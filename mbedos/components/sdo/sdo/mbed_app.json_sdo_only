@@ -1,0 +1,27 @@
+{
+	"config": {
+		"main-stack-size": {
+			"value": 16000
+		}
+	},
+	"target_overrides": {
+        "*": {
+            "platform.stdio-baud-rate": 115200,
+            "platform.stdio-convert-newlines": true,
+            "target.network-default-interface-type": "ETHERNET",
+            "target.features_add": ["STORAGE"],
+            "target.components_add": ["SD"]
+		}
+	},
+	"macros": [
+		"NDEBUG=1",
+		"MBEDTLS_PEM_WRITE_C",
+		"MBEDTLS_X509_CREATE_C",
+		"MBEDTLS_X509_CSR_PARSE_C",
+		"MBEDTLS_X509_CSR_WRITE_C",
+		"MBEDTLS_ENTROPY_HARDWARE_ALT",
+		"DEVICE_TRNG=1",
+		"MBEDTLS_DHM_C=1",
+		"MBEDTLS_USER_CONFIG_FILE=\"mbedtls_user_config.h\""
+	]
+}
