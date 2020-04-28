@@ -29,22 +29,22 @@ typedef enum {
 	SDO_SDK_NORMAL_DATA = 2,
 	SDO_SDK_OTP_DATA = 4,
 	SDO_SDK_RAW_DATA = 8
-} sdoSdkBlobFlags;
+} sdo_sdk_blob_flags;
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int32_t sdoBlobRead(const char *blobName, sdoSdkBlobFlags flags,
-		    uint8_t *buffer, uint32_t length);
+int32_t sdo_blob_read(const char *blob_name, sdo_sdk_blob_flags flags,
+		      uint8_t *buffer, uint32_t length);
 
-int32_t sdoBlobWrite(const char *blobName, sdoSdkBlobFlags flags,
-		     const uint8_t *buffer, uint32_t length);
+int32_t sdo_blob_write(const char *blob_name, sdo_sdk_blob_flags flags,
+		       const uint8_t *buffer, uint32_t length);
 
-int32_t sdoBlobSize(const char *blobName, sdoSdkBlobFlags flags);
+int32_t sdo_blob_size(const char *blob_name, sdo_sdk_blob_flags flags);
 
-int32_t sdoReadEPIDKey(uint8_t *buffer, uint32_t *size);
+int32_t sdo_read_epid_key(uint8_t *buffer, uint32_t *size);
 
-int32_t createHMACForNormalBlob(void);
+int32_t create_hmac_normal_blob(void);
 
 #ifdef __cplusplus
 } // endof externc (CPP code)

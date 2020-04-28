@@ -22,28 +22,29 @@
 /**
  * Sign a message using provided ECDSA Private Keys.
  * @param data - pointer of type uint8_t, holds the plaintext message.
- * @param dataLen - size of message, type size_t.
- * @param messageSignature - pointer of type unsigned char, which will be
+ * @param data_len - size of message, type size_t.
+ * @param message_signature - pointer of type unsigned char, which will be
  * by filled with signature.
- * @param signatureLength - size of signature, type unsigned int.
+ * @param signature_length - size of signature, type unsigned int.
  * @return 0 if true, else -1.
  */
-int32_t sdoECDSASign(const uint8_t *data, size_t dataLen,
-		     unsigned char *messageSignature, size_t *signatureLength)
+int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
+		       unsigned char *message_signature,
+		       size_t *signature_length)
 {
 	int ret = -1;
 	EC_KEY *eckey = NULL;
 	unsigned char hash[SHA512_DIGEST_SIZE] = {0};
 	unsigned char *signature = NULL;
 	unsigned int sig_len = 0;
-	size_t hashLength = 0;
+	size_t hash_length = 0;
 
-	if (!data || !dataLen || !messageSignature || !signatureLength) {
-		LOG(LOG_ERROR, "sdoCryptoECDSASign params not valid\n");
+	if (!data || !data_len || !message_signature || !signature_length) {
+		LOG(LOG_ERROR, "sdo_cryptoECDSASign params not valid\n");
 		goto end;
 	}
 
-	eckey = get_EC_KEY();
+	eckey = get_ec_key();
 	if (!eckey) {
 		LOG(LOG_ERROR, "Failed to get the EC key\n");
 		goto end;
@@ -51,38 +52,42 @@ int32_t sdoECDSASign(const uint8_t *data, size_t dataLen,
 
 	sig_len = ECDSA_size(eckey);
 
-	if (!sig_len || !(signature = OPENSSL_malloc(sig_len)))
+	if (sig_len) {
+		signature = OPENSSL_malloc(sig_len);
+	}
+	if (!sig_len || !signature) {
 		goto end;
+	}
 
 	/* Supplied buffer is enough ? */
-	if (sig_len > *signatureLength) {
+	if (sig_len > *signature_length) {
 		LOG(LOG_ERROR,
 		    "Supplied signature buffer is not enough, "
 		    "supplied: %zu bytes, required: %d bytes!\n",
-		    *signatureLength, sig_len);
+		    *signature_length, sig_len);
 		goto end;
 	}
 
 #if defined(ECDSA256_DA)
-	hashLength = SHA256_DIGEST_SIZE;
-	if (SHA256(data, dataLen, hash) == NULL)
+	hash_length = SHA256_DIGEST_SIZE;
+	if (SHA256(data, data_len, hash) == NULL)
 		goto end;
 #elif defined(ECDSA384_DA)
-	hashLength = SHA384_DIGEST_SIZE;
-	if (SHA384(data, dataLen, hash) == NULL)
+	hash_length = SHA384_DIGEST_SIZE;
+	if (SHA384(data, data_len, hash) == NULL)
 		goto end;
 #endif
 
 	// ECDSA_sign return 1 on success, 0 on failure
 	int result =
-	    ECDSA_sign(0, hash, hashLength, signature, &sig_len, eckey);
+	    ECDSA_sign(0, hash, hash_length, signature, &sig_len, eckey);
 	if (result == 0) {
 		LOG(LOG_ERROR, "ECDSA_sign() failed!\n");
 		goto end;
 	}
 
-	*signatureLength = sig_len;
-	if (memcpy_s(messageSignature, (size_t)sig_len, (char *)signature,
+	*signature_length = sig_len;
+	if (memcpy_s(message_signature, (size_t)sig_len, (char *)signature,
 		     (size_t)sig_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto end;

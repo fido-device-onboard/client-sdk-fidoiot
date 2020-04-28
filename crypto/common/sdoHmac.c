@@ -7,7 +7,7 @@
 #include "util.h"
 #include "safe_lib.h"
 #include "sdoCryptoCtx.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 #include "sdoprot.h"
 #include "storage_al.h"
 #include "platform_utils.h"
@@ -18,35 +18,35 @@
 
 /**
  * This function computes the HMAC of encrypted TO2 messages using SVK as its
- * key. sdoTo2CryptoContext specifies the hmacType to be used to generate
- * the HMAC of the data contained in to2Msg of size to2MsgLength and places
- * the output in hmac, the size of which is specified by hmacLength.
+ * key. sdo_to2Crypto_context specifies the hmac_type to be used to generate
+ * the HMAC of the data contained in to2Msg of size to2Msg_length and places
+ * the output in hmac, the size of which is specified by hmac_length.
  * The hmac buffer must be of size SDO_MSG_HMAC_LENGTH or greater.
  * @param to2Msg In Pointer to the message
- * @param to2MsgLen In Size of the message
+ * @param to2Msg_len In Size of the message
  * @param hmac Out Pointer to the buffer where the hmac is stored after the HMAC
  * operation is completed. This buffer must be allocated before calling this API
- * @param hmacLen In Size of the buffer pointed to by hmac
+ * @param hmac_len In Size of the buffer pointed to by hmac
  * @return 0 on success and -1 on failure.
  */
-int32_t sdoTo2HMAC(uint8_t *to2Msg, size_t to2MsgLen, uint8_t *hmac,
-		   size_t hmacLen)
+int32_t sdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
+		     size_t hmac_len)
 {
-	SDOAESKeyset_t *keyset = getKeyset();
+	sdo_aes_keyset_t *keyset = get_keyset();
 	uint8_t *svk;
-	uint8_t svkLen;
+	uint8_t svk_len;
 
 	if (NULL == keyset || (NULL == keyset->svk) || (NULL == to2Msg)) {
 		return -1;
 	}
 	svk = keyset->svk->bytes;
-	svkLen = keyset->svk->byteSz;
+	svk_len = keyset->svk->byte_sz;
 
-	if (!svk || !svkLen || !to2MsgLen || !hmacLen)
+	if (!svk || !svk_len || !to2Msg_len || !hmac_len)
 		goto error;
 
-	if (0 != sdoCryptoHMAC(SDO_CRYPTO_HMAC_TYPE_USED, to2Msg, to2MsgLen,
-			       hmac, hmacLen, svk, svkLen)) {
+	if (0 != crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, to2Msg, to2Msg_len,
+				 hmac, hmac_len, svk, svk_len)) {
 		LOG(LOG_ERROR, "Failed to perform HMAC\n");
 		goto error;
 	}
@@ -59,24 +59,24 @@ error:
  * This function sets the Ownership Voucher hmac key in the structure.
  * Which will later be used by the OVHMAC function to get the hmac.
  * @param OVkey In Pointer to the Ownership Voucher hmac.
- * @param OVKeyLen In Size of the Ownership Voucher hmac key
+ * @param OVKey_len In Size of the Ownership Voucher hmac key
  * @return 0 on success and -1 on failure.
  */
-int32_t setOVKey(SDOByteArray_t *OVkey, size_t OVKeyLen)
+int32_t set_ov_key(sdo_byte_array_t *OVkey, size_t OVKey_len)
 {
 	int ret = -1;
-	SDOByteArray_t **ovkeyctx = getOVKey();
+	sdo_byte_array_t **ovkeyctx = getOVKey();
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
-	    !((BUFF_SIZE_32_BYTES == OVKeyLen) ||
-	      (BUFF_SIZE_48_BYTES == OVKeyLen))) {
+	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
+	      (BUFF_SIZE_48_BYTES == OVKey_len))) {
 		return -1;
 	}
 
 	if (NULL == *ovkeyctx) {
-		*ovkeyctx = sdoByteArrayAlloc(OVKeyLen);
+		*ovkeyctx = sdo_byte_array_alloc(OVKey_len);
 		if (!*ovkeyctx) {
-			LOG(LOG_ERROR, "Alloc failed \n");
+			LOG(LOG_ERROR, "Alloc failed\n");
 			return -1;
 		}
 	}
@@ -84,7 +84,7 @@ int32_t setOVKey(SDOByteArray_t *OVkey, size_t OVKeyLen)
 		goto err;
 	}
 
-	ret = memcpy_s((*ovkeyctx)->bytes, OVKeyLen, OVkey->bytes, OVKeyLen);
+	ret = memcpy_s((*ovkeyctx)->bytes, OVKey_len, OVkey->bytes, OVKey_len);
 	if (ret != 0) {
 		ret = -1;
 		goto err;
@@ -92,7 +92,7 @@ int32_t setOVKey(SDOByteArray_t *OVkey, size_t OVKeyLen)
 	ret = 0;
 err:
 	if ((0 != ret) && (*ovkeyctx)) {
-		sdoByteArrayFree(*ovkeyctx);
+		sdo_byte_array_free(*ovkeyctx);
 		*ovkeyctx = NULL;
 	}
 
@@ -102,37 +102,39 @@ err:
 /**
  * This function computes the HMAC of OV Header using device secret as the key
  * in
- * sdoTo2CryptoCtx. The Ownership Voucher header shall be pointed by OVHdr with
- * its length specified in OVHdrLength and generated HMAC shall be placed in
- * output buffer pointed by hmac, the size of which is specified by hmacLength.
- * The hmac buffer must be of size SDO_DEVICE_HMAC_LENGTH or greater.
+ * sdo_to2Crypto_ctx. The Ownership Voucher header shall be pointed by OVHdr
+ * with its length specified in OVHdr_length and generated HMAC shall be placed
+ * in output buffer pointed by hmac, the size of which is specified by
+ * hmac_length. The hmac buffer must be of size SDO_DEVICE_HMAC_LENGTH or
+ * greater.
  * @param OVHdr In Pointer to the Ownership Voucher header
- * @param OVHdrLen In Size of the Ownership Voucher header
+ * @param OVHdr_len In Size of the Ownership Voucher header
  * @param hmac Out Pointer to the buffer where the hmac is stored after the hmac
  * operation is completed. This buffer must be allocated before calling this API
- * @param hmacLen In/Out In: Size of the buffer pointed to by hmac
+ * @param hmac_len In/Out In: Size of the buffer pointed to by hmac
  * Out: Size of the message hmac
  * @return 0 on success and -1 on failure.
  */
-int32_t sdoDeviceOVHMAC(uint8_t *OVHdr, size_t OVHdrLen, uint8_t *hmac,
-			size_t hmacLen)
+int32_t sdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
+			   size_t hmac_len)
 {
 #if defined(DEVICE_TPM20_ENABLED)
-	return sdoTPMGetHMAC(OVHdr, OVHdrLen, hmac, hmacLen, TPM_HMAC_PUB_KEY,
-			     TPM_HMAC_PRIV_KEY);
+	return sdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
+				TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
 #else
-	SDOByteArray_t **keyset = getOVKey();
+	sdo_byte_array_t **keyset = getOVKey();
+
 	if (!keyset || !*keyset || !OVHdr || !hmac) {
 		return -1;
 	}
-	uint8_t *hmacKey = (*keyset)->bytes;
-	uint8_t hmacKeyLen = (*keyset)->byteSz;
+	uint8_t *hmac_key = (*keyset)->bytes;
+	uint8_t hmac_key_len = (*keyset)->byte_sz;
 
-	if (!hmacKey || !hmacKeyLen || !OVHdrLen || !hmacLen)
+	if (!hmac_key || !hmac_key_len || !OVHdr_len || !hmac_len)
 		goto error;
 
-	if (0 != sdoCryptoHMAC(SDO_CRYPTO_HMAC_TYPE_USED, OVHdr, OVHdrLen, hmac,
-			       hmacLen, hmacKey, hmacKeyLen)) {
+	if (0 != crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, OVHdr, OVHdr_len,
+				 hmac, hmac_len, hmac_key, hmac_key_len)) {
 		LOG(LOG_ERROR, "Failed to perform HMAC\n");
 		goto error;
 	}
@@ -143,26 +145,26 @@ error:
 }
 
 /**
- * sdoCryptoHash function calculate hash on input data
+ * sdo_crypto_hash function calculate hash on input data
  *
  * @param message - pointer to input data buffer of uint8_t type.
- * @param messageLength - input data buffer size
+ * @param message_length - input data buffer size
  * @param hash - pointer to output data buffer of uint8_t type.
- * @param hashLength - output data buffer size
+ * @param hash_length - output data buffer size
  *
  * @return
  *        return 0 on success. -ve value on failure.
  */
-int32_t sdoCryptoHash(uint8_t *message, size_t messageLength, uint8_t *hash,
-		      size_t hashLength)
+int32_t sdo_crypto_hash(const uint8_t *message, size_t message_length,
+			uint8_t *hash, size_t hash_length)
 {
 
-	if (!message || !messageLength || !hash || !hashLength) {
+	if (!message || !message_length || !hash || !hash_length) {
 		return -1;
 	}
 
-	if (0 != _sdoCryptoHash(SDO_CRYPTO_HASH_TYPE_USED, message,
-				messageLength, hash, hashLength)) {
+	if (0 != crypto_hal_hash(SDO_CRYPTO_HASH_TYPE_USED, message,
+				  message_length, hash, hash_length)) {
 
 		return -1;
 	}
@@ -170,18 +172,19 @@ int32_t sdoCryptoHash(uint8_t *message, size_t messageLength, uint8_t *hash,
 }
 
 /**
- * sdoGenerateOVHMACKey function generates OV HMAC key
+ * sdo_generate_ov_hmac_key function generates OV HMAC key
  *
  * @return
  *        return 0 on success, -1 on failure.
  */
 
-int32_t sdoGenerateOVHMACKey(void)
+int32_t sdo_generate_ov_hmac_key(void)
 {
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != sdoTPMGenerateHMACKey(TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY)) {
+	if (0 !=
+	    sdo_tpm_generate_hmac_key(TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY)) {
 		LOG(LOG_ERROR, "Failed to generate device HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -192,49 +195,55 @@ int32_t sdoGenerateOVHMACKey(void)
 		       " from TPM.\n");
 
 #else
-	SDOByteArray_t *secret = sdoByteArrayAlloc(INITIAL_SECRET_BYTES);
+	sdo_byte_array_t *secret = sdo_byte_array_alloc(INITIAL_SECRET_BYTES);
+
+	if (!secret) {
+		LOG(LOG_ERROR, "Out of memory for OV HMAC key\n");
+		goto err;
+	}
 
 	/* Generate HMAC key for calcuating it over Ownership header */
-	sdoCryptoRandomBytes(secret->bytes, INITIAL_SECRET_BYTES);
-	if (0 != setOVKey(secret, INITIAL_SECRET_BYTES)) {
+	sdo_crypto_random_bytes(secret->bytes, INITIAL_SECRET_BYTES);
+	if (0 != set_ov_key(secret, INITIAL_SECRET_BYTES)) {
 		goto err;
 	}
 
 	ret = 0;
 err:
-	sdoByteArrayFree(secret);
+	sdo_byte_array_free(secret);
 #endif
 
 	return ret;
 }
 
 /**
- * sdoComputeStorageHMAC function generates OV HMAC key
+ * sdo_compute_storage_hmac function generates OV HMAC key
  * @param data: pointer to the input data
- * @param dataLength: length of the input data
- * @param computedHmac: pointer to the computed HMAC
- * @param computedHmacSize: size of the computed HMAC buffer
+ * @param data_length: length of the input data
+ * @param computed_hmac: pointer to the computed HMAC
+ * @param computed_hmac_size: size of the computed HMAC buffer
  *
  * @return
  *        return 0 on success, -1 on failure.
  */
-
-int32_t sdoComputeStorageHMAC(const uint8_t *data, uint32_t dataLength,
-			      uint8_t *computedHmac, int computedHmacSize)
+#ifndef TARGET_OS_OPTEE
+int32_t sdo_compute_storage_hmac(const uint8_t *data, uint32_t data_length,
+				 uint8_t *computed_hmac, int computed_hmac_size)
 {
 
 	int32_t ret = -1;
 
-	if (!data || !dataLength || !computedHmac ||
-	    (computedHmacSize != PLATFORM_HMAC_SIZE)) {
+	if (!data || !data_length || !computed_hmac ||
+	    (computed_hmac_size != PLATFORM_HMAC_SIZE)) {
 		LOG(LOG_ERROR, "Failed to generate HMAC, invalid"
 			       " parameter received.\n");
 		goto error;
 	}
 
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != sdoTPMGetHMAC(data, dataLength, computedHmac, computedHmacSize,
-			       TPM_HMAC_DATA_PUB_KEY, TPM_HMAC_DATA_PRIV_KEY)) {
+	if (0 != sdo_tpm_get_hmac(data, data_length, computed_hmac,
+				  computed_hmac_size, TPM_HMAC_DATA_PUB_KEY,
+				  TPM_HMAC_DATA_PRIV_KEY)) {
 		LOG(LOG_ERROR, "TPM HMAC Computation failed!\n");
 		goto error;
 	}
@@ -243,17 +252,18 @@ int32_t sdoComputeStorageHMAC(const uint8_t *data, uint32_t dataLength,
 
 #else
 	uint8_t hmac_key[PLATFORM_HMAC_KEY_DEFAULT_LEN] = {0};
-	if (!getPlatformHMACKey(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
+
+	if (!get_platform_hmac_key(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 		LOG(LOG_ERROR, "Could not get platform IV!\n");
 		goto error;
 	}
 
 	// compute HMAC
-	if (0 != sdoCryptoHMAC(SDO_CRYPTO_HMAC_TYPE_SHA_256, data, dataLength,
-			       computedHmac, computedHmacSize, hmac_key,
-			       HMACSHA256_KEY_SIZE)) {
+	if (0 != crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_SHA_256, data,
+				 data_length, computed_hmac, computed_hmac_size,
+				 hmac_key, HMACSHA256_KEY_SIZE)) {
 		LOG(LOG_ERROR, "HMAC computation dailed during"
-			       " sdoBlobRead()!\n");
+			       " sdo_blob_read()!\n");
 		goto error;
 	}
 	LOG(LOG_DEBUG, "HMAC computed successfully!\n");
@@ -268,23 +278,26 @@ error:
 #endif
 	return ret;
 }
+#endif
 
 /**
- * sdoGenerateStorageHMACKey function generates Storage HMAC key
+ * sdo_generate_storage_hmac_key function generates Storage HMAC key
  *
  * @return
  *        return 0 on success, -1 on failure.
  */
-
-int32_t sdoGenerateStorageHMACKey(void)
+int32_t sdo_generate_storage_hmac_key(void)
 {
 
 	int32_t ret = -1;
 
-#if defined(DEVICE_TPM20_ENABLED)
-	if (0 != sdoTPMGenerateHMACKey(TPM_HMAC_DATA_PUB_KEY,
-				       TPM_HMAC_DATA_PRIV_KEY)) {
-		LOG(LOG_ERROR, "Failed to generate TPM data protection"
+#if defined(TARGET_OS_OPTEE)
+	return 0;
+
+#elif defined(DEVICE_TPM20_ENABLED)
+	if (0 != sdo_tpm_generate_hmac_key(TPM_HMAC_DATA_PUB_KEY,
+					   TPM_HMAC_DATA_PRIV_KEY)) {
+		LOG(LOG_ERROR, "Failed to generate TPM data protection "
 			       "key.\n");
 		return ret;
 	}
@@ -296,14 +309,14 @@ int32_t sdoGenerateStorageHMACKey(void)
 	uint8_t hmac_key[PLATFORM_HMAC_KEY_DEFAULT_LEN] = {0};
 
 	if (0 !=
-	    sdoCryptoRandomBytes(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
+	    sdo_crypto_random_bytes(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 		LOG(LOG_ERROR, "Unable to generate hmac key.\n");
 		return ret;
 	}
 
 	if (PLATFORM_HMAC_KEY_DEFAULT_LEN !=
-	    sdoBlobWrite((const char *)PLATFORM_HMAC_KEY, SDO_SDK_RAW_DATA,
-			 hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
+	    sdo_blob_write((const char *)PLATFORM_HMAC_KEY, SDO_SDK_RAW_DATA,
+			   hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 		LOG(LOG_ERROR, "Plaform HMAC Key file is not written"
 			       " properly!\n");
 		return ret;

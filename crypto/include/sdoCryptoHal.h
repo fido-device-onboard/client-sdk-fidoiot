@@ -23,7 +23,7 @@ extern "C" {
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/gcm.h"
-#else
+#elif defined(USE_OPENSSL)
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/conf.h>
@@ -49,152 +49,155 @@ extern "C" {
 #define SDO_AES_KEY_LENGTH BUFF_SIZE_16_BYTES /* 128 bits */
 #endif
 
-#if defined(ECDSA256_DA)
-#define ECDSA_PRIV_KEYSIZE BUFF_SIZE_32_BYTES // 256 bit
-#elif defined(ECDSA384_DA)
-#define ECDSA_PRIV_KEYSIZE BUFF_SIZE_48_BYTES // 384 bit
-#else
-#define ECDSA_PRIV_KEYSIZE BUFF_SIZE_0_BYTES // wrong key
-#endif
-
-#define SDO_ASYM_DEV_RANDOM 256
-#define SDO_ASYM3072_DEV_RANDOM 768
-
-#ifdef KEX_ASYM_ENABLED
-#define DEVICE_RANDOM_SIZE SDO_ASYM_DEV_RANDOM
-#else
-/* ASYM3072 Generate Device Random bits(768) */
-#define DEVICE_RANDOM_SIZE SDO_ASYM3072_DEV_RANDOM
-#endif //	KEX_ASYM_ENABLED
-
 /* Initialize randomization library. */
 int random_init(void);
 
 /* Undo what random_init does. */
 int random_close(void);
 
-/* Generate numBytes of random data and place it in randomBuffer. randomBuffer
- * should point to a buffer large enough to store this data. */
-int32_t _sdoCryptoRandomBytes(uint8_t *randomBuffer, size_t numBytes);
+/* Generate num_bytes of random data and place it in random_buffer.
+ * random_buffer should point to a buffer large enough to store this data.
+ */
+int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes);
 
-int32_t cryptoInit(void);
-int32_t cryptoClose(void);
+int32_t crypto_init(void);
+int32_t crypto_close(void);
 
 /* Calculate hash of "buffer" and place the result in "output". "output" must
- * be allocated already. */
-int32_t _sdoCryptoHash(uint8_t hashType, const uint8_t *buffer,
-		       size_t bufferLength, uint8_t *output,
-		       size_t outputLength);
+ * be allocated already.
+ */
+int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
+			 size_t buffer_length, uint8_t *output,
+			 size_t output_length);
 
 /* Calculate hmac of "buffer" using "key", and place the result in "output".
- * "output" must be allocated already. */
-int32_t sdoCryptoHMAC(uint8_t hmacType, const uint8_t *buffer,
-		      size_t bufferLength, uint8_t *output, size_t outputLength,
-		      const uint8_t *key, size_t keyLength);
+ * "output" must be allocated already.
+ */
+int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
+			size_t buffer_length, uint8_t *output,
+			size_t output_length, const uint8_t *key,
+			size_t key_length);
 
-/* sdoCryptoSigVerify
+
+/* crypto_hal_sig_verify
  * Verify an RSA PKCS v1.5 Signature using provided public key
  * or verify ecdsa signature verify
  *
- * @param keyEncoding[in] - Key encoding typee.
- * @param keyAlgorithm[in] - Public key algorithm.
+ * @param key_encoding[in] - Key encoding typee.
+ * @param key_algorithm[in] - Public key algorithm.
  * @param message[in] - pointer of type uint8_t, holds the encoded message.
- * @param messageLength[in] - size of message, type size_t.
- * @param messageSignature[in] - pointer of type uint8_t, holds a valid
+ * @param message_length[in] - size of message, type size_t.
+ * @param message_signature[in] - pointer of type uint8_t, holds a valid
  *				signature in big-endian format
- * @param signatureLength[in] - size of signature, type unsigned int.
- * @param keyParam1[in] - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length[in] - size of public key1, type size_t.
- * @param keyParam2[in] - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length[in] - size of public key2, type size_t
+ * @param signature_length[in] - size of signature, type unsigned int.
+ * @param key_param1[in] - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length[in] - size of public key1, type size_t.
+ * @param key_param2[in] - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length[in] - size of public key2, type size_t
  * @return 0 if true, else -1.
  */
-int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
-			   const uint8_t *message, uint32_t messageLength,
-			   const uint8_t *messageSignature,
-			   uint32_t signatureLength, const uint8_t *keyParam1,
-			   uint32_t keyParam1Length, const uint8_t *keyParam2,
-			   uint32_t keyParam2Length);
+int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
+			      const uint8_t *message, uint32_t message_length,
+			      const uint8_t *message_signature,
+			      uint32_t signature_length,
+			      const uint8_t *key_param1,
+			      uint32_t key_param1Length,
+			      const uint8_t *key_param2,
+			      uint32_t key_param2Length);
 
 /* ECDSA P-256/384 curve signature length, can be to used while allocating
- * buffer */
+ * buffer
+ */
 
 /* Sign and generate ECDSA signature for a given message */
-int32_t sdoECDSASign(const uint8_t *message, size_t messageLen,
-		     unsigned char *signature, size_t *signatureLen);
+int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
+		       unsigned char *signature, size_t *signature_len);
 
-/* Encrypt "clearText" using rsa pubkeys. */
-int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
-			    uint8_t keyAlgorithm, const uint8_t *clearText,
-			    uint32_t clearTextLength, uint8_t *cipherText,
-			    uint32_t cipherTextLength, const uint8_t *keyParam1,
-			    uint32_t keyParam1Length, const uint8_t *keyParam2,
-			    uint32_t keyParam2Length);
+/* Encrypt "clear_text" using rsa pubkeys. */
+int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
+			       uint8_t key_algorithm, const uint8_t *clear_text,
+			       uint32_t clear_text_length, uint8_t *cipher_text,
+			       uint32_t cipher_text_length,
+			       const uint8_t *key_param1,
+			       uint32_t key_param1Length,
+			       const uint8_t *key_param2,
+			       uint32_t key_param2Length);
+
+uint32_t crypto_hal_rsa_len(const uint8_t *key_param1,
+			    uint32_t key_param1Length,
+			    const uint8_t *key_param2,
+			    uint32_t key_param2Length);
 
 #define RSA_SHA256_KEY1_SIZE 256
 
-/* Encrypt "clearText" using "key" and put the result in "cypherText".
+/* Encrypt "clear_text" using "key" and put the result in "cypher_text".
  * "cipher_txt" must point to a buffer large enough to store the
- * encrypted message. cypherText buffer size required can be derived
- * by passing NULL as cypherText */
-int32_t sdoCryptoAESEncrypt(const uint8_t *clearText, uint32_t clearTextLength,
-			    uint8_t *cypherText, uint32_t *cypherLength,
-			    size_t blockSize, const uint8_t *iv,
-			    const uint8_t *key, uint32_t keyLength);
-
-/* Decrypt "cypherText" using "key" and put the result in "clearText".
- * and "clearText" must point to a buffer large enough to store the
- * decrypted message.clearText buffer size required can be derived
- * by passing NULL as clearText.
+ * encrypted message. cypher_text buffer size required can be derived
+ * by passing NULL as cypher_text
  */
-int32_t sdoCryptoAESDecrypt(uint8_t *clearText, uint32_t *clearTextLength,
-			    const uint8_t *cypherText, uint32_t cypherLength,
-			    size_t blockSize, const uint8_t *iv,
-			    const uint8_t *key, uint32_t keyLength);
+int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
+			       uint32_t clear_text_length, uint8_t *cypher_text,
+			       uint32_t *cypher_length, size_t block_size,
+			       const uint8_t *iv, const uint8_t *key,
+			       uint32_t key_length);
+
+/* Decrypt "cypher_text" using "key" and put the result in "clear_text".
+ * and "clear_text" must point to a buffer large enough to store the
+ * decrypted message.clear_text buffer size required can be derived
+ * by passing NULL as clear_text.
+ */
+int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
+			       const uint8_t *cypher_text,
+			       uint32_t cypher_length, size_t block_size,
+			       const uint8_t *iv, const uint8_t *key,
+			       uint32_t key_length);
 
 /* AES-GCM authenticated encryption/decryption APIs */
-int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
-			       uint32_t plainTextLength, uint8_t *cipherText,
-			       uint32_t cipherTextLength, const uint8_t *iv,
-			       uint32_t ivLength, const uint8_t *key,
-			       uint32_t keyLength, uint8_t *tag,
-			       uint32_t tagLength);
-int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
-			       const uint8_t *cipherText,
-			       uint32_t cipherTextLength, const uint8_t *iv,
-			       uint32_t ivLength, const uint8_t *key,
-			       uint32_t keyLength, uint8_t *tag,
-			       uint32_t tagLength);
+int32_t sdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
+				   uint32_t plain_text_length,
+				   uint8_t *cipher_text,
+				   uint32_t cipher_text_length,
+				   const uint8_t *iv, uint32_t iv_length,
+				   const uint8_t *key, uint32_t key_length,
+				   uint8_t *tag, uint32_t tag_length);
+
+int32_t sdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
+				   uint32_t clear_text_length,
+				   const uint8_t *cipher_text,
+				   uint32_t cipher_text_length,
+				   const uint8_t *iv, uint32_t iv_length,
+				   const uint8_t *key, uint32_t key_length,
+				   uint8_t *tag, uint32_t tag_length);
 
 /*
  * Helper API designed to convert the raw signature into DER format required by
  * SDO.
  * raw_sig: input a 64 Byte r and s format signature.
- * messageSignature: outputs a DER encoded signature value
- * signatureLength: outputs the size of the signature after converting to DER
+ * message_signature: outputs a DER encoded signature value
+ * signature_length: outputs the size of the signature after converting to DER
  * format.
  */
-int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
-		  uint8_t *messageSignature, size_t *signatureLength);
+int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
+		   uint8_t *message_signature, size_t *signature_length);
 
 /*
  * This internal API is used to convert public key and signature which is in
  * DER format to raw format of r and s representation. This raw formatted
  * data will be of 64 Bytes.
- * rawKey: output, returns the public key in 64 byte format of r and s.
- * rawSig: output, returns the signature in 64 byte format of r and s.
- * pubKey: input, the DER formatted public key that was received.
- * keyLength: input, the size of the DER formatted public key.
- * messageSignature: input, the DER formatted signature that was received
- * signatureLength: input, the length of signature in bytes that was received.
- * rawKeyLength: input, the buffer size of the rawKey
+ * raw_key: output, returns the public key in 64 byte format of r and s.
+ * raw_sig: output, returns the signature in 64 byte format of r and s.
+ * pub_key: input, the DER formatted public key that was received.
+ * key_length: input, the size of the DER formatted public key.
+ * message_signature: input, the DER formatted signature that was received
+ * signature_length: input, the length of signature in bytes that was received.
+ * raw_key_length: input, the buffer size of the raw_key
  */
-int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
-		  size_t keyLength, const uint8_t *messageSignature,
-		  size_t signatureLength, size_t rawKeyLength,
-		  size_t rawSigLength);
+int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
+		   const unsigned char *pub_key, size_t key_length,
+		   const uint8_t *message_signature, size_t signature_length,
+		   size_t raw_key_length, size_t raw_sig_length);
 
-int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr);
+int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr);
 
 /* SSL API's*/
 
@@ -208,17 +211,17 @@ int sdo_ssl_close(void *ssl);
 #endif
 
 #ifdef USE_MBEDTLS
-typedef struct sslInfo {
+typedef struct ssl_info {
 	mbedtls_net_context server_fd;
 	mbedtls_ssl_context ssl;
 	mbedtls_ssl_config conf;
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
-} sslInfo;
+} ssl_info;
 
 void *sdo_ssl_setup_connect(char *server_name, char *port);
 int sdo_ssl_close(void *ssl);
-#define MBEDTLS_NET_DUMMY_SOCKET 999
+#define MBEDTLS_NET_DUMMY_SOCKET (void *)999
 #endif
 
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
@@ -245,16 +248,21 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 #define SDO_ASYM_DEV_RANDOM 256
 #define SDO_ASYM3072_DEV_RANDOM 768
 
-int32_t sdoCryptoKEXInit(void **context);
-int32_t sdoCryptoGetDeviceRandom(void *context, uint8_t *devRandValue,
-				 uint32_t *devRandLength);
-int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
-			       uint32_t peerRandLength);
-int32_t sdoCryptoGetSecret(void *context, uint8_t *secret,
-			   uint32_t *secretLength);
-int32_t sdoCryptoKEXClose(void **context);
+int32_t crypto_hal_kex_init(void **context);
+int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
+				     uint32_t *dev_rand_length);
+int32_t crypto_hal_set_peer_random(void *context,
+				   const uint8_t *peer_rand_value,
+				   uint32_t peer_rand_length);
+int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
+			      uint32_t *secret_length);
+int32_t crypto_hal_kex_close(void **context);
 
-int32_t setEncryptKeyAsym(void *context, SDOPublicKey_t *encryptKey);
+int32_t set_encrypt_key_asym(void *context, sdo_public_key_t *encrypt_key);
+
+#ifdef SECURE_ELEMENT
+int32_t crypto_hal_se_init(void);
+#endif
 
 #ifdef __cplusplus
 } // endof externc (CPP code)

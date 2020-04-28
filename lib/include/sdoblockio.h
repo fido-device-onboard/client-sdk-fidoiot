@@ -13,31 +13,31 @@
 
 typedef struct {
 	int cursor;
-	int blockMax;
-	int blockSize;
+	int block_max;
+	int block_size;
 	uint8_t *block;
-} SDOBlock_t;
+} sdo_block_t;
 
 typedef struct _SDOR_s {
-	SDOBlock_t b;
-	uint8_t needComma;
-	bool haveBlock;
-	int msgType;
-	int contentLength;
+	sdo_block_t b;
+	uint8_t need_comma;
+	bool have_block;
+	int msg_type;
+	int content_length;
 	int (*receive)(struct _SDOR_s *, int);
-	void *receiveData;
-} SDOR_t;
+	void *receive_data;
+} sdor_t;
 
-typedef int (*SDOReceiveFcnPtr_t)(SDOR_t *, int);
+typedef int (*SDOReceive_fcn_ptr_t)(sdor_t *, int);
 
 typedef struct _SDOW_s {
-	SDOBlock_t b;
-	uint8_t needComma;
-	int blockLengthFixup;
-	int msgType;
+	sdo_block_t b;
+	uint8_t need_comma;
+	int block_length_fixup;
+	int msg_type;
 	int (*send)(struct _SDOW_s *);
-	void *sendData;
-} SDOW_t;
+	void *send_data;
+} sdow_t;
 
 #define SDO_FIX_UP_STR "\"0000\""
 #define SDO_FIX_UP_TEMPL "\"%04x\""
@@ -47,65 +47,67 @@ typedef struct _SDOW_s {
 #define SDO_BLOCK_MASK ~255
 #define SDO_OK 0
 #define SDO_BLOCKLEN_SZ 8
-void sdoBlockInit(SDOBlock_t *sdob);
-void sdoBlockReset(SDOBlock_t *sdob);
-int SDOBPeekc(SDOBlock_t *sdob);
-void sdoResizeBlock(SDOBlock_t *sdob, int need);
-bool sdoRInit(SDOR_t *sdor, SDOReceiveFcnPtr_t rcv, void *rcvData);
-void sdoRFlush(SDOR_t *sdor);
-int sdoRPeek(SDOR_t *sdor);
-bool sdoRHaveBlock(SDOR_t *sdor);
-void sdoRSetHaveBlock(SDOR_t *sdor);
-bool sdoRNextBlock(SDOR_t *sdor, uint32_t *typep);
-uint8_t *sdoRGetBlockPtr(SDOR_t *sdor, int fromCursor);
-uint8_t *sdoWGetBlockPtr(SDOW_t *sdow, int fromCursor);
-bool sdoRBeginSequence(SDOR_t *sdor);
-bool sdoREndSequence(SDOR_t *sdor);
-bool sdoRBeginObject(SDOR_t *sdor);
-bool sdoREndObject(SDOR_t *sdor);
-uint32_t sdoReadUInt(SDOR_t *sdor);
-int sdoReadStringSz(SDOR_t *sdor);
-int sdoReadArraySz(SDOR_t *sdor);
-int sdoReadArrayNoStateChange(SDOR_t *sdor, uint8_t *buf);
-int sdoReadString(SDOR_t *sdor, char *bufp, int bufSz);
-int sdoReadTag(SDOR_t *sdor, char *bufp, int bufSz);
-bool sdoReadTagFinisher(SDOR_t *sdor);
-int sdoReadExpectedTag(SDOR_t *sdor, char *tag);
-int sdoReadByteArrayField(SDOR_t *sdor, int b64Sz, uint8_t *bufp, int bufSz);
+void sdo_block_init(sdo_block_t *sdob);
+void sdo_block_reset(sdo_block_t *sdob);
+int sdob_peekc(sdo_block_t *sdob);
+void sdo_resize_block(sdo_block_t *sdob, int need);
+bool sdor_init(sdor_t *sdor, SDOReceive_fcn_ptr_t rcv, void *rcv_data);
+void sdor_flush(sdor_t *sdor);
+int sdor_peek(sdor_t *sdor);
+bool sdor_have_block(sdor_t *sdor);
+void sdor_set_have_block(sdor_t *sdor);
+bool sdor_next_block(sdor_t *sdor, uint32_t *typep);
+uint8_t *sdor_get_block_ptr(sdor_t *sdor, int from_cursor);
+uint8_t *sdow_get_block_ptr(sdow_t *sdow, int from_cursor);
+bool sdor_begin_sequence(sdor_t *sdor);
+bool sdor_end_sequence(sdor_t *sdor);
+bool sdor_begin_object(sdor_t *sdor);
+bool sdor_end_object(sdor_t *sdor);
+uint32_t sdo_read_uint(sdor_t *sdor);
+int sdo_read_string_sz(sdor_t *sdor);
+int sdo_read_array_sz(sdor_t *sdor);
+int sdo_read_array_no_state_change(sdor_t *sdor, uint8_t *buf);
+int sdo_read_string(sdor_t *sdor, char *bufp, int buf_sz);
+int sdo_read_tag(sdor_t *sdor, char *bufp, int buf_sz);
+bool sdo_read_tag_finisher(sdor_t *sdor);
+int sdo_read_expected_tag(sdor_t *sdor, const char *tag);
+int sdo_read_byte_array_field(sdor_t *sdor, int b64Sz, uint8_t *bufp,
+			      int buf_sz);
 
-bool sdoWInit(SDOW_t *sdow);
-void sdoWBlockReset(SDOW_t *sdow);
-int sdoWNextBlock(SDOW_t *sdow, int type);
-int sdoWCreateFixup(SDOW_t *sdow);
-void sdoWFixFixup(SDOW_t *sdow, int cursorPosn, int fixup);
-void sdoWBeginSequence(SDOW_t *sdow);
-void sdoWEndSequence(SDOW_t *sdow);
-void sdoWBeginObject(SDOW_t *sdow);
-void sdoWEndObject(SDOW_t *sdow);
-void sdoWriteTag(SDOW_t *sdow, char *tag);
-void sdoWriteTagLen(SDOW_t *sdow, char *tag, int len);
-void sdoWriteUInt(SDOW_t *sdow, uint32_t i);
-void sdoWriteString(SDOW_t *sdow, const char *s);
-void sdoWriteStringLen(SDOW_t *sdow, char *s, int len);
-void sdoWriteBigNumField(SDOW_t *sdow, uint8_t *bufp, int bufSz);
-void sdoWriteBigNum(SDOW_t *sdow, uint8_t *bufp, int bufSz);
-void sdoWriteByteArrayField(SDOW_t *sdow, uint8_t *bufp, int bufSz);
-void sdoWriteByteArray(SDOW_t *sdow, uint8_t *bufp, int bufSz);
-void sdoWriteByteArrayOneInt(SDOW_t *sdow, uint32_t val1, uint8_t *bufp,
-			     int bufSz);
-void sdoWriteByteArrayOneIntFirst(SDOW_t *sdow, uint32_t val1, uint8_t *bufp,
-				  int bufSz);
-void sdoRReadAndIgnoreUntil(SDOR_t *sdor, char expected);
-void sdoRReadAndIgnoreUntilEndSequence(SDOR_t *sdor);
-void sdoWriteByteArrayTwoInt(SDOW_t *sdow, uint8_t *bufIv, uint32_t bufIvSz,
-			     uint8_t *bufp, uint32_t bufSz);
+bool sdow_init(sdow_t *sdow);
+void sdow_block_reset(sdow_t *sdow);
+int sdow_next_block(sdow_t *sdow, int type);
+int sdow_create_fixup(sdow_t *sdow);
+void sdow_fix_fixup(sdow_t *sdow, int cursor_posn, int fixup);
+void sdow_begin_sequence(sdow_t *sdow);
+void sdow_end_sequence(sdow_t *sdow);
+void sdow_begin_object(sdow_t *sdow);
+void sdow_end_object(sdow_t *sdow);
+void sdo_write_tag(sdow_t *sdow, const char *tag);
+void sdo_write_tag_len(sdow_t *sdow, const char *tag, int len);
+void sdo_writeUInt(sdow_t *sdow, uint32_t i);
+void sdo_write_string(sdow_t *sdow, const char *s);
+void sdo_write_string_len(sdow_t *sdow, const char *s, int len);
+void sdo_write_big_num_field(sdow_t *sdow, uint8_t *bufp, int buf_sz);
+void sdo_write_big_num(sdow_t *sdow, uint8_t *bufp, int buf_sz);
+void sdo_write_byte_array_field(sdow_t *sdow, uint8_t *bufp, int buf_sz);
+void sdo_write_byte_array(sdow_t *sdow, uint8_t *bufp, int buf_sz);
+void sdo_write_byte_array_one_int(sdow_t *sdow, uint32_t val1, uint8_t *bufp,
+				  int buf_sz);
+void sdo_write_byte_array_one_int_first(sdow_t *sdow, uint32_t val1,
+					uint8_t *bufp, int buf_sz);
+void sdor_read_and_ignore_until(sdor_t *sdor, char expected);
+void sdor_read_and_ignore_until_end_sequence(sdor_t *sdor);
+void sdo_write_byte_array_two_int(sdow_t *sdow, uint8_t *buf_iv,
+				  uint32_t buf_iv_sz, uint8_t *bufp,
+				  uint32_t buf_sz);
 
 #if 0 // Deprecated
-int hexitToInt(int c);
-int intToHexit(int v);
-int sdoReadBigNumField(SDOR_t *sdor, uint8_t *bufp, int bufSz);
-int sdoReadBigNumAsteriskHack(SDOR_t *sdor, uint8_t *bufp, int bufSz,
-			      bool *haveAsterisk);
+int hexit_to_int(int c);
+int int_to_hexit(int v);
+int sdo_read_big_num_field(sdor_t *sdor, uint8_t *bufp, int buf_sz);
+int sdo_read_big_num_asterisk_hack(sdor_t *sdor, uint8_t *bufp, int buf_sz,
+			      bool *have_asterisk);
 #endif
 
 #endif /*__SDOBLOCKIO_H__ */

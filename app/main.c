@@ -31,16 +31,22 @@
 #endif
 
 #define STORAGE_NAMESPACE "storage"
-#define OWNERSHIP_TRANSFER_FILE "owner_transfer"
+#define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
 #define ERROR_RETRY_COUNT 5
 
-static bool is_ownership_transfer(void)
+static bool is_ownership_transfer(bool do_resale)
 {
 	FILE *fp = NULL;
 	char state = 0;
-	sdoSdkStatus ret;
+	sdo_sdk_status ret;
 
-#ifdef TARGET_OS_LINUX
+	if (do_resale) {
+		state = '1';
+	} else {
+		return false;
+	}
+
+#ifdef RASALE_BASED_ON_FILE
 	fp = fopen(OWNERSHIP_TRANSFER_FILE, "r");
 	if (!fp)
 		return false;
@@ -54,9 +60,8 @@ static bool is_ownership_transfer(void)
 	if (fclose(fp) == EOF)
 		LOG(LOG_INFO, "Fclose Failed");
 #endif
-
 	if (state == '1') {
-		ret = sdoSdkResale();
+		ret = sdo_sdk_resale();
 		if (ret == SDO_ERROR) {
 			LOG(LOG_INFO,
 			    "Failed to set Ownership transfer app exits\n");
@@ -79,7 +84,8 @@ static bool is_ownership_transfer(void)
 			return true;
 		} else if (ret == SDO_RESALE_NOT_READY) {
 			/*Device is not yet ready for ownership transfer
-			 * First do the initial configuration*/
+			 * First do the initial configuration
+			 */
 			return false;
 		} else if (ret == SDO_RESALE_NOT_SUPPORTED) {
 			LOG(LOG_INFO, "Device doesn't support Resale\n");
@@ -94,40 +100,73 @@ static bool is_ownership_transfer(void)
  * in-turn calls another API, which finally register them to SDO.
  *
  * @return
- *        pointer to array of SvInfo modules.
+ *        pointer to array of Sv_info modules.
  */
-static sdoSdkServiceInfoModule *sdoSvInfoModulesInit(void)
+static sdo_sdk_service_info_module *sdo_sv_info_modules_init(void)
 {
-	sdoSdkServiceInfoModule *moduleInfo = NULL;
+	sdo_sdk_service_info_module *module_info = NULL;
 
 #ifdef MODULES_ENABLED
-	moduleInfo = malloc(SDO_MAX_MODULES * (sizeof(*moduleInfo)));
+	module_info = malloc(SDO_MAX_MODULES * (sizeof(*module_info)));
 
-	if (!moduleInfo) {
+	if (!module_info) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
 		return NULL;
 	}
 
 	/* module#1: sdo_sys */
-	if (strncpy_s(moduleInfo[0].moduleName, SDO_MODULE_NAME_LEN, "sdo_sys",
-		      SDO_MODULE_NAME_LEN) != 0) {
+	if (strncpy_s(module_info[0].module_name, SDO_MODULE_NAME_LEN,
+		      "sdo_sys", SDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
-		free(moduleInfo);
+		free(module_info);
 		return NULL;
 	}
-	moduleInfo[0].serviceInfoCallback = sdo_sys;
+	module_info[0].service_info_callback = sdo_sys;
+
+#if defined(EXTRA_MODULES)
+	/* module#2: devconfig */
+	if (strncpy_s(module_info[1].module_name, SDO_MODULE_NAME_LEN,
+		      "devconfig", SDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		free(module_info);
+		return NULL;
+	}
+	module_info[1].service_info_callback = devconfig;
+
+	/* module#3: keypair */
+	if (strncpy_s(module_info[2].module_name, SDO_MODULE_NAME_LEN,
+		      "keypair", SDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		free(module_info);
+		return NULL;
+	}
+	module_info[2].service_info_callback = keypair;
+
+#ifdef TARGET_OS_LINUX
+	/* module#4: pelionconfig (only supported on linux as of now) */
+	if (strncpy_s(module_info[3].module_name, SDO_MODULE_NAME_LEN,
+		      "pelionconfig", SDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		free(module_info);
+		return NULL;
+	}
+	module_info[3].service_info_callback = pelionconfig;
+#endif // #ifdef TARGET_OS_LINUX
+#endif
 #endif
 
-	return moduleInfo;
+	return module_info;
 }
 
-static int error_cb(sdoSdkStatus type, sdoSdkError errorcode)
+static int error_cb(sdo_sdk_status type, sdo_sdk_error errorcode)
 {
-	static unsigned int rv_timeout = 0;
-	static unsigned int conn_timeout = 0;
-	static unsigned int di_err = 0;
-	static unsigned int to1_err = 0;
-	static unsigned int to2_err = 0;
+	static unsigned int rv_timeout;
+	static unsigned int conn_timeout;
+	static unsigned int di_err;
+	static unsigned int to1_err;
+	static unsigned int to2_err;
+
+	(void)type;
 
 	switch (errorcode) {
 	case SDO_RV_TIMEOUT:
@@ -184,19 +223,19 @@ static int error_cb(sdoSdkStatus type, sdoSdkError errorcode)
 
 static void print_device_status(void)
 {
-	sdoSdkDeviceState status = SDO_STATE_ERROR;
+	sdo_sdk_device_state status = SDO_STATE_ERROR;
 
-	status = sdoSdkGetStatus();
+	status = sdo_sdk_get_status();
 	if (status == SDO_STATE_PRE_DI)
-		LOG(LOG_DEBUG, "Device is ready for DI \n");
+		LOG(LOG_DEBUG, "Device is ready for DI\n");
 	if (status == SDO_STATE_PRE_TO1)
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer \n");
+		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
 	if (status == SDO_STATE_IDLE)
 		LOG(LOG_DEBUG, "Device Ownership transfer Done\n");
 	if (status == SDO_STATE_RESALE)
 		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
 	if (status == SDO_STATE_ERROR)
-		LOG(LOG_DEBUG, "Error in getting device status \n");
+		LOG(LOG_DEBUG, "Error in getting device status\n");
 }
 
 /**
@@ -205,15 +244,16 @@ static void print_device_status(void)
  *        0 if success, -ve if error.
  */
 #ifdef TARGET_OS_LINUX
-int main(void)
+int main(int argc, char **argv)
 #elif defined TARGET_OS_FREERTOS
-int app_main()
+int app_main(bool is_resale)
 #else
-int app_main()
+int app_main(bool is_resale)
 #endif
 {
-	sdoSdkServiceInfoModule *moduleInfo;
+	sdo_sdk_service_info_module *module_info;
 
+	bool do_resale = false;
 	LOG(LOG_DEBUG, "Starting Secure Device Onboard\n");
 
 #ifdef SECURE_ELEMENT
@@ -223,39 +263,43 @@ int app_main()
 	}
 #endif /* SECURE_ELEMENT */
 
-	if (-1 == configureNormalBlob()) {
+	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");
 		return -1;
 	}
 
-	/* List and Init all SvInfo modules */
-	moduleInfo = sdoSvInfoModulesInit();
+	/* List and Init all Sv_info modules */
+	module_info = sdo_sv_info_modules_init();
 
-	if (!moduleInfo) {
-		LOG(LOG_DEBUG, "SvInfo Modules not loaded!\n");
+	if (!module_info) {
+		LOG(LOG_DEBUG, "Sv_info Modules not loaded!\n");
 	}
 
 	/* Init sdo sdk */
-	if (SDO_SUCCESS != sdoSdkInit(error_cb, SDO_MAX_MODULES, moduleInfo)) {
-		LOG(LOG_ERROR, "sdoSdkInit failed!!\n");
+	if (SDO_SUCCESS !=
+	    sdo_sdk_init(error_cb, SDO_MAX_MODULES, module_info)) {
+		LOG(LOG_ERROR, "sdo_sdk_init failed!!\n");
+		free(module_info);
 		return -1;
 	}
 
 	/* free the module related info
 	 * SDO has created the required DB
-	 * */
-	free(moduleInfo);
+	 */
+	free(module_info);
 
 #ifdef TARGET_OS_LINUX
 	/* Change stdout to unbuffered mode, without this we don't get logs
-	 * if app crashes */
+	 * if app crashes
+	 */
 	setbuf(stdout, NULL);
 #endif
 
 #if defined TARGET_OS_FREERTOS
 	static nvs_handle storage = -1;
 	int err = nvs_flash_init();
+
 	if (err != ESP_OK) {
 		LOG(LOG_ERROR, "esp32 NVS init Failed.\n");
 		return -1;
@@ -267,24 +311,35 @@ int app_main()
 		return -1;
 	}
 
-	sdoWifiInit();
+	sdo_wifi_init();
 #endif
 #if defined TARGET_OS_MBEDOS
 /* TODO: ad nvs and network */
 #endif
 
-	if (is_ownership_transfer())
+#if defined TARGET_OS_LINUX
+	if  (argc > 1 && *argv[1] == '1') {
+		do_resale = true;
+	}
+#else
+	if  (is_resale == true) {
+		do_resale = true;
+	}
+
+#endif
+	if (is_ownership_transfer(do_resale)) {
 		return 0;
+	}
 
 	print_device_status();
 
-	if (SDO_SUCCESS != sdoSdkRun()) {
+	if (SDO_SUCCESS != sdo_sdk_run()) {
 		LOG(LOG_ERROR, "Secure device onboarding failed\n");
 		return -1;
 	}
 
 #ifdef TARGET_OS_FREERTOS
-	sdoWifiExit();
+	sdo_wifi_exit();
 #endif
 	// Return 0 on success
 	return 0;

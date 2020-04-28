@@ -27,7 +27,7 @@
 		}                                                              \
 	}
 
-static const TPM2B_PUBLIC inPublicPrimaryKeyTemplate = {
+static const TPM2B_PUBLIC in_public_primary_key_template = {
     .size = 0,
     .publicArea =
 	{
@@ -41,29 +41,30 @@ static const TPM2B_PUBLIC inPublicPrimaryKeyTemplate = {
 		{
 		    .size = 0,
 		},
+
 	    .parameters.eccDetail = {.symmetric =
-					 {
-					     .algorithm = TPM2_ALG_AES,
-					     .keyBits.aes = 128,
-					     .mode.aes = TPM2_ALG_CFB,
-					 },
-				     .scheme =
-					 {
-					     .scheme = TPM2_ALG_NULL,
-					     .details = {},
-					 },
-				     .curveID = SDO_TPM2_CURVE_ID,
-				     .kdf = {.scheme = TPM2_ALG_NULL,
-					     .details = {}}},
+					  {
+					      .algorithm = TPM2_ALG_AES,
+					      .keyBits.aes = 128,
+					      .mode.aes = TPM2_ALG_CFB,
+					  },
+				      .scheme =
+					  {
+					      .scheme = TPM2_ALG_NULL,
+					      .details = {{0}},
+					  },
+				      .curveID = SDO_TPM2_CURVE_ID,
+				      .kdf = {.scheme = TPM2_ALG_NULL,
+					      .details = {{0}}}},
 	    .unique.ecc =
 		{
-		    .x = {.size = 0, .buffer = {}},
-		    .y = {.size = 0, .buffer = {}},
+		    .x = {.size = 0, .buffer = {0}},
+		    .y = {.size = 0, .buffer = {0}},
 		},
 	},
 };
 
-static const TPM2B_PUBLIC inPublicHMACKeyTemplate = {
+static const TPM2B_PUBLIC in_publicHMACKey_template = {
     .size = 0,
     .publicArea =
 	{
@@ -77,12 +78,13 @@ static const TPM2B_PUBLIC inPublicHMACKeyTemplate = {
 		{
 		    .size = 0,
 		},
+
 	    .parameters.keyedHashDetail =
 		{
 		    .scheme =
 			{
 			    .scheme = TPM2_ALG_NULL,
-			    .details = {},
+			    .details = {{0}},
 			},
 		},
 	    .unique.keyedHash =
@@ -93,10 +95,10 @@ static const TPM2B_PUBLIC inPublicHMACKeyTemplate = {
 	},
 };
 
-int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
-		      size_t hmacLength, char *tpmHMACPubKey,
-		      char *tpmHMACPrivKey);
-int32_t sdoTPMGenerateHMACKey(char *tpmHMACPubKey, char *tpmHMACPrivKey);
-int32_t isValidTPMDataProtectionKeyPresent(void);
+int32_t sdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
+			 size_t hmac_length, char *tpmHMACPub_key,
+			 char *tpmHMACPriv_key);
+int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key);
+int32_t is_valid_tpm_data_protection_key_present(void);
 
 #endif /* #ifndef __TPM20_UTILS_H__ */

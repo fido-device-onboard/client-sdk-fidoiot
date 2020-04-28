@@ -21,7 +21,7 @@ extern "C" {
 
 #ifdef TARGET_OS_OPTEE
 #include <tee_api.h>
-#define sdoFree(x)                                                             \
+#define sdo_free(x)                                                            \
 	{                                                                      \
 		TEE_Free(x);                                                   \
 		x = NULL;                                                      \
@@ -30,14 +30,14 @@ extern "C" {
 int atoi(char *ptr);
 int isalnum(int c);
 #else
-#define sdoFree(x)                                                             \
+#define sdo_free(x)                                                            \
 	{                                                                      \
 		free(x);                                                       \
 		x = NULL;                                                      \
 	}
 #endif
 
-#define b64charCheck(y)                                                        \
+#define b64char_check(y)                                                       \
 	if (!(isalnum(y) || '+' == y || '/' == y || '=' == y)) {               \
 		return -1;                                                     \
 	}
@@ -66,12 +66,18 @@ typedef enum log_level {
 			}                                                      \
 			if (level == LOG_DEBUG) {                              \
 				if (print_timestamp() != 0)                    \
-					printf("TimeStamp ERROR\n");           \
+					printf("Time_stamp ERROR\n");          \
 			}                                                      \
 			printf(__VA_ARGS__);                                   \
 		}                                                              \
 	}
 #endif
+
+#ifndef TARGET_OS_MBEDOS
+#define ATTRIBUTE_FALLTHROUGH __attribute__((fallthrough))
+#else
+#define ATTRIBUTE_FALLTHROUGH
+#endif /* TARGET_OS_MBEDOS */
 
 #define BUFF_SIZE_0_BYTES 0
 #define BUFF_SIZE_4_BYTES 4
@@ -163,7 +169,7 @@ int read_buffer_from_file(const char *filename, void *buffer, size_t size);
 /*
  * Allocate a buffer and set its contents to 0 before using it.
  */
-void *sdoAlloc(int size);
+void *sdo_alloc(int size);
 
 /* Print timestamp */
 int print_timestamp(void);

@@ -40,31 +40,29 @@ encoded with the RSAMODEXP format:
 
  */
 
-/* **************************************************************************
-// CONVERT2PKEY
-// Convert a public key into an OpenSSL PKEY for use by the libcrypto routines
-//
-// PURPOSE: Convert a public key into an OpenSSL key
-//
-// REQUIRE: An public key in SDOPublicKey structure
-//          A pointer to a PKEY structure, which will be allocated by this
-routine
-//          using OpenSSL's EVP_PKEY alloc and free functions
-//
-// PROMISE: if SDOPublicKey is a valid RSA public key in version 0.5 structure
-in
-RSAMODENC
-//          this routine will take the modulus and public key and format them
-into a PKEY structure
-//
-// RESULT: Return 0 with the modulus and exponent placed into a the PKEY
-structure in the "out" parameter
-//         or return -1 on failure
-//
-// ************************************************************************** */
+/* **************************************************************************/
+/*  CONVERT2PKEY */
+/*  Convert a public key into an OpenSSL PKEY for use by the libcrypto */
+/* routines */
+/*  PURPOSE: Convert a public key into an OpenSSL key */
+
+/*  REQUIRE: An public key in SDOPublic_key structure */
+/*           A pointer to a PKEY structure, which will be allocated by this */
+/* routine */
+/*           using OpenSSL's EVP_PKEY alloc and free functions */
+
+/*  PROMISE: if SDOPublic_key is a valid RSA public key in version 0.5  */
+/* structure in RSAMODENC */
+/*           this routine will take the modulus and public key and format  */
+/* them into a PKEY structure */
+
+/*  RESULT: Return 0 with the modulus and exponent placed into a the PKEY */
+/* structure in the "out" parameter */
+/*          or return -1 on failure */
+/***************************************************************************/
 static int convert2pkey(EVP_PKEY **out, RSA **rsa_in, const uint8_t *key1,
-			uint32_t keyParam1Length1, const uint8_t *key2,
-			uint32_t keyParam1Length2)
+			uint32_t key_param1Length1, const uint8_t *key2,
+			uint32_t key_param1Length2)
 {
 	RSA *rsa = NULL;
 
@@ -89,7 +87,7 @@ static int convert2pkey(EVP_PKEY **out, RSA **rsa_in, const uint8_t *key1,
 		return -1;
 	}
 
-	BIGNUM *n = NULL;
+	BIGNUM * n = NULL;
 	BIGNUM *d = NULL;
 	BIGNUM *e = NULL;
 	BIGNUM *p = NULL;
@@ -101,32 +99,47 @@ static int convert2pkey(EVP_PKEY **out, RSA **rsa_in, const uint8_t *key1,
 	/* We need the RSA components non-NULL. */
 	if (rsa == NULL) {
 		return -1;
-	} else if ((n = BN_new()) == NULL) {
-		return -1;
-	} else if ((d = BN_new()) == NULL) {
-		return -1;
-	} else if ((e = BN_new()) == NULL) {
-		return -1;
-	} else if ((p = BN_new()) == NULL) {
-		return -1;
-	} else if ((q = BN_new()) == NULL) {
-		return -1;
-	} else if ((dmp1 = BN_new()) == NULL) {
-		return -1;
-	} else if ((dmq1 = BN_new()) == NULL) {
-		return -1;
-	} else if ((iqmp = BN_new()) == NULL) {
-		return -1;
 	}
-
+	n = BN_new();
+	if (n == NULL) {
+		goto err;
+	}
+	d = BN_new();
+	if (d == NULL) {
+		goto err;
+	}
+	e = BN_new();
+	if (e == NULL) {
+		goto err;
+	}
+	p = BN_new();
+	if (p == NULL) {
+		goto err;
+	}
+	q = BN_new();
+	if (q == NULL) {
+		goto err;
+	}
+	dmp1 = BN_new();
+	if (dmp1 == NULL) {
+		goto err;
+	}
+	dmq1 = BN_new();
+	if (dmq1 == NULL) {
+		goto err;
+	}
+	iqmp = BN_new();
+	if (iqmp == NULL) {
+		goto err;
+	}
 	/* Set verifier key's MODULUS. */
-	if (BN_bin2bn((const unsigned char *)key1, keyParam1Length1, n) ==
+	if (BN_bin2bn((const unsigned char *)key1, key_param1Length1, n) ==
 	    NULL) {
 		goto err;
 	}
 
 	/* Set verifier key's EXPONENT. */
-	if (BN_bin2bn((const unsigned char *)key2, keyParam1Length2, e) ==
+	if (BN_bin2bn((const unsigned char *)key2, key_param1Length2, e) ==
 	    NULL) {
 		goto err;
 	}
@@ -154,27 +167,29 @@ err:
 }
 
 /**
- * sdoCryptoRSAVerify
+ * sdo_cryptoRSAVerify
  * Verify an RSA PKCS v1.5 Signature using provided public key
- * @param keyEncoding - RSA Key encoding typee.
- * @param keyAlgorithm - RSA public key algorithm.
+ * @param key_encoding - RSA Key encoding typee.
+ * @param key_algorithm - RSA public key algorithm.
  * @param message - pointer of type uint8_t, holds the encoded message.
- * @param messageLength - size of message, type size_t.
- * @param messageSignature - pointer of type uint8_t, holds a valid
+ * @param message_length - size of message, type size_t.
+ * @param message_signature - pointer of type uint8_t, holds a valid
  *			PKCS v1.5 signature in big-endian format
- * @param signatureLength - size of signature, type unsigned int.
- * @param keyParam1 - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length - size of public key1, type size_t.
- * @param keyParam2 - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length - size of public key2, type size_t
+ * @param signature_length - size of signature, type unsigned int.
+ * @param key_param1 - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length - size of public key1, type size_t.
+ * @param key_param2 - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length - size of public key2, type size_t
  * @return 0 if true, else -1.
  */
-int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
-			   const uint8_t *message, uint32_t messageLength,
-			   const uint8_t *messageSignature,
-			   uint32_t signatureLength, const uint8_t *keyParam1,
-			   uint32_t keyParam1Length, const uint8_t *keyParam2,
-			   uint32_t keyParam2Length)
+int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
+			      const uint8_t *message, uint32_t message_length,
+			      const uint8_t *message_signature,
+			      uint32_t signature_length,
+			      const uint8_t *key_param1,
+			      uint32_t key_param1Length,
+			      const uint8_t *key_param2,
+			      uint32_t key_param2Length)
 {
 	int ret = 0;
 	RSA *rsa = NULL;
@@ -182,22 +197,22 @@ int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
 	uint8_t *hash = NULL;
 
 	/* Make sure we have a valid key type. */
-	if (keyEncoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    keyAlgorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type.\n");
 		ret = -1;
 		goto end;
 	}
 
-	if (NULL == keyParam1 || 0 == keyParam1Length || NULL == keyParam2 ||
-	    0 == keyParam2Length || NULL == messageSignature ||
-	    0 == signatureLength || NULL == message || 0 == messageLength) {
+	if (NULL == key_param1 || 0 == key_param1Length || NULL == key_param2 ||
+	    0 == key_param2Length || NULL == message_signature ||
+	    0 == signature_length || NULL == message || 0 == message_length) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		return -1;
 	}
 
-	if (convert2pkey(&pkey, &rsa, keyParam1, keyParam1Length, keyParam2,
-			 keyParam2Length) != 0) {
+	if (convert2pkey(&pkey, &rsa, key_param1, key_param1Length, key_param2,
+			 key_param2Length) != 0) {
 		LOG(LOG_ERROR, "Cannot convert public key to OpenSSL "
 			       "EVP_PKEY.\n ");
 		ret = -1;
@@ -205,8 +220,9 @@ int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
 	}
 
 	/* Verify that the signature is appropriate length for the
-	 * modulus of RSA key */
-	if (signatureLength != (unsigned int)RSA_size(rsa)) {
+	 * modulus of RSA key
+	 */
+	if (signature_length != (unsigned int)RSA_size(rsa)) {
 		LOG(LOG_ERROR, "Wrong size signature\n");
 		RSAerr(RSA_F_RSA_VERIFY_ASN1_OCTET_STRING,
 		       RSA_R_WRONG_SIGNATURE_LENGTH);
@@ -221,14 +237,14 @@ int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
 		ret = -1;
 		goto end;
 	}
-	if (SHA256((const unsigned char *)message, messageLength, hash) ==
+	if (SHA256((const unsigned char *)message, message_length, hash) ==
 	    NULL) {
 		ret = -1;
 		goto end;
 	}
 
 	if (1 != RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH,
-			    messageSignature, signatureLength, rsa)) {
+			    message_signature, signature_length, rsa)) {
 		ret = -1;
 	}
 end:

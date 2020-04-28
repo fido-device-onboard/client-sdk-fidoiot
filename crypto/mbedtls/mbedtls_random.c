@@ -7,6 +7,7 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 
+#include "sdoCrypto.h"
 #include "sdoCryptoHal.h"
 #include "safe_lib.h"
 #include "util.h"
@@ -18,7 +19,7 @@
 
 static mbedtls_ctr_drbg_context g_prng_ctx;
 static mbedtls_entropy_context g_entropy;
-static bool g_random_initialised = false;
+static bool g_random_initialised;
 
 /*
  * Routines like ECDSA sign required random generator context,
@@ -60,7 +61,10 @@ static int entropy_source(void *data, unsigned char *output, size_t len,
 	}
 	*olen = result;
 #elif defined(TARGET_OS_OPTEE)
-	if (sdoCryptoRandomBytes(output, len))
+	(void)fp;
+	(void)result;
+
+	if (sdo_crypto_random_bytes(output, len))
 		return -1;
 	*olen = len;
 #endif

@@ -1,30 +1,30 @@
-# For Arm* Mbed* Linux* (Arm* Cortex*-A7) OS-based implementation
+# For Arm* Mbed* Linux* (Arm Cortex*-A7) OS-based Implementation
 ## About
 
-This document can be used as a quick guide to build and execute Secure Device Onboard (SDO) client-sdk on the Arm Cortex-A7 platform running on the Mbed Linux OS. To build and execute the SDO client-sdk on other platforms (e.g. Linux* OS and Mbed* OS), refer to [this](setup.md) document.
+This document can be used as a quick guide to build and execute Secure Device Onboard (SDO) client-sdk on the Arm Cortex-A7 platform running the Arm Mbed* Linux* OS. To build and execute the SDO client-sdk on other platforms (e.g. Linux OS and Arm Mbed OS), refer to [this](setup.md) document.
 
 ## Hardware requirements:
-- WaRP7* development platform with [i.MX7S](https://www.nxp.com/products/processors-and-microcontrollers/arm-based-processors-and-mcus/i.mx-applications-processors/i.mx-7-processors/i.mx-7solo-processors-heterogeneous-processing-with-arm-cortex-a7-and-cortex-m4-cores:i.MX7S) processing unit.
+- WaRP7* development platform with an [i.MX 7Solo](https://www.nxp.com/products/processors-and-microcontrollers/arm-based-processors-and-mcus/i.mx-applications-processors/i.mx-7-processors/i.mx-7solo-processors-heterogeneous-processing-with-arm-cortex-a7-and-cortex-m4-cores:i.MX7S) processor.
 - Two MICROUSB cables (one for power supply, another for serial communication).
 
 ## Software requirements:
 
-This implementation is built using Yocto Project* and provides facilities to run  SDO client-sdk in the context of the Mbed Linux software. The following are the requirements:
+This implementation is built using Yocto Project* and provides facilities to run  SDO client-sdk in the context of the Arm Mbed Linux software. The following are the requirements:
 
-- Linux* OS (Ubuntu* OS version 16.04 LTS) as the host machine.
+- Linux OS (Ubuntu* OS version 16.04 LTS) as the host machine.
 - Arm cross-compiler, can be installed using the command:
 ```shell
 $ sudo apt-get install gcc-arm-linux-gnueabi gcc-multilib-arm-linux-gnueabi
 ```
 
-> **Note:** Compilation steps are documented in the [ sdo-client-sdk for Mbed Linux OS](mbed_linux.md) readme file.
+> **Note:** Compilation steps are documented in the [ sdo-client-sdk for Arm Mbed Linux OS](mbed_linux.md) readme file.
 
-## Building Mbed-linux
-Download and build the mbed-linux-os source code, after following the steps mentioned in [this](https://os.mbed.com/docs/mbed-linux-os/v0.5/getting-started/building-an-mbl-image.html) link. 
+## Building Arm Mbed Linux OS
+Download and build the Arm Mbed Linux OS source code, after following the steps mentioned in [this](https://os.mbed.com/docs/mbed-linux-os/v0.9/getting-started/building-an-mbl-image.html) link. 
 
-> **Note:** The current supported version of the Mbed Linux OS is `mbl-os-0.5`.
+> **Note:** The current supported version of the Arm Mbed Linux OS is `mbl-os-0.9`.
 
-On successful completion of the build, a new directory named `build-warp7` will be created.
+On successful build completion, a new directory named `build-warp7` will be created.
 
 ## Building required dependencies
 Place all required dependencies under the `build-warp7` directory for the final  SDO client-sdk build.
@@ -32,7 +32,7 @@ Place all required dependencies under the `build-warp7` directory for the final 
 ### Intel safestringlib
 Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, and follow these instructions to build safestringlib with the Arm cross-compiler:
 
-1. Clone `safestringlib` into `build-warp7` directory and checkout to tag `v1.0.0`:
+1. Clone `safestringlib` into the `build-warp7` directory and check out to tag `v1.0.0`:
 
 ```shell
 $ cd build-warp7/
@@ -54,10 +54,10 @@ $ mkdir obj
 $ make libsafestring.a
 ```
 
-After this step, the `libsafestring.a` library will be created.
+After this step, the `libsafestring.a` library is created.
 
-### Intel® Enhanced Privacy ID (Intel® EPID) SDK (optional)
-<a href="https://intel-epid-sdk.github.io/">Intel Epid SDK</a> can be downloaded and built by running the `build_epid-sdk.sh` script. Follow these instructions to build the Intel EPID SDK:
+### Intel(R) Enhanced Privacy ID [Intel(R) EPID] SDK (optional)
+<a href="https://intel-epid-sdk.github.io/">Intel EPID SDK</a> can be downloaded and built by running the `build_epid-sdk.sh` script. Follow these instructions to build the Intel EPID SDK:
 
 1. Copy `build_epid-sdk.sh` from the `<release-package-dir>/sdo-client-sdk/utils` to `build-warp7` directory:
 
@@ -65,7 +65,7 @@ After this step, the `libsafestring.a` library will be created.
 $ cp <release-package-dir>/sdo-client-sdk/utils/build_epid-sdk.sh build-warp7/
 ```
 
-2. Execute `build_epid-sdk.sh` to build epid-sdk with the Arm compiler:
+2. Execute `build_epid-sdk.sh` to build Intel EPID SDK with the Arm compiler:
 
 ```shell
 $ cd build-warp7/
@@ -92,7 +92,7 @@ $ cp sdo.tar.gz build-warp7/machine-imx7s-warp-mbl/mbl-manifest/layers/meta-inte
 
 >**Note:** By default, `c-code-sdk.bb` is configured with the default build configuration. To see the  SDO default configuration and other details, refer to the [Building  SDO c-code-sdk](build_conf.md) section of the `<release-package-dir>/c-code-sdk/README.md` document.
 
-4. Add the `meta-intel-sdo` layer information by setting the `BBLAYERS` flag in the BitBake (BB) configuration file (the BB configuration file can be found at `build-warp7/machine-imx7s-warp-mbl/mbl-manifest/conf/bblayers.conf`):
+4. Add the `meta-intel-sdo` layer information by setting the `BBLAYERS` flag in the BitBake configuration file (the BitBake configuration file can be found at `build-warp7/machine-imx7s-warp-mbl/mbl-manifest/conf/bblayers.conf`):
 
 ```shell
     BBLAYERS = ${OEROOT}/layer/meta-intel-sdo
@@ -104,14 +104,14 @@ $ cp sdo.tar.gz build-warp7/machine-imx7s-warp-mbl/mbl-manifest/layers/meta-inte
     IMAGE_INSTALL_APPEND = "c-code-sdk"
 ```
 
-6. Re-run the build command as you did in the [Building Mbed-linux](#building-mbed-linux) step.
+6. Re-run the build command as you did in the [Building Arm Mbed Linux OS](#building-mbed-linux) step.
 > **Note:** If the `imx7s-warp.dtb` file is not generated during build, refer to [this](https://github.com/WaRP7/linux-fslc/) link to generate the file.
 
 ## Flashing and preparing the device
 
-To flash the WaRP7 device with the build image, follow the steps in the [flashing-warp7-devices-mbed-linux](https://os.mbed.com/docs/mbed-linux-os/v0.6/first-image/warp7-devices.html) link.
+To flash the WaRP7 device with the build image, follow the steps in the [this](https://os.mbed.com/docs/mbed-linux-os/v0.6/first-image/warp7-devices.html) link.
 
-Once the device is flashed, use the [setting-up-a-wi-fi-connection](https://os.mbed.com/docs/mbed-linux-os/v0.6/first-image/connecting-to-a-network-and-pelion-device-management.html#setting-up-a-wi-fi-connection) link to connect the device to the Wi-Fi* network for the first time.
+After the device is flashed, use the [Setting up a WI-FI* connection](https://os.mbed.com/docs/mbed-linux-os/v0.6/first-image/connecting-to-a-network-and-pelion-device-management.html#setting-up-a-wi-fi-connection) link to connect the device to the Wi-Fi* network for the first time.
 
 ## Running  SDO
 After a successful flash, the  SDO Cortex-A7 device executable can be found at `<device-root>/opt/arm/linux-client`. Follow the steps in the [Execution](./linux.md#run_linux_sdo) section of [this](./linux.md) document to run the  SDO Cortex-A7 application against the  SDO Customer Reference Implementation (CRI) implementation.

@@ -28,26 +28,28 @@
 
 /**
  * Verify an RSA-SHA-256 signature using provided RSA Public Keys.
- * @param keyEncoding - RSA Key encoding typee.
- * @param keyAlgorithm - RSA public key algorithm.
+ * @param key_encoding - RSA Key encoding typee.
+ * @param key_algorithm - RSA public key algorithm.
  * @param message - pointer of type uint8_t, holds the encoded message.
- * @param messageLength - size of message, type size_t.
- * @param messageSignature - pointer of type uint8_t, holds a valid
+ * @param message_length - size of message, type size_t.
+ * @param message_signature - pointer of type uint8_t, holds a valid
  *			PKCS v1.5 signature in big-endian format
- * @param signatureLength - size of signature, type unsigned int.
- * @param keyParam1 - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length - size of public key1, type size_t.
- * @param keyParam2 - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length - size of public key2, type size_t
+ * @param signature_length - size of signature, type unsigned int.
+ * @param key_param1 - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length - size of public key1, type size_t.
+ * @param key_param2 - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length - size of public key2, type size_t
  * @return 0 if true, else -1.
 
  */
-int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
-			   const uint8_t *message, uint32_t messageLength,
-			   const uint8_t *messageSignature,
-			   uint32_t signatureLength, const uint8_t *keyParam1,
-			   uint32_t keyParam1Length, const uint8_t *keyParam2,
-			   uint32_t keyParam2Length)
+int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
+			      const uint8_t *message, uint32_t message_length,
+			      const uint8_t *message_signature,
+			      uint32_t signature_length,
+			      const uint8_t *key_param1,
+			      uint32_t key_param1Length,
+			      const uint8_t *key_param2,
+			      uint32_t key_param2Length)
 {
 	int ret;
 	unsigned char hash[32];
@@ -55,31 +57,37 @@ int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
 	mbedtls_pk_context ctx;
 
 	/* Check validity of key type. */
-	if (keyEncoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    keyAlgorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		return -1;
 	}
 
-	if (NULL == keyParam1 || 0 == keyParam1Length || NULL == keyParam2 ||
-	    0 == keyParam2Length || NULL == messageSignature ||
-	    0 == signatureLength || NULL == message || 0 == messageLength) {
+	if (NULL == key_param1 || 0 == key_param1Length || NULL == key_param2 ||
+	    0 == key_param2Length || NULL == message_signature ||
+	    0 == signature_length || NULL == message || 0 == message_length) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		return -1;
 	}
 
 	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
 
-	if ((ret = mbedtls_mpi_read_binary(&rsa.N, keyParam1,
-					   keyParam1Length)) != 0 ||
-	    (ret = mbedtls_mpi_read_binary(&rsa.E, keyParam2,
-					   keyParam2Length)) != 0) {
-		LOG(LOG_ERROR, "mbedtls_mpi_read_binary returned %d./n", ret);
+	ret = mbedtls_rsa_import_raw(&rsa,
+			       key_param1, key_param1Length,  /* N */
+			       NULL, 0, /* P */
+			       NULL, 0, /* Q */
+			       NULL, 0, /* D */
+			       key_param2, key_param2Length); /* E */
+
+	if (ret != 0) {
+		LOG(LOG_ERROR, "mbedtls_rsa_import_raw returned %d./n",
+		    ret);
 		ret = -1;
 		goto end;
 	}
+
 	rsa.len = (mbedtls_mpi_bitlen(&rsa.N) + 7) >> 3;
-	if (signatureLength != rsa.len) {
+	if (signature_length != rsa.len) {
 		LOG(LOG_ERROR, "Invalid RSA signature format.\n");
 		ret = -1;
 		goto end;
@@ -88,11 +96,13 @@ int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
 	mbedtls_pk_init(&ctx);
 	ctx.pk_ctx = &rsa;
 
-	mbedtls_sha256_ret((const unsigned char *)message, messageLength, hash,
+	mbedtls_sha256_ret((const unsigned char *)message, message_length, hash,
 			   0);
-	if ((ret = mbedtls_rsa_pkcs1_verify(
-		 &rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA256, 0,
-		 hash, messageSignature)) != 0) {
+
+	ret = mbedtls_rsa_pkcs1_verify(&rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC,
+				       MBEDTLS_MD_SHA256, 0,
+				       hash, message_signature);
+	if (ret != 0) {
 		LOG(LOG_ERROR, " mbedtls_rsa_pkcs1_verify returned %d.\n", ret);
 	}
 

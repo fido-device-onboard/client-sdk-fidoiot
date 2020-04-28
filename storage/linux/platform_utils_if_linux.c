@@ -22,7 +22,7 @@
  * @param datalen - length(in bytes) of data to be encrypted.
  * @retval true if IV is copied successfully, false otherwise.
  */
-bool getPlatformIV(uint8_t *iv, size_t len, size_t datalen)
+bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 {
 	bool retval = false;
 	FILE *fp = NULL;
@@ -48,7 +48,8 @@ bool getPlatformIV(uint8_t *iv, size_t len, size_t datalen)
 
 	if (fsize != PLATFORM_IV_DEFAULT_LEN * 2) {
 		/* generate new IV and store into file */
-		if ((p_iv = sdoAlloc(PLATFORM_IV_DEFAULT_LEN)) == NULL) {
+		p_iv = sdo_alloc(PLATFORM_IV_DEFAULT_LEN);
+		if (p_iv == NULL) {
 			LOG(LOG_ERROR, "Allocation failed for plaform IV!\n");
 			goto end;
 		}
@@ -56,7 +57,7 @@ bool getPlatformIV(uint8_t *iv, size_t len, size_t datalen)
 		LOG(LOG_DEBUG, "Generating platform IV of length: %zu\n",
 		    (size_t)PLATFORM_IV_DEFAULT_LEN);
 
-		if (_sdoCryptoRandomBytes(p_iv, PLATFORM_IV_DEFAULT_LEN)) {
+		if (crypto_hal_random_bytes(p_iv, PLATFORM_IV_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform IV failed!\n");
 			goto end;
@@ -88,7 +89,9 @@ bool getPlatformIV(uint8_t *iv, size_t len, size_t datalen)
 			goto end;
 		}
 	}
-	if (!(fp = fopen((const char *)PLATFORM_IV, "w"))) {
+
+	fp = fopen((const char *)PLATFORM_IV, "w");
+	if (!fp) {
 		LOG(LOG_ERROR, "Could not open platform IV file!\n");
 		goto end;
 	}
@@ -110,7 +113,7 @@ end:
 	if (fp)
 		fclose(fp);
 	if (p_iv)
-		sdoFree(p_iv);
+		sdo_free(p_iv);
 	return retval;
 }
 
@@ -122,7 +125,7 @@ end:
  * @param len - length(in bytes) of the KEY to be generated.
  * @retval true if Key is copied successfully, false otherwise.
  */
-bool getPlatformAESKey(uint8_t *key, size_t len)
+bool get_platform_aes_key(uint8_t *key, size_t len)
 {
 	bool retval = false;
 	FILE *fp = NULL;
@@ -146,13 +149,15 @@ bool getPlatformAESKey(uint8_t *key, size_t len)
 		LOG(LOG_DEBUG, "Generating platform AES Key of length: %zu\n",
 		    len);
 
-		if (_sdoCryptoRandomBytes(key, PLATFORM_AES_KEY_DEFAULT_LEN)) {
+		if (crypto_hal_random_bytes(key,
+					     PLATFORM_AES_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform AES Key failed!\n");
 			goto end;
 		}
 
-		if (!(fp = fopen((const char *)PLATFORM_AES_KEY, "w"))) {
+		fp = fopen((const char *)PLATFORM_AES_KEY, "w");
+		if (!fp) {
 			LOG(LOG_ERROR,
 			    "Could not open platform AES Key file!\n");
 			goto end;
@@ -190,7 +195,7 @@ end:
  * @retval true if key is copied successfully, false otherwise.
  */
 
-bool getPlatformHMACKey(uint8_t *key, size_t len)
+bool get_platform_hmac_key(uint8_t *key, size_t len)
 {
 	bool retval = false;
 	FILE *fp = NULL;
@@ -213,13 +218,15 @@ bool getPlatformHMACKey(uint8_t *key, size_t len)
 		LOG(LOG_DEBUG, "Generating platform HMAC Key of length: %zu\n",
 		    len);
 
-		if (_sdoCryptoRandomBytes(key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
+		if (crypto_hal_random_bytes(key,
+					     PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform HMAC Key failed!\n");
 			goto end;
 		}
 
-		if (!(fp = fopen((const char *)PLATFORM_HMAC_KEY, "w"))) {
+		fp = fopen((const char *)PLATFORM_HMAC_KEY, "w");
+		if (!fp) {
 			LOG(LOG_ERROR,
 			    "Could not open platform HMAC Key file!\n");
 			goto end;

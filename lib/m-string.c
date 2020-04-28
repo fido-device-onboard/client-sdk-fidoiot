@@ -12,8 +12,9 @@
 #include "sdoprot.h"
 #include "util.h"
 #include "safe_lib.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 #include "snprintf_s.h"
+#include "sdoCryptoHal.h"
 
 /*
  * Generate the "m" string value.
@@ -121,6 +122,7 @@ static int fill_base_m_string(uint8_t *m_string_bytes, size_t m_string_sz,
 	*ofs += strnlen_s(model_number, MAX_MODEL_NUMBER_SIZE) + 1;
 #else /* PK_ENC_RSA or DA = epid*/
 	/* Fill in the model number without NULL termination, no space for it */
+
 	ret = memcpy_s((char *)m_string_bytes + *ofs, m_string_sz - *ofs,
 		       model_number, model_number_len);
 	if (ret) {
@@ -140,51 +142,53 @@ err:
  * a. PK_ENC = rsa
  * b. PK_ENC = ecdsa DA = epid
  */
-int non_csr_m_string(SDOProt_t *ps)
+#if defined(EPID_DA) || defined(PK_ENC_RSA)
+static int non_csr_m_string(sdo_prot_t *ps)
 {
 	int ret = -1;
 	uint32_t ofs = 0;
 	size_t m_string_sz = 0;
-	SDOByteArray_t *m_string = NULL;
+	sdo_byte_array_t *m_string = NULL;
 
 	/* Get the total size of m-string (includes NULL + CSR) */
 	m_string_sz = get_base_m_string_size();
-	m_string = sdoByteArrayAlloc(m_string_sz);
+	m_string = sdo_byte_array_alloc(m_string_sz);
 	if (!m_string) {
 		LOG(LOG_ERROR, "Failed to allocate m-string buffer\n");
 		goto err;
 	}
 
 	/* Fill the base part of m-string */
-	ret = fill_base_m_string(m_string->bytes, m_string->byteSz, &ofs);
+	ret = fill_base_m_string(m_string->bytes, m_string->byte_sz, &ofs);
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to fill in base ecc m-string\n");
 		goto err;
 	}
 
-	sdoByteArrayWriteChars(&ps->sdow, m_string);
+	sdo_byte_array_write_chars(&ps->sdow, m_string);
 
 err:
 	if (m_string)
-		sdoByteArrayFree(m_string);
+		sdo_byte_array_free(m_string);
 	return ret;
 }
+#endif
 
 /**
  * Internal API
  */
 #if defined(PK_ENC_ECDSA)
 #if defined(ECDSA256_DA) || defined(ECDSA384_DA)
-int ps_get_m_string(SDOProt_t *ps)
+int ps_get_m_string(sdo_prot_t *ps)
 {
 	int ret = -1;
 	uint32_t ofs = 0;
 	size_t m_string_sz = 0;
-	SDOByteArray_t *csr = NULL;
-	SDOByteArray_t *m_string = NULL;
+	sdo_byte_array_t *csr = NULL;
+	sdo_byte_array_t *m_string = NULL;
 
 	/* Get the CSR data */
-	ret = sdoGetDeviceCsr(&csr);
+	ret = sdo_get_device_csr(&csr);
 	if (0 != ret) {
 		LOG(LOG_ERROR, "Unable to get device CSR\n");
 		goto err;
@@ -206,15 +210,15 @@ int ps_get_m_string(SDOProt_t *ps)
 #endif
 
 	/* Get the total size of m-string (includes NULL + CSR) */
-	m_string_sz = get_base_m_string_size() + (1 + csr->byteSz);
-	m_string = sdoByteArrayAlloc(m_string_sz);
+	m_string_sz = get_base_m_string_size() + (1 + csr->byte_sz);
+	m_string = sdo_byte_array_alloc(m_string_sz);
 	if (!m_string) {
 		LOG(LOG_ERROR, "Failed to allocate m-string buffer\n");
 		goto err;
 	}
 
 	/* Fill the base part of m-string */
-	ret = fill_base_m_string(m_string->bytes, m_string->byteSz, &ofs);
+	ret = fill_base_m_string(m_string->bytes, m_string->byte_sz, &ofs);
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to fill in base ecc m-string\n");
 		goto err;
@@ -222,23 +226,23 @@ int ps_get_m_string(SDOProt_t *ps)
 
 	/* Copy CSR */
 	ret = memcpy_s(m_string->bytes + ofs, m_string_sz - ofs, csr->bytes,
-		       csr->byteSz);
+		       csr->byte_sz);
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to copy csr-data\n");
 		goto err;
 	}
 
-	sdoByteArrayWriteChars(&ps->sdow, m_string);
+	sdo_byte_array_write_chars(&ps->sdow, m_string);
 
 err:
 	if (m_string)
-		sdoByteArrayFree(m_string);
+		sdo_byte_array_free(m_string);
 	if (csr)
-		sdoByteArrayFree(csr);
+		sdo_byte_array_free(csr);
 	return ret;
 }
 #elif defined(EPID_DA)
-int ps_get_m_string(SDOProt_t *ps)
+int ps_get_m_string(sdo_prot_t *ps)
 {
 	/* Fill in the key id based on owner attestation */
 	if (snprintf_s_i(key_id, sizeof(key_id), "%u",
@@ -255,7 +259,7 @@ int ps_get_m_string(SDOProt_t *ps)
 /**
  * Internal API
  */
-int ps_get_m_string(SDOProt_t *ps)
+int ps_get_m_string(sdo_prot_t *ps)
 {
 	/* Fill in the key id */
 	if (snprintf_s_i(key_id, sizeof(key_id), "%u",
@@ -272,9 +276,9 @@ int ps_get_m_string(SDOProt_t *ps)
  * Internal API
  * TODO: Delete this function once manufacturer toolkit is ON by default
  */
-int ps_get_m_string(SDOProt_t *ps)
+int ps_get_m_string(sdo_prot_t *ps)
 {
-	sdoWriteString(&ps->sdow, "device-serial");
+	sdo_write_string(&ps->sdow, "device-serial");
 	return 0;
 }
 #endif

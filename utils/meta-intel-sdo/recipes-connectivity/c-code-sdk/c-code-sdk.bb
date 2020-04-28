@@ -32,8 +32,8 @@ export SAFESTRING_ROOT=${TOPDIR}/../../../safestringlib
 #export EPID_SDK_R6_ROOT=${TOPDIR}/../../../epid-sdk
 export MODULES=false
 export ARCH=arm
-CFLAGS="${CFLAGS}" make TLS=mbedtls PK_ENC=rsa DA=ecdsa256 pristine 
-CFLAGS="${CFLAGS}" make TLS=mbedtls PK_ENC=rsa DA=ecdsa256
+CFLAGS="${CFLAGS}" make TLS=mbedtls PK_ENC=rsa DA=ecdsa256 OPTIMIZE=1 pristine
+CFLAGS="${CFLAGS}" make TLS=mbedtls PK_ENC=rsa DA=ecdsa256 OPTIMIZE=1
 cd ${CUR_DIR}
 }
 

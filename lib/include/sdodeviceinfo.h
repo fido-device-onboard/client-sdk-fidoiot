@@ -13,21 +13,21 @@
 #define BIN_TYPE "x86"
 #define SEPARATOR ";"
 
-#elif TARGET_OS_FREERTOS
+#elif defined TARGET_OS_FREERTOS
 #define OS_NAME "FreeRTOS"
 #define ARCH "Esp"
 #define OS_VERSION "FreeRTOS-1.2"
 #define BIN_TYPE "ihex"
 #define SEPARATOR ";"
 
-#elif TARGET_OS_MBEDOS
+#elif defined TARGET_OS_MBEDOS
 #define OS_NAME "MbedOS"
 #define ARCH "CortexM"
 #define OS_VERSION "MbedOS-5.8"
 #define BIN_TYPE "arm"
 #define SEPARATOR ";"
 
-#elif TARGET_OS_OPTEE
+#elif defined TARGET_OS_OPTEE
 #define OS_NAME "optee"
 #define ARCH "armv8"
 #define OS_VERSION "1.0" /* FIXME: */

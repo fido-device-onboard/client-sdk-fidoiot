@@ -2,6 +2,7 @@
 # Copyright 2020 Intel Corporation
 # SPDX-License-Identifier: Apache 2.0
 #
+
 BASE_DIR := .
 
 include ./connection_settings.mk
@@ -10,7 +11,7 @@ include ../../../crypto/conf.mk
 
     $(shell ln -sfn $(SAFESTRING_ROOT) $(BASE_DIR)/safestring)
     $(shell ln -sfn ../../../lib lib)
-    $(shell ln -sfn ../../../hal hal)
+    $(shell ln -sfn ../../../network network)
     $(shell ln -sfn ../../../crypto crypto)
     $(shell ln -sfn ../../../storage storage)
     $(shell ln -sfn ../../../../app/main.c sdo/app_main.c)

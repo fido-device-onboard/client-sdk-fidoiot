@@ -27,6 +27,7 @@ void *sdo_ssl_setup(int sock)
 {
 	SSL_CTX *ctx = NULL;
 	SSL *ssl = NULL;
+
 	const SSL_METHOD *method;
 	const long flags =
 	    SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION;

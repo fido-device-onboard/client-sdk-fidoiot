@@ -20,16 +20,16 @@
  * --- Message Format Begins ---
  * {
  *      "n4": Nonce,  # Calcuate sign on Nonce for sigature freshness
- *      "eB": SigInfo # Information to use for signing
+ *      "eB": Sig_info # Information to use for signing
  * }
  * --- Message Format Ends
  *
  * --- eB for EPID 2.0 ---
  * {
- *     sigRLSize: UInt16 # Size of data in sigRL field
- * 	   sigRL	: Signature Revocation List
- * 	   publicKeySize: UInt16 Size of data in publicKey field
- * 	   publicKey: Group public key
+ *     sig_rlSize: UInt16 # Size of data in sig_rl field
+ * 	   sig_rl	: Signature Revocation List
+ * 	   public_key_size: UInt16 Size of data in public_key field
+ * 	   public_key: Group public key
  * }
  *
  * --- eB for ECDSA ---
@@ -38,51 +38,51 @@
  * }
  *
  */
-int32_t msg31(SDOProt_t *ps)
+int32_t msg31(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtTO1";
 	char buf[DEBUGBUFSZ] = {0};
 
 	/* Read network data from internal buffer */
-	if (!sdoProtRcvMsg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
 		ret = 0; /* Mark for retry */
 		goto err;
 	}
 
-	if (!sdoRBeginObject(&ps->sdor)) {
+	if (!sdor_begin_object(&ps->sdor)) {
 		goto err;
 	}
 
 	/* Read "n4" tag, and it's data */
-	if (!sdoReadExpectedTag(&ps->sdor, "n4")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "n4")) {
 		goto err;
 	}
 
-	ps->n4 = sdoByteArrayAlloc(SDO_NONCE_BYTES);
-	if (!ps->n4 || !sdoByteArrayReadChars(&ps->sdor, ps->n4)) {
+	ps->n4 = sdo_byte_array_alloc(SDO_NONCE_BYTES);
+	if (!ps->n4 || !sdo_byte_array_read_chars(&ps->sdor, ps->n4)) {
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "Received n4: %s\n",
-	    sdoNonceToString(ps->n4->bytes, buf, sizeof buf) ? buf : "");
+	    sdo_nonce_to_string(ps->n4->bytes, buf, sizeof buf) ? buf : "");
 
 	/* Read eB data: EPID or ECDSA */
-	if (!sdoReadExpectedTag(&ps->sdor, "eB")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "eB")) {
 		goto err;
 	}
 
 	/* Handle both EPID and ECDSA cases */
-	if (0 != sdoEBRead(&ps->sdor)) {
+	if (0 != sdo_eb_read(&ps->sdor)) {
 		LOG(LOG_ERROR, "EB read in message 31 failed\n");
 		goto err;
 	}
 
-	if (!sdoREndObject(&ps->sdor)) {
+	if (!sdor_end_object(&ps->sdor)) {
 		goto err;
 	}
 
-	sdoRFlush(&ps->sdor);
+	sdor_flush(&ps->sdor);
 
 	/* Updated state to move to msg32 */
 	ps->state = SDO_STATE_TO1_SND_PROVE_TO_SDO;

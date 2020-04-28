@@ -10,10 +10,10 @@
 
 #include "sdoprot.h"
 #include "util.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 
 /**
- * msg40() - TO2.HelloDevice
+ * msg40() - TO2.Hello_device
  * This message starts the Transfer of ownership of device to new owner. The
  * device sends some parameters to setup up trust with the owner
  *
@@ -25,58 +25,58 @@
  *     "kx": String, # Key exchange suite name (ASYM, RSA, ECDH)
  *     "cs": String, # Ciphersuite name
  *     "iv": IVData, # 12 bytes for CTR mode, 16 bytes for CBC
- *     "eA": SigInfo # Same as sent in msg30 to Rendezvous Server (RV)
+ *     "eA": Sig_info # Same as sent in msg30 to Rendezvous Server (RV)
  * }
  * --- Message Format Ends ---
  */
-int32_t msg40(SDOProt_t *ps)
+int32_t msg40(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char buf[DEBUGBUFSZ] = {0};
-	SDOString_t *kx = sdoGetDeviceKexMethod();
-	SDOString_t *cs = sdoGetDeviceCryptoSuite();
+	sdo_string_t *kx = sdo_get_device_kex_method();
+	sdo_string_t *cs = sdo_get_device_crypto_suite();
 
 	LOG(LOG_DEBUG, "SDO_STATE_T02_SND_HELLO_DEVICE: Starting\n");
 
-	sdoWNextBlock(&ps->sdow, SDO_TO2_HELLO_DEVICE);
+	sdow_next_block(&ps->sdow, SDO_TO2_HELLO_DEVICE);
 
 	/* Begin the message */
-	sdoWBeginObject(&ps->sdow);
+	sdow_begin_object(&ps->sdow);
 
 	/* Fill in the GUID */
-	sdoWriteTag(&ps->sdow, "g2");
-	sdoByteArrayWriteChars(&ps->sdow, ps->g2);
+	sdo_write_tag(&ps->sdow, "g2");
+	sdo_byte_array_write_chars(&ps->sdow, ps->g2);
 
 	/* Fill in the Nonce */
-	sdoWriteTag(&ps->sdow, "n5");
-	ps->n5 = sdoByteArrayAlloc(SDO_NONCE_BYTES);
+	sdo_write_tag(&ps->sdow, "n5");
+	ps->n5 = sdo_byte_array_alloc(SDO_NONCE_BYTES);
 	if (!ps->n5) {
 		LOG(LOG_ERROR, "Out of memory for n5 (nonce)\n");
 		goto err;
 	}
-	sdoNonceInitRand(ps->n5);
+	sdo_nonce_init_rand(ps->n5);
 	LOG(LOG_DEBUG, "Sending n5: %s\n",
-	    sdoNonceToString(ps->n5->bytes, buf, sizeof buf) ? buf : "");
-	sdoByteArrayWriteChars(&ps->sdow, ps->n5);
+	    sdo_nonce_to_string(ps->n5->bytes, buf, sizeof buf) ? buf : "");
+	sdo_byte_array_write_chars(&ps->sdow, ps->n5);
 
 	/* Fill in the public key encoding */
-	sdoWriteTag(&ps->sdow, "pe");
-	sdoWriteUInt(&ps->sdow, ps->keyEncoding);
+	sdo_write_tag(&ps->sdow, "pe");
+	sdo_writeUInt(&ps->sdow, ps->key_encoding);
 
 	/* Fill in the key exchange */
-	sdoWriteTag(&ps->sdow, "kx");
-	sdoWriteStringLen(&ps->sdow, kx->bytes, kx->byteSz);
+	sdo_write_tag(&ps->sdow, "kx");
+	sdo_write_string_len(&ps->sdow, kx->bytes, kx->byte_sz);
 
 	/* Fill in the ciphersuite info */
-	sdoWriteTag(&ps->sdow, "cs");
-	sdoWriteStringLen(&ps->sdow, cs->bytes, cs->byteSz);
+	sdo_write_tag(&ps->sdow, "cs");
+	sdo_write_string_len(&ps->sdow, cs->bytes, cs->byte_sz);
 
 	/* Write the eA info */
-	sdoWriteTag(&ps->sdow, "eA");
-	sdoGidWrite(&ps->sdow);
+	sdo_write_tag(&ps->sdow, "eA");
+	sdo_gid_write(&ps->sdow);
 
 	/* Close the JSON object */
-	sdoWEndObject(&ps->sdow);
+	sdow_end_object(&ps->sdow);
 
 	/* Mark to move to next message */
 	ps->state = SDO_STATE_TO2_RCV_PROVE_OVHDR;

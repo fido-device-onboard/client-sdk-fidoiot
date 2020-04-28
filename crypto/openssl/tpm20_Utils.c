@@ -14,57 +14,57 @@
 #include "sdoCryptoHal.h"
 #include "storage_al.h"
 
-static int32_t sdoTPMEsysContextInit(ESYS_CONTEXT **esysContext);
-static int32_t sdoTPMEsysAuthSessionInit(ESYS_CONTEXT *esysContext,
-					 ESYS_TR *sessionHandle);
-static int32_t sdoTPMTSSContextCleanUp(ESYS_CONTEXT **esysContext,
-				       ESYS_TR *authSessionHandle,
-				       ESYS_TR *primaryHandle);
-static int32_t sdoTPMGeneratePrimaryKeyContext(ESYS_CONTEXT **esysContext,
-					       ESYS_TR *primaryHandle,
-					       ESYS_TR *authSessionHandle);
+static int32_t sdoTPMEsys_context_init(ESYS_CONTEXT **esys_context);
+static int32_t sdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
+					    ESYS_TR *session_handle);
+static int32_t sdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
+					 ESYS_TR *auth_session_handle,
+					 ESYS_TR *primary_handle);
+static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
+						  ESYS_TR *primary_handle,
+						  ESYS_TR *auth_session_handle);
 
 /**
  * Generates HMAC using TPM
  *
  * @param data: pointer to the input data
- * @param dataLength: length of the input data
+ * @param data_length: length of the input data
  * @param hmac: output buffer to save the HMAC
- * @param hmacLength: length of the output HMAC buffer, equal to the SHA256 hash
- *length
- * @param tpmHMACPubKey: File name of the TPM HMAC public key
- * @param tpmHMACPrivKey: File name of the TPM HMAC private key
+ * @param hmac_length: length of the output HMAC buffer, equal to the SHA256
+ *hash length
+ * @param tpmHMACPub_key: File name of the TPM HMAC public key
+ * @param tpmHMACPriv_key: File name of the TPM HMAC private key
  * @return
  *	0, on success
  *	-1, on failure
  */
-int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
-		      size_t hmacLength, char *tpmHMACPubKey,
-		      char *tpmHMACPrivKey)
+int32_t sdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
+			 size_t hmac_length, char *tpmHMACPub_key,
+			 char *tpmHMACPriv_key)
 {
-	int32_t ret = -1, retVal = -1, fileSize = 0;
-	size_t hashedLength = 0;
+	int32_t ret = -1, ret_val = -1, file_size = 0;
+	size_t hashed_length = 0;
 	size_t offset = 0;
-	uint8_t bufferTPMHMACPrivKey[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
-	uint8_t bufferTPMHMACPubKey[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
-	ESYS_CONTEXT *esysContext = NULL;
-	ESYS_TR primaryKeyHandle = ESYS_TR_NONE;
-	ESYS_TR authSessionHandle = ESYS_TR_NONE;
-	ESYS_TR hmacKeyHandle = ESYS_TR_NONE;
-	ESYS_TR sequenceHandle = ESYS_TR_NONE;
+	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
+	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
+	ESYS_CONTEXT *esys_context = NULL;
+	ESYS_TR primary_key_handle = ESYS_TR_NONE;
+	ESYS_TR auth_session_handle = ESYS_TR_NONE;
+	ESYS_TR hmac_key_handle = ESYS_TR_NONE;
+	ESYS_TR sequence_handle = ESYS_TR_NONE;
 	TPMT_TK_HASHCHECK *validation = NULL;
-	TPM2B_PUBLIC unmarshalHMACPubKey = {0};
-	TPM2B_PRIVATE unmarshalHMACPrivKey = {0};
+	TPM2B_PUBLIC unmarshalHMACPub_key = {0};
+	TPM2B_PRIVATE unmarshalHMACPriv_key = {0};
 	TPM2B_DIGEST *outHMAC = NULL;
 	TPM2B_MAX_BUFFER block = {0};
-	TPM2B_AUTH nullAuth = {0};
+	TPM2B_AUTH null_auth = {0};
 
 	LOG(LOG_DEBUG, "HMAC generation from TPM function called.\n");
 
 	/* Validating all input parameters are passed in the function call*/
 
-	if (!data || !dataLength || !tpmHMACPubKey || !tpmHMACPrivKey ||
-	    !hmac || (hmacLength != SHA256_DIGEST_SIZE)) {
+	if (!data || !data_length || !tpmHMACPub_key || !tpmHMACPriv_key ||
+	    !hmac || (hmac_length != SHA256_DIGEST_SIZE)) {
 		LOG(LOG_ERROR,
 		    "Failed to generate HMAC from TPM, invalid parameter"
 		    " received.\n");
@@ -75,8 +75,9 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 
 	/*Creating TPM Primary Key Context*/
 
-	if (0 != sdoTPMGeneratePrimaryKeyContext(
-		     &esysContext, &primaryKeyHandle, &authSessionHandle)) {
+	if (0 != sdoTPMGenerate_primary_key_context(&esys_context,
+						    &primary_key_handle,
+						    &auth_session_handle)) {
 		LOG(LOG_ERROR,
 		    "Failed to create primary key context from TPM.\n");
 		goto err;
@@ -86,9 +87,9 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 
 	/* Unmarshalling the HMAC Private key from the HMAC Private key file*/
 
-	fileSize = get_file_size(tpmHMACPrivKey);
+	file_size = get_file_size(tpmHMACPriv_key);
 
-	if (fileSize != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
+	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
 		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
 		goto err;
 	}
@@ -96,10 +97,10 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 	LOG(LOG_DEBUG,
 	    "TPM HMAC Private Key file size retreived successfully.\n");
 
-	retVal = read_buffer_from_file(tpmHMACPrivKey, bufferTPMHMACPrivKey,
-				       fileSize);
+	ret_val = read_buffer_from_file(tpmHMACPriv_key, bufferTPMHMACPriv_key,
+					file_size);
 
-	if (retVal != 0) {
+	if (ret_val != 0) {
 		LOG(LOG_ERROR,
 		    "Failed to load TPM HMAC Private Key into buffer.\n");
 		goto err;
@@ -108,10 +109,10 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 	LOG(LOG_DEBUG, "TPM HMAC Private Key file content copied successfully"
 		       " to buffer.\n");
 
-	retVal = Tss2_MU_TPM2B_PRIVATE_Unmarshal(
-	    bufferTPMHMACPrivKey, fileSize, &offset, &unmarshalHMACPrivKey);
+	ret_val = Tss2_MU_TPM2B_PRIVATE_Unmarshal(
+	    bufferTPMHMACPriv_key, file_size, &offset, &unmarshalHMACPriv_key);
 
-	if (retVal != TSS2_RC_SUCCESS) {
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to unmarshal TPM HMAC Private Key.\n");
 		goto err;
 	}
@@ -121,9 +122,9 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 
 	/* Unmarshalling the HMAC Public key from the HMAC public key file*/
 
-	fileSize = get_file_size(tpmHMACPubKey);
+	file_size = get_file_size(tpmHMACPub_key);
 
-	if (fileSize != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
+	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
 		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
 		goto err;
 	}
@@ -131,10 +132,10 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 	LOG(LOG_DEBUG,
 	    "TPM HMAC Public Key file size retreived successfully.\n");
 
-	retVal =
-	    read_buffer_from_file(tpmHMACPubKey, bufferTPMHMACPubKey, fileSize);
+	ret_val = read_buffer_from_file(tpmHMACPub_key, bufferTPMHMACPub_key,
+					file_size);
 
-	if (retVal != 0) {
+	if (ret_val != 0) {
 		LOG(LOG_ERROR,
 		    "Failed to load TPM HMAC Public key into buffer.\n");
 		goto err;
@@ -145,10 +146,10 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 
 	offset = 0;
 
-	retVal = Tss2_MU_TPM2B_PUBLIC_Unmarshal(bufferTPMHMACPubKey, fileSize,
-						&offset, &unmarshalHMACPubKey);
+	ret_val = Tss2_MU_TPM2B_PUBLIC_Unmarshal(
+	    bufferTPMHMACPub_key, file_size, &offset, &unmarshalHMACPub_key);
 
-	if (retVal != TSS2_RC_SUCCESS) {
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to unmarshal TPM HMAC Public Key.\n");
 		goto err;
 	}
@@ -159,11 +160,12 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 	/* Loading the TPM Primary key, HMAC public key and HMAC Private Key to
 	 * generate the HMAC Key Context */
 
-	retVal = Esys_Load(esysContext, primaryKeyHandle, authSessionHandle,
-			   ESYS_TR_NONE, ESYS_TR_NONE, &unmarshalHMACPrivKey,
-			   &unmarshalHMACPubKey, &hmacKeyHandle);
+	ret_val =
+	    Esys_Load(esys_context, primary_key_handle, auth_session_handle,
+		      ESYS_TR_NONE, ESYS_TR_NONE, &unmarshalHMACPriv_key,
+		      &unmarshalHMACPub_key, &hmac_key_handle);
 
-	if (retVal != TSS2_RC_SUCCESS) {
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to load HMAC Key Context.\n");
 		goto err;
 	}
@@ -172,13 +174,13 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 
 	/* Generating HMAC for input data, blockwise*/
 
-	if (dataLength <= TPM2_MAX_DIGEST_BUFFER) {
+	if (data_length <= TPM2_MAX_DIGEST_BUFFER) {
 
-		block.size = dataLength;
-		retVal = memcpy_s(block.buffer, sizeof(block.buffer), data,
-				  dataLength);
+		block.size = data_length;
+		ret_val = memcpy_s(block.buffer, sizeof(block.buffer), data,
+				   data_length);
 
-		if (retVal != 0) {
+		if (ret_val != 0) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
 			goto err;
 		}
@@ -186,11 +188,12 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 		LOG(LOG_DEBUG, "Data copied from input buffer to TPM data"
 			       " structure.\n");
 
-		retVal = Esys_HMAC(
-		    esysContext, hmacKeyHandle, authSessionHandle, ESYS_TR_NONE,
-		    ESYS_TR_NONE, &block, TPM2_ALG_SHA256, &outHMAC);
+		ret_val =
+		    Esys_HMAC(esys_context, hmac_key_handle,
+			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
+			      &block, TPM2_ALG_SHA256, &outHMAC);
 
-		if (retVal != TSS2_RC_SUCCESS) {
+		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
 			goto err;
 		}
@@ -199,11 +202,12 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 
 	} else {
 
-		retVal = Esys_HMAC_Start(
-		    esysContext, hmacKeyHandle, authSessionHandle, ESYS_TR_NONE,
-		    ESYS_TR_NONE, &nullAuth, TPM2_ALG_SHA256, &sequenceHandle);
+		ret_val = Esys_HMAC_Start(esys_context, hmac_key_handle,
+					  auth_session_handle, ESYS_TR_NONE,
+					  ESYS_TR_NONE, &null_auth,
+					  TPM2_ALG_SHA256, &sequence_handle);
 
-		if (retVal != TSS2_RC_SUCCESS) {
+		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
 			goto err;
 		}
@@ -211,18 +215,18 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 		LOG(LOG_DEBUG,
 		    "HMAC generation initiated for data sequence.\n");
 
-		while (hashedLength != dataLength) {
+		while (hashed_length != data_length) {
 
-			if ((dataLength - hashedLength) <=
+			if ((data_length - hashed_length) <=
 			    TPM2_MAX_DIGEST_BUFFER) {
 
-				block.size = (dataLength - hashedLength);
-				retVal =
+				block.size = (data_length - hashed_length);
+				ret_val =
 				    memcpy_s(block.buffer, sizeof(block.buffer),
-					     data + hashedLength,
-					     (dataLength - hashedLength));
+					     data + hashed_length,
+					     (data_length - hashed_length));
 
-				if (retVal != 0) {
+				if (ret_val != 0) {
 					LOG(LOG_ERROR,
 					    "Failed to create HMAC.\n");
 					goto err;
@@ -232,13 +236,13 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 					       "sequence to TPM"
 					       " data structure.\n");
 
-				retVal = Esys_SequenceComplete(
-				    esysContext, sequenceHandle,
-				    authSessionHandle, ESYS_TR_NONE,
+				ret_val = Esys_SequenceComplete(
+				    esys_context, sequence_handle,
+				    auth_session_handle, ESYS_TR_NONE,
 				    ESYS_TR_NONE, &block, TPM2_RH_NULL,
 				    &outHMAC, &validation);
 
-				if (retVal != TSS2_RC_SUCCESS) {
+				if (ret_val != TSS2_RC_SUCCESS) {
 					LOG(LOG_ERROR,
 					    "Failed to create HMAC.\n");
 					goto err;
@@ -247,17 +251,17 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 				LOG(LOG_DEBUG, "HMAC generation for data "
 					       "sequence completed"
 					       " successfully.\n");
-				hashedLength = dataLength;
+				hashed_length = data_length;
 
 			} else {
 
 				block.size = TPM2_MAX_DIGEST_BUFFER;
-				retVal =
+				ret_val =
 				    memcpy_s(block.buffer, sizeof(block.buffer),
-					     data + hashedLength,
+					     data + hashed_length,
 					     TPM2_MAX_DIGEST_BUFFER);
 
-				if (retVal != 0) {
+				if (ret_val != 0) {
 					LOG(LOG_ERROR,
 					    "Failed to create HMAC.\n");
 					goto err;
@@ -267,12 +271,12 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 				    "Data copied from input buffer sequence"
 				    " to TPM data structure.\n");
 
-				retVal = Esys_SequenceUpdate(
-				    esysContext, sequenceHandle,
-				    authSessionHandle, ESYS_TR_NONE,
+				ret_val = Esys_SequenceUpdate(
+				    esys_context, sequence_handle,
+				    auth_session_handle, ESYS_TR_NONE,
 				    ESYS_TR_NONE, &block);
 
-				if (retVal != TSS2_RC_SUCCESS) {
+				if (ret_val != TSS2_RC_SUCCESS) {
 					LOG(LOG_ERROR,
 					    "Failed to create HMAC.\n");
 					goto err;
@@ -281,20 +285,20 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 				LOG(LOG_DEBUG,
 				    "Sequence handle updated successfully.\n");
 
-				hashedLength =
-				    hashedLength + TPM2_MAX_DIGEST_BUFFER;
+				hashed_length =
+				    hashed_length + TPM2_MAX_DIGEST_BUFFER;
 			}
 		}
 	}
 
-	if (!outHMAC || (hmacLength != outHMAC->size)) {
+	if (!outHMAC || (hmac_length != outHMAC->size)) {
 		LOG(LOG_ERROR, "Incorrect HMAC Generated\n");
 		goto err;
 	}
 
-	retVal = memcpy_s(hmac, hmacLength, outHMAC->buffer, outHMAC->size);
+	ret_val = memcpy_s(hmac, hmac_length, outHMAC->buffer, outHMAC->size);
 
-	if (retVal != 0) {
+	if (ret_val != 0) {
 		LOG(LOG_ERROR, "Failed to copy HMAC.\n");
 		goto err;
 	}
@@ -306,9 +310,9 @@ int32_t sdoTPMGetHMAC(const uint8_t *data, size_t dataLength, uint8_t *hmac,
 	ret = 0;
 
 err:
-	if (esysContext) {
-		if (hmacKeyHandle != ESYS_TR_NONE) {
-			if (Esys_FlushContext(esysContext, hmacKeyHandle) !=
+	if (esys_context) {
+		if (hmac_key_handle != ESYS_TR_NONE) {
+			if (Esys_FlushContext(esys_context, hmac_key_handle) !=
 			    TSS2_RC_SUCCESS) {
 				LOG(LOG_ERROR,
 				    "Failed to flush HMAC key handle.\n");
@@ -316,12 +320,12 @@ err:
 			} else {
 				LOG(LOG_DEBUG,
 				    "HMAC key handle flushed successfully.\n");
-				hmacKeyHandle = ESYS_TR_NONE;
+				hmac_key_handle = ESYS_TR_NONE;
 			}
 		}
-		if (0 != sdoTPMTSSContextCleanUp(&esysContext,
-						 &authSessionHandle,
-						 &primaryKeyHandle)) {
+		if (0 != sdoTPMTSSContext_clean_up(&esys_context,
+						   &auth_session_handle,
+						   &primary_key_handle)) {
 			LOG(LOG_ERROR,
 			    "Failed to tear down all the TSS context.\n");
 			ret = -1;
@@ -338,91 +342,94 @@ err:
 /**
  * Generates HMAC Key inside TPM
  *
- * @param tpmHMACPubKey: File name of the TPM HMAC public key
- * @param tpmHMACPrivKey: File name of the TPM HMAC private key
+ * @param tpmHMACPub_key: File name of the TPM HMAC public key
+ * @param tpmHMACPriv_key: File name of the TPM HMAC private key
  * @return
  *		0, on success
  *		-1, on failure
  */
-int32_t sdoTPMGenerateHMACKey(char *tpmHMACPubKey, char *tpmHMACPrivKey)
+int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 {
 	int32_t ret = -1;
-	TSS2_RC retVal = TPM2_RC_FAILURE;
-	ESYS_CONTEXT *esysContext = NULL;
-	ESYS_TR primaryKeyHandle = ESYS_TR_NONE;
-	ESYS_TR authSessionHandle = ESYS_TR_NONE;
-	TPM2B_PUBLIC *outPublic = NULL;
-	TPM2B_PRIVATE *outPrivate = NULL;
-	TPM2B_CREATION_DATA *creationData = NULL;
-	TPM2B_DIGEST *creationHash = NULL;
-	TPMT_TK_CREATION *creationTicket = NULL;
-	TPM2B_PUBLIC inPublic = inPublicHMACKeyTemplate;
-	TPM2B_SENSITIVE_CREATE inSensitivePrimary = {0};
-	TPM2B_DATA outsideInfo = {0};
+	TSS2_RC ret_val = TPM2_RC_FAILURE;
+	ESYS_CONTEXT *esys_context = NULL;
+	ESYS_TR primary_key_handle = ESYS_TR_NONE;
+	ESYS_TR auth_session_handle = ESYS_TR_NONE;
+	TPM2B_PUBLIC *out_public = NULL;
+	TPM2B_PRIVATE *out_private = NULL;
+	TPM2B_CREATION_DATA *creation_data = NULL;
+	TPM2B_DIGEST *creation_hash = NULL;
+	TPMT_TK_CREATION *creation_ticket = NULL;
+	TPM2B_PUBLIC in_public = in_publicHMACKey_template;
+	TPM2B_SENSITIVE_CREATE in_sensitive_primary = {0};
+	TPM2B_DATA outside_info = {0};
 	TPML_PCR_SELECTION creationPCR = {0};
 	/* Using same buffer for both public and private context,
 	   private context size > public context size */
 	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	size_t offset = 0;
 
-	if (!tpmHMACPubKey || !tpmHMACPrivKey) {
+	if (!tpmHMACPub_key || !tpmHMACPriv_key) {
 		LOG(LOG_ERROR, "Failed to generate HMAC Key,"
 			       "invalid parameters received.\n");
 		goto err;
 	}
 
-	if ((file_exists(tpmHMACPubKey) && !remove(tpmHMACPubKey)) &&
-	    (file_exists(tpmHMACPrivKey) && !remove(tpmHMACPrivKey))) {
+	if ((file_exists(tpmHMACPub_key) && !remove(tpmHMACPub_key)) &&
+	    (file_exists(tpmHMACPriv_key) && !remove(tpmHMACPriv_key))) {
 		LOG(LOG_DEBUG, "Successfully deleted old HMAC key.\n");
-	} else if (file_exists(tpmHMACPubKey) || file_exists(tpmHMACPrivKey)) {
+	} else if (file_exists(tpmHMACPub_key) ||
+		   file_exists(tpmHMACPriv_key)) {
 		LOG(LOG_DEBUG, "HMAC key generation failed,"
 			       "failed to delete the old HMAC key.\n");
 		goto err;
 	}
 
-	if (0 != sdoTPMGeneratePrimaryKeyContext(
-		     &esysContext, &primaryKeyHandle, &authSessionHandle)) {
+	if (0 != sdoTPMGenerate_primary_key_context(&esys_context,
+						    &primary_key_handle,
+						    &auth_session_handle)) {
 		LOG(LOG_ERROR,
 		    "Failed to create primary key context from TPM.\n");
 		goto err;
 	}
 
-	retVal = Esys_Create(esysContext, primaryKeyHandle, authSessionHandle,
-			     ESYS_TR_NONE, ESYS_TR_NONE, &inSensitivePrimary,
-			     &inPublic, &outsideInfo, &creationPCR, &outPrivate,
-			     &outPublic, &creationData, &creationHash,
-			     &creationTicket);
+	ret_val = Esys_Create(esys_context, primary_key_handle,
+			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
+			      &in_sensitive_primary, &in_public, &outside_info,
+			      &creationPCR, &out_private, &out_public,
+			      &creation_data, &creation_hash, &creation_ticket);
 
-	if (retVal != TSS2_RC_SUCCESS) {
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to create HMAC Key.\n");
 		goto err;
 	}
 
-	retVal = Tss2_MU_TPM2B_PUBLIC_Marshal(outPublic, buffer, sizeof(buffer),
-					      &offset);
-	if (retVal != TSS2_RC_SUCCESS) {
+	ret_val = Tss2_MU_TPM2B_PUBLIC_Marshal(out_public, buffer,
+					       sizeof(buffer), &offset);
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR,
 		    "Failed to serialize the public HMAC key context.\n");
 		goto err;
 	}
-	if (offset !=
-	    sdoBlobWrite(tpmHMACPubKey, SDO_SDK_RAW_DATA, buffer, offset)) {
+
+	if ((int32_t)offset !=
+	    sdo_blob_write(tpmHMACPub_key, SDO_SDK_RAW_DATA, buffer, offset)) {
 		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "Saved HMAC public key context of size %zu.\n", offset);
 
 	offset = 0;
-	retVal = Tss2_MU_TPM2B_PRIVATE_Marshal(outPrivate, buffer,
-					       sizeof(buffer), &offset);
-	if (retVal != TSS2_RC_SUCCESS) {
+	ret_val = Tss2_MU_TPM2B_PRIVATE_Marshal(out_private, buffer,
+						sizeof(buffer), &offset);
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR,
 		    "Failed to serialize the private HMAC key context.\n");
 		goto err;
 	}
 
-	if (offset !=
-	    sdoBlobWrite(tpmHMACPrivKey, SDO_SDK_RAW_DATA, buffer, offset)) {
+	if ((int32_t)offset !=
+	    sdo_blob_write(tpmHMACPriv_key, SDO_SDK_RAW_DATA, buffer, offset)) {
 		LOG(LOG_ERROR,
 		    "Failed to save the private HMAC key context.\n");
 		goto err;
@@ -434,15 +441,15 @@ int32_t sdoTPMGenerateHMACKey(char *tpmHMACPubKey, char *tpmHMACPrivKey)
 	ret = 0;
 
 err:
-	TPM2_ZEROISE_FREE(outPublic);
-	TPM2_ZEROISE_FREE(outPrivate);
-	TPM2_ZEROISE_FREE(creationData);
-	TPM2_ZEROISE_FREE(creationHash);
-	TPM2_ZEROISE_FREE(creationTicket);
+	TPM2_ZEROISE_FREE(out_public);
+	TPM2_ZEROISE_FREE(out_private);
+	TPM2_ZEROISE_FREE(creation_data);
+	TPM2_ZEROISE_FREE(creation_hash);
+	TPM2_ZEROISE_FREE(creation_ticket);
 
-	if (esysContext &&
-	    (0 != sdoTPMTSSContextCleanUp(&esysContext, &authSessionHandle,
-					  &primaryKeyHandle))) {
+	if (esys_context &&
+	    (0 != sdoTPMTSSContext_clean_up(&esys_context, &auth_session_handle,
+					    &primary_key_handle))) {
 		LOG(LOG_ERROR, "Failed to tear down all the TSS context.\n");
 	}
 
@@ -452,54 +459,55 @@ err:
 /**
  * Generate TPM Primary key Context from endorsement Hierarchy
  *
- * @param esysContext : output Esys Context
- * @param primaryKeyHandle : output primary key handle
- * @param authSessionHandle : output auth sesson handle for Esys API
+ * @param esys_context : output Esys Context
+ * @param primary_key_handle : output primary key handle
+ * @param auth_session_handle : output auth sesson handle for Esys API
  * @return
  *		0, on success
  *		-1, on failure
  */
-static int32_t sdoTPMGeneratePrimaryKeyContext(ESYS_CONTEXT **esysContext,
-					       ESYS_TR *primaryKeyHandle,
-					       ESYS_TR *authSessionHandle)
+static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
+						  ESYS_TR *primary_key_handle,
+						  ESYS_TR *auth_session_handle)
 {
 	int ret = -1;
-	TSS2_RC retVal = TPM2_RC_FAILURE;
-	TPM2B_SENSITIVE_CREATE inSensitivePrimary = {0};
-	TPM2B_DATA outsideInfo = {0};
+	TSS2_RC ret_val = TPM2_RC_FAILURE;
+	TPM2B_SENSITIVE_CREATE in_sensitive_primary = {0};
+	TPM2B_DATA outside_info = {0};
 	TPML_PCR_SELECTION creationPCR = {0};
-	TPM2B_PUBLIC *outPublic = NULL;
-	TPM2B_CREATION_DATA *creationData = NULL;
-	TPM2B_DIGEST *creationHash = NULL;
-	TPMT_TK_CREATION *creationTicket = NULL;
-	TPM2B_PUBLIC inPublic = inPublicPrimaryKeyTemplate;
+	TPM2B_PUBLIC *out_public = NULL;
+	TPM2B_CREATION_DATA *creation_data = NULL;
+	TPM2B_DIGEST *creation_hash = NULL;
+	TPMT_TK_CREATION *creation_ticket = NULL;
+	TPM2B_PUBLIC in_public = in_public_primary_key_template;
 
-	if (!esysContext || !primaryKeyHandle || !authSessionHandle) {
+	if (!esys_context || !primary_key_handle || !auth_session_handle) {
 		LOG(LOG_ERROR, "Invalid parameter received.\n");
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "Generate Primary key context.\n");
 
-	if (0 != sdoTPMEsysContextInit(esysContext) || (!*esysContext)) {
+	if (0 != sdoTPMEsys_context_init(esys_context) || (!*esys_context)) {
 		LOG(LOG_ERROR, "Failed to Create Esys Context.\n");
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "Esys Context created succesfully!!\n");
 
-	if (0 != sdoTPMEsysAuthSessionInit(*esysContext, authSessionHandle)) {
+	if (0 !=
+	    sdoTPMEsys_auth_session_init(*esys_context, auth_session_handle)) {
 		LOG(LOG_ERROR, "Failed to create Auth Session for Esys API.\n");
 		goto err;
 	}
 
-	retVal = Esys_CreatePrimary(
-	    *esysContext, ESYS_TR_RH_ENDORSEMENT, *authSessionHandle,
-	    ESYS_TR_NONE, ESYS_TR_NONE, &inSensitivePrimary, &inPublic,
-	    &outsideInfo, &creationPCR, primaryKeyHandle, &outPublic,
-	    &creationData, &creationHash, &creationTicket);
+	ret_val = Esys_CreatePrimary(
+	    *esys_context, ESYS_TR_RH_ENDORSEMENT, *auth_session_handle,
+	    ESYS_TR_NONE, ESYS_TR_NONE, &in_sensitive_primary, &in_public,
+	    &outside_info, &creationPCR, primary_key_handle, &out_public,
+	    &creation_data, &creation_hash, &creation_ticket);
 
-	if (retVal != TSS2_RC_SUCCESS) {
+	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to create primary key.\n");
 		goto err;
 	}
@@ -508,16 +516,16 @@ static int32_t sdoTPMGeneratePrimaryKeyContext(ESYS_CONTEXT **esysContext,
 	goto out;
 
 err:
-	if (esysContext && *esysContext) {
-		sdoTPMTSSContextCleanUp(esysContext, authSessionHandle,
-					primaryKeyHandle);
+	if (esys_context && *esys_context) {
+		sdoTPMTSSContext_clean_up(esys_context, auth_session_handle,
+					  primary_key_handle);
 	}
 
 out:
-	TPM2_ZEROISE_FREE(outPublic);
-	TPM2_ZEROISE_FREE(creationData);
-	TPM2_ZEROISE_FREE(creationHash);
-	TPM2_ZEROISE_FREE(creationTicket);
+	TPM2_ZEROISE_FREE(out_public);
+	TPM2_ZEROISE_FREE(creation_data);
+	TPM2_ZEROISE_FREE(creation_hash);
+	TPM2_ZEROISE_FREE(creation_ticket);
 
 	return ret;
 }
@@ -525,32 +533,32 @@ out:
 /**
  * Initialize Esys context.
  *
- * @param esysContext : output Esys Context
+ * @param esys_context : output Esys Context
  *
  * @return
  *		0, on success
  *		-1, on failure
  */
-static int32_t sdoTPMEsysContextInit(ESYS_CONTEXT **esysContext)
+static int32_t sdoTPMEsys_context_init(ESYS_CONTEXT **esys_context)
 {
 	int ret = -1;
-	TSS2_TCTI_CONTEXT *tctiContext = NULL;
+	TSS2_TCTI_CONTEXT *tcti_context = NULL;
 
-	if (!esysContext) {
+	if (!esys_context) {
 		LOG(LOG_ERROR, "Invalid parameter received.\n");
 		goto err;
 	}
 
 	if ((TSS2_RC_SUCCESS !=
-	     Tss2_TctiLdr_Initialize(TPM2_TCTI_TYPE, &tctiContext)) ||
-	    (!tctiContext)) {
+	     Tss2_TctiLdr_Initialize(TPM2_TCTI_TYPE, &tcti_context)) ||
+	    (!tcti_context)) {
 		LOG(LOG_ERROR, "TCTI Context initialization failed.\n");
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "TCTI Initialized succesfully!!\n");
 
-	if (Esys_Initialize(esysContext, tctiContext, NULL) !=
+	if (Esys_Initialize(esys_context, tcti_context, NULL) !=
 	    TPM2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to intitialize Esys context.\n");
 		goto err;
@@ -559,8 +567,8 @@ static int32_t sdoTPMEsysContextInit(ESYS_CONTEXT **esysContext)
 	return 0;
 
 err:
-	if (tctiContext) {
-		Tss2_TctiLdr_Finalize(&tctiContext);
+	if (tcti_context) {
+		Tss2_TctiLdr_Finalize(&tcti_context);
 	}
 	return ret;
 }
@@ -568,24 +576,24 @@ err:
 /**
  * Create HMAC based auth session for Esys Context
  *
- * @param esysContext : input Esys Context
- * @param sessionHandle : output authentication session Handle
+ * @param esys_context : input Esys Context
+ * @param session_handle : output authentication session Handle
  *
  * @return
  *	0, on success
  *	-1, on failure
  */
-static int32_t sdoTPMEsysAuthSessionInit(ESYS_CONTEXT *esysContext,
-					 ESYS_TR *sessionHandle)
+static int32_t sdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
+					    ESYS_TR *session_handle)
 {
 	int ret = -1;
 	TPMT_SYM_DEF symmetric = {0};
 	symmetric.algorithm = TPM2_ALG_NULL;
 
 	TSS2_RC rval = Esys_StartAuthSession(
-	    esysContext, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
-	    ESYS_TR_NONE, NULL, TPM2_SE_HMAC, &symmetric, TPM2_ALG_SHA256,
-	    sessionHandle);
+	    esys_context, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
+	    ESYS_TR_NONE, ESYS_TR_NONE, NULL, TPM2_SE_HMAC, &symmetric,
+	    TPM2_ALG_SHA256, session_handle);
 	if (rval != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to start the auth session.\n");
 		return ret;
@@ -597,58 +605,58 @@ static int32_t sdoTPMEsysAuthSessionInit(ESYS_CONTEXT *esysContext,
 /**
  * Clear Esys, TCTI, contexts and Auth Session, Primary Key handles.
  *
- * @param esysContext : Esys Context to be cleared
- * @param authSessionHandle : Auth session Handle to be flushed
- * @param primaryHandle : Primary key handle to be cleared
+ * @param esys_context : Esys Context to be cleared
+ * @param auth_session_handle : Auth session Handle to be flushed
+ * @param primary_handle : Primary key handle to be cleared
  * @return
  *	0, on success
  *	-1, on failure
  */
-static int32_t sdoTPMTSSContextCleanUp(ESYS_CONTEXT **esysContext,
-				       ESYS_TR *authSessionHandle,
-				       ESYS_TR *primaryHandle)
+static int32_t sdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
+					 ESYS_TR *auth_session_handle,
+					 ESYS_TR *primary_handle)
 {
-	int ret = -1, isFailed = 0;
-	TSS2_TCTI_CONTEXT *tctiContext = NULL;
+	int ret = -1, is_failed = 0;
+	TSS2_TCTI_CONTEXT *tcti_context = NULL;
 
-	if (!esysContext || !*esysContext) {
+	if (!esys_context || !*esys_context) {
 		LOG(LOG_ERROR, "Invalid parameter received.\n");
 		return ret;
 	}
 
-	if (authSessionHandle && (*authSessionHandle != ESYS_TR_NONE)) {
-		if (Esys_FlushContext(*esysContext, *authSessionHandle) !=
+	if (auth_session_handle && (*auth_session_handle != ESYS_TR_NONE)) {
+		if (Esys_FlushContext(*esys_context, *auth_session_handle) !=
 		    TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR,
 			    "Failed to flush auth session handle.\n");
-			isFailed = 1;
+			is_failed = 1;
 		} else {
 			LOG(LOG_DEBUG,
 			    "Auth session handle flushed successfully.\n");
-			*authSessionHandle = ESYS_TR_NONE;
+			*auth_session_handle = ESYS_TR_NONE;
 		}
 	}
 
-	if (primaryHandle && (*primaryHandle != ESYS_TR_NONE)) {
-		if (Esys_FlushContext(*esysContext, *primaryHandle) !=
+	if (primary_handle && (*primary_handle != ESYS_TR_NONE)) {
+		if (Esys_FlushContext(*esys_context, *primary_handle) !=
 		    TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to flush primary key handle.\n");
-			isFailed = 1;
+			is_failed = 1;
 		} else {
 			LOG(LOG_DEBUG,
 			    "Primary key handle flushed successfully.\n");
-			*primaryHandle = ESYS_TR_NONE;
+			*primary_handle = ESYS_TR_NONE;
 		}
 	}
 
-	Esys_GetTcti(*esysContext, &tctiContext);
-	Esys_Finalize(esysContext);
+	Esys_GetTcti(*esys_context, &tcti_context);
+	Esys_Finalize(esys_context);
 
-	if (tctiContext) {
-		Tss2_TctiLdr_Finalize(&tctiContext);
+	if (tcti_context) {
+		Tss2_TctiLdr_Finalize(&tcti_context);
 	}
 
-	if (isFailed) {
+	if (is_failed) {
 		return ret;
 	}
 
@@ -662,7 +670,7 @@ static int32_t sdoTPMTSSContextCleanUp(ESYS_CONTEXT **esysContext,
  *		1, present
  *		0, not present
  */
-int32_t isValidTPMDataProtectionKeyPresent(void)
+int32_t is_valid_tpm_data_protection_key_present(void)
 {
 	return (file_exists(TPM_HMAC_DATA_PUB_KEY) &&
 		(TPM_HMAC_PUB_KEY_CONTEXT_SIZE ==

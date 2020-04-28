@@ -19,68 +19,74 @@
 
 /**
  * Verify an ECC P-256/P-384 signature using provided ECDSA Public Keys.
- * @param keyEncoding - encoding typee.
- * @param keyAlgorithm - public key algorithm.
+ * @param key_encoding - encoding typee.
+ * @param key_algorithm - public key algorithm.
  * @param message - pointer of type uint8_t, holds the encoded message.
- * @param messageLength - size of message, type size_t.
- * @param messageSignature - pointer of type uint8_t, holds a valid
+ * @param message_length - size of message, type size_t.
+ * @param message_signature - pointer of type uint8_t, holds a valid
  *			ecdsa signature in big-endian format
- * @param signatureLength - size of signature, type unsigned int.
- * @param keyParam1 - pointer of type uint8_t, holds the public key.
- * @param keyParam1Length - size of public key, type size_t.
- * @param keyParam2 - not used.
- * @param keyParam2Length - not used
+ * @param signature_length - size of signature, type unsigned int.
+ * @param key_param1 - pointer of type uint8_t, holds the public key.
+ * @param key_param1Length - size of public key, type size_t.
+ * @param key_param2 - not used.
+ * @param key_param2Length - not used
  * @return 0 if true, else -1.
 
  */
-int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
-			   const uint8_t *message, uint32_t messageLength,
-			   const uint8_t *messageSignature,
-			   uint32_t signatureLength, const uint8_t *keyParam1,
-			   uint32_t keyParam1Length, const uint8_t *keyParam2,
-			   uint32_t keyParam2Length)
+int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
+			      const uint8_t *message, uint32_t message_length,
+			      const uint8_t *message_signature,
+			      uint32_t signature_length,
+			      const uint8_t *key_param1,
+			      uint32_t key_param1Length,
+			      const uint8_t *key_param2,
+			      uint32_t key_param2Length)
 {
 	int32_t ret = -1;
 	EC_KEY *eckey = NULL;
 	uint8_t hash[SHA512_DIGEST_LENGTH] = {0};
-	size_t hashLength = 0;
-	const unsigned char *pubKey = (const unsigned char *)keyParam1;
+	size_t hash_length = 0;
+	const unsigned char *pub_key = (const unsigned char *)key_param1;
+
+	/* Unused parameter */
+	(void)key_param2;
+	(void)key_param2Length;
 
 	/* Check validity of key type. */
-	if (keyEncoding != SDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
-	    (keyAlgorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
-	     keyAlgorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
+	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
+	    (key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
+	     key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		goto end;
 	}
 
-	if (NULL == pubKey || 0 == keyParam1Length ||
-	    NULL == messageSignature || 0 == signatureLength ||
-	    NULL == message || 0 == messageLength) {
+	if (NULL == pub_key || 0 == key_param1Length ||
+	    NULL == message_signature || 0 == signature_length ||
+	    NULL == message || 0 == message_length) {
 		LOG(LOG_ERROR, "Invalid arguments!\n");
 		goto end;
 	}
 
 	/* generate required EC_KEY based on type */
-	if (keyAlgorithm == SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
+	if (key_algorithm == SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
 		eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 		/* Perform SHA-256 digest of the message */
-		if (SHA256((const unsigned char *)message, messageLength,
+		if (SHA256((const unsigned char *)message, message_length,
 			   hash) == NULL) {
 			LOG(LOG_ERROR, "SHA-256 calculation failed!\n");
 			goto end;
 		}
-		hashLength = SHA256_DIGEST_LENGTH;
+		hash_length = SHA256_DIGEST_LENGTH;
 
 	} else { // P-384
 		eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
 		/* Perform SHA-384 digest of the message */
-		if (SHA384((const unsigned char *)message, messageLength,
+		if (SHA384((const unsigned char *)message, message_length,
 			   hash) == NULL) {
 			LOG(LOG_ERROR, "SHA-384 calculation failed!\n");
 			goto end;
 		}
-		hashLength = SHA384_DIGEST_LENGTH;
+		hash_length = SHA384_DIGEST_LENGTH;
 	}
 
 	if (NULL == eckey) {
@@ -89,13 +95,13 @@ int32_t sdoCryptoSigVerify(uint8_t keyEncoding, uint8_t keyAlgorithm,
 	}
 
 	/* decode EC_KEY struct from DER encoded EC public key */
-	if (d2i_EC_PUBKEY(&eckey, &pubKey, (long)keyParam1Length) == NULL) {
+	if (d2i_EC_PUBKEY(&eckey, &pub_key, (long)key_param1Length) == NULL) {
 		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
 		goto end;
 	}
 
-	if (1 != ECDSA_verify(0, hash, hashLength, messageSignature,
-			      signatureLength, eckey)) {
+	if (1 != ECDSA_verify(0, hash, hash_length, message_signature,
+			      signature_length, eckey)) {
 		LOG(LOG_ERROR, "ECDSA Sig verification failed\n");
 		goto end;
 	}

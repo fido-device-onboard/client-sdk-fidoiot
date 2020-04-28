@@ -1,19 +1,20 @@
 # Linux* OS
-`Ubuntu* OS version 16.04/18.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute Secure Device Onboard (SDO).
+The development and execution OS used was `Ubuntu* OS version 16.04/18.04` on x86.. Follow these steps to compile and execute Secure Device Onboard (SDO).
 
-The SDO build and execution depend on OpenSSL* toolkit version 1.1.1c. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The SDO build and execution depend on OpenSSL* toolkit version 1.1.1f. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages requirements when building binaries (for Ubuntu OS version 16.04/18.04):
 
 ```shell
 $ sudo apt-get install python-setuptools clang-format dos2unix ruby \
-  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen
+  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-38-0 libmozjs-38- doxygen
 $ sudo easy_install pip
 $ sudo pip install docutils
 ```
 ## 2. Packages requirements when executing binaries (on Ubuntu OS version 16.04/18.04):
 
-OpenSSL toolkit version 1.1.1c
+OpenSSL toolkit version 1.1.1f
+GCC version > 7.5
 
 ## 3. Compiling Intel safestringlib
  SDO client-sdk uses safestringlib for string and memory operations to prevent serious security vulnerabilities (e.g. buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
@@ -24,7 +25,7 @@ From the root of the safestringlib, do the following:
  ```
 After this step, `libsafestring.a` library will be created.
 
-## 4. Compiling Intel® Enhanced Privacy ID (Intel® EPID) SDK – version 6.0.1
+## 4. Compiling Intel(R) Enhanced Privacy ID (Intel(R) EPID) SDK – version 6.0.1
 
 To use Intel EPID for device attestation (DA), Intel EPID SDK must be installed. If any other DA method is used (e.g. ECDSA), this step can be skipped.
 
@@ -37,7 +38,7 @@ $ ./configure
 $ make
 $ make install
 ```
-> **Note:** If `make` fails due to a misleading indentation error, add `-Wno-misleading-indentation` to compiler flags in the top-level Makefile.
+> **Note:** If `make` fails due to a misleading indentation error, add `-Wno-misleading-indentation` to compiler flags in the top-level makefile.
 
 
 ## 5. Environment Variables
@@ -50,7 +51,7 @@ $ export EPID_SDK_R6_ROOT=path/to/intel-epid-sdk-v6.0.1
 > **Note:** `EPID_SDK_R6_ROOT` is optional if the DA method is not Intel EPID.
 
 ## 6. Compiling Service Info Modules (optional)
-Provide the service-info device module path to use the  SDO service-info functionality:
+Provide the service info device module path to use the  SDO service info functionality:
 ```shell
 $ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
 ```
@@ -67,8 +68,8 @@ $ make TARGET_OS=linux BUILD=debug pristine
 $ make TARGET_OS=linux BUILD=debug
 ```
 
-Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), Public-key encoding (PK_ENC) type, and SSL support (TLS).
-Refer to the section [SDO Build configurations] (build_conf.md)
+Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), public-key encoding (PK_ENC) type, and SSL support (TLS).
+Refer to the section. [SDO Build configurations] (build_conf.md)
 
 <a name="run_linux_sdo"></a>
 
@@ -80,7 +81,7 @@ To test the  SDO Linux device against the  SDO Java CRI implementation, obtain t
 After a successful compilation, the  SDO Linux device executable can be found at `<path-to-sdo-client-sdk>/build/linux/${BUILD}/linux-client`.
 > **Note:** ${BUILD} can be either `debug` or `release` based on the compilation step.
 
-- Before executing `linux-client`, prepare for Device Initialization (DI) using
+- Before executing `linux-client`, prepare for Device Initialization (DI) using the
   manufacturer CRI. Refer to [ DI CRI Setup](DI_setup.md). After the manufacturer CRI is set up,
   execute `linux-client`. The device is now initialized with the credentials and is ready for ownership transfer.
 To run the device against the manufacturer CRI for the DI protocol, do the following:
@@ -88,7 +89,7 @@ To run the device against the manufacturer CRI for the DI protocol, do the follo
   $ ./build/linux/${BUILD}/linux-client
   ```
 
-- To enable the device for owner transfer, configure the rendezvous and owner CRIs.
+- To enable the device for ownership transfer, configure the rendezvous and owner CRIs.
   Refer to [ Ownership Transfer Setup ](ownership_transfer.md). After these
   CRIs are set up, execute `linux-client` again.
   
@@ -96,20 +97,20 @@ To run the device against the manufacturer CRI for the DI protocol, do the follo
   $ ./build/linux/${BUILD}/linux-client
   ```
 
-**Steps to upgrade the OpenSSL toolkit to version 1.1.1c**
+**Steps to upgrade the OpenSSL toolkit to version 1.1.1f**
 
 1. If libssl-dev is installed, remove it:
 ```shell
 sudo apt-get remove --auto-remove libssl-dev
 sudo apt-get remove --auto-remove libssl-dev:i386
 ```
-2. Pull the tarball: wget https://www.openssl.org/source/openssl-1.1.1c.tar.gz
+2. Pull the tarball: wget https://www.openssl.org/source/openssl-1.1.1f.tar.gz
 
-3. Unpack the tarball with `tar -zxf openssl-1.1.1c.tar.gz && cd openssl-1.1.1c`
+3. Unpack the tarball with `tar -zxf openssl-1.1.1f.tar.gz && cd openssl-1.1.1f`
 
 4. Issue the command `./config`.
 
-5. Issue the command `make ` (You may need to run “sudo apt install make gcc” before running this command successfully).
+5. Issue the command `make ` (You may need to run ‘sudo apt install make gcc’ before running this command successfully).
 
 6. Run `make test` to check for possible errors.
 
@@ -133,5 +134,5 @@ sudo apt-get remove --auto-remove libssl-dev:i386
     Your output should be as follows:
 
     ```
-    OpenSSL 1.1.1c  28 May 2019
+	OpenSSL 1.1.1f  31 Mar 2020
     ```

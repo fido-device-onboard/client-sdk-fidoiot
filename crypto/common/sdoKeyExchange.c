@@ -10,29 +10,29 @@
 #include "snprintf_s.h"
 #include "stdlib.h"
 #include "sdoCryptoCtx.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 
 /* Static functions */
-static int32_t removeJavaCompatibleByteArray(SDOByteArray_t *BArray);
+static int32_t remove_java_compatible_byte_array(sdo_byte_array_t *BArray);
 
-/***********************************************************************************/
+/******************************************************************************/
 /**
- * sdoKexInit() - Initialize key exchange context
+ * sdo_kex_init() - Initialize key exchange context
  * Initialize the key exchange context which can be done at init time
  * o Key Exchange algorithm (DH, AYSM, ECDH, ECDH384)
  * o Cipher Suite to be used (AESxxx/CTRorCBC/HMAC-SHAyyy)
  * o If it's ECDH, perform the 1st step of ECDH
  */
-int32_t sdoKexInit(void)
+int32_t sdo_kex_init(void)
 {
 	char cs[32];
 	int32_t ret = -1;
-	sdoKexCtx_t *kex_ctx = getsdoKeyCtx();
-	sdoTo2SymEncCtx_t *to2sym_ctx = getsdoTO2Ctx();
+	sdo_kex_ctx_t *kex_ctx = getsdo_key_ctx();
+	sdo_to2Sym_enc_ctx_t *to2sym_ctx = get_sdo_to2_ctx();
 	size_t ofs = 0;
 
 	/* Allocate kex string */
-	kex_ctx->kx = sdoStringAllocWithStr(KEX);
+	kex_ctx->kx = sdo_string_alloc_with_str(KEX);
 	if (!kex_ctx->kx) {
 		LOG(LOG_ERROR, "Failed to allocate kex info\n");
 		goto err;
@@ -53,90 +53,90 @@ int32_t sdoKexInit(void)
 	/* Construct the cs string: AESxxx/CTRorCBC/HMAC-SHAyyy */
 	snprintf_s_i(cs, sizeof(cs), "AES%u/", AES_BITS);
 	ofs = strnlen_s(cs, sizeof(cs));
-	snprintf_s_si(cs + ofs, sizeof(cs) - ofs, "%s/HMAC-SHA%u", AES_MODE,
-		      HMAC_MODE);
+	snprintf_s_si(cs + ofs, sizeof(cs) - ofs, "%s/HMAC-SHA%u",
+		      (char *)AES_MODE, HMAC_MODE);
 
-	kex_ctx->cs = sdoStringAllocWithStr(cs);
+	kex_ctx->cs = sdo_string_alloc_with_str(cs);
 	if (!kex_ctx->cs) {
 		LOG(LOG_ERROR, "Failed to allocate cs info\n");
 		goto err;
 	}
 
 	/* Allocate buffer for Session Encryption Key (SEK) */
-	to2sym_ctx->keyset.sek = sdoByteArrayAlloc(SEK_KEY_SIZE);
+	to2sym_ctx->keyset.sek = sdo_byte_array_alloc(SEK_KEY_SIZE);
 	if (!to2sym_ctx->keyset.sek)
 		goto err;
 
-	to2sym_ctx->keyset.svk = sdoByteArrayAlloc(SVK_KEY_SIZE);
+	to2sym_ctx->keyset.svk = sdo_byte_array_alloc(SVK_KEY_SIZE);
 	if (!to2sym_ctx->keyset.svk)
 		goto err;
 
-	if (sdoCryptoKEXInit(&(kex_ctx->context))) {
+	if (crypto_hal_kex_init(&(kex_ctx->context))) {
 		goto err;
 	}
 
 	/* Fill out the labels */
-	kex_ctx->kdfLabel = "MarshalPointKDF";
-	kex_ctx->sekLabel = "AutomaticProvisioning-cipher";
-	kex_ctx->svkLabel = "AutomaticProvisioning-hmac";
+	kex_ctx->kdf_label = "MarshalPointKDF";
+	kex_ctx->sek_label = "AutomaticProvisioning-cipher";
+	kex_ctx->svk_label = "AutomaticProvisioning-hmac";
 
 	ret = 0; /* Mark as success */
 
 err:
 	if (ret) {
-		sdoKexClose();
+		sdo_kex_close();
 	}
 	return ret;
 }
 
 /**
- * sdoKexClose() - release kex context
+ * sdo_kex_close() - release kex context
  */
-int32_t sdoKexClose(void)
+int32_t sdo_kex_close(void)
 {
-	struct sdoKexCtx *kex_ctx = getsdoKeyCtx();
-	sdoTo2SymEncCtx_t *to2sym_ctx = getsdoTO2Ctx();
+	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
+	sdo_to2Sym_enc_ctx_t *to2sym_ctx = get_sdo_to2_ctx();
 	/* Free "KEX" string (Key Exchange) */
 	if (kex_ctx->kx) {
-		sdoStringFree(kex_ctx->kx);
+		sdo_string_free(kex_ctx->kx);
 		kex_ctx->kx = NULL;
 	}
 
 	/* Free "Cipher Suite" string */
 	if (kex_ctx->cs) {
-		sdoStringFree(kex_ctx->cs);
+		sdo_string_free(kex_ctx->cs);
 		kex_ctx->cs = NULL;
 	}
 
 	/* Free "Key Exchange" information sent from device */
 	if (kex_ctx->xB) {
-		sdoByteArrayFree(kex_ctx->xB);
+		sdo_byte_array_free(kex_ctx->xB);
 		kex_ctx->xB = NULL;
 	}
 
 	/* TODO: Final initial secret */
-	if (kex_ctx->initialSecret) {
-		sdoByteArrayFree(kex_ctx->initialSecret);
-		kex_ctx->initialSecret = NULL;
+	if (kex_ctx->initial_secret) {
+		sdo_byte_array_free(kex_ctx->initial_secret);
+		kex_ctx->initial_secret = NULL;
 	}
 
-	/* Cleanup sdoTo2SymEncCtx_t */
+	/* Cleanup sdo_to2Sym_enc_ctx_t */
 	if (to2sym_ctx->keyset.sek) {
-		sdoByteArrayFree(to2sym_ctx->keyset.sek);
+		sdo_byte_array_free(to2sym_ctx->keyset.sek);
 		to2sym_ctx->keyset.sek = NULL;
 	}
 	if (to2sym_ctx->keyset.svk) {
-		sdoByteArrayFree(to2sym_ctx->keyset.svk);
+		sdo_byte_array_free(to2sym_ctx->keyset.svk);
 		to2sym_ctx->keyset.svk = NULL;
 	}
 
-	if (to2sym_ctx->initializationVector) {
-		sdoFree(to2sym_ctx->initializationVector);
-		to2sym_ctx->initializationVector = NULL;
+	if (to2sym_ctx->initialization_vector) {
+		sdo_free(to2sym_ctx->initialization_vector);
+		to2sym_ctx->initialization_vector = NULL;
 	}
 
 	if (kex_ctx->context) {
-		sdoCryptoKEXClose((void *)&kex_ctx->context);
+		crypto_hal_kex_close((void *)&kex_ctx->context);
 		kex_ctx->context = NULL;
 	}
 
@@ -146,13 +146,14 @@ int32_t sdoKexClose(void)
 /**
  * Internal API
  */
-static int32_t setEncryptKey(SDOPublicKey_t *encryptKey)
+static int32_t set_encrypt_key(sdo_public_key_t *encrypt_key)
 {
 #ifdef KEX_ASYM_ENABLED
-	struct sdoKexCtx *kex_ctx = getsdoKeyCtx();
-	return setEncryptKeyAsym(kex_ctx->context, encryptKey);
+	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
+
+	return set_encrypt_key_asym(kex_ctx->context, encrypt_key);
 #endif
-	(void)encryptKey;
+	(void)encrypt_key;
 	return 0;
 }
 
@@ -164,58 +165,57 @@ static int32_t setEncryptKey(SDOPublicKey_t *encryptKey)
  * @return B secret to be suared with other side of connection
  *	encrypted or clear based on encryption mode
  */
-int32_t sdoGetKexParamB(SDOByteArray_t **xB)
+int32_t sdo_get_kex_paramB(sdo_byte_array_t **xB)
 {
 	int32_t ret = -1;
-	sdoKexCtx_t *kex_ctx = getsdoKeyCtx();
+	sdo_kex_ctx_t *kex_ctx = getsdo_key_ctx();
 	uint32_t bufsize = 0;
-	SDOByteArray_t *tmp_xB = NULL;
+	sdo_byte_array_t *tmp_xB = NULL;
 
 	if (!xB) {
 		return -1;
 	}
-
 	if (*xB != NULL) {
-		sdoByteArrayFree(*xB);
+		sdo_byte_array_free(*xB);
 		*xB = NULL;
 	}
 
-	if (sdoCryptoGetDeviceRandom(kex_ctx->context, NULL, &bufsize)) {
+	if (crypto_hal_get_device_random(kex_ctx->context, NULL, &bufsize)) {
 		return -1;
 	}
 
-	tmp_xB = sdoByteArrayAlloc(bufsize);
+	tmp_xB = sdo_byte_array_alloc(bufsize);
 	if (!tmp_xB) {
 		goto err;
 	}
 
-	if (sdoCryptoGetDeviceRandom(kex_ctx->context, tmp_xB->bytes,
-				     &bufsize)) {
+	if (crypto_hal_get_device_random(kex_ctx->context, tmp_xB->bytes,
+					 &bufsize)) {
 		goto err;
 	}
-
 	/* if not clean clean it */
 	if (kex_ctx->xB != NULL) {
-		sdoByteArrayFree(kex_ctx->xB);
+		sdo_byte_array_free(kex_ctx->xB);
+		kex_ctx->xB = NULL;
 	}
 	kex_ctx->xB = tmp_xB;
 	*xB = kex_ctx->xB;
 	ret = 0;
 err:
 	if (ret && tmp_xB) {
-		sdoByteArrayFree(tmp_xB);
+		sdo_byte_array_free(tmp_xB);
 		*xB = NULL;
 	}
 	return ret;
 }
 
-static int32_t removeJavaCompatibleByteArray(SDOByteArray_t *BArray)
+static int32_t remove_java_compatible_byte_array(sdo_byte_array_t *BArray)
 {
 	if (BArray && BArray->bytes) {
 		if (BArray->bytes[0] == 0x00) {
-			if (!memmove_s(BArray->bytes, BArray->byteSz - 1,
-				       &BArray->bytes[1], BArray->byteSz - 1))
-				BArray->byteSz--;
+			if (!memmove_s(BArray->bytes, BArray->byte_sz - 1,
+				       &BArray->bytes[1], BArray->byte_sz - 1))
+				BArray->byte_sz--;
 			else
 				return -1;
 		}
@@ -230,11 +230,11 @@ static int32_t removeJavaCompatibleByteArray(SDOByteArray_t *BArray)
  */
 
 static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size,
-			   SDOByteArray_t *shse, bool svk, bool svk384)
+			   sdo_byte_array_t *shse, bool svk, bool svk384)
 {
 	int ret = -1;
-	struct sdoKexCtx *kex_ctx = getsdoKeyCtx();
-	const char *label = kex_ctx->sekLabel;
+	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
+	const char *label = kex_ctx->sek_label;
 	size_t ofs = 0;
 	uint8_t idx0_val = 0x1; /* for keymat1 */
 
@@ -245,21 +245,21 @@ static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size,
 		} else {
 			idx0_val = 0x3;
 		}
-		label = kex_ctx->svkLabel;
+		label = kex_ctx->svk_label;
 	}
 	keymat[ofs] = idx0_val;
 	ofs += 1;
 
 	/* Fill in the kdflabel */
 	if (strncpy_s((char *)&keymat[ofs], keymat_size - ofs,
-		      kex_ctx->kdfLabel,
-		      strnlen_s(kex_ctx->kdfLabel, SDO_MAX_STR_SIZE))) {
+		      kex_ctx->kdf_label,
+		      strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE))) {
 		LOG(LOG_ERROR, "Failed to fill kdf label in key Material 1\n");
 		goto err;
 	}
-	ofs += strnlen_s(kex_ctx->kdfLabel, SDO_MAX_STR_SIZE);
+	ofs += strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE);
 
-	/* Follow the kdfLabel by 0 */
+	/* Follow the kdf_label by 0 */
 	keymat[ofs] = 0x00;
 	ofs += 1;
 
@@ -273,7 +273,7 @@ static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size,
 
 	/* Fill in the shared secret */
 	if (memcpy_s(&keymat[ofs], keymat_size - ofs, shse->bytes,
-		     shse->byteSz)) {
+		     shse->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy shared secret\n");
 		goto err;
 	}
@@ -284,56 +284,58 @@ err:
 	return ret;
 }
 
-/* Get Shared Secret SheShe */
-static SDOByteArray_t *getSecret(void)
+/* Get Shared Secret She_she */
+static sdo_byte_array_t *get_secret(void)
 {
-	SDOByteArray_t *b = NULL;
+	sdo_byte_array_t *b = NULL;
 	uint8_t *shared_secret_buffer = NULL;
 	uint32_t secret_size = 0;
-	struct sdoKexCtx *kex_ctx = getsdoKeyCtx();
-	sdoKexCtx_t *keyExData = (sdoKexCtx_t *)(getsdoKeyCtx());
+	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
+	sdo_kex_ctx_t *key_ex_data = (sdo_kex_ctx_t *)(getsdo_key_ctx());
 
-	if (sdoCryptoGetSecret(keyExData->context, NULL, &secret_size) != 0) {
-		LOG(LOG_ERROR, " sdoCryptoGetSecret failed");
+	if (crypto_hal_get_secret(key_ex_data->context, NULL, &secret_size) !=
+	    0) {
+		LOG(LOG_ERROR, " crypto_hal_get_secret failed");
 		return NULL;
 	}
 
-	shared_secret_buffer = sdoAlloc(secret_size);
+	shared_secret_buffer = sdo_alloc(secret_size);
 
 	if (!shared_secret_buffer) {
-		LOG(LOG_ERROR, " alloc of %d failed", secret_size);
+		LOG(LOG_ERROR, " alloc of %d failed", (int)secret_size);
 		return NULL;
 	}
 
-	if (sdoCryptoGetSecret(keyExData->context, shared_secret_buffer,
-			       &secret_size) != 0) {
-		LOG(LOG_ERROR, " sdoCryptoGetSecret failed");
+	if (crypto_hal_get_secret(key_ex_data->context, shared_secret_buffer,
+				  &secret_size) != 0) {
+		LOG(LOG_ERROR, " crypto_hal_get_secret failed");
 		goto err;
 	}
 
-	b = sdoByteArrayAllocWithByteArray(shared_secret_buffer, secret_size);
+	b = sdo_byte_array_alloc_with_byte_array(shared_secret_buffer,
+						 secret_size);
 
 	if (memset_s(shared_secret_buffer, secret_size, 0)) {
 		LOG(LOG_ERROR, "Failed to clear shared secret buffer\n");
 		goto err;
 	}
 
-	sdoFree(shared_secret_buffer);
+	sdo_free(shared_secret_buffer);
 
 	/* remove extra byte from bigendian java */
-	if (removeJavaCompatibleByteArray(b)) {
+	if (remove_java_compatible_byte_array(b)) {
 		goto err;
 	}
 
-	if (kex_ctx->initialSecret) {
-		sdoBitsFree(kex_ctx->initialSecret);
-		kex_ctx->initialSecret = b;
+	if (kex_ctx->initial_secret) {
+		sdo_bits_free(kex_ctx->initial_secret);
+		kex_ctx->initial_secret = b;
 	}
 	return b;
 
 err:
-	sdoFree(shared_secret_buffer);
-	sdoByteArrayFree(b);
+	sdo_free(shared_secret_buffer);
+	sdo_byte_array_free(b);
 	return NULL;
 }
 
@@ -349,9 +351,9 @@ static int32_t kex_kdf(void)
 	int ret = -1;
 	size_t keymat1_size = 0;
 	size_t keymat2_size = 0;
-	struct sdoKexCtx *kex_ctx = getsdoKeyCtx();
-	SDOByteArray_t *shse = getSecret();
-	SDOAESKeyset_t *keyset = getKeyset();
+	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
+	sdo_byte_array_t *shse = get_secret();
+	sdo_aes_keyset_t *keyset = get_keyset();
 	uint8_t *keymat1 = NULL;
 	uint8_t *keymat2a = NULL;
 	uint8_t *keymat2b = NULL;
@@ -359,29 +361,29 @@ static int32_t kex_kdf(void)
 	uint8_t hmac_key[SHA256_DIGEST_SIZE] = {0};
 
 	/*
-	 * kdfLabel = "MarshalPointKDF"
-	 * sekLabel = "AutomaticProvisioning-cipher"
-	 * svkLabel = "AutomaticProvisioning-hmac"
+	 * kdf_label = "Marshal_pointKDF"
+	 * sek_label = "Automatic_provisioning-cipher"
+	 * svk_label = "Automatic_provisioning-hmac"
 	 *
 	 * For DH/ECDH/ASYM
 	 * ----------------
-	 * keyMaterial1 = HMAC-SHA-256[0,
-	 * (byte)1||kdfLabel||(byte)0||sekLabel||ShSe] keyMaterial2 =
-	 * HMAC-SHA-256[0, (byte)2||kdfLabel||(byte)0||svkLabel||ShSe]
+	 * key_material1 = HMAC-SHA-256[0,
+	 * (byte)1||kdf_label||(byte)0||sek_label||Sh_se] key_material2 =
+	 * HMAC-SHA-256[0, (byte)2||kdf_label||(byte)0||svk_label||Sh_se]
 	 *
-	 * sek = KeyMaterial1[0..15] (128 bits, to feed AES128)
-	 * svk = KeyMaterial2[0..31] (256 bits, to feed SHA256)
+	 * sek = Key_material1[0..15] (128 bits, to feed AES128)
+	 * svk = Key_material2[0..31] (256 bits, to feed SHA256)
 	 *
 	 * For ECDH384
 	 * -----------
-	 * keyMaterial1  = HMAC-SHA-384[0,
-	 * (byte)1||kdfLabel||(byte)0||sekLabel||ShSe] keyMaterial2a =
-	 * HMAC-SHA-384[0, (byte)2||kdfLabel||(byte)0||svkLabel||ShSe]
-	 * keyMaterial2b = HMAC-SHA-384[0,
-	 * (byte)3||kdfLabel||(byte)0||svkLabel||ShSe]
+	 * key_material1  = HMAC-SHA-384[0,
+	 * (byte)1||kdf_label||(byte)0||sek_label||Sh_se] key_material2a =
+	 * HMAC-SHA-384[0, (byte)2||kdf_label||(byte)0||svk_label||Sh_se]
+	 * key_material2b = HMAC-SHA-384[0,
+	 * (byte)3||kdf_label||(byte)0||svk_label||Sh_se]
 	 *
-	 * sek = KeyMaterial1[0..31]
-	 * svk = KeyMaterial2a[0..47] || KeyMaterial2b[0..15]
+	 * sek = Key_material1[0..31]
+	 * svk = Key_material2a[0..47] || Key_material2b[0..15]
 	 *
 	 */
 
@@ -390,28 +392,28 @@ static int32_t kex_kdf(void)
 		goto err;
 	}
 
-	keymat1_size = 1 + strnlen_s(kex_ctx->kdfLabel, SDO_MAX_STR_SIZE) + 1 +
-		       strnlen_s(kex_ctx->sekLabel, SDO_MAX_STR_SIZE) +
-		       shse->byteSz;
-	keymat2_size = 1 + strnlen_s(kex_ctx->kdfLabel, SDO_MAX_STR_SIZE) + 1 +
-		       strnlen_s(kex_ctx->svkLabel, SDO_MAX_STR_SIZE) +
-		       shse->byteSz;
+	keymat1_size = 1 + strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE) + 1 +
+		       strnlen_s(kex_ctx->sek_label, SDO_MAX_STR_SIZE) +
+		       shse->byte_sz;
+	keymat2_size = 1 + strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE) + 1 +
+		       strnlen_s(kex_ctx->svk_label, SDO_MAX_STR_SIZE) +
+		       shse->byte_sz;
 
 	/* Allocate memory for key materials */
-	keymat1 = sdoAlloc(keymat1_size);
+	keymat1 = sdo_alloc(keymat1_size);
 	if (!keymat1) {
 		LOG(LOG_ERROR, "Out of memory for key material 1\n");
 		goto err;
 	}
 
-	keymat2a = sdoAlloc(keymat2_size);
+	keymat2a = sdo_alloc(keymat2_size);
 	if (!keymat2a) {
 		LOG(LOG_ERROR, "Out of memory for key material 2a\n");
 		goto err;
 	}
 
 #ifdef KEX_ECDH384_ENABLED
-	keymat2b = sdoAlloc(keymat2_size);
+	keymat2b = sdo_alloc(keymat2_size);
 	if (!keymat2b) {
 		LOG(LOG_ERROR, "Out of memory for key material 2b\n");
 		goto err;
@@ -454,22 +456,22 @@ static int32_t kex_kdf(void)
 	 * AES key is either 128 bit or 256 bit, so, in any case it
 	 * cannot be directly used to hold the HMAC output
 	 */
-	hmac_buf = sdoAlloc(SDO_SHA_DIGEST_SIZE_USED);
+	hmac_buf = sdo_alloc(SDO_SHA_DIGEST_SIZE_USED);
 	if (!hmac_buf) {
 		LOG(LOG_ERROR, "Failed to allocate hmac buffer\n");
 		goto err;
 	}
 
-	if (sdoCryptoHMAC(SDO_CRYPTO_HMAC_TYPE_USED, keymat1, keymat1_size,
-			  hmac_buf, SDO_SHA_DIGEST_SIZE_USED, hmac_key,
-			  sizeof(hmac_key))) {
+	if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat1, keymat1_size,
+			    hmac_buf, SDO_SHA_DIGEST_SIZE_USED, hmac_key,
+			    sizeof(hmac_key))) {
 		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
 		goto err;
 	}
 
-	/* Get the sek. (keyset->sek->byteSz <= SDO_SHA_DIGEST_SIZE_USED) */
-	if (memcpy_s(keyset->sek->bytes, keyset->sek->byteSz, hmac_buf,
-		     keyset->sek->byteSz)) {
+	/* Get the sek. (keyset->sek->byte_sz <= SDO_SHA_DIGEST_SIZE_USED) */
+	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, hmac_buf,
+		     keyset->sek->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy sek key\n");
 		goto err;
 	}
@@ -478,9 +480,9 @@ static int32_t kex_kdf(void)
 	 * Get the svk key. It can directly hold the hmac output as it
 	 * is either 256 bits (32 bytes) or 512 bits (64 bytes)
 	 */
-	if (sdoCryptoHMAC(SDO_CRYPTO_HMAC_TYPE_USED, keymat2a, keymat2_size,
-			  keyset->svk->bytes, keyset->svk->byteSz, hmac_key,
-			  sizeof(hmac_key))) {
+	if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat2a, keymat2_size,
+			    keyset->svk->bytes, keyset->svk->byte_sz, hmac_key,
+			    sizeof(hmac_key))) {
 		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
 		goto err;
 	}
@@ -492,16 +494,16 @@ static int32_t kex_kdf(void)
  * allocated transient buffer
  */
 #ifdef KEX_ECDH384_ENABLED
-	if (sdoCryptoHMAC(SDO_CRYPTO_HMAC_TYPE_USED, keymat2b, keymat2_size,
-			  hmac_buf, SDO_SHA_DIGEST_SIZE_USED, hmac_key,
-			  sizeof(hmac_key))) {
+	if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat2b, keymat2_size,
+			    hmac_buf, SDO_SHA_DIGEST_SIZE_USED, hmac_key,
+			    sizeof(hmac_key))) {
 		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
 		goto err;
 	}
 
 	/* Copy 16 bytes more to complete 64 bytes of svk */
 	if (memcpy_s(keyset->svk->bytes + SDO_SHA_DIGEST_SIZE_USED,
-		     keyset->svk->byteSz - SDO_SHA_DIGEST_SIZE_USED, hmac_buf,
+		     keyset->svk->byte_sz - SDO_SHA_DIGEST_SIZE_USED, hmac_buf,
 		     16)) {
 		LOG(LOG_ERROR, "Failed to fill svk\n");
 		goto err;
@@ -512,19 +514,19 @@ static int32_t kex_kdf(void)
 
 err:
 	if (hmac_buf) {
-		sdoFree(hmac_buf);
+		sdo_free(hmac_buf);
 	}
 	if (keymat1) {
-		sdoFree(keymat1);
+		sdo_free(keymat1);
 	}
 	if (keymat2a) {
-		sdoFree(keymat2a);
+		sdo_free(keymat2a);
 	}
 	if (keymat2b) {
-		sdoFree(keymat2b);
+		sdo_free(keymat2b);
 	}
 
-	sdoByteArrayFree(shse);
+	sdo_byte_array_free(shse);
 
 	return ret;
 }
@@ -534,25 +536,26 @@ err:
  * to generate key as per the SDO Protocol Spec. This generated key shall be
  * used for encryption/decryption in TO2 protocol.
  * @param xA In Pointer to the key exchange parameter xA
- * @param encryptKey Encrypt key
+ * @param encrypt_key Encrypt key
  * @return 0 on success and -1 on failures
  */
-int32_t sdoSetKexParamA(SDOByteArray_t *xA, SDOPublicKey_t *encryptKey)
+int32_t sdo_set_kex_paramA(sdo_byte_array_t *xA, sdo_public_key_t *encrypt_key)
 
 {
 	int32_t ret = true;
-	sdoKexCtx_t *keyExData = (sdoKexCtx_t *)(getsdoKeyCtx());
+	sdo_kex_ctx_t *key_ex_data = (sdo_kex_ctx_t *)(getsdo_key_ctx());
+
 	if (!xA) {
 		return -1;
 	}
 
-	if (setEncryptKey(encryptKey)) {
+	if (set_encrypt_key(encrypt_key)) {
 		LOG(LOG_ERROR, "Failed set encryption random\n");
 		return -1;
 	}
 
-	if (0 !=
-	    sdoCryptoSetPeerRandom(keyExData->context, xA->bytes, xA->byteSz)) {
+	if (0 != crypto_hal_set_peer_random(key_ex_data->context, xA->bytes,
+					    xA->byte_sz)) {
 		LOG(LOG_ERROR, "Failed set peer random\n");
 		return -1;
 	}

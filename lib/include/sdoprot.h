@@ -41,7 +41,7 @@
 // Operational States for the device
 #define SDO_OP_STATE_APPLICATION 2 // SDO Complete, running customer application
 
-// Note states are sequential to make sdoStateToURL work
+// Note states are sequential to make sdo_state_toURL work
 
 // Protocol Report: Device => Reporter Server
 #define SDO_STATE_MGR_AGENT_INIT 17
@@ -122,8 +122,8 @@
 #define SDO_MGR_AGENT_RCV_REPORT_ACK 53
 
 // For restful URL mapping
-#define SDOMsgTypeMIN SDO_TO1_TYPE_HELLO_SDO
-#define SDOMsgTypeMAX SDO_TO2_DONE2
+#define SDOMsg_typeMIN SDO_TO1_TYPE_HELLO_SDO
+#define SDOMsg_typeMAX SDO_TO2_DONE2
 
 // Protocol version
 #define SDO_VER_MAJOR 1
@@ -169,97 +169,99 @@ static const bool resale_supported = false;
 #endif
 
 // Utility to convert type to URL
-sdourl_t sdoStateToURL(int state);
+sdourl_t sdo_state_toURL(int state);
 
-typedef struct SDOProt_s {
+typedef struct sdo_prot_s {
 	int state;
 	int ecode;
 	bool success;
-	SDOR_t sdor;
-	SDOW_t sdow;
+	sdor_t sdor;
+	sdow_t sdow;
 	uint8_t gid[GID_SIZE];
-	SDOByteArray_t *g2; /* Our initial GUID */
-	SDOIPAddress_t i1;
+	sdo_byte_array_t *g2; /* Our initial GUID */
+	sdo_ip_address_t i1;
 	uint32_t port1;
 	char *dns1;
-	int keyEncoding;
-	SDOPublicKey_t *new_pk;
-	SDODevCred_t *devCred;
-	SDOPublicKey_t *mfgPublicKey; // TO2.bo.oh.pk & DI.oh.ok
+	int key_encoding;
+	sdo_public_key_t *new_pk;
+	sdo_dev_cred_t *dev_cred;
+	sdo_public_key_t *mfg_public_key; // TO2.bo.oh.pk & DI.oh.ok
 	// Installed during manufacturing is a hash of this
-	SDOPublicKey_t
-	    *ownerPublicKey; // TO2.ProveOVHdr bo.pk - The new Owner Public key
-	SDOIV_t *iv;	 // IV store
-	SDOServiceInfo_t *serviceInfo;
-	SDOPublicKey_t *tlsKey;
-	SDOPublicKey_t *localKeyPair;
-	uint16_t ovEntryNum;
-	SDOOwnershipVoucher_t *ovoucher;
-	SDOHash_t *newOVHdrHMAC;
-	SDORendezvous_t *rv;
-	uint16_t servReqInfoNum;
-	int ownerSuppliedServiceInfoCount;
-	int ownerSuppliedServiceInfoNum;
-	int ownerSuppliedServiceInfoRcv;
-	SDOOwnerSuppliedCredentials_t *osc;
-	SDOByteArray_t *n4;
-	SDOByteArray_t *n5;
-	SDOByteArray_t *n7;
-	SDOByteArray_t *n5r;
-	SDOByteArray_t *n6;
-	SDOByteArray_t *n7r;
-	SDORedirect_t SDORedirect;
-	uint32_t RoundTripCount;
-	//	void *keyExData;
-	sdoSdkServiceInfoModuleList_t
-	    *SvInfoModListHead; // Global SvInfomodule list head
-	sdoSvInfoDsiInfo_t *dsiInfo;
-	int totalDsiRounds; // device service infos + module DSI counts
-	uint8_t rvIndex;    // keep track of current rv index
-	bool reuse_enabled; // REUSE protocol flag
-} SDOProt_t;
+	sdo_public_key_t *
+	    owner_public_key; // TO2.ProveOVHdr bo.pk - The new Owner Public key
+	sdo_iv_t *iv;	 // IV store
+	sdo_service_info_t *service_info;
+	sdo_public_key_t *tls_key;
+	sdo_public_key_t *local_key_pair;
+	uint16_t ov_entry_num;
+	sdo_ownership_voucher_t *ovoucher;
+	sdo_hash_t *new_ov_hdr_hmac;
+	sdo_rendezvous_t *rv;
+	uint16_t serv_req_info_num;
+	int owner_supplied_service_info_count;
+	int owner_supplied_service_info_num;
+	int owner_supplied_service_info_rcv;
+	sdo_owner_supplied_credentials_t *osc;
+	sdo_byte_array_t *n4;
+	sdo_byte_array_t *n5;
+	sdo_byte_array_t *n7;
+	sdo_byte_array_t *n5r;
+	sdo_byte_array_t *n6;
+	sdo_byte_array_t *n7r;
+	sdo_redirect_t sdo_redirect;
+	uint32_t round_trip_count;
+	//	void *key_ex_data;
+	sdo_sdk_service_info_module_list_t
+	    *sv_info_mod_list_head; // Global Sv_infomodule list head
+	sdo_sv_info_dsi_info_t *dsi_info;
+	int total_dsi_rounds; // device service infos + module DSI counts
+	uint8_t rv_index;     // keep track of current rv index
+	bool reuse_enabled;   // REUSE protocol flag
+} sdo_prot_t;
 
 /* DI function declarations */
-int32_t msg10(SDOProt_t *ps);
-int32_t msg11(SDOProt_t *ps);
-int32_t msg12(SDOProt_t *ps);
-int32_t msg13(SDOProt_t *ps);
+int32_t msg10(sdo_prot_t *ps);
+int32_t msg11(sdo_prot_t *ps);
+int32_t msg12(sdo_prot_t *ps);
+int32_t msg13(sdo_prot_t *ps);
 
 /* TO1 function declarations */
-int32_t msg30(SDOProt_t *ps);
-int32_t msg31(SDOProt_t *ps);
-int32_t msg32(SDOProt_t *ps);
-int32_t msg33(SDOProt_t *ps);
+int32_t msg30(sdo_prot_t *ps);
+int32_t msg31(sdo_prot_t *ps);
+int32_t msg32(sdo_prot_t *ps);
+int32_t msg33(sdo_prot_t *ps);
 
 /* TO2 function declarations */
-int32_t msg40(SDOProt_t *ps);
-int32_t msg41(SDOProt_t *ps);
-int32_t msg42(SDOProt_t *ps);
-int32_t msg43(SDOProt_t *ps);
-int32_t msg44(SDOProt_t *ps);
-int32_t msg45(SDOProt_t *ps);
-int32_t msg46(SDOProt_t *ps);
-int32_t msg47(SDOProt_t *ps);
-int32_t msg48(SDOProt_t *ps);
-int32_t msg49(SDOProt_t *ps);
-int32_t msg50(SDOProt_t *ps);
-int32_t msg51(SDOProt_t *ps);
+int32_t msg40(sdo_prot_t *ps);
+int32_t msg41(sdo_prot_t *ps);
+int32_t msg42(sdo_prot_t *ps);
+int32_t msg43(sdo_prot_t *ps);
+int32_t msg44(sdo_prot_t *ps);
+int32_t msg45(sdo_prot_t *ps);
+int32_t msg46(sdo_prot_t *ps);
+int32_t msg47(sdo_prot_t *ps);
+int32_t msg48(sdo_prot_t *ps);
+int32_t msg49(sdo_prot_t *ps);
+int32_t msg50(sdo_prot_t *ps);
+int32_t msg51(sdo_prot_t *ps);
 
 /* Init functions of particular protocol (DI, TO1, TO2) */
-void sdoProtDIInit(SDOProt_t *ps, SDODevCred_t *devCred);
-int32_t sdoProtTO1Init(SDOProt_t *ps, SDODevCred_t *devCred);
-bool sdoProtTO2Init(SDOProt_t *ps, SDOServiceInfo_t *si, SDODevCred_t *devCred,
-		    sdoSdkServiceInfoModuleList_t *moduleList);
+void sdo_prot_di_init(sdo_prot_t *ps, sdo_dev_cred_t *dev_cred);
+int32_t sdo_prot_to1_init(sdo_prot_t *ps, sdo_dev_cred_t *dev_cred);
+bool sdo_prot_to2_init(sdo_prot_t *ps, sdo_service_info_t *si,
+		       sdo_dev_cred_t *dev_cred,
+		       sdo_sdk_service_info_module_list_t *module_list);
 
 /* State machine management of protocols */
-bool sdo_process_states(SDOProt_t *ps);
+bool sdo_process_states(sdo_prot_t *ps);
 
-bool sdoCheckTO2RoundTrips(SDOProt_t *ps);
+bool sdo_check_to2_round_trips(sdo_prot_t *ps);
 
-void sdoSendErrorMessage(SDOW_t *sdow, int ecode, int msgnum, const char *emsg);
-void sdoReceiveErrorMessage(SDOR_t *sdor, int *ecode, int *msgnum, char *emsg,
-			    int emsgSz);
-bool sdoProtRcvMsg(SDOR_t *sdor, SDOW_t *sdow, char *protName, int *statep);
+void sdo_send_error_message(sdow_t *sdow, int ecode, int msgnum,
+			    const char *emsg);
+void sdo_receive_error_message(sdor_t *sdor, int *ecode, int *msgnum,
+			       char *emsg, int emsg_sz);
+bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep);
 
-int ps_get_m_string(SDOProt_t *ps);
+int ps_get_m_string(sdo_prot_t *ps);
 #endif /* __SDOPROT_H__ */

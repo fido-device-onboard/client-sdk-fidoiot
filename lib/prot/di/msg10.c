@@ -15,7 +15,7 @@
 /* TODO: Move m-string generation here */
 
 /**
- * msg10() - DI.AppStart
+ * msg10() - DI.App_start
  * This is the beginning of state machine for ownership transfer of device.The
  * device prepares the "m" string to communicate with the manufacturer, so, it
  * gets the first ownership voucher after Device Initialize (DI) stage is
@@ -27,14 +27,14 @@
  *    "m": String
  * }
  */
-int32_t msg10(SDOProt_t *ps)
+int32_t msg10(sdo_prot_t *ps)
 {
 	int ret = -1;
 
 	/* Start the "m" string */
-	sdoWNextBlock(&ps->sdow, SDO_DI_APP_START);
-	sdoWBeginObject(&ps->sdow);
-	sdoWriteTag(&ps->sdow, "m");
+	sdow_next_block(&ps->sdow, SDO_DI_APP_START);
+	sdow_begin_object(&ps->sdow);
+	sdo_write_tag(&ps->sdow, "m");
 
 #if !defined(DEVICE_TPM20_ENABLED)
 	/* Get the m-string in the ps object */
@@ -44,10 +44,10 @@ int32_t msg10(SDOProt_t *ps)
 		goto err;
 	}
 #else
-	SDOByteArray_t *mstring = NULL;
+	sdo_byte_array_t *mstring = NULL;
 	int mstring_size = get_file_size(DEVICE_MSTRING);
 
-	mstring = sdoByteArrayAlloc(mstring_size + 1);
+	mstring = sdo_byte_array_alloc(mstring_size + 1);
 	if (NULL == mstring) {
 		LOG(LOG_ERROR,
 		    "Failed to allocate memory for device mstring.\n");
@@ -57,18 +57,18 @@ int32_t msg10(SDOProt_t *ps)
 	if (0 != read_buffer_from_file(DEVICE_MSTRING, mstring->bytes,
 				       mstring_size)) {
 		LOG(LOG_ERROR, "Failed to read %s file!\n", DEVICE_MSTRING);
-		sdoByteArrayFree(mstring);
+		sdo_byte_array_free(mstring);
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "csr content start: \n%s\ncsr content end\n",
 	    mstring->bytes);
-	sdoWriteString(&ps->sdow, (char *)mstring->bytes);
-	sdoByteArrayFree(mstring);
+	sdo_write_string(&ps->sdow, (char *)mstring->bytes);
+	sdo_byte_array_free(mstring);
 #endif
 
 	/* End the object */
-	sdoWEndObject(&ps->sdow);
+	sdow_end_object(&ps->sdow);
 
 	/* This state manages the transition to the next protocol message */
 	ps->state = SDO_STATE_DI_SET_CREDENTIALS;

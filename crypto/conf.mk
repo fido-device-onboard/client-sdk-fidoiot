@@ -10,38 +10,13 @@ ifeq ($(filter $(TLS),$(SUPPORTED_TLS)),)
     $(error Supported values for TLS are: $(SUPPORTED_TLS))
 endif
 ifeq ($(TLS), openssl)
-    CRYPTO_CFLAGS += -DUSE_OPENSSL
+    CRYPTO_CFLAGS := -DUSE_OPENSSL
 else
-    CRYPTO_CFLAGS += -DUSE_MBEDTLS
+    CRYPTO_CFLAGS := -DUSE_MBEDTLS
 endif
 
 ### KEX (key exchange) validation
 SUPPORTED_KEX = dh asym ecdh ecdh384 none
-
-# enforce to use higher crypto
-ifeq ($(DA), ecdsa384)
-    $(info "enforcing to use ecdh384 for ecdsa384")
-    KEX = ecdh384
-endif
-$(info KEX = $(KEX))
-ifeq ($(filter $(KEX),$(SUPPORTED_KEX)),)
-    $(error supported values for kex are: $(SUPPORTED_KEX))
-endif
-ifeq ($(KEX), dh)
-    CRYPTO_CFLAGS += -DKEX=\"DHKEXid14\" -DKEX_DH_ENABLED
-endif
-ifeq ($(KEX), asym)
-    CRYPTO_CFLAGS += -DKEX=\"ASYMKEX\" -DKEX_ASYM_ENABLED
-endif
-ifeq ($(KEX), ecdh)
-    CRYPTO_CFLAGS += -DKEX=\"ECDH\" -DKEX_ECDH_ENABLED
-    CRYPTO_CFLAGS += -DAES_128_BIT
-endif
-ifeq ($(KEX), ecdh384)
-    CRYPTO_CFLAGS += -DKEX=\"ECDH384\" -DKEX_ECDH384_ENABLED
-    CRYPTO_CFLAGS += -DAES_256_BIT
-endif
-
 
 ### Device Attestation validation
 SUPPORTED_DA = epid ecdsa256 ecdsa384 tpm20_ecdsa256
@@ -49,6 +24,14 @@ $(info DA = $(DA))
 ifeq ($(filter $(DA),$(SUPPORTED_DA)),)
     $(error Supported values for DA are: $(SUPPORTED_DA))
 endif
+
+# enforce to use higher crypto
+ifeq ($(DA), ecdsa384)
+    $(info "enforcing to use ecdh384 for ecdsa384")
+    KEX = ecdh384
+endif
+
+
 ifeq ($(DA), epid)
     ifeq ($(EPID_SDK_R6_ROOT),)
         $(error EPID_SDK path is not set, please export EPID_SDK_R6_ROOT=/path/to/epid-sdk)
@@ -83,11 +66,59 @@ SUPPORTED_PK_ENC = rsa ecdsa
 ifeq ($(filter $(PK_ENC),$(SUPPORTED_PK_ENC)),)
     $(error supported values for PK_ENC are: $(SUPPORTED_PK_ENC))
 endif
+
+
 ifeq ($(PK_ENC), rsa)
+    ifeq ($(DA), $(filter $(DA), ecdsa256 tpm20_ecdsa256 ecdsa384 tpm20_ecdsa384))
+        $(error PK_ENC: $(PK_ENC) not supported for DA : $(DA))
+    endif
     CRYPTO_CFLAGS += -DPK_ENC_RSA
 endif
+
 ifeq ($(PK_ENC), ecdsa)
+    ifeq ($(DA), epid)
+        $(error PK_ENC: $(PK_ENC) not supported for DA : $(DA))
+    endif
     CRYPTO_CFLAGS += -DPK_ENC_ECDSA
+endif
+
+$(info KEX = $(KEX))
+ifeq ($(filter $(KEX),$(SUPPORTED_KEX)),)
+    $(error supported values for kex are: $(SUPPORTED_KEX))
+endif
+
+ifeq ($(DA), epid)
+    ifneq ($(KEX), $(filter $(KEX), dh asym))
+        $(error $(KEX) not supported supported DA : $(DA))
+    endif
+endif
+
+ifeq ($(DA), $(filter $(DA), ecdsa256 tpm20_ecdsa256 ecdsa384 tpm20_ecdsa384))
+    ifneq ($(KEX), $(filter $(KEX), ecdh ecdh384))
+        $(error $(KEX) not supported supported DA : $(DA))
+    endif
+endif
+
+ifeq ($(KEX), dh)
+    CRYPTO_CFLAGS += -DKEX=\"DHKEXid14\" -DKEX_DH_ENABLED
+endif
+ifeq ($(KEX), asym)
+    CRYPTO_CFLAGS += -DKEX=\"ASYMKEX\" -DKEX_ASYM_ENABLED
+endif
+
+ifeq ($(KEX), ecdh)
+    ifneq ($(DA), $(filter $(DA), ecdsa256 tpm20_ecdsa256))
+	    $(error $(KEX) not supported supported DA : $(DA))
+    endif
+    CRYPTO_CFLAGS += -DKEX=\"ECDH\" -DKEX_ECDH_ENABLED
+    CRYPTO_CFLAGS += -DAES_128_BIT
+endif
+ifeq ($(KEX), ecdh384)
+    ifneq ($(DA), $(filter $(DA), ecdsa384 tpm20_ecdsa384))
+        $(error $(KEX) not supported supported DA : $(DA))
+    endif
+    CRYPTO_CFLAGS += -DKEX=\"ECDH384\" -DKEX_ECDH384_ENABLED
+    CRYPTO_CFLAGS += -DAES_256_BIT
 endif
 
 ### Encryption mode validation

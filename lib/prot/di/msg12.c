@@ -24,24 +24,24 @@
  *    "hmac": Hash
  * }
  */
-int32_t msg12(SDOProt_t *ps)
+int32_t msg12(sdo_prot_t *ps)
 {
 	int ret = -1;
 
 	/* Prepare the block for msg12 */
-	sdoWNextBlock(&ps->sdow, SDO_DI_SET_HMAC);
-	sdoWBeginObject(&ps->sdow);
+	sdow_next_block(&ps->sdow, SDO_DI_SET_HMAC);
+	sdow_begin_object(&ps->sdow);
 
-	sdoWriteTag(&ps->sdow, "hmac");
-	if (!ps->newOVHdrHMAC) {
+	sdo_write_tag(&ps->sdow, "hmac");
+	if (!ps->new_ov_hdr_hmac) {
 		LOG(LOG_ERROR, "OVHdrHMAC is NULL MSG#12\n");
 		goto err;
 	}
 
 	/* Write the HMAC and send it to manufacturer */
-	sdoHashWrite(&ps->sdow, ps->newOVHdrHMAC);
-	sdoHashFree(ps->newOVHdrHMAC);
-	sdoWEndObject(&ps->sdow);
+	sdo_hash_write(&ps->sdow, ps->new_ov_hdr_hmac);
+	sdo_hash_free(ps->new_ov_hdr_hmac);
+	sdow_end_object(&ps->sdow);
 
 	/* Mark as success and goto msg13 */
 	ps->state = SDO_STATE_DI_DONE;

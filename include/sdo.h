@@ -18,7 +18,7 @@ typedef enum {
 	SDO_DI_ERROR,
 	SDO_TO1_ERROR,
 	SDO_TO2_ERROR
-} sdoSdkError;
+} sdo_sdk_error;
 
 // enum for sdk init return value
 typedef enum {
@@ -31,7 +31,7 @@ typedef enum {
 	SDO_WARNING,
 	SDO_ERROR,
 	SDO_ABORT
-} sdoSdkStatus;
+} sdo_sdk_status;
 
 typedef enum {
 	SDO_STATE_PRE_DI = 2,
@@ -39,21 +39,21 @@ typedef enum {
 	SDO_STATE_IDLE,
 	SDO_STATE_RESALE,
 	SDO_STATE_ERROR
-} sdoSdkDeviceState;
+} sdo_sdk_device_state;
 
-sdoSdkStatus sdoSdkRun(void);
+sdo_sdk_status sdo_sdk_run(void);
 
-sdoSdkStatus sdoSdkResale(void);
+sdo_sdk_status sdo_sdk_resale(void);
 
-sdoSdkDeviceState sdoSdkGetStatus(void);
+sdo_sdk_device_state sdo_sdk_get_status(void);
 
 // callback for error handling
-typedef int (*sdoSdkErrorCB)(sdoSdkStatus type, sdoSdkError errorCode);
+typedef int (*sdo_sdk_errorCB)(sdo_sdk_status type, sdo_sdk_error error_code);
 
-sdoSdkStatus sdoSdkInit(sdoSdkErrorCB errorHandlingCallback,
-			uint32_t numModules,
-			sdoSdkServiceInfoModule *moduleInformation);
+sdo_sdk_status sdo_sdk_init(sdo_sdk_errorCB error_handling_callback,
+			    uint32_t num_modules,
+			    sdo_sdk_service_info_module *module_information);
 
-int sdoDeInit(void);
+int sdo_de_init(void);
 
 #endif /* __MP_H__ */

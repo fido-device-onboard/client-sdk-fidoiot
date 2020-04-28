@@ -13,7 +13,7 @@
 #include "util.h"
 
 /**
- * msg45() - TO2.GetNextDeviceServiceInfo
+ * msg45() - TO2.Get_next_device_service_info
  * So, the owner has verified that it is talking to right device and
  * sending in the service info data
  * --- Message Format Begins ---
@@ -24,65 +24,65 @@
  * --- Message Format Ends ---
  */
 
-int32_t msg45(SDOProt_t *ps)
+int32_t msg45(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtTO2";
-	SDOString_t *psi = NULL;
+	sdo_string_t *psi = NULL;
 	uint32_t mtype = 0;
-	SDOEncryptedPacket_t *pkt = NULL;
+	sdo_encrypted_packet_t *pkt = NULL;
 
-	if (!sdoCheckTO2RoundTrips(ps)) {
+	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
 	}
 
-	if (!sdoProtRcvMsg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
 		ret = 0; /* Get the data, and come back */
 		goto err;
 	}
 
 	/* If the packet is encrypted, decrypt it */
-	pkt = sdoEncryptedPacketRead(&ps->sdor);
+	pkt = sdo_encrypted_packet_read(&ps->sdor);
 	if (pkt == NULL) {
 		LOG(LOG_ERROR, "Trouble reading encrypted packet\n");
 		goto err;
 	}
 
-	if (!sdoEncryptedPacketUnwind(&ps->sdor, pkt, ps->iv)) {
+	if (!sdo_encrypted_packet_unwind(&ps->sdor, pkt, ps->iv)) {
 		LOG(LOG_ERROR, "Failed to decrypt packet!\n");
 		goto err;
 	}
 
 	/* Get past any header */
-	if (!sdoRNextBlock(&ps->sdor, &mtype)) {
+	if (!sdor_next_block(&ps->sdor, &mtype)) {
 		LOG(LOG_DEBUG, "SDOR doesn't seems to have next block !!\n");
 		goto err;
 	}
 
-	if (!sdoRBeginObject(&ps->sdor)) {
+	if (!sdor_begin_object(&ps->sdor)) {
 		goto err;
 	}
 
 	/* The device needs to send the Service Info corresponding to "nn" */
-	if (!sdoReadExpectedTag(&ps->sdor, "nn")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "nn")) {
 		goto err;
 	}
-	ps->servReqInfoNum = sdoReadUInt(&ps->sdor);
+	ps->serv_req_info_num = sdo_read_uint(&ps->sdor);
 
 	/*
 	 * It is optional and can only contain value if "nn" = 0. For non-NULL
 	 * "psi", it is indicating to device, to prepare itself for Service
 	 * Info. (PSI: Pre Service Info
 	 */
-	if (!sdoReadExpectedTag(&ps->sdor, "psi")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "psi")) {
 		goto err;
 	}
 
-	psi = sdoStringAlloc();
+	psi = sdo_string_alloc();
 	if (psi == NULL) {
 		goto err;
 	}
-	if (!sdoStringRead(&ps->sdor, psi)) {
+	if (!sdo_string_read(&ps->sdor, psi)) {
 		LOG(LOG_ERROR, "Parsing psi String\n");
 		goto err;
 	}
@@ -93,16 +93,17 @@ int32_t msg45(SDOProt_t *ps)
 	 * time when  modules are completely dynamic.
 	 */
 	LOG(LOG_DEBUG, "psi string: %s, nn = %d\n\n", psi->bytes,
-	    ps->servReqInfoNum);
+	    ps->serv_req_info_num);
 
 	/* For "nn" == 0 */
-	if (ps->servReqInfoNum == 0) {
+	if (ps->serv_req_info_num == 0) {
 		/* Parse PSI only when psi->bytes is not an empty string */
-		if (psi->byteSz > EMPTY_STRING_LEN) {
-			int modRetVal = 0;
-			if (!sdoPsiParsing(ps->SvInfoModListHead, psi->bytes,
-					   psi->byteSz, &modRetVal)) {
-				LOG(LOG_ERROR, "SvInfo: PSI did not "
+		if (psi->byte_sz > EMPTY_STRING_LEN) {
+			int mod_ret_val = 0;
+			if (!sdo_psi_parsing(ps->sv_info_mod_list_head,
+					     psi->bytes, psi->byte_sz,
+					     &mod_ret_val)) {
+				LOG(LOG_ERROR, "Sv_info: PSI did not "
 					       "finished gracefully!\n");
 
 				/*
@@ -112,25 +113,25 @@ int32_t msg45(SDOProt_t *ps)
 				goto err;
 			}
 		} else {
-			LOG(LOG_INFO, "SvInfo: Empty PSI string for nn=0\n");
+			LOG(LOG_INFO, "Sv_info: Empty PSI string for nn=0\n");
 		}
-	} else if (ps->servReqInfoNum > 0 &&
-		   (ps->servReqInfoNum < ps->totalDsiRounds)) {
-		if (psi->byteSz != EMPTY_STRING_LEN) {
-			LOG(LOG_ERROR, "SvInfo: For non-zero nn, "
+	} else if (ps->serv_req_info_num > 0 &&
+		   (ps->serv_req_info_num < ps->total_dsi_rounds)) {
+		if (psi->byte_sz != EMPTY_STRING_LEN) {
+			LOG(LOG_ERROR, "Sv_info: For non-zero nn, "
 				       "psi string must be empty!\n");
 			goto err;
 		}
 	} else {
-		LOG(LOG_ERROR, "SvInfo: nn value is out of range!");
+		LOG(LOG_ERROR, "Sv_info: nn value is out of range!");
 		goto err;
 	}
 
-	if (!sdoREndObject(&ps->sdor)) {
+	if (!sdor_end_object(&ps->sdor)) {
 		goto err;
 	}
 
-	sdoRFlush(&ps->sdor);
+	sdor_flush(&ps->sdor);
 	ps->state = SDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO;
 	LOG(LOG_DEBUG, "SDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO "
 		       ": 45 Completed\n");
@@ -138,7 +139,7 @@ int32_t msg45(SDOProt_t *ps)
 
 err:
 	if (psi) {
-		sdoStringFree(psi);
+		sdo_string_free(psi);
 	}
 	return ret;
 }

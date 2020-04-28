@@ -21,12 +21,12 @@
 #include <openssl/rand.h>
 #include <assert.h>
 #include "sdoCryptoHal.h"
-#ifdef SECURE_ELEMENT
-int32_t sdoSECryptoInit(void);
+
+#ifndef SECURE_ELEMENT
+static bool g_random_initialised;
 #endif /* SECURE_ELEMENT */
 
-ENGINE *engine;
-static bool g_random_initialised = false;
+ENGINE * engine;
 
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks)
@@ -151,19 +151,19 @@ int random_close(void)
 
 /**
  * If g_random_initialised is true, generate random bytes of data
- * of size numBytes passed as paramater, else return error.
- * @param randomBuffer - Pointer rand_data of type uint8_t to be filled with,
- * @param numBytes - Number of bytes to be filled.
+ * of size num_bytes passed as paramater, else return error.
+ * @param random_buffer - Pointer rand_data of type uint8_t to be filled with,
+ * @param num_bytes - Number of bytes to be filled.
  * @return 0 if succeeds, else -1.
  */
-int32_t _sdoCryptoRandomBytes(uint8_t *randomBuffer, size_t numBytes)
+int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 {
 	if (!g_random_initialised) {
 		return -1;
-	} else if (NULL == randomBuffer) {
+	} else if (NULL == random_buffer) {
 		return -1;
 	} else if (1 !=
-		   RAND_priv_bytes((unsigned char *)randomBuffer, numBytes)) {
+		   RAND_priv_bytes((unsigned char *)random_buffer, num_bytes)) {
 		return -1;
 	}
 
@@ -177,7 +177,7 @@ int32_t _sdoCryptoRandomBytes(uint8_t *randomBuffer, size_t numBytes)
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int32_t cryptoInit(void)
+int32_t crypto_init(void)
 {
 	if (0 != random_init()) {
 		return -1;
@@ -190,7 +190,7 @@ int32_t cryptoInit(void)
 	OpenSSL_add_all_algorithms();
 
 #ifdef SECURE_ELEMENT
-	if (0 != sdoSECryptoInit()) {
+	if (0 != crypto_hal_se_init()) {
 		return -1;
 	}
 #endif /* SECURE_ELEMENT */
@@ -203,7 +203,7 @@ int32_t cryptoInit(void)
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int32_t cryptoClose(void)
+int32_t crypto_close(void)
 {
 	if (0 != random_close()) {
 		return -1;
@@ -226,43 +226,46 @@ int32_t cryptoClose(void)
 
 #ifndef SECURE_ELEMENT
 /**
- * sdoCryptoHash function calculate hash on input data
+ * sdo_crypto_hash function calculate hash on input data
  *
- * @param hashType - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256/
+ * @param _hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256/
  *				SDO_CRYPTO_HASH_TYPE_SHA_384/
  *				SDO_CRYPTO_HASH_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
- * @param bufferLength - input data buffer size
+ * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
- * @param outputLength - output data buffer size
+ * @param output_length - output data buffer size
  *
  * @return
  *        return 0 on success. -ve value on failure.
  */
 
-int32_t _sdoCryptoHash(uint8_t _hashType, const uint8_t *buffer,
-		       size_t bufferLength, uint8_t *output,
-		       size_t outputLength)
+int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
+			 size_t buffer_length, uint8_t *output,
+			 size_t output_length)
 {
-	uint8_t hashType = SDO_CRYPTO_HASH_TYPE_USED;
-	if (NULL == output || 0 == outputLength || NULL == buffer ||
-	    0 == bufferLength) {
+	uint8_t hash_type = SDO_CRYPTO_HASH_TYPE_USED;
+
+	(void)_hash_type; /* Unused parameter */
+
+	if (NULL == output || 0 == output_length || NULL == buffer ||
+	    0 == buffer_length) {
 		return -1;
 	}
 
-	switch (hashType) {
+	switch (hash_type) {
 	case SDO_CRYPTO_HASH_TYPE_SHA_256:
-		if (outputLength < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
-		if (NULL == SHA256((const unsigned char *)buffer, bufferLength,
+		if (NULL == SHA256((const unsigned char *)buffer, buffer_length,
 				   output)) {
 			return -1;
 		}
 		break;
 	case SDO_CRYPTO_HASH_TYPE_SHA_384:
-		if (outputLength < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
-		if (NULL == SHA384((const unsigned char *)buffer, bufferLength,
+		if (NULL == SHA384((const unsigned char *)buffer, buffer_length,
 				   output)) {
 			return -1;
 		}
@@ -275,43 +278,44 @@ int32_t _sdoCryptoHash(uint8_t _hashType, const uint8_t *buffer,
 }
 
 /**
- * sdoCryptoHMAC function calculate hmac on input data
+ * crypto_hal_hmac function calculate hmac on input data
  *
- * @param hmacType - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
+ * @param hmac_type - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
  *				SDO_CRYPTO_HMAC_TYPE_SHA_384/
  *				SDO_CRYPTO_HMAC_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
- * @param bufferLength - input data buffer size
+ * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
- * @param outputLength - output data buffer size
+ * @param output_length - output data buffer size
  * @param key - pointer to hmac key buffer of uint8_t type.
- * @param keyLength - hmac key size
+ * @param key_length - hmac key size
  * @return
  *        return 0 on success. -ve value on failure.
  */
-int32_t sdoCryptoHMAC(uint8_t hmacType, const uint8_t *buffer,
-		      size_t bufferLength, uint8_t *output, size_t outputLength,
-		      const uint8_t *key, size_t keyLength)
+int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
+			size_t buffer_length, uint8_t *output,
+			size_t output_length, const uint8_t *key,
+			size_t key_length)
 {
-	if (NULL == output || 0 == outputLength || NULL == buffer ||
-	    0 == bufferLength || NULL == key || 0 == keyLength) {
+	if (NULL == output || 0 == output_length || NULL == buffer ||
+	    0 == buffer_length || NULL == key || 0 == key_length) {
 		return -1;
 	}
 
-	switch (hmacType) {
+	switch (hmac_type) {
 	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
-		if (outputLength < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
-		if (NULL == HMAC(EVP_sha256(), key, keyLength, buffer,
-				 (int)bufferLength, output, NULL)) {
+		if (NULL == HMAC(EVP_sha256(), key, key_length, buffer,
+				 (int)buffer_length, output, NULL)) {
 			return -1;
 		}
 		break;
 	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
-		if (outputLength < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
-		if (NULL == HMAC(EVP_sha384(), key, keyLength, buffer,
-				 (int)bufferLength, output, NULL)) {
+		if (NULL == HMAC(EVP_sha384(), key, key_length, buffer,
+				 (int)buffer_length, output, NULL)) {
 			return -1;
 		}
 		break;
@@ -320,86 +324,5 @@ int32_t sdoCryptoHMAC(uint8_t hmacType, const uint8_t *buffer,
 	}
 
 	return 0;
-}
-
-/**
- * sdoCryptoHMACChained function calculate hash on input data and chain
- *
- * @param hmacType - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_384/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_512)
- * @param buffer - pointer to input data buffer of uint8_t type.
- * @param bufferLength - input data buffer size
- * @param output - pointer to output data buffer of uint8_t type.
- * @param outputLength - output data buffer size
- * @param key - pointer to hmac key buffer of uint8_t type.
- * @param keyLength - hmac key size
- * @param previousHMAC - pointer to last packet's hmac of uint8_t type.
- * @param previousHMACLength - last packet's hmaci size
- *
- * @return
- *        return 0 on success. -ve value on failure.
- */
-int32_t sdoCryptoHMACChained(uint8_t hmacType, const uint8_t *buffer,
-			     size_t bufferLength, uint8_t *output,
-			     size_t outputLength, const uint8_t *key,
-			     size_t keyLength, const uint8_t *previousHMAC,
-			     size_t previousHMACLength)
-{
-	if (NULL == output || 0 == outputLength || NULL == buffer ||
-	    0 == bufferLength || NULL == key || 0 == keyLength ||
-	    NULL == previousHMAC || 0 >= previousHMACLength) {
-		return -1;
-	}
-
-	int ret = 0;
-	unsigned int digest_size;
-
-	HMAC_CTX *ctx = NULL;
-
-	if (!(ctx = HMAC_CTX_new())) {
-		ret = -1;
-		goto end;
-	}
-
-	switch (hmacType) {
-	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
-		if (outputLength < SHA256_DIGEST_SIZE)
-			return -1;
-		if (1 !=
-		    HMAC_Init_ex(ctx, key, keyLength, EVP_sha256(), NULL)) {
-			ret = -1;
-			goto end;
-		}
-		break;
-	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
-		if (outputLength < SHA384_DIGEST_SIZE)
-			return -1;
-		if (1 !=
-		    HMAC_Init_ex(ctx, key, keyLength, EVP_sha384(), NULL)) {
-			ret = -1;
-			goto end;
-		}
-		break;
-	default:
-		return -1;
-	}
-
-	if (1 != HMAC_Update(ctx, previousHMAC, previousHMACLength)) {
-		ret = -1;
-		goto end;
-	}
-	if (1 != HMAC_Update(ctx, buffer, bufferLength)) {
-		ret = -1;
-		goto end;
-	}
-	if (1 != HMAC_Final(ctx, output, &digest_size)) {
-		ret = -1;
-		goto end;
-	}
-
-end:
-	HMAC_CTX_free(ctx);
-	return ret;
 }
 #endif /* SECURE_ELEMENT */

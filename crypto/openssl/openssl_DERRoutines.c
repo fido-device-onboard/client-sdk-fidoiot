@@ -16,23 +16,23 @@
 /*
  * Helper API designed to convert the raw signature into DER format required by
  * SDO.
- * rawSig: input a 64 Byte r and s format signature.
- * messageSignature: outputs a DER encoded signature value
- * signatureLength: outputs the size of the signature after converting to DER
+ * raw_sig: input a 64 Byte r and s format signature.
+ * message_signature: outputs a DER encoded signature value
+ * signature_length: outputs the size of the signature after converting to DER
  * format.
  */
-int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
-		  uint8_t *messageSignature, size_t *signatureLength)
+int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
+		   uint8_t *message_signature, size_t *signature_length)
 {
 	/* Encode */
 	int ret = 0;
 	BIGNUM *r = BN_new();
 	BIGNUM *s = BN_new();
 	ECDSA_SIG *sig = ECDSA_SIG_new();
-	uint8_t *msg = (uint8_t *)messageSignature;
+	uint8_t *msg = (uint8_t *)message_signature;
 
-	if ((NULL == rawSig) || (BUFF_SIZE_64_BYTES != rawSigLength) ||
-	    (NULL == messageSignature) || (NULL == signatureLength)) {
+	if ((NULL == raw_sig) || (BUFF_SIZE_64_BYTES != raw_sig_length) ||
+	    (NULL == message_signature) || (NULL == signature_length)) {
 		ret = -1;
 		goto err;
 	}
@@ -43,12 +43,12 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	}
 
 	/* Read the binary and populate the BIGNUM r and s needed by openssl */
-	if (NULL == BN_bin2bn(rawSig, BUFF_SIZE_32_BYTES, r)) {
+	if (NULL == BN_bin2bn(raw_sig, BUFF_SIZE_32_BYTES, r)) {
 		ret = -1;
 		goto err;
 	}
 	if (NULL ==
-	    BN_bin2bn(rawSig + BUFF_SIZE_32_BYTES, BUFF_SIZE_32_BYTES, s)) {
+	    BN_bin2bn(raw_sig + BUFF_SIZE_32_BYTES, BUFF_SIZE_32_BYTES, s)) {
 		ret = -1;
 		goto err;
 	}
@@ -67,7 +67,7 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	}
 
 	/* Return the length of the encoded DER signature  */
-	*signatureLength = (size_t)i2d_ECDSA_SIG(sig, NULL);
+	*signature_length = (size_t)i2d_ECDSA_SIG(sig, NULL);
 
 err:
 	/* Frees up sig, r and s variables */
@@ -80,18 +80,18 @@ err:
  * This internal API is used to convert public key and signature which is in
  * DER format to raw format of r and s representation. This raw formatted
  * data will be of 64 Bytes which the SE can use to verify.
- * rawKey: output, returns the public key in 64 byte format of r and s.
- * rawSig: output, returns the signature in 64 byte format of r and s.
- * pubKey: input, the DER formatted public key that was received.
- * keyLength: input, the size of the DER formatted public key.
- * messageSignature: input, the DER formatted signature that was received
- * signatureLength: input, the length of signature in bytes that was received.
- * rawKeyLength: input, the buffer size of the rawKey
+ * raw_key: output, returns the public key in 64 byte format of r and s.
+ * raw_sig: output, returns the signature in 64 byte format of r and s.
+ * pub_key: input, the DER formatted public key that was received.
+ * key_length: input, the size of the DER formatted public key.
+ * message_signature: input, the DER formatted signature that was received
+ * signature_length: input, the length of signature in bytes that was received.
+ * raw_key_length: input, the buffer size of the raw_key
  */
-int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
-		  size_t keyLength, const uint8_t *messageSignature,
-		  size_t signatureLength, size_t rawKeyLength,
-		  size_t rawSigLength)
+int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
+		   const unsigned char *pub_key, size_t key_length,
+		   const uint8_t *message_signature, size_t signature_length,
+		   size_t raw_key_length, size_t raw_sig_length)
 {
 	size_t buff_size;
 	int ret = 0;
@@ -103,13 +103,15 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	const BIGNUM *r = BN_new();
 	const BIGNUM *s = BN_new();
 	ECDSA_SIG *sig = ECDSA_SIG_new();
+
 	const EC_GROUP *ecgroup;
+
 	const EC_POINT *ecpoint;
 
-	if ((NULL == rawKey) || (NULL == rawSig) || (NULL == pubKey) ||
-	    (NULL == messageSignature) ||
-	    (BUFF_SIZE_64_BYTES != rawSigLength) ||
-	    (BUFF_SIZE_64_BYTES != rawKeyLength)) {
+	if ((NULL == raw_key) || (NULL == raw_sig) || (NULL == pub_key) ||
+	    (NULL == message_signature) ||
+	    (BUFF_SIZE_64_BYTES != raw_sig_length) ||
+	    (BUFF_SIZE_64_BYTES != raw_key_length)) {
 		ret = -1;
 		goto err;
 	}
@@ -121,7 +123,7 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	}
 
 	/* decode EC_KEY struct from DER encoded EC public key */
-	if (d2i_EC_PUBKEY(&eckey, &pubKey, (long)keyLength) == NULL) {
+	if (d2i_EC_PUBKEY(&eckey, &pub_key, (long)key_length) == NULL) {
 		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
 		ret = -1;
 		goto err;
@@ -149,13 +151,13 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	 * information
 	 * regarding compressed/uncompressed format.
 	 */
-	if (0 != memcpy_s(rawKey, rawKeyLength, local_raw_key + 1, 64)) {
+	if (0 != memcpy_s(raw_key, raw_key_length, local_raw_key + 1, 64)) {
 		ret = -1;
 		goto err;
 	}
 
 	/* Decode  signature*/
-	if (d2i_ECDSA_SIG(&sig, &messageSignature, signatureLength) == NULL) {
+	if (d2i_ECDSA_SIG(&sig, &message_signature, signature_length) == NULL) {
 		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
 		ret = -1;
 		goto err;
@@ -163,12 +165,12 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 
 	ECDSA_SIG_get0(sig, &r, &s);
 
-	/* This will populate the rawSig with the r and s formatted data. */
-	if (0 == BN_bn2bin(r, rawSig)) {
+	/* This will populate the raw_sig with the r and s formatted data. */
+	if (0 == BN_bn2bin(r, raw_sig)) {
 		ret = -1;
 		goto err;
 	}
-	if (0 == BN_bn2bin(s, rawSig + 32)) {
+	if (0 == BN_bn2bin(s, raw_sig + 32)) {
 		ret = -1;
 		goto err;
 	}

@@ -12,3 +12,5 @@ ifeq ($(TARGET_OS), linux)
 endif
 
 srcs-y += $(addprefix storage/$(TARGET_OS)/, $(storage-srcs-y))
+
+srcs-y += $(addprefix storage/, util.c)

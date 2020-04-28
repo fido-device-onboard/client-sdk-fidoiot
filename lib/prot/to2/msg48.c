@@ -13,27 +13,27 @@
 #include "util.h"
 
 /**
- * msg48() - TO2.GetNextOwnerServiceInfo
+ * msg48() - TO2.Get_next_owner_service_info
  * --- Message Format Begins ---
  * {
  *   "nn":Uint8
  * }
  * --- Message Format Ends ---
  */
-int32_t msg48(SDOProt_t *ps)
+int32_t msg48(sdo_prot_t *ps)
 {
 	int ret = -1;
 
 	/* send entry number to load */
-	sdoWNextBlock(&ps->sdow, SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO);
-	sdoWBeginObject(&ps->sdow);
+	sdow_next_block(&ps->sdow, SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO);
+	sdow_begin_object(&ps->sdow);
 
 	/* Write the "nn" - next Owner Service Info Index */
-	sdoWriteTag(&ps->sdow, "nn");
-	sdoWriteUInt(&ps->sdow, ps->ownerSuppliedServiceInfoNum);
-	sdoWEndObject(&ps->sdow);
+	sdo_write_tag(&ps->sdow, "nn");
+	sdo_writeUInt(&ps->sdow, ps->owner_supplied_service_info_num);
+	sdow_end_object(&ps->sdow);
 
-	if (!sdoEncryptedPacketWindup(
+	if (!sdo_encrypted_packet_windup(
 		&ps->sdow, SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO, ps->iv)) {
 		goto err;
 	}

@@ -1,3 +1,5 @@
+# Copyright 2020 Intel Corporation
+# SPDX-License-Identifier: Apache 2.0
 BASE_DIR :=.
 
 include ../../../base.mk

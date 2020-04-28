@@ -19,13 +19,13 @@
 /*
  * Helper API designed to convert the raw signature into DER format required by
  * SDO.
- * rawSig: input a 64 Byte r and s format signature.
- * messageSignature: outputs a DER encoded signature value
- * signatureLength: outputs the size of the signature after converting to DER
+ * raw_sig: input a 64 Byte r and s format signature.
+ * message_signature: outputs a DER encoded signature value
+ * signature_length: outputs the size of the signature after converting to DER
  * format.
  */
-int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
-		  uint8_t *messageSignature, size_t *signatureLength)
+int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
+		   uint8_t *message_signature, size_t *signature_length)
 {
 	int ret;
 	mbedtls_mpi r, s;
@@ -36,24 +36,25 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	mbedtls_mpi_init(&r);
 	mbedtls_mpi_init(&s);
 
-	if ((NULL == rawSig) || (BUFF_SIZE_64_BYTES != rawSigLength) ||
-	    (NULL == messageSignature) || (NULL == signatureLength)) {
+	if ((NULL == raw_sig) || (BUFF_SIZE_64_BYTES != raw_sig_length) ||
+	    (NULL == message_signature) || (NULL == signature_length)) {
 		ret = -1;
 		goto err;
 	}
 
 	/* Encode */
-	/* Read from the rawSig buffer into a MPI r and s needed by mbedtls */
-	ret = mbedtls_mpi_read_binary(&r, rawSig, BUFF_SIZE_32_BYTES);
-	ret |= mbedtls_mpi_read_binary(&s, (rawSig + BUFF_SIZE_32_BYTES),
+	/* Read from the raw_sig buffer into a MPI r and s needed by mbedtls */
+	ret = mbedtls_mpi_read_binary(&r, raw_sig, BUFF_SIZE_32_BYTES);
+	ret |= mbedtls_mpi_read_binary(&s, (raw_sig + BUFF_SIZE_32_BYTES),
 				       BUFF_SIZE_32_BYTES);
 	if (0 != ret) {
-		LOG(LOG_ERROR, "failed at mpi write for signature \n");
+		LOG(LOG_ERROR, "failed at mpi write for signature\n");
 		ret = -1;
 		goto err;
 	}
 
-	if (0 > (ret = mbedtls_asn1_write_mpi(&p, buf, &s))) {
+	ret = mbedtls_asn1_write_mpi(&p, buf, &s);
+	if (0 > ret) {
 		LOG(LOG_ERROR,
 		    "Unable to convert the raw signature into DER format");
 		ret = -1;
@@ -61,7 +62,8 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	}
 	len = ret;
 
-	if (0 > (ret = mbedtls_asn1_write_mpi(&p, buf, &r))) {
+	ret = mbedtls_asn1_write_mpi(&p, buf, &r);
+	if (0 > ret) {
 		LOG(LOG_ERROR,
 		    "Unable to convert the raw signature into DER format");
 		ret = -1;
@@ -69,7 +71,8 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	}
 	len += ret;
 
-	if (0 > (ret = mbedtls_asn1_write_len(&p, buf, len))) {
+	ret = mbedtls_asn1_write_len(&p, buf, len);
+	if (0 > ret) {
 		LOG(LOG_ERROR,
 		    "Unable to convert the raw signature into DER format");
 		ret = -1;
@@ -77,9 +80,10 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	}
 	len += ret;
 
-	if (0 >
-	    (ret = mbedtls_asn1_write_tag(
-		 &p, buf, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE))) {
+	ret = mbedtls_asn1_write_tag(&p, buf,
+				     MBEDTLS_ASN1_CONSTRUCTED |
+				     MBEDTLS_ASN1_SEQUENCE);
+	if (0 > ret) {
 		LOG(LOG_ERROR,
 		    "Unable to convert the raw signature into DER format");
 		ret = -1;
@@ -87,13 +91,13 @@ int32_t DEREncode(uint8_t *rawSig, size_t rawSigLength,
 	}
 	len += ret;
 
-	if (0 != memcpy_s(messageSignature, BUFF_SIZE_256_BYTES, p, len)) {
-		LOG(LOG_ERROR, "Memcpy to messageSignature failed \n");
+	if (0 != memcpy_s(message_signature, BUFF_SIZE_256_BYTES, p, len)) {
+		LOG(LOG_ERROR, "Memcpy to message_signature failed\n");
 		ret = -1;
 		goto err;
 	}
 	ret = 0;
-	*signatureLength = len;
+	*signature_length = len;
 
 err:
 	mbedtls_mpi_free(&r);
@@ -105,40 +109,41 @@ err:
  * This internal API is used to convert public key and signature which is in
  * DER format to raw format of r and s representation. This raw formatted
  * data will be of 64 Bytes which the SE can use to verify.
- * rawKey: output, returns the public key in 64 byte format of r and s.
- * rawSig: output, returns the signature in 64 byte format of r and s.
- * pubKey: input, the DER formatted public key that was received.
- * keyLength: input, the size of the DER formatted public key.
- * messageSignature: input, the DER formatted signature that was received
- * signatureLength: input, the length of signature in bytes that was received.
- * rawKeyLength: input, the buffer size of the rawKey
+ * raw_key: output, returns the public key in 64 byte format of r and s.
+ * raw_sig: output, returns the signature in 64 byte format of r and s.
+ * pub_key: input, the DER formatted public key that was received.
+ * key_length: input, the size of the DER formatted public key.
+ * message_signature: input, the DER formatted signature that was received
+ * signature_length: input, the length of signature in bytes that was received.
+ * raw_key_length: input, the buffer size of the raw_key
  */
-int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
-		  size_t keyLength, const uint8_t *messageSignature,
-		  size_t signatureLength, size_t rawKeyLength,
-		  size_t rawSigLength)
+int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
+		   const unsigned char *pub_key, size_t key_length,
+		   const uint8_t *message_signature, size_t signature_length,
+		   size_t raw_key_length, size_t raw_sig_length)
 {
 	int ret;
 	mbedtls_pk_context pk_ctx = {0};
 	size_t len;
 	mbedtls_mpi r, s;
-	const uint8_t *end = messageSignature + signatureLength;
-	uint8_t *p = (unsigned char *)messageSignature;
+	const uint8_t *end = message_signature + signature_length;
+	uint8_t *p = (unsigned char *)message_signature;
 	uint8_t *local_raw_key = NULL;
 	uint8_t *end_buf;
 
-	if ((NULL == rawKey) || (NULL == rawSig) || (NULL == pubKey) ||
-	    (NULL == messageSignature) ||
-	    (BUFF_SIZE_64_BYTES != rawSigLength) ||
-	    (BUFF_SIZE_64_BYTES != rawKeyLength)) {
+	if ((NULL == raw_key) || (NULL == raw_sig) || (NULL == pub_key) ||
+	    (NULL == message_signature) ||
+	    (BUFF_SIZE_64_BYTES != raw_sig_length) ||
+	    (BUFF_SIZE_64_BYTES != raw_key_length)) {
 		ret = -1;
 		goto err;
 	}
 
 	mbedtls_pk_init(&pk_ctx);
 
-	if ((ret = mbedtls_pk_parse_public_key(&pk_ctx, pubKey,
-					       (size_t)keyLength)) != 0) {
+	ret = mbedtls_pk_parse_public_key(&pk_ctx, pub_key,
+					  (size_t)key_length);
+	if (ret != 0) {
 
 		LOG(LOG_ERROR, "Parsing EC public-key failed!\n");
 		ret = -1;
@@ -146,7 +151,7 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	}
 
 	/* one extra byte for compression information. */
-	local_raw_key = (uint8_t *)sdoAlloc(BUFF_SIZE_65_BYTES);
+	local_raw_key = (uint8_t *)sdo_alloc(BUFF_SIZE_65_BYTES);
 	if (NULL == local_raw_key) {
 		LOG(LOG_ERROR, "Allocation of buffer for raw key failed\n");
 		ret = -1;
@@ -159,12 +164,12 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	/* public key converted */
 	ret = mbedtls_pk_write_pubkey(&end_buf, local_raw_key, &pk_ctx);
 	if ((BUFF_SIZE_64_BYTES + 1) != ret) {
-		LOG(LOG_ERROR, "failed at mpi write for public key \n");
+		LOG(LOG_ERROR, "failed at mpi write for public key\n");
 		ret = -1;
 		goto err;
 	}
 
-	if (0 != memcpy_s(rawKey, rawKeyLength, local_raw_key + 1,
+	if (0 != memcpy_s(raw_key, raw_key_length, local_raw_key + 1,
 			  BUFF_SIZE_64_BYTES)) {
 		ret = -1;
 		goto err;
@@ -174,10 +179,11 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	mbedtls_mpi_init(&r);
 	mbedtls_mpi_init(&s);
 
-	if ((ret = mbedtls_asn1_get_tag(&p, end, &len,
-					MBEDTLS_ASN1_CONSTRUCTED |
-					    MBEDTLS_ASN1_SEQUENCE)) != 0) {
-		LOG(LOG_ERROR, "failed at tag for  signature %d \n", ret);
+	ret = mbedtls_asn1_get_tag(&p, end, &len,
+				   MBEDTLS_ASN1_CONSTRUCTED |
+				   MBEDTLS_ASN1_SEQUENCE));
+	if (ret != 0) {
+		LOG(LOG_ERROR, "failed at tag for  signature %d\n", ret);
 		ret = -1;
 		goto err;
 	}
@@ -185,16 +191,16 @@ int32_t DERDecode(uint8_t *rawKey, uint8_t *rawSig, const unsigned char *pubKey,
 	ret = mbedtls_asn1_get_mpi(&p, end, &r);
 	ret |= mbedtls_asn1_get_mpi(&p, end, &s);
 	if (0 != ret) {
-		LOG(LOG_ERROR, "failed at r and s for  signature %d \n", ret);
+		LOG(LOG_ERROR, "failed at r and s for  signature %d\n", ret);
 		ret = -1;
 		goto err;
 	}
 
-	ret = mbedtls_mpi_write_binary(&r, rawSig, BUFF_SIZE_32_BYTES);
-	ret |= mbedtls_mpi_write_binary(&s, (rawSig + BUFF_SIZE_32_BYTES),
+	ret = mbedtls_mpi_write_binary(&r, raw_sig, BUFF_SIZE_32_BYTES);
+	ret |= mbedtls_mpi_write_binary(&s, (raw_sig + BUFF_SIZE_32_BYTES),
 					BUFF_SIZE_32_BYTES);
 	if (0 != ret) {
-		LOG(LOG_ERROR, "failed at mpi write for signature \n");
+		LOG(LOG_ERROR, "failed at mpi write for signature\n");
 		ret = -1;
 		goto err;
 	}
@@ -203,10 +209,10 @@ err:
 	mbedtls_mpi_free(&r);
 	mbedtls_mpi_free(&s);
 	if (0 != memset_s(local_raw_key, BUFF_SIZE_65_BYTES, 0)) {
-		LOG(LOG_ERROR, "Memset for local raw key failed \n");
+		LOG(LOG_ERROR, "Memset for local raw key failed\n");
 		ret = -1;
 	}
-	sdoFree(local_raw_key);
+	sdo_free(local_raw_key);
 	mbedtls_pk_free(&pk_ctx);
 	return ret;
 }

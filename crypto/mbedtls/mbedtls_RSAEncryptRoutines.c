@@ -26,30 +26,32 @@
 #define mbedtls_calloc calloc
 
 /**
- * sdoCryptoRSAEncrypt -  Encrypt the block passed using the public key
+ * crypto_hal_rsa_encrypt -  Encrypt the block passed using the public key
  * passed, the key must be RSA
- * @param hashType - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
- * @param keyEncoding - RSA Key encoding typee.
- * @param keyAlgorithm - RSA public key algorithm.
- * @param clearText - Input text to be encrypted.
- * @param clearTextLength - Plain text size in bytes.
- * @param cipherText - Encrypted text(output).
- * @param cipherTextLength - Encrypted text size in bytes.
- * @param keyParam1 - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length - size of public key1, type size_t.
- * @param keyParam2 - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length - size of public key2, type size_t
+ * @param hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
+ * @param key_encoding - RSA Key encoding typee.
+ * @param key_algorithm - RSA public key algorithm.
+ * @param clear_text - Input text to be encrypted.
+ * @param clear_text_length - Plain text size in bytes.
+ * @param cipher_text - Encrypted text(output).
+ * @param cipher_text_length - Encrypted text size in bytes.
+ * @param key_param1 - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length - size of public key1, type size_t.
+ * @param key_param2 - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length - size of public key2, type size_t
  * @return ret
  *        return 0 on success. -1 on failure.
- *        return cypherLength in bytes while cypherText passed as NULL, & all
+ *        return cypher_length in bytes while cypher_text passed as NULL, & all
  *        other parameters are passed as it is.
  */
-int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
-			    uint8_t keyAlgorithm, const uint8_t *clearText,
-			    uint32_t clearTextLength, uint8_t *cipherText,
-			    uint32_t cipherTextLength, const uint8_t *keyParam1,
-			    uint32_t keyParam1Length, const uint8_t *keyParam2,
-			    uint32_t keyParam2Length)
+int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
+			       uint8_t key_algorithm, const uint8_t *clear_text,
+			       uint32_t clear_text_length, uint8_t *cipher_text,
+			       uint32_t cipher_text_length,
+			       const uint8_t *key_param1,
+			       uint32_t key_param1Length,
+			       const uint8_t *key_param2,
+			       uint32_t key_param2Length)
 {
 	mbedtls_rsa_context rsa;
 
@@ -58,36 +60,36 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 	size_t tmpkey1Sz = 0;
 	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_entropy_context entropy;
-	const char pers[] = "test_string";
-	uint32_t cipherCalLength = 0;
+	static const char pers[] = "test_string";
+	uint32_t cipher_cal_length = 0;
 
 	LOG(LOG_DEBUG, "rsa_encrypt starting.\n");
 
 	/* Make sure we have a correct type of key. */
-	if (keyEncoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    keyAlgorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type.\n");
 		return -1;
 	}
-	if (NULL == clearText || 0 == clearTextLength) {
+	if (NULL == clear_text || 0 == clear_text_length) {
 		LOG(LOG_ERROR, "Incorrect input text.\n");
 		return -1;
 	}
-	if (keyParam1 == NULL || keyParam1Length == 0) {
+	if (key_param1 == NULL || key_param1Length == 0) {
 		LOG(LOG_ERROR, "Missing Key1.\n");
 		return -1;
 	}
-	if (keyParam2 == NULL || keyParam2Length == 0) {
+	if (key_param2 == NULL || key_param2Length == 0) {
 		LOG(LOG_ERROR, "Missing Key2.\n");
 		return -1;
 	}
-	if (keyParam1Length == keyParam2Length) {
+	if (key_param1Length == key_param2Length) {
 		LOG(LOG_ERROR, "Incorrect Key.\n");
 		return -1;
 	}
 
-	tmpkey1 = (uint8_t *)keyParam1;
-	tmpkey1Sz = keyParam1Length;
+	tmpkey1 = (uint8_t *)key_param1;
+	tmpkey1Sz = key_param1Length;
 	/*
 	 * Removing extra byte in MSB of value 0x00, which is required
 	 * for java compatibility,
@@ -97,24 +99,28 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 	 * 3) correct key1 MSBit should be 1, so anding with 0x80 to
 	 * ensure such condition.
 	 */
-	if ((keyParam1Length == (RSA_SHA256_KEY1_SIZE + 1)) &&
-	    !(keyParam1[0]) && (keyParam1[1] & BIT7_MASK)) {
-		tmpkey1 = (uint8_t *)keyParam1 + 1;
-		tmpkey1Sz = keyParam1Length - 1;
+	if ((key_param1Length == (RSA_SHA256_KEY1_SIZE + 1)) &&
+	    !(key_param1[0]) && (key_param1[1] & BIT7_MASK)) {
+		tmpkey1 = (uint8_t *)key_param1 + 1;
+		tmpkey1Sz = key_param1Length - 1;
 	}
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	hexdump("Public N", tmpkey1, tmpkey1Sz);
-	hexdump("Public E", keyParam2, keyParam2Length);
+	hexdump("Public E", key_param2, key_param2Length);
 #endif
+	/* This PRNG is being created here in order to pass it into the RSA
+	 * Encrypt function which needs the PRNG to create random values for
+	 * OAEP padding.
+	 */
 	mbedtls_ctr_drbg_init(&ctr_drbg);
 	mbedtls_entropy_init(&entropy);
 	mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
 			      (const unsigned char *)pers, sizeof(pers) - 1);
 
-	// by default OEAP is selcted for PKCS_V15
-	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
-	switch (hashType) {
+	// by default OEAP is selcted for PKCS_V21
+	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V21, 0);
+	switch (hash_type) {
 	case SDO_PK_HASH_SHA1:
 		mbedtls_rsa_set_padding(&rsa, MBEDTLS_RSA_PKCS_V21,
 					MBEDTLS_MD_SHA1);
@@ -133,37 +139,47 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 		goto error;
 	}
 
-	if ((mbedtls_mpi_read_binary(&rsa.N, tmpkey1, tmpkey1Sz)) != 0 ||
-	    (mbedtls_mpi_read_binary(&rsa.E, keyParam2, keyParam2Length)) !=
-		0) {
-		LOG(LOG_ERROR, "mbedtls_mpi_read_ error/n");
-		goto error;
-	}
-	rsa.len = (mbedtls_mpi_bitlen(&rsa.N) + 7) >> 3;
+	ret = mbedtls_rsa_import_raw(&rsa,
+				     tmpkey1, tmpkey1Sz,  /* N */
+				     NULL, 0, /* P */
+				     NULL, 0, /* Q */
+				     NULL, 0, /* D */
+				     key_param2, key_param2Length); /* E */
 
-	if ((ret = mbedtls_rsa_check_pubkey(&rsa)) != 0) {
-		LOG(LOG_ERROR, "mbedtls_i rsa pubkey error: %d.\n", ret);
-		goto error;
-	}
-	cipherCalLength = rsa.len;
-	LOG(LOG_DEBUG, "rsa len : %zu.\n", rsa.len);
-
-	/* send back required cipher budffer size */
-	if (cipherText == NULL) {
-		ret = cipherCalLength;
-		goto error;
-	}
-
-	/*When caller sends cipher buffer */
-	if (cipherCalLength > cipherTextLength) {
+	if (ret != 0) {
+		LOG(LOG_ERROR, "mbedtls_rsa_import_raw returned %d./n", ret);
 		ret = -1;
 		goto error;
 	}
 
-	if ((ret = mbedtls_rsa_pkcs1_encrypt(
-		 &rsa, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PUBLIC,
-		 clearTextLength, (unsigned char *)clearText, cipherText)) !=
-	    0) {
+	rsa.len = (mbedtls_mpi_bitlen(&rsa.N) + 7) >> 3;
+
+	ret = mbedtls_rsa_check_pubkey(&rsa);
+	if (ret != 0) {
+		LOG(LOG_ERROR, "mbedtls_i rsa pubkey error: %d.\n", ret);
+		goto error;
+	}
+	cipher_cal_length = rsa.len;
+	LOG(LOG_DEBUG, "rsa len : %zu.\n", rsa.len);
+
+	/* send back required cipher budffer size */
+	if (cipher_text == NULL) {
+		ret = cipher_cal_length;
+		goto error;
+	}
+
+	/*When caller sends cipher buffer */
+	if (cipher_cal_length > cipher_text_length) {
+		ret = -1;
+		goto error;
+	}
+
+	ret = mbedtls_rsa_pkcs1_encrypt(&rsa, mbedtls_ctr_drbg_random,
+					&ctr_drbg, MBEDTLS_RSA_PUBLIC,
+					clear_text_length,
+					(unsigned char *)clear_text,
+					cipher_text);
+	if (ret != 0) {
 		LOG(LOG_ERROR, "rsa encrypt failed ret: %x\n", ret);
 		ret = -1;
 		goto error;
@@ -177,22 +193,24 @@ error:
 }
 
 /**
- * sdoCryptoRSALen - Returns the cipher length
- * @param keyParam1 - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length - size of public key1, type size_t.
- * @param keyParam2 - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length - size of public key2, type size_t
+ * crypto_hal_rsa_len - Returns the cipher length
+ * @param key_param1 - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length - size of public key1, type size_t.
+ * @param key_param2 - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length - size of public key2, type size_t
  * @return ret
- *        return cypherLength in bytes.
+ *        return cypher_length in bytes.
  */
-uint32_t sdoCryptoRSALen(const uint8_t *keyParam1, uint32_t keyParam1Length,
-			 const uint8_t *keyParam2, uint32_t keyParam2Length)
+uint32_t crypto_hal_rsa_len(const uint8_t *key_param1,
+			    uint32_t key_param1Length,
+			    const uint8_t *key_param2,
+			    uint32_t key_param2Length)
 {
 	mbedtls_rsa_context rsa;
-	uint32_t cipherCalLength = 0;
+	uint32_t cipher_cal_length = 0;
 
-	uint8_t *tmpkey1 = (uint8_t *)keyParam1;
-	uint32_t tmpkey1Sz = keyParam1Length;
+	uint8_t *tmpkey1 = (uint8_t *)key_param1;
+	uint32_t tmpkey1Sz = key_param1Length;
 	/*
 	 * Removing extra byte in MSB of value 0x00, which is required
 	 * for java compatibility,
@@ -202,24 +220,24 @@ uint32_t sdoCryptoRSALen(const uint8_t *keyParam1, uint32_t keyParam1Length,
 	 * 3) correct key1 MSBit should be 1, so anding with 0x80 to
 	 * ensure such condition.
 	 */
-	if ((keyParam1Length == (RSA_SHA256_KEY1_SIZE + 1)) &&
-	    !(keyParam1[0]) && (keyParam1[1] & BIT7_MASK)) {
-		tmpkey1 = (uint8_t *)keyParam1 + 1;
-		tmpkey1Sz = keyParam1Length - 1;
+	if ((key_param1Length == (RSA_SHA256_KEY1_SIZE + 1)) &&
+	    !(key_param1[0]) && (key_param1[1] & BIT7_MASK)) {
+		tmpkey1 = (uint8_t *)key_param1 + 1;
+		tmpkey1Sz = key_param1Length - 1;
 	}
 
-	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V15, 0);
+	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V21, 0);
 	mbedtls_rsa_set_padding(&rsa, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256);
 
 	if ((mbedtls_mpi_read_binary(&rsa.N, tmpkey1, tmpkey1Sz)) != 0 ||
-	    (mbedtls_mpi_read_binary(&rsa.E, keyParam2, keyParam2Length)) !=
+	    (mbedtls_mpi_read_binary(&rsa.E, key_param2, key_param2Length)) !=
 		0) {
 		LOG(LOG_ERROR, "mbedtls_mpi_read_ error/n");
 		goto error;
 	}
-	cipherCalLength = ((mbedtls_mpi_bitlen(&rsa.N) + 7) >> 3);
+	cipher_cal_length = ((mbedtls_mpi_bitlen(&rsa.N) + 7) >> 3);
 
 error:
 	mbedtls_rsa_free(&rsa);
-	return cipherCalLength;
+	return cipher_cal_length;
 }

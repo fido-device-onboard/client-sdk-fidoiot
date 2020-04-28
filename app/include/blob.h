@@ -23,6 +23,6 @@
 
 #include <stdint.h>
 
-int32_t configureNormalBlob(void);
+int32_t configure_normal_blob(void);
 
 #endif // #ifndef __BLOB_H__

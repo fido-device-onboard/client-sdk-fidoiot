@@ -27,17 +27,18 @@
 #endif /* KEX_ECDH384_ENABLED */
 
 typedef struct {
-	DECLARE_BIGNUM(_DeviceRandom);
+	DECLARE_BIGNUM(_Device_random);
 	DECLARE_BIGNUM(_publicA); /* The server's A public value */
 	EC_KEY *_key;
+
 	const DECLARE_BIGNUM(_secretb); /* Out bit secret */
 	DECLARE_BIGNUM(_publicB);       /* Our B public value */
-	DECLARE_BIGNUM(_sharedSecret);
+	DECLARE_BIGNUM(_shared_secret);
 	uint8_t *_pubB;
 	uint8_t _publicB_length;
 } ecdh_context_t;
 
-static bool computePublicBECDH(ecdh_context_t *keyExData);
+static bool compute_publicBECDH(ecdh_context_t *key_ex_data);
 
 /**
  * Initialize the key exchange of type ECDH
@@ -45,9 +46,9 @@ static bool computePublicBECDH(ecdh_context_t *keyExData);
  * data structure
  * @return 0 if success else -1
  */
-int32_t sdoCryptoKEXInit(void **context)
+int32_t crypto_hal_kex_init(void **context)
 {
-	ecdh_context_t *keyExData = NULL;
+	ecdh_context_t *key_ex_data = NULL;
 	EC_KEY *key = NULL;
 
 	if (!context) {
@@ -55,30 +56,30 @@ int32_t sdoCryptoKEXInit(void **context)
 		return -1;
 	}
 
-	keyExData = sdoAlloc(sizeof(ecdh_context_t));
-	if (!keyExData) {
+	key_ex_data = sdo_alloc(sizeof(ecdh_context_t));
+	if (!key_ex_data) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto error;
 	}
 
 	/*
 	 * Start by memory allocation so then all pointers will be initialized
-	 * in case of sdoCryptoInit error.
+	 * in case of sdo_crypto_init error.
 	 */
-	keyExData->_publicB = BN_new();
-	keyExData->_publicA = BN_new();
-	keyExData->_sharedSecret = BN_new();
-	keyExData->_DeviceRandom = BN_new();
+	key_ex_data->_publicB = BN_new();
+	key_ex_data->_publicA = BN_new();
+	key_ex_data->_shared_secret = BN_new();
+	key_ex_data->_Device_random = BN_new();
 
-	if (!keyExData->_publicB || !keyExData->_publicA ||
-	    !keyExData->_sharedSecret || !keyExData->_DeviceRandom) {
+	if (!key_ex_data->_publicB || !key_ex_data->_publicA ||
+	    !key_ex_data->_shared_secret || !key_ex_data->_Device_random) {
 		LOG(LOG_ERROR, "BN alloc failed\n");
 		goto error;
 	}
 
 	key = EC_KEY_new_by_curve_name(KEY_CURVE);
 	/* Generate Device Random bits(384) */
-	if (bn_rand(keyExData->_DeviceRandom, BN_RANDOM_SIZE)) {
+	if (bn_rand(key_ex_data->_Device_random, BN_RANDOM_SIZE)) {
 		goto error;
 	}
 
@@ -87,16 +88,16 @@ int32_t sdoCryptoKEXInit(void **context)
 		goto error;
 	}
 
-	keyExData->_key = key;
+	key_ex_data->_key = key;
 
-	if (computePublicBECDH(keyExData) == false)
+	if (compute_publicBECDH(key_ex_data) == false)
 		goto error;
 
-	*context = (void *)keyExData;
+	*context = (void *)key_ex_data;
 	return 0;
 error:
-	if (NULL != keyExData)
-		sdoCryptoKEXClose((void *)&keyExData);
+	if (NULL != key_ex_data)
+		crypto_hal_kex_close((void *)&key_ex_data);
 	return -1;
 }
 
@@ -105,47 +106,49 @@ error:
  * @param context - pointer to the keyexchange data structure
  * @return 0 if success else -1
  **/
-int32_t sdoCryptoKEXClose(void **context)
+int32_t crypto_hal_kex_close(void **context)
 {
-	ecdh_context_t *keyExData;
+	ecdh_context_t *key_ex_data;
 
 	if (!context) {
 		LOG(LOG_ERROR, "Invalid parameters\n");
 		return -1;
 	}
 
-	keyExData = *(ecdh_context_t **)context;
-	if (keyExData->_publicB)
-		BN_clear_free(keyExData->_publicB);
-	if (keyExData->_publicA)
-		BN_clear_free(keyExData->_publicA);
-	if (keyExData->_sharedSecret)
-		BN_clear_free(keyExData->_sharedSecret);
-	if (keyExData->_DeviceRandom)
-		BN_clear_free(keyExData->_DeviceRandom);
+	key_ex_data = *(ecdh_context_t **)context;
+	if (key_ex_data->_publicB)
+		BN_clear_free(key_ex_data->_publicB);
+	if (key_ex_data->_publicA)
+		BN_clear_free(key_ex_data->_publicA);
+	if (key_ex_data->_shared_secret)
+		BN_clear_free(key_ex_data->_shared_secret);
+	if (key_ex_data->_Device_random)
+		BN_clear_free(key_ex_data->_Device_random);
 
-	if (keyExData->_key != NULL) {
-		EC_KEY_free(keyExData->_key);
-		keyExData->_key = NULL;
+	if (key_ex_data->_key != NULL) {
+		EC_KEY_free(key_ex_data->_key);
+		key_ex_data->_key = NULL;
 	}
-	if (keyExData->_pubB) {
-		sdoFree(keyExData->_pubB);
+	if (key_ex_data->_pubB) {
+		sdo_free(key_ex_data->_pubB);
 	}
-	sdoFree(keyExData);
+	sdo_free(key_ex_data);
 	return 0;
 }
 
 /**
  * Compute B from initial secret a passed to us in the clear
- * @param keyExData - pointer to the keyexchange data structure
+ * @param key_ex_data - pointer to the keyexchange data structure
  * @return
  *        returns true on success, false on error
  */
-static bool computePublicBECDH(ecdh_context_t *keyExData)
+static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 {
 	BN_CTX *ctx = NULL;
+
 	const EC_GROUP *group = NULL;
 	EC_KEY *key = NULL;
+
 	const EC_POINT *point = NULL;
 	BIGNUM *x = NULL, *y = NULL;
 	unsigned char *temp = NULL;
@@ -153,9 +156,10 @@ static bool computePublicBECDH(ecdh_context_t *keyExData)
 	int allocbytes = 0;
 	uint16_t tmp = 0;
 	bool ret = false;
-	LOG(LOG_DEBUG, "computePublicB started\n");
 
-	if (!keyExData) {
+	LOG(LOG_DEBUG, "compute_publicB started\n");
+
+	if (!key_ex_data) {
 		LOG(LOG_ERROR, "invalid param\n");
 		return ret;
 	}
@@ -173,7 +177,7 @@ static bool computePublicBECDH(ecdh_context_t *keyExData)
 		goto exit;
 	}
 
-	key = keyExData->_key;
+	key = key_ex_data->_key;
 	if (!key) {
 		LOG(LOG_ERROR, "EC key  is wrong\n");
 		goto exit;
@@ -191,8 +195,8 @@ static bool computePublicBECDH(ecdh_context_t *keyExData)
 	}
 
 	/* Store the private key */
-	keyExData->_secretb = EC_KEY_get0_private_key(key);
-	if (!keyExData->_secretb) {
+	key_ex_data->_secretb = EC_KEY_get0_private_key(key);
+	if (!key_ex_data->_secretb) {
 		LOG(LOG_ERROR, "EC private key get failed\n");
 		goto exit;
 	}
@@ -211,28 +215,32 @@ static bool computePublicBECDH(ecdh_context_t *keyExData)
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Print the co-ordinates */
 	char *hexbuf1 = BN_bn2hex(x);
+
 	LOG(LOG_DEBUG, "Bx %s : bytes %d, %s\n",
 	    BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x),
 	    hexbuf1);
 	OPENSSL_free(hexbuf1);
 
 	char *hexbuf2 = BN_bn2hex(y);
+
 	LOG(LOG_DEBUG, "By %s : bytes %d, %s\n",
 	    BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y),
 	    hexbuf2);
 	OPENSSL_free(hexbuf2);
 
-	char *hexbuf3 = BN_bn2hex(keyExData->_DeviceRandom);
+	char *hexbuf3 = BN_bn2hex(key_ex_data->_Device_random);
+
 	LOG(LOG_DEBUG, "Device Random  %s : bytes %d, %s\n",
-	    BN_is_negative(keyExData->_DeviceRandom) ? "Negative" : "Positive",
-	    bn_num_bytes(keyExData->_DeviceRandom), hexbuf3);
+	    BN_is_negative(key_ex_data->_Device_random) ? "Negative"
+							: "Positive",
+	    bn_num_bytes(key_ex_data->_Device_random), hexbuf3);
 	OPENSSL_free(hexbuf3);
 #endif
 
 	/* 2byte for each blen 3x2 =6 */
 	allocbytes = (bn_num_bytes(x) + bn_num_bytes(y) +
-		      bn_num_bytes(keyExData->_DeviceRandom) + 6);
-	temp = sdoAlloc(allocbytes);
+		      bn_num_bytes(key_ex_data->_Device_random) + 6);
+	temp = sdo_alloc(allocbytes);
 	if (!temp) {
 		LOG(LOG_ERROR, "Mem alloc failed\n");
 		goto exit;
@@ -254,44 +262,46 @@ static bool computePublicBECDH(ecdh_context_t *keyExData)
 	temp[size] = (tmp & 0x00ff);
 	size += 1;
 	size += BN_bn2bin(y, &temp[size]);
-	tmp = bn_num_bytes(keyExData->_DeviceRandom);
+	tmp = bn_num_bytes(key_ex_data->_Device_random);
 	if (tmp & 0xffff0000) // check size more than 2 byte size space
 		goto exit;
 	temp[size] = tmp >> 8;
 	size += 1;
 	temp[size] = (tmp & 0x00ff);
 	size += 1;
-	size += BN_bn2bin(keyExData->_DeviceRandom, &temp[size]);
+	size += BN_bn2bin(key_ex_data->_Device_random, &temp[size]);
 
-	BN_bin2bn(temp, size, keyExData->_publicB);
-	keyExData->_pubB = sdoAlloc(allocbytes);
-	if (!keyExData->_pubB) {
+	BN_bin2bn(temp, size, key_ex_data->_publicB);
+	key_ex_data->_pubB = sdo_alloc(allocbytes);
+	if (!key_ex_data->_pubB) {
 		LOG(LOG_ERROR, "Memclloc failed\n");
 		goto exit;
 	}
-	if (memcpy_s(keyExData->_pubB, allocbytes, temp, allocbytes) != 0) {
+	if (memcpy_s(key_ex_data->_pubB, allocbytes, temp, allocbytes) != 0) {
 		LOG(LOG_ERROR, "Memcpy failed\n");
-		sdoFree(keyExData->_pubB);
+		sdo_free(key_ex_data->_pubB);
 		goto exit;
 	}
 
-	keyExData->_publicB_length = allocbytes;
+	key_ex_data->_publicB_length = allocbytes;
 #if LOG_LEVEL == LOG_MAX_LEVEL
-	hexdump("_publicB::", keyExData->_publicB, keyExData->_publicB_length);
+	hexdump("_publicB::", key_ex_data->_publicB,
+		key_ex_data->_publicB_length);
 	{
-		char *hexbuf = BN_bn2hex(keyExData->_publicB);
-		LOG(LOG_DEBUG, "keyExData->_publicB %s : bytes %d, %s\n",
-		    BN_is_negative(keyExData->_publicB) ? "Negative"
-							: "Positive",
-		    bn_num_bytes(keyExData->_publicB), hexbuf);
+		char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
+
+		LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, %s\n",
+		    BN_is_negative(key_ex_data->_publicB) ? "Negative"
+							  : "Positive",
+		    bn_num_bytes(key_ex_data->_publicB), hexbuf);
 		OPENSSL_free(hexbuf);
 	}
 #endif
 	ret = true;
-	LOG(LOG_DEBUG, "computePublicB complete\n");
+	LOG(LOG_DEBUG, "compute_publicB complete\n");
 exit:
 	if (temp)
-		sdoFree(temp);
+		sdo_free(temp);
 	if (x)
 		BN_clear(x);
 	if (y)
@@ -308,30 +318,30 @@ exit:
  * This is then sent to the other side of the connection.
  *
  * @param context - pointer to the key exchange data structure
- * @param devRandValue - B secret to be shared with other side of connection
- * @param devRandLength - Size of devRandValue buffer
+ * @param dev_rand_value - B secret to be shared with other side of connection
+ * @param dev_rand_length - Size of dev_rand_value buffer
  * @return 0 if success, else -1
  */
-int32_t sdoCryptoGetDeviceRandom(void *context, uint8_t *devRandValue,
-				 uint32_t *devRandLength)
+int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
+				     uint32_t *dev_rand_length)
 {
-	ecdh_context_t *keyExData = (ecdh_context_t *)context;
+	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
-	if (!keyExData || !devRandLength) {
+	if (!key_ex_data || !dev_rand_length) {
 		LOG(LOG_ERROR, "Invalid parameters\n");
 		return -1;
 	}
-	if (!devRandValue) {
-		*devRandLength = keyExData->_publicB_length;
+	if (!dev_rand_value) {
+		*dev_rand_length = key_ex_data->_publicB_length;
 		return 0;
 	}
-	if (*devRandLength < keyExData->_publicB_length) {
+	if (*dev_rand_length < key_ex_data->_publicB_length) {
 		LOG(LOG_ERROR, "Invalid buff size\n");
 		return -1;
 	}
 
-	if (memcpy_s(devRandValue, *devRandLength, keyExData->_pubB,
-		     *devRandLength) != 0) {
+	if (memcpy_s(dev_rand_value, *dev_rand_length, key_ex_data->_pubB,
+		     *dev_rand_length) != 0) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
 		return -1;
 	}
@@ -342,30 +352,31 @@ int32_t sdoCryptoGetDeviceRandom(void *context, uint8_t *devRandValue,
 /**
  * Input A from other side of connection and compute shared secret[ECDH mode].
  * @param context - pointer to the key exchange data structure
- * @param peerRandValue - value is encrypted from other side of connection,
- * @param peerRandLength - Size of peerRandValue
+ * @param peer_rand_value - value is encrypted from other side of connection,
+ * @param peer_rand_length - Size of peer_rand_value
  * @return 0 if success, else false.
  */
-int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
-			       uint32_t peerRandLength)
+int32_t crypto_hal_set_peer_random(void *context,
+				   const uint8_t *peer_rand_value,
+				   uint32_t peer_rand_length)
 {
-	ecdh_context_t *keyExData = (ecdh_context_t *)context;
+	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
-	if (!keyExData || !peerRandValue || peerRandLength == 0) {
+	if (!key_ex_data || !peer_rand_value || peer_rand_length == 0) {
 		LOG(LOG_ERROR, "Invalid parameters\n");
 		return -1;
 	}
 
 	BN_CTX *ctx = NULL;
 	const uint8_t *temp = NULL;
-	size_t size_Ax = 0, size_Ay = 0, size_ownerRandom = 0;
+	size_t size_Ax = 0, size_Ay = 0, size_owner_random = 0;
 	unsigned char *shse = NULL, *shx = NULL;
 	int size = 0;
-	BIGNUM *Ax_bn = NULL, *Ay_bn = NULL, *ownerRandom_bn = NULL;
+	BIGNUM *Ax_bn = NULL, *Ay_bn = NULL, *owner_random_bn = NULL;
 	BIGNUM *Shx_bn = NULL, *Shy_bn = NULL;
 	const EC_GROUP *group = NULL;
 	EC_POINT *point = NULL;
-	EC_POINT *ShSe_point = NULL;
+	EC_POINT *Sh_se_point = NULL;
 	EC_KEY *key = NULL;
 	int ret = -1;
 
@@ -373,38 +384,40 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 	Ay_bn = BN_new();
 	Shx_bn = BN_new();
 	Shy_bn = BN_new();
-	ownerRandom_bn = BN_new();
+	owner_random_bn = BN_new();
 
-	if (!Ax_bn || !Ay_bn || !Shx_bn || !Shy_bn || !ownerRandom_bn) {
+	if (!Ax_bn || !Ay_bn || !Shx_bn || !Shy_bn || !owner_random_bn) {
 		LOG(LOG_ERROR, "BN alloc failed\n");
 		goto error;
 	}
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
-	LOG(LOG_DEBUG, "setPublicA : bytes : %u\n", peerRandLength);
-	hexdump("Public A", peerRandValue, peerRandLength);
+	LOG(LOG_DEBUG, "set_publicA : bytes : %u\n", peer_rand_length);
+	hexdump("Public A", peer_rand_value, peer_rand_length);
 	/* Display public - B */
-	char *hexbuf = BN_bn2hex(keyExData->_publicB);
-	LOG(LOG_DEBUG, "keyExData->_publicB %s : bytes %d, 0x%s\n",
-	    BN_is_negative(keyExData->_publicB) ? "Negative" : "Positive",
-	    bn_num_bytes(keyExData->_publicB), hexbuf);
+	char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
+
+	LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, 0x%s\n",
+	    BN_is_negative(key_ex_data->_publicB) ? "Negative" : "Positive",
+	    bn_num_bytes(key_ex_data->_publicB), hexbuf);
 	OPENSSL_free(hexbuf);
 #endif
-	bn_bin2bn(peerRandValue, peerRandLength, keyExData->_publicA);
+	bn_bin2bn(peer_rand_value, peer_rand_length, key_ex_data->_publicA);
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Display Public - A */
-	char *hexbuf1 = BN_bn2hex(keyExData->_publicA);
+	char *hexbuf1 = BN_bn2hex(key_ex_data->_publicA);
+
 	LOG(LOG_DEBUG,
-	    "Device Received: keyExData->_publicA %s : "
+	    "Device Received: key_ex_data->_publicA %s : "
 	    "bytes %d, 0x%s\n",
-	    BN_is_negative(keyExData->_publicA) ? "Negative" : "Positive",
-	    bn_num_bytes(keyExData->_publicA), hexbuf1);
+	    BN_is_negative(key_ex_data->_publicA) ? "Negative" : "Positive",
+	    bn_num_bytes(key_ex_data->_publicA), hexbuf1);
 	OPENSSL_free(hexbuf1);
 #endif
 
-	temp = peerRandValue;
-	hexdump("Public A(bn)", temp, peerRandLength);
+	temp = peer_rand_value;
+	hexdump("Public A(bn)", temp, peer_rand_length);
 	size = 0;
 	size_Ax = (temp[size] << 8) | temp[size + 1];
 	size += 2;
@@ -414,25 +427,28 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 	size += 2;
 	BN_bin2bn(&temp[size], size_Ay, Ay_bn);
 	size += size_Ay;
-	size_ownerRandom = (temp[size] << 8) | temp[size + 1];
+	size_owner_random = (temp[size] << 8) | temp[size + 1];
 	size += 2;
-	BN_bin2bn(&temp[size], size_ownerRandom, ownerRandom_bn);
+	BN_bin2bn(&temp[size], size_owner_random, owner_random_bn);
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	char *hexbuf2 = BN_bn2hex(Ax_bn);
+
 	LOG(LOG_DEBUG, "Device Reveived: Ax %s : bytes %d, %s\n",
 	    BN_is_negative(Ax_bn) ? "Negative" : "Positive",
 	    bn_num_bytes(Ax_bn), hexbuf2);
 	OPENSSL_free(hexbuf2);
 	char *hexbuf3 = BN_bn2hex(Ay_bn);
+
 	LOG(LOG_DEBUG, "Device Received: Ay %s : bytes %d, %s\n",
 	    BN_is_negative(Ay_bn) ? "Negative" : "Positive",
 	    bn_num_bytes(Ay_bn), hexbuf3);
 	OPENSSL_free(hexbuf3);
-	char *hexbuf4 = BN_bn2hex(ownerRandom_bn);
+	char *hexbuf4 = BN_bn2hex(owner_random_bn);
+
 	LOG(LOG_DEBUG, "Device Reveived: Owner Random  %s : bytes %d, %s\n",
-	    BN_is_negative(ownerRandom_bn) ? "Negative" : "Positive",
-	    bn_num_bytes(ownerRandom_bn), hexbuf4);
+	    BN_is_negative(owner_random_bn) ? "Negative" : "Positive",
+	    bn_num_bytes(owner_random_bn), hexbuf4);
 	OPENSSL_free(hexbuf4);
 #endif
 	ctx = BN_CTX_new();
@@ -441,7 +457,7 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 		goto error;
 	}
 
-	key = keyExData->_key;
+	key = key_ex_data->_key;
 	group = EC_KEY_get0_group(key);
 	point = EC_POINT_new(group);
 	if (group == NULL || point == NULL || key == NULL) {
@@ -449,7 +465,7 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 		goto error;
 	}
 	EC_POINT_set_affine_coordinates_GFp(group, point, Ax_bn, Ay_bn, ctx);
-	shx = sdoAlloc(bn_num_bytes(Ax_bn));
+	shx = sdo_alloc(bn_num_bytes(Ax_bn));
 	if (!shx)
 		goto error;
 #if defined OPENSSL_2_0_1
@@ -458,6 +474,7 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 		goto error;
 	}
 	size_t shx_len = strlen_s(shx, SDO_MAX_STR_SIZE);
+
 	if (!shx_len || shx_len == SDO_MAX_STR_SIZE)
 		goto error;
 	if (BN_bin2bn(shx, shx_len, Shx_bn) == NULL) {
@@ -466,17 +483,17 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 	}
 
 #else
-	ShSe_point = EC_POINT_new(group);
-	if (!ShSe_point)
+	Sh_se_point = EC_POINT_new(group);
+	if (!Sh_se_point)
 		goto error;
-	if (EC_POINT_mul(group, ShSe_point, NULL, point, keyExData->_secretb,
+	if (EC_POINT_mul(group, Sh_se_point, NULL, point, key_ex_data->_secretb,
 			 ctx) == 0) {
-		EC_POINT_free(ShSe_point);
+		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
-	if (EC_POINT_get_affine_coordinates_GFp(group, ShSe_point, Shx_bn,
+	if (EC_POINT_get_affine_coordinates_GFp(group, Sh_se_point, Shx_bn,
 						Shy_bn, ctx) == 0) {
-		EC_POINT_free(ShSe_point);
+		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
 
@@ -485,10 +502,10 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 		goto error;
 	}
 
-	EC_POINT_free(ShSe_point);
+	EC_POINT_free(Sh_se_point);
 #endif
-	shse = sdoAlloc(bn_num_bytes(keyExData->_DeviceRandom) +
-			size_ownerRandom + bn_num_bytes(Shx_bn));
+	shse = sdo_alloc(bn_num_bytes(key_ex_data->_Device_random) +
+			 size_owner_random + bn_num_bytes(Shx_bn));
 	if (!shse) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
 		goto error;
@@ -500,18 +517,18 @@ int32_t sdoCryptoSetPeerRandom(void *context, const uint8_t *peerRandValue,
 		goto error;
 	}
 	size += bn_num_bytes(Shx_bn);
-	if (BN_bn2bin(keyExData->_DeviceRandom, &shse[size]) == 0) {
+	if (BN_bn2bin(key_ex_data->_Device_random, &shse[size]) == 0) {
 		LOG(LOG_ERROR, "BN bn to bin conversion failed\n");
 		goto error;
 	}
-	size += bn_num_bytes(keyExData->_DeviceRandom);
-	if (BN_bn2bin(ownerRandom_bn, &shse[size]) == 0) {
+	size += bn_num_bytes(key_ex_data->_Device_random);
+	if (BN_bn2bin(owner_random_bn, &shse[size]) == 0) {
 		LOG(LOG_ERROR, "BN bn to bin conversion failed\n");
 		goto error;
 	}
-	size += size_ownerRandom;
+	size += size_owner_random;
 
-	if (BN_bin2bn(shse, size, keyExData->_sharedSecret) == 0) {
+	if (BN_bin2bn(shse, size, key_ex_data->_shared_secret) == 0) {
 		LOG(LOG_ERROR, "BN bn to bin conversion failed\n");
 		goto error;
 	}
@@ -521,13 +538,13 @@ error:
 	if (point)
 		EC_POINT_free(point);
 	if (shse)
-		sdoFree(shse);
+		sdo_free(shse);
 	if (Ax_bn)
 		BN_clear_free(Ax_bn);
 	if (Ay_bn)
 		BN_clear_free(Ay_bn);
-	if (ownerRandom_bn)
-		BN_clear_free(ownerRandom_bn);
+	if (owner_random_bn)
+		BN_clear_free(owner_random_bn);
 	if (Shx_bn)
 		BN_clear_free(Shx_bn);
 	if (Shy_bn)
@@ -535,43 +552,44 @@ error:
 	if (ctx)
 		BN_CTX_free(ctx);
 	if (shx)
-		sdoFree(shx);
+		sdo_free(shx);
 
 	return ret;
 }
 
 /** This function returns the secret computed per the ECDH protocol in the
- * secret buffer of length secretLength.
+ * secret buffer of length secret_length.
  *  @param context - The context parameter is an initialized opaque context
  * structure.
  *  @param secret - buffer to contain shared secret
- *  @param secretLength - Size of secret buffer
+ *  @param secret_length - Size of secret buffer
  *  @return 0 on success or -1 on failure.
  */
-int32_t sdoCryptoGetSecret(void *context, uint8_t *secret,
-			   uint32_t *secretLength)
+int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
+			      uint32_t *secret_length)
 {
-	ecdh_context_t *keyExData = (ecdh_context_t *)context;
+	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
-	if (!keyExData || !secretLength) {
+	if (!key_ex_data || !secret_length) {
 		LOG(LOG_ERROR, "Invalid parameters\n");
 		return -1;
 	}
 
 	if (!secret) {
-		*secretLength = bn_num_bytes(keyExData->_sharedSecret);
+		*secret_length = bn_num_bytes(key_ex_data->_shared_secret);
 		return 0;
 	}
 
-	if (*secretLength < bn_num_bytes(keyExData->_sharedSecret)) {
+	if (*secret_length <
+	    (uint32_t)bn_num_bytes(key_ex_data->_shared_secret)) {
 		LOG(LOG_ERROR, "Invalid buff size\n");
 		return -1;
 	}
 
 #if defined(KEX_ASYM_ENABLED)
-	sharedSecret = keyExData->_sharedSecret;
+	shared_secret = key_ex_data->_shared_secret;
 #else
-	if (0 >= bn_bn2bin(keyExData->_sharedSecret, secret))
+	if (0 >= bn_bn2bin(key_ex_data->_shared_secret, secret))
 		return -1;
 #endif
 

@@ -20,7 +20,7 @@
  * --- Message Format Begins ---
  *  {
  *      "g2": GUID,   # Device GUID, received and stored during DI
- *      "eA": SigInfo # eA: Device Signature information
+ *      "eA": Sig_info # eA: Device Signature information
  *  }
  * --- Message Format Ends ---
  *
@@ -31,20 +31,20 @@
  * Value = 13 (ECDSA256): 128bit number
  * Value = 14 (ECDSA384): 128bit number
  */
-int32_t msg30(SDOProt_t *ps)
+int32_t msg30(sdo_prot_t *ps)
 {
-	sdoWNextBlock(&ps->sdow, SDO_TO1_TYPE_HELLO_SDO);
-	sdoWBeginObject(&ps->sdow);
+	sdow_next_block(&ps->sdow, SDO_TO1_TYPE_HELLO_SDO);
+	sdow_begin_object(&ps->sdow);
 
 	/* Write GUID received during DI */
-	sdoWriteTag(&ps->sdow, "g2");
-	sdoByteArrayWriteChars(&ps->sdow, ps->devCred->ownerBlk->guid);
+	sdo_write_tag(&ps->sdow, "g2");
+	sdo_byte_array_write_chars(&ps->sdow, ps->dev_cred->owner_blk->guid);
 
 	/* Write the siginfo for RV to use and prepare next msg */
-	sdoWriteTag(&ps->sdow, "eA");
-	sdoGidWrite(&ps->sdow);
+	sdo_write_tag(&ps->sdow, "eA");
+	sdo_gid_write(&ps->sdow);
 
-	sdoWEndObject(&ps->sdow);
+	sdow_end_object(&ps->sdow);
 
 	/* Move to next state (msg31) */
 	ps->state = SDO_STATE_TO1_RCV_HELLO_SDOACK;

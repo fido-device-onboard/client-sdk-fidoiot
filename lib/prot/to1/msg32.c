@@ -10,55 +10,55 @@
 
 #include "util.h"
 #include "sdoprot.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 
 /**
- * msg32() - TO1.ProveToSDO
+ * msg32() - TO1.Prove_toSDO
  * The device responds with the data which potentially proves to RV that it is
  * the authorized device requesting the owner information
  *
  * --- Message Format Begins ---
  * {
  *      "bo": {
- *	    "ai": AppId,     # AppId of SDO
+ *	    "ai": App_id,     # App_id of SDO
  *   	"n4": Nonce,     # Nonce which was received in msg31
  *      "g2": GUID,      # GUID sent to RV in msg30
  *      },
- *      "pk": PublicKey, # EPID Public key if DA = epid, else PKNull
+ *      "pk": Public_key, # EPID Public key if DA = epid, else PKNull
  *      "sg": Signature  # Signature calculated over nonce
  * }
  * --- Message Format Ends---
  *
  */
-int32_t msg32(SDOProt_t *ps)
+int32_t msg32(sdo_prot_t *ps)
 {
 	int ret = -1;
-	SDOSig_t sig = {0};
-	SDOSigInfo_t *eA;
-	SDOPublicKey_t *publickey;
+	sdo_sig_t sig = {0};
+	sdo_sig_info_t *eA;
+	sdo_public_key_t *publickey;
 
 	LOG(LOG_DEBUG, "Starting SDO_STATE_TO1_SND_PROVE_TO_SDO\n");
 
 	/* Start writing the block for msg31 */
-	sdoWNextBlock(&ps->sdow, SDO_TO1_TYPE_PROVE_TO_SDO);
+	sdow_next_block(&ps->sdow, SDO_TO1_TYPE_PROVE_TO_SDO);
 
 	/* Start Body/Begin Object "bo" tag */
-	eA = sdoGetDeviceSigInfoeA();
+	eA = sdo_get_device_sig_infoeA();
 	publickey = eA ? eA->pubkey : NULL;
 
-	if (!sdoBeginWriteSignature(&ps->sdow, &sig, publickey)) {
+	if (!sdo_begin_write_signature(&ps->sdow, &sig, publickey)) {
 		LOG(LOG_ERROR, "Failed in writing the signature\n");
 		goto err;
 	}
 
-	sdoWBeginObject(&ps->sdow);
+	sdow_begin_object(&ps->sdow);
 
 	/* Write the "ai" tag */
-	sdoWriteTag(&ps->sdow, "ai");
-	sdoAppIDWrite(&ps->sdow);
+	sdo_write_tag(&ps->sdow, "ai");
+	sdo_app_id_write(&ps->sdow);
 
 	/* Write back the same nonce which was received in msg31 */
-	sdoWriteTag(&ps->sdow, "n4");
+	sdo_write_tag(&ps->sdow, "n4");
 	if (!ps->n4) {
 		LOG(LOG_ERROR, "ps->n4 is empty MSG#32\n");
 		goto err;
@@ -66,18 +66,18 @@ int32_t msg32(SDOProt_t *ps)
 
 	/* FIXME: Move to error handling. If TO1 restarts, we will leak memory
 	 */
-	sdoByteArrayWriteChars(&ps->sdow, ps->n4);
-	sdoByteArrayFree(ps->n4);
+	sdo_byte_array_write_chars(&ps->sdow, ps->n4);
+	sdo_byte_array_free(ps->n4);
 	ps->n4 = NULL;
 
 	/* Write the GUID received during DI */
-	sdoWriteTag(&ps->sdow, "g2");
-	sdoByteArrayWriteChars(&ps->sdow, ps->devCred->ownerBlk->guid);
+	sdo_write_tag(&ps->sdow, "g2");
+	sdo_byte_array_write_chars(&ps->sdow, ps->dev_cred->owner_blk->guid);
 	/* TODO: Add support for epk defined in spec 0.8 */
-	sdoWEndObject(&ps->sdow);
+	sdow_end_object(&ps->sdow);
 
 	/* Fill in the pk and sg based on Device Attestation selected */
-	if (sdoEndWriteSignature(&ps->sdow, &sig) != true) {
+	if (sdo_end_write_signature(&ps->sdow, &sig) != true) {
 		LOG(LOG_ERROR, "Failed in writing the signature\n");
 		goto err;
 	}

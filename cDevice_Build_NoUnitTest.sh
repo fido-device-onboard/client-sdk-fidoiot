@@ -11,13 +11,15 @@ else
         BUILDTYPE=$1
 fi
 
+
 # Build To Archive into Artifactory
+
 
 echo "For ecdsa_c_device *******"
 mkdir -p ecdsa256_c_device_bin
 mkdir -p ecdsa256_c_device_bin/blob_backup
 make DA=ecdsa256 pristine
-make BUILD=${BUILDTYPE} PK_ENC=rsa DA=ecdsa256
+make BUILD=${BUILDTYPE} PK_ENC=ecdsa DA=ecdsa256 KEX=ecdh
 
 cp -a ${WORKSPACE}/build/linux/${BUILDTYPE}/linux-client    ${WORKSPACE}/ecdsa256_c_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/ecdsa256_c_device_bin
@@ -30,7 +32,7 @@ echo "For ecdsa_c_device for Supply chain tool*******"
 mkdir -p ecdsa256_c_sct_device_bin
 mkdir -p ecdsa256_c_sct_device_bin/blob_backup
 make DA=ecdsa256 pristine
-make BUILD=${BUILDTYPE} PK_ENC=ecdsa DA=ecdsa256 MANUFACTURER_TOOLKIT=true
+make BUILD=${BUILDTYPE} PK_ENC=ecdsa DA=ecdsa256 MANUFACTURER_TOOLKIT=true KEX=ecdh
 
 cp -a ${WORKSPACE}/build/linux/${BUILDTYPE}/linux-client    ${WORKSPACE}/ecdsa256_c_sct_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/ecdsa256_c_sct_device_bin
@@ -42,7 +44,7 @@ cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa256_c_sct_device_bin/b
 mkdir -p ecdsa384_c_sct_device_bin
 mkdir -p ecdsa384_c_sct_device_bin/blob_backup
 make DA=ecdsa384 pristine
-make BUILD=${BUILDTYPE} PK_ENC=ecdsa DA=ecdsa384 MANUFACTURER_TOOLKIT=true
+make BUILD=${BUILDTYPE} PK_ENC=ecdsa DA=ecdsa384 MANUFACTURER_TOOLKIT=true KEX=ecdh384
 
 cp -a ${WORKSPACE}/build/linux/${BUILDTYPE}/linux-client    ${WORKSPACE}/ecdsa384_c_sct_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/ecdsa384_c_sct_device_bin
@@ -55,7 +57,7 @@ echo "For epid_c_device *******"
 mkdir -p epid_c_device_bin
 mkdir -p epid_c_device_bin/blob_backup
 make DA=epid pristine
-make BUILD=${BUILDTYPE} HTTPPROXY=true DA=epid
+make BUILD=${BUILDTYPE} HTTPPROXY=true DA=epid PK_ENC=rsa KEX=asym
 
 cp -a ${WORKSPACE}/build/linux/${BUILDTYPE}/linux-client    ${WORKSPACE}/epid_c_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/epid_c_device_bin
@@ -68,7 +70,7 @@ echo "For epid_c_device for Supply chain tool*******"
 mkdir -p epid_c_sct_device_bin
 mkdir -p epid_c_sct_device_bin/blob_backup
 make DA=epid pristine
-make BUILD=${BUILDTYPE} PK_ENC=rsa DA=epid MANUFACTURER_TOOLKIT=true
+make BUILD=${BUILDTYPE} PK_ENC=rsa DA=epid MANUFACTURER_TOOLKIT=true KEX=dh
 
 cp -a ${WORKSPACE}/build/linux/${BUILDTYPE}/linux-client    ${WORKSPACE}/epid_c_sct_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/epid_c_sct_device_bin

@@ -19,58 +19,60 @@
 #include "safe_lib.h"
 
 /**
- * sdoCryptoAESGcmEncrypt -  Perform Authenticated AES encryption on the input
- * plain text.
+ * sdo_crypto_aes_gcm_encrypt -  Perform Authenticated AES encryption on the
+ * input plain text.
  *
- * @param plainText
+ * @param plain_text
  *        input plain-text to modify.
- * @param plainTextLength
+ * @param plain_text_length
  *        plain-text size in bytes.
- * @param cipherText
+ * @param cipher_text
  *        Encrypted text(output).
- * @param cipherTextLength
- * 	  Max length of Cipher Text
+ * @param cipher_text_length
+ *	  Max length of Cipher Text
  * @param iv
  *        AES encryption IV.
- * @param ivLength
+ * @param iv_length
  *        AES encryption IV size in bytes.
  * @param key
- *        Key in ByteArray format used in encryption.
- * @param keyLength
+ *        Key in Byte_array format used in encryption.
+ * @param key_length
  *        Key size in Bytes. Only AES128 is supported
  * @param tag
  *        tag added during encryption (output).
- * @param tagLength
+ * @param tag_length
  *        tag size in Bytes.
  * @return ret
- *        return cipherLength in bytes during success and -1 during any error.
+ *        return cipher_length in bytes during success and -1 during any error.
  */
-int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
-			       uint32_t plainTextLength, uint8_t *cipherText,
-			       uint32_t cipherTextLength, const uint8_t *iv,
-			       uint32_t ivLength, const uint8_t *key,
-			       uint32_t keyLength, uint8_t *tag,
-			       uint32_t tagLength)
+int32_t sdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
+				   uint32_t plain_text_length,
+				   uint8_t *cipher_text,
+				   uint32_t cipher_text_length,
+				   const uint8_t *iv, uint32_t iv_length,
+				   const uint8_t *key, uint32_t key_length,
+				   uint8_t *tag, uint32_t tag_length)
 {
 	int retval = -1;
 	EVP_CIPHER_CTX *ctx = NULL;
 	int len = 0;
 
-	if (NULL == plainText || 0 == plainTextLength || NULL == cipherText ||
-	    NULL == iv || 0 == ivLength || NULL == key ||
-	    keyLength != PLATFORM_AES_KEY_DEFAULT_LEN || NULL == tag ||
-	    tagLength != AES_GCM_TAG_LEN) {
+	if (NULL == plain_text || 0 == plain_text_length ||
+	    NULL == cipher_text || NULL == iv || 0 == iv_length ||
+	    NULL == key || key_length != PLATFORM_AES_KEY_DEFAULT_LEN ||
+	    NULL == tag || tag_length != AES_GCM_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
 		goto end;
 	}
 
-	if (cipherTextLength < plainTextLength) {
+	if (cipher_text_length < plain_text_length) {
 		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
 		goto end;
 	}
 
 	/* Initialise the context */
-	if (NULL == (ctx = EVP_CIPHER_CTX_new())) {
+	ctx = EVP_CIPHER_CTX_new();
+	if (NULL == ctx) {
 		LOG(LOG_ERROR, "Error during Initializing EVP cipher ctx!\n");
 		goto end;
 	}
@@ -85,9 +87,10 @@ int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
 	/* Set IV length if default 12 bytes (96 bits) is not appropriate
 	 * NIST strongly recommends AES IV of length 12 bytes (96 bits) to use
 	 * while AES GCM operations
-	 * TODO: change this in coming iteration */
+	 * TODO: change this in coming iteration
+	 */
 	if (1 !=
-	    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, ivLength, NULL)) {
+	    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_length, NULL)) {
 		LOG(LOG_ERROR, "Error during setting AES GCM IV length!\n");
 		goto end;
 	}
@@ -99,33 +102,35 @@ int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
 	}
 
 	/* Provide the message to be encrypted, and obtain the encrypted output.
-	 * EVP_EncryptUpdate can be called multiple times if necessary */
-	if (1 != EVP_EncryptUpdate(ctx, cipherText, &len, plainText,
-				   plainTextLength)) {
+	 * EVP_EncryptUpdate can be called multiple times if necessary
+	 */
+	if (1 != EVP_EncryptUpdate(ctx, cipher_text, &len, plain_text,
+				   plain_text_length)) {
 		LOG(LOG_ERROR, "AES GCM: EVP_EncryptUpdate() failed!\n");
 		goto end;
 	}
 
-	cipherTextLength = len;
+	cipher_text_length = len;
 
 	/* Finalise the encryption. Normally ciphertext bytes may be written at
-	 * this stage, but this does not occur in GCM mode */
-	if (1 != EVP_EncryptFinal_ex(ctx, cipherText + len, &len)) {
+	 * this stage, but this does not occur in GCM mode
+	 */
+	if (1 != EVP_EncryptFinal_ex(ctx, cipher_text + len, &len)) {
 		LOG(LOG_ERROR, "AES GCM: EVP_EncryptFinal_ex() failed!\n");
 		goto end;
 	}
 
-	cipherTextLength += len;
+	cipher_text_length += len;
 
 	/* Get the tag */
 	if (1 !=
-	    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tagLength, tag)) {
+	    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tag_length, tag)) {
 		LOG(LOG_ERROR, "AES GCM: could not get required tag value "
 			       "during encryption!\n");
 		goto end;
 	}
 
-	retval = cipherTextLength;
+	retval = cipher_text_length;
 end:
 	/* Clean up and free allocated memory */
 	if (ctx)
@@ -134,59 +139,61 @@ end:
 }
 
 /**
- * sdoCryptoAESGcmDecrypt -  Perform Authenticated AES decryption on the input
- * cipher text.
+ * sdo_crypto_aes_gcm_decrypt -  Perform Authenticated AES decryption on the
+ * input cipher text.
  *
- * @param clearText
+ * @param clear_text
  *        output clear-text.
- * @param clearTextLength
+ * @param clear_text_length
  *        plain-text buffer size in bytes.
- * @param cipherText
+ * @param cipher_text
  *        Encrypted text(input).
- * @param cipherTextLength
+ * @param cipher_text_length
  *        Encrypted cipher-text size in Byte.
  * @param iv
  *        AES encryption IV.
- * @param ivLength
+ * @param iv_length
  *        AES encryption IV size in bytes.
  * @param key
- *        Key in ByteArray format used in encryption.
- * @param keyLength
+ *        Key in Byte_array format used in encryption.
+ * @param key_length
  *        Key size in Bytes. Only AES128 is supported
  * @param tag
  *        input authenticated tag which got added during encryption.
- * @param tagLength
+ * @param tag_length
  *        tag size in Bytes.
  * @return ret
- *        return clearTextLength in bytes during success and -1 during any
+ *        return clear_text_length in bytes during success and -1 during any
  * error.
  */
-int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
-			       const uint8_t *cipherText,
-			       uint32_t cipherTextLength, const uint8_t *iv,
-			       uint32_t ivLength, const uint8_t *key,
-			       uint32_t keyLength, uint8_t *tag,
-			       uint32_t tagLength)
+int32_t sdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
+				   uint32_t clear_text_length,
+				   const uint8_t *cipher_text,
+				   uint32_t cipher_text_length,
+				   const uint8_t *iv, uint32_t iv_length,
+				   const uint8_t *key, uint32_t key_length,
+				   uint8_t *tag, uint32_t tag_length)
 {
 	int retval = -1;
 	EVP_CIPHER_CTX *ctx = NULL;
 	int len = 0;
 
-	if (NULL == clearText || NULL == cipherText || 0 == cipherTextLength ||
-	    NULL == iv || 0 == ivLength || NULL == key ||
-	    keyLength != PLATFORM_AES_KEY_DEFAULT_LEN || NULL == tag ||
-	    tagLength != AES_GCM_TAG_LEN) {
+	if (NULL == clear_text || NULL == cipher_text ||
+	    0 == cipher_text_length || NULL == iv || 0 == iv_length ||
+	    NULL == key || key_length != PLATFORM_AES_KEY_DEFAULT_LEN ||
+	    NULL == tag || tag_length != AES_GCM_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
 		goto end;
 	}
 
-	if (clearTextLength < cipherTextLength) {
+	if (clear_text_length < cipher_text_length) {
 		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
 		goto end;
 	}
 
 	/* Create and initialise the context */
-	if (!(ctx = EVP_CIPHER_CTX_new())) {
+	ctx = EVP_CIPHER_CTX_new();
+	if (!ctx) {
 		LOG(LOG_ERROR, "Error during Initializing EVP cipher ctx!\n");
 		goto end;
 	}
@@ -199,7 +206,8 @@ int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
 	}
 
 	/* TODO: change IV from 16 to 12 bytes in coming iteration */
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, ivLength, NULL)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_length,
+				 NULL)) {
 		LOG(LOG_ERROR, "Error during setting AES GCM IV length!\n");
 		goto end;
 	}
@@ -210,31 +218,33 @@ int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
 		goto end;
 	}
 
-	/* Provide the message to be decrypted, and obtain the clearText output.
-	 * EVP_DecryptUpdate can be called multiple times if necessary */
-	if (!EVP_DecryptUpdate(ctx, clearText, &len, cipherText,
-			       cipherTextLength)) {
+	/* Provide the message to be decrypted, and obtain the clear_text
+	 * output. EVP_DecryptUpdate can be called multiple times if necessary
+	 */
+	if (!EVP_DecryptUpdate(ctx, clear_text, &len, cipher_text,
+			       cipher_text_length)) {
 		LOG(LOG_ERROR, "AES GCM: EVP_DecryptUpdate() failed!\n");
 		goto end;
 	}
 
-	clearTextLength = len;
+	clear_text_length = len;
 
 	/* Set expected tag value */
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tagLength, tag)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag_length, tag)) {
 		LOG(LOG_ERROR, "AES GCM: could not set exptected tag value "
 			       "during decryption!\n");
 		goto end;
 	}
 
 	/* Finalise the decryption. A positive return value indicates success
-	 * anything else is a failure i.e. the plaintext is not trustworthy. */
-	retval = EVP_DecryptFinal_ex(ctx, clearText + len, &len);
+	 * anything else is a failure i.e. the plaintext is not trustworthy.
+	 */
+	retval = EVP_DecryptFinal_ex(ctx, clear_text + len, &len);
 
 	if (retval > 0) {
 		/* Success: authentication passed */
-		clearTextLength += len;
-		retval = clearTextLength;
+		clear_text_length += len;
+		retval = clear_text_length;
 	} else {
 		/* Failure: authentication failed */
 		retval = -1;

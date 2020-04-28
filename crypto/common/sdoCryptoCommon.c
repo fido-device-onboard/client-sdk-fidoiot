@@ -9,17 +9,17 @@
 #include "snprintf_s.h"
 #include "stdlib.h"
 #include "sdoCryptoCtx.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 
-static sdoCryptoContext_t crypto_ctx;
+static sdo_crypto_context_t crypto_ctx;
 static void cleanup_ctx(void);
 
-/***********************************************************************************/
+/******************************************************************************/
 /**
  * This function returns the kx value needed by the protocol
  * @return kx string which was stored during init.
  */
-SDOString_t *sdoGetDeviceKexMethod(void)
+sdo_string_t *sdo_get_device_kex_method(void)
 {
 	return crypto_ctx.kex.kx;
 }
@@ -28,25 +28,25 @@ SDOString_t *sdoGetDeviceKexMethod(void)
  * This function returns the cs value needed by the protocol
  * @return cs string which was stored during init.
  */
-SDOString_t *sdoGetDeviceCryptoSuite(void)
+sdo_string_t *sdo_get_device_crypto_suite(void)
 {
 	return crypto_ctx.kex.cs;
 }
 
 /**
  * This function returns the keyset which holds sek and svk values.
- * @return struct of type SDOAESKeyset_t which has sek and svk.
+ * @return struct of type sdo_aes_keyset_t which has sek and svk.
  */
-SDOAESKeyset_t *getKeyset(void)
+sdo_aes_keyset_t *get_keyset(void)
 {
-	return &crypto_ctx.to2SymEnc.keyset;
+	return &crypto_ctx.to2Sym_enc.keyset;
 }
 
 /**
  * This function returns the address of Ownership voucher hmac key.
  * @return Byte array which holds the OV hmac key
  */
-SDOByteArray_t **getOVKey(void)
+sdo_byte_array_t **getOVKey(void)
 {
 	return &crypto_ctx.OVKey;
 }
@@ -55,16 +55,16 @@ SDOByteArray_t **getOVKey(void)
  * This function returns the address of the dev key struct inside crypto
  * context.
  */
-sdoDevKeyCtx_t *getsdoDevKeyCtx(void)
+sdo_dev_key_ctx_t *getsdo_dev_key_ctx(void)
 {
-	return &crypto_ctx.devKey;
+	return &crypto_ctx.dev_key;
 }
 
 /**
  * This function returns the address of the kex struct inside crypto
  * context.
  */
-sdoKexCtx_t *getsdoKeyCtx(void)
+sdo_kex_ctx_t *getsdo_key_ctx(void)
 {
 	return &crypto_ctx.kex;
 }
@@ -73,16 +73,16 @@ sdoKexCtx_t *getsdoKeyCtx(void)
  * This function returns the address of the kex struct inside crypto
  * context.
  */
-sdoTo2SymEncCtx_t *getsdoTO2Ctx(void)
+sdo_to2Sym_enc_ctx_t *get_sdo_to2_ctx(void)
 {
-	return &crypto_ctx.to2SymEnc;
+	return &crypto_ctx.to2Sym_enc;
 }
 
-int32_t sdoCryptoInit(void)
+int32_t sdo_crypto_init(void)
 {
 	int32_t ret = -1;
 
-	if (cryptoInit()) {
+	if (crypto_init()) {
 		goto err;
 	}
 	if (dev_attestation_init()) {
@@ -93,12 +93,13 @@ err:
 	return ret;
 }
 
-int32_t sdoCryptoClose(void)
+int32_t sdo_crypto_close(void)
 {
 	int32_t ret = 0;
+
 	dev_attestation_close();
 
-	ret = cryptoClose();
+	ret = crypto_close();
 	/* CLeanup of context structs */
 	cleanup_ctx();
 	return ret;
@@ -106,42 +107,45 @@ int32_t sdoCryptoClose(void)
 
 static void cleanup_ctx(void)
 {
-	/* devKey cleanup*/
-	if (crypto_ctx.devKey.eA) {
-		sdoPublicKeyFree(crypto_ctx.devKey.eA->pubkey);
-		sdoFree(crypto_ctx.devKey.eA);
-		crypto_ctx.devKey.eA = NULL;
+	/* dev_key cleanup*/
+	if (crypto_ctx.dev_key.eA) {
+		sdo_public_key_free(crypto_ctx.dev_key.eA->pubkey);
+		sdo_free(crypto_ctx.dev_key.eA);
+		crypto_ctx.dev_key.eA = NULL;
 	}
-	sdoEPIDInfoEBFree(crypto_ctx.devKey.eB);
-	crypto_ctx.devKey.eB = NULL;
+	sdo_epid_info_eb_free(crypto_ctx.dev_key.eB);
+	crypto_ctx.dev_key.eB = NULL;
 
 	/* cleanup ovkey */
-	sdoByteArrayFree(crypto_ctx.OVKey);
+	sdo_byte_array_free(crypto_ctx.OVKey);
 	crypto_ctx.OVKey = NULL;
 }
 
 /**
  * If crypto init is true, generate random bytes of data
- * of size numBytes passed as paramater, else return error.
- * @param randomBuffer - Pointer randomBuffer of type uint8_t to be filled with,
- * @param numBytes - Number of bytes to be filled.
+ * of size num_bytes passed as paramater, else return error.
+ * @param random_buffer - Pointer random_buffer of type uint8_t to be filled
+ * with,
+ * @param num_bytes - Number of bytes to be filled.
  * @return 0 if succeeds, else -1.
  */
-int32_t sdoCryptoRandomBytes(uint8_t *randomBuffer, size_t numBytes)
+int32_t sdo_crypto_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 {
-	return (_sdoCryptoRandomBytes(randomBuffer, numBytes));
+	return crypto_hal_random_bytes(random_buffer, num_bytes);
 }
 
 /**
  * Internal API
  * Interface to get device CSR (certificate generated shall be used during
  * Device Attestation to RV/OWN server).
- * @return pointer to a byteArray holding a valid device CSR.
+ * @return pointer to a byte_array holding a valid device CSR.
  */
-int32_t sdoGetDeviceCsr(SDOByteArray_t **csr)
+int32_t sdo_get_device_csr(sdo_byte_array_t **csr)
 {
 #if !defined(EPID_DA)
-	return (_sdoGetDeviceCsr(csr));
-#endif
+	return crypto_hal_get_device_csr(csr);
+#else //For ecdsa
+	(void)csr;
 	return 0;
+#endif
 }

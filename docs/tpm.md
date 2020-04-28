@@ -2,11 +2,11 @@
 
 `Ubuntu* OS version 16.04/18.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute  Secure Device Onboard (SDO).
 
-The  SDO build and execution depend on OpenSSL* toolkit version 1.1.1c. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The  SDO build and execution depend on OpenSSL* toolkit version 1.1.1f. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages requirements when setting up TPM2.0 (on Ubuntu OS version 16.04/18.04):
 
-OpenSSL* toolkit version 1.1.1c. Follow the steps given in Section 10 to update the openssl version to 1.1.1c.
+OpenSSL* toolkit version 1.1.1f. Follow the steps given in Section 10 to update the openssl version to 1.1.1f.
 
 ## 2. TPM* Library Installation (for Ubuntu OS version 16.04/18.04):
 
@@ -228,15 +228,15 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building SDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1c for building and running the SDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 1.1.1f for building and running the SDO Client SDK.
   Check the version of the OpenSSL toolkit installed in your machine with the command
 
   ```shell
   $ openssl version
   ```
-  If the OpenSSL toolkit version in your machine is earlier than version 1.1.1c, follow the steps given in Section10 to update the openssl version to 1.1.1c.
+  If the OpenSSL toolkit version in your machine is earlier than version 1.1.1f, follow the steps given in Section10 to update the openssl version to 1.1.1f.
 
-## Steps to upgrade the OpenSSL* toolkit to version 1.1.1c
+## Steps to upgrade the OpenSSL* toolkit to version 1.1.1f
 
 ```shell
 # 1. If libssl-dev is installed, remove it:
@@ -246,11 +246,11 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 
 # 2. Pull the tarball: 
 
-  $ wget https://www.openssl.org/source/openssl-1.1.1c.tar.gz
+  $ wget https://www.openssl.org/source/openssl-1.1.1f.tar.gz
 
 # 3. Unpack the tarball with 
 
-  $ tar -zxf openssl-1.1.1c.tar.gz && cd openssl-1.1.1c
+  $ tar -zxf openssl-1.1.1f.tar.gz && cd openssl-1.1.1f
 
 # 4. Issue the command 
 
@@ -288,5 +288,5 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 
   Your output should be as follows:
 
-    OpenSSL 1.1.1c  28 May 2019
+  OpenSSL 1.1.1f  31 Mar 2020
 ```

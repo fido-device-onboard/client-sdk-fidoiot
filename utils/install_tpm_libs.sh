@@ -4,9 +4,8 @@ TPM2_ABRMD_VER="2.2.0"
 TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
 TPM2_TOOLS_VER="4.0.1"
 TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
-#TPM2_TSS_ENGINE_VER=
-TPM2_TSS_ENGINE_BRANCH=820835977213ee28c0866f8eff623c307c618f5d
-TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/$TPM2_TSS_ENGINE_BRANCH.zip"
+TPM2_TSS_ENGINE_VER=1.1.0-rc0
+TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v$TPM2_TSS_ENGINE_VER.zip"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -99,10 +98,10 @@ install_tpm2tssengine()
 {
     echo "Build & Install tpm2-tss-engine..."
     cd $PARENT_DIR
-    rm -f $TPM2_TSS_ENGINE_BRANCH.zip
+    rm -f v$TPM2_TSS_ENGINE_VER.zip
     wget $TPM2_TSS_ENGINE_LINK
-    unzip $TPM2_TSS_ENGINE_BRANCH.zip
-    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_BRANCH
+    unzip v$TPM2_TSS_ENGINE_VER.zip
+    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
 
     ./bootstrap
     ./configure
@@ -139,7 +138,7 @@ uninstall_tpm2tssengine()
 {
     echo "Uninstall tpm2-tss-engine...."
     cd $PARENT_DIR
-    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_BRANCH
+    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
     sudo make uninstall
 }
 
@@ -162,7 +161,7 @@ uninstall()
     uninstall_tpm2tssengine
     cd $PARENT_DIR
     rm -rf tpm2* 
-    rm $TPM2_TSS_ENGINE_BRANCH.zip
+    rm v$TPM2_TSS_ENGINE_VER.zip
 }
 
 usage()

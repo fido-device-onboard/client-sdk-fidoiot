@@ -1,3 +1,5 @@
+# Copyright 2020 Intel Corporation
+# SPDX-License-Identifier: Apache 2.0
 ifeq ($(HTTPPROXY), true)
 DFLAGS += -DHTTPPROXY="\"10.223.4.20\"" -DHTTPPROXYPORT=911
 endif

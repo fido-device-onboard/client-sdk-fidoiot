@@ -20,9 +20,6 @@
 #include "safe_lib.h"
 #include "mbedtls_random.h"
 
-#ifdef SECURE_ELEMENT
-int32_t sdoSECryptoInit(void);
-#endif /* SECURE_ELEMENT */
 
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks)
@@ -33,6 +30,8 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 
 	if (!first_iv || !new_iv)
 		return -1;
+
+	(void)aesblocks;
 
 	mbedtls_mpi_init(&iv_bn_cur);
 	mbedtls_mpi_init(&iv_bn_first);
@@ -56,8 +55,9 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 
 	/* Check the sizes of the iv. have they changed after add */
 	if (mbedtls_mpi_size(&iv_bn_new) != mbedtls_mpi_size(&iv_bn_cur)) {
-		/* Create a new MPI which has 17 bytes( or the size of the new
-		 * iv)   */
+		/* Create a new MPI which has 17 bytes( or the size of the
+		 * new iv)
+		 */
 		if (0 != mbedtls_mpi_grow(&comparison_iv,
 					  mbedtls_mpi_size(&iv_bn_new))) {
 			LOG(LOG_ERROR, "Unable to grow the new iv\n");
@@ -74,7 +74,8 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 		}
 
 		/* Now subtract the new comparison_iv with iv_bn_new to
-		 * eliminate the MSB */
+		 * eliminate the MSB
+		 */
 		if (0 != mbedtls_mpi_sub_mpi(&iv_bn_cur, &iv_bn_new,
 					     &comparison_iv)) {
 			LOG(LOG_ERROR, "Unable to subtract mpi\n");
@@ -112,22 +113,23 @@ err:
 #ifndef SECURE_ELEMENT
 /**
  * If crypto init is true, generate random bytes of data
- * of size numBytes passed as paramater, else return error.
- * @param randomBuffer - Pointer randomBuffer of type uint8_t to be filled with,
- * @param numBytes - Number of bytes to be filled.
+ * of size num_bytes passed as paramater, else return error.
+ * @param random_buffer - Pointer random_buffer of type uint8_t to be filled
+ * with,
+ * @param num_bytes - Number of bytes to be filled.
  * @return 0 if succeeds, else -1.
  */
-int32_t _sdoCryptoRandomBytes(uint8_t *randomBuffer, size_t numBytes)
+int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 {
 	void *dbrg_ctx = get_mbedtls_random_ctx();
 
 	if (!is_mbedtls_random_init() || !dbrg_ctx)
 		return -1;
 
-	if (NULL == randomBuffer) {
+	if (NULL == random_buffer) {
 		return -1;
 	} else if (0 != mbedtls_ctr_drbg_random(
-			    dbrg_ctx, (uint8_t *)randomBuffer, numBytes)) {
+			    dbrg_ctx, (uint8_t *)random_buffer, num_bytes)) {
 		return -1;
 	}
 
@@ -140,14 +142,14 @@ int32_t _sdoCryptoRandomBytes(uint8_t *randomBuffer, size_t numBytes)
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int32_t cryptoInit(void)
+int32_t crypto_init(void)
 {
 	if (0 != random_init()) {
 		return -1;
 	}
 
 #ifdef SECURE_ELEMENT
-	if (0 != sdoSECryptoInit()) {
+	if (0 != crypto_hal_se_init()) {
 		return -1;
 	}
 #endif /* SECURE_ELEMENT */
@@ -162,7 +164,7 @@ int32_t cryptoInit(void)
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int32_t cryptoClose(void)
+int32_t crypto_close(void)
 {
 	if (0 != random_close()) {
 		return -1;
@@ -172,48 +174,51 @@ int32_t cryptoClose(void)
 }
 
 /**
- * sdoCryptoHash function calculate hash on input data
+ * sdo_crypto_hash function calculate hash on input data
  *
- * @param hashType - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256/
+ * @param _hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256/
  *				SDO_CRYPTO_HASH_TYPE_SHA_384/
  *				SDO_CRYPTO_HASH_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
- * @param bufferLength - input data buffer size
+ * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
- * @param outputLength - output data buffer size
+ * @param output_length - output data buffer size
  *
  * @return
  *        return 0 on success. -ve value on failure.
  */
-int32_t _sdoCryptoHash(uint8_t _hashType, const uint8_t *buffer,
-		       size_t bufferLength, uint8_t *output,
-		       size_t outputLength)
+int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
+			 size_t buffer_length, uint8_t *output,
+			 size_t output_length)
 {
-	mbedtls_md_type_t mbedhashType = MBEDTLS_MD_NONE;
-	uint8_t hashType = SDO_CRYPTO_HASH_TYPE_USED;
-	if (NULL == output || 0 == outputLength || NULL == buffer ||
-	    0 == bufferLength) {
+	mbedtls_md_type_t mbedhash_type = MBEDTLS_MD_NONE;
+	uint8_t hash_type = SDO_CRYPTO_HASH_TYPE_USED;
+
+	if (NULL == output || 0 == output_length || NULL == buffer ||
+	    0 == buffer_length) {
 		return -1;
 	}
 
-	switch (hashType) {
+	(void)_hash_type;
+
+	switch (hash_type) {
 	case SDO_CRYPTO_HASH_TYPE_SHA_256:
-		if (outputLength < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
-		mbedhashType = MBEDTLS_MD_SHA256;
+		mbedhash_type = MBEDTLS_MD_SHA256;
 		break;
 	case SDO_CRYPTO_HASH_TYPE_SHA_384:
-		if (outputLength < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
-		mbedhashType = MBEDTLS_MD_SHA384;
+		mbedhash_type = MBEDTLS_MD_SHA384;
 		break;
 
 	default:
 		return -1;
 	}
 	/* Calculate the hash over message and sign that hash */
-	if (mbedtls_md(mbedtls_md_info_from_type(mbedhashType),
-		       (const uint8_t *)buffer, bufferLength, output) != 0) {
+	if (mbedtls_md(mbedtls_md_info_from_type(mbedhash_type),
+		       (const uint8_t *)buffer, buffer_length, output) != 0) {
 		LOG(LOG_ERROR, " mbedtls_md FAILED:\n");
 		return -1;
 	}
@@ -222,45 +227,46 @@ int32_t _sdoCryptoHash(uint8_t _hashType, const uint8_t *buffer,
 }
 
 /**
- * sdoCryptoHMAC function calculate hmac on input data
+ * crypto_hal_hmac function calculate hmac on input data
  *
- * @param hmacType - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
+ * @param hmac_type - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
  *				SDO_CRYPTO_HMAC_TYPE_SHA_384/
  *				SDO_CRYPTO_HMAC_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
- * @param bufferLength - input data buffer size
+ * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
- * @param outputLength - output data buffer size
+ * @param output_length - output data buffer size
  * @param key - pointer to hmac key buffer of uint8_t type.
- * @param keyLength - hmac key size
+ * @param key_length - hmac key size
  * @return
  *        return 0 on success. -ve value on failure.
  */
 
-int32_t sdoCryptoHMAC(uint8_t hmacType, const uint8_t *buffer,
-		      size_t bufferLength, uint8_t *output, size_t outputLength,
-		      const uint8_t *key, size_t keyLength)
+int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
+			size_t buffer_length, uint8_t *output,
+			size_t output_length, const uint8_t *key,
+			size_t key_length)
 {
-	if (NULL == output || 0 == outputLength || NULL == buffer ||
-	    0 == bufferLength || NULL == key || 0 == keyLength) {
+	if (NULL == output || 0 == output_length || NULL == buffer ||
+	    0 == buffer_length || NULL == key || 0 == key_length) {
 		return -1;
 	}
 
-	switch (hmacType) {
+	switch (hmac_type) {
 	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
-		if (outputLength < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
 		return mbedtls_md_hmac(
 		    mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
-		    (const uint8_t *)key, keyLength, buffer, bufferLength,
+		    (const uint8_t *)key, key_length, buffer, buffer_length,
 		    output);
 		break;
 	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
-		if (outputLength < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
 		return mbedtls_md_hmac(
 		    mbedtls_md_info_from_type(MBEDTLS_MD_SHA384),
-		    (const uint8_t *)key, keyLength, buffer, bufferLength,
+		    (const uint8_t *)key, key_length, buffer, buffer_length,
 		    output);
 		break;
 
@@ -269,79 +275,5 @@ int32_t sdoCryptoHMAC(uint8_t hmacType, const uint8_t *buffer,
 	}
 
 	return -1;
-}
-
-/**
- * sdoCryptoHMACChained function calculate hash on input data and chain
- *
- * @param hmacType - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_384/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_512)
- * @param buffer - pointer to input data buffer of uint8_t type.
- * @param bufferLength - input data buffer size
- * @param output - pointer to output data buffer of uint8_t type.
- * @param outputLength - output data buffer size
- * @param key - pointer to hmac key buffer of uint8_t type.
- * @param keyLength - hmac key size
- * @param previousHMAC - pointer to last packet's hmac of uint8_t type.
- * @param previousHMACLength - last packet's hmaci size
- *
- * @return
- *        return 0 on success. -ve value on failure.
- */
-int32_t sdoCryptoHMACChained(uint8_t hmacType, const uint8_t *buffer,
-			     size_t bufferLength, uint8_t *output,
-			     size_t outputLength, const uint8_t *key,
-			     size_t keyLength, const uint8_t *previousHMAC,
-			     size_t previousHMACLength)
-{
-	int ret = -1;
-	mbedtls_md_context_t ctx;
-	const mbedtls_md_info_t *md_info = NULL;
-
-	if (NULL == output || 0 == outputLength || NULL == buffer ||
-	    0 == bufferLength || NULL == key || 0 == keyLength ||
-	    NULL == previousHMAC || 0 == previousHMACLength) {
-		return -1;
-	}
-
-	switch (hmacType) {
-	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
-		if (outputLength < SHA256_DIGEST_SIZE)
-			goto end;
-		md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-		break;
-	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
-		if (outputLength < SHA384_DIGEST_SIZE)
-			goto end;
-		md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA384);
-		break;
-	default:
-		return -1;
-	}
-
-	mbedtls_md_init(&ctx);
-	if (0 != mbedtls_md_setup(&ctx, md_info, 1)) {
-		goto end;
-	}
-	if (0 !=
-	    mbedtls_md_hmac_starts(&ctx, (const uint8_t *)key, keyLength)) {
-		goto end;
-	}
-	if (0 !=
-	    mbedtls_md_hmac_update(&ctx, previousHMAC, previousHMACLength)) {
-		goto end;
-	}
-	if (0 != mbedtls_md_hmac_update(&ctx, buffer, bufferLength)) {
-		goto end;
-	}
-	if (0 != mbedtls_md_hmac_finish(&ctx, output)) {
-		goto end;
-	}
-
-	ret = 0;
-end:
-	mbedtls_md_free(&ctx);
-	return ret;
 }
 #endif /* SECURE_ELEMENT */

@@ -17,28 +17,29 @@
 #include "sdoCryptoHal.h"
 #include "safe_lib.h"
 #include "ecdsa_privkey.h"
+#include "sdocred.h"
 
 #define CSR_BUFFER_SIZE (4 * 1024)
 
 static int f_rng(void *ctx, unsigned char *buf, size_t size)
 {
 	(void)ctx;
-	return _sdoCryptoRandomBytes(buf, size);
+	return crypto_hal_random_bytes(buf, size);
 }
 
 /**
  * Internal API
  * Interface to get device CSR (certificate generated shall be used during
  * Device Attestation to RV/OWN server).
- * @return pointer to a byteArray holding a valid device CSR.
+ * @return pointer to a byte_array holding a valid device CSR.
  */
-int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
+int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 {
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
 	uint8_t *csr_buf = NULL;
-	SDOByteArray_t *pem_byte_arr = NULL;
+	sdo_byte_array_t *pem_byte_arr = NULL;
 	size_t pem_buf_size = 0;
 	mbedtls_pk_context pk_ctx;
 	mbedtls_x509write_csr csr_ctx;
@@ -128,7 +129,7 @@ int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
 	mbedtls_x509write_csr_set_md_alg(&csr_ctx, md_algo);
 
 	/* TODO: What should be the max size of buf */
-	csr_buf = sdoAlloc(CSR_BUFFER_SIZE);
+	csr_buf = sdo_alloc(CSR_BUFFER_SIZE);
 	if (!csr_buf) {
 		LOG(LOG_ERROR, "Failed to allocate memory for CSR\n");
 		goto csr_err;
@@ -144,7 +145,7 @@ int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
 
 	/* Allocate CSR byte array */
 	pem_buf_size = strnlen_s((const char *)csr_buf, CSR_BUFFER_SIZE);
-	pem_byte_arr = sdoByteArrayAlloc(pem_buf_size);
+	pem_byte_arr = sdo_byte_array_alloc(pem_buf_size);
 	if (!pem_byte_arr) {
 		LOG(LOG_ERROR, "Out of memory for CSR byte array\n");
 		goto csr_err;
@@ -165,14 +166,14 @@ csr_err:
 			LOG(LOG_ERROR, "Failed to clear ecdsa privkey\n");
 			ret = -1;
 		}
-		sdoFree(privkey);
+		sdo_free(privkey);
 	}
 	if (pem_byte_arr && ret) {
-		sdoByteArrayFree(pem_byte_arr);
+		sdo_byte_array_free(pem_byte_arr);
 		pem_byte_arr = NULL;
 	}
 	if (csr_buf)
-		sdoFree(csr_buf);
+		sdo_free(csr_buf);
 	mbedtls_x509write_csr_free(&csr_ctx);
 key_err:
 	mbedtls_pk_free(&pk_ctx);

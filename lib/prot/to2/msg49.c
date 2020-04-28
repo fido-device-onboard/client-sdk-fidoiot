@@ -13,42 +13,42 @@
 #include "util.h"
 
 /**
- * msg49() - TO2.OwnerServiceInfo
+ * msg49() - TO2.Owner_service_info
  * --- Message Format Begins ---
  * {
  *    "nn": UInt8, # index of this message, from zero upwards
- *    "sv": ServiceInfo
+ *    "sv": Service_info
  * }
  * --- Message Format Ends ---
  */
-int32_t msg49(SDOProt_t *ps)
+int32_t msg49(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtTO2";
 	uint32_t mtype = 0;
-	SDOEncryptedPacket_t *pkt = NULL;
+	sdo_encrypted_packet_t *pkt = NULL;
 
-	if (!sdoCheckTO2RoundTrips(ps)) {
+	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
 	}
 
-	if (!sdoProtRcvMsg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
 		ret = 0; /* Get the data, and come back */
 		goto err;
 	}
 
 	/* If the packet is encrypted, decrypt it */
-	pkt = sdoEncryptedPacketRead(&ps->sdor);
+	pkt = sdo_encrypted_packet_read(&ps->sdor);
 	if (pkt == NULL) {
 		LOG(LOG_ERROR, "Trouble reading "
 			       "encrypted packet\n");
 		goto err;
 	}
-	if (!sdoEncryptedPacketUnwind(&ps->sdor, pkt, ps->iv)) {
+	if (!sdo_encrypted_packet_unwind(&ps->sdor, pkt, ps->iv)) {
 		goto err;
 	}
 	/* Get past any header */
-	if (!sdoRNextBlock(&ps->sdor, &mtype)) {
+	if (!sdor_next_block(&ps->sdor, &mtype)) {
 		LOG(LOG_DEBUG, "SDOR doesn't seems to "
 			       "have "
 			       "next block !!\n");
@@ -59,28 +59,28 @@ int32_t msg49(SDOProt_t *ps)
 	/* Print the service information received from the owner
 	 * in plain text. */
 	LOG(LOG_DEBUG, "Owner service info: ");
-	print_buffer(LOG_DEBUG, ps->sdor.b.block, ps->sdor.b.blockSize);
+	print_buffer(LOG_DEBUG, ps->sdor.b.block, ps->sdor.b.block_size);
 #endif
 
-	if (!sdoRBeginObject(&ps->sdor)) {
+	if (!sdor_begin_object(&ps->sdor)) {
 		goto err;
 	}
 
 	/* Read the index of the Owner service info */
-	if (!sdoReadExpectedTag(&ps->sdor, "nn")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "nn")) {
 		goto err;
 	}
-	ps->ownerSuppliedServiceInfoRcv = sdoReadUInt(&ps->sdor);
+	ps->owner_supplied_service_info_rcv = sdo_read_uint(&ps->sdor);
 
-	if (ps->ownerSuppliedServiceInfoNum ==
-	    ps->ownerSuppliedServiceInfoRcv) {
-		int modRetVal = 0;
+	if (ps->owner_supplied_service_info_num ==
+	    ps->owner_supplied_service_info_rcv) {
+		int mod_ret_val = 0;
 
-		if (!sdoReadExpectedTag(&ps->sdor, "sv")) {
+		if (!sdo_read_expected_tag(&ps->sdor, "sv")) {
 			goto err;
 		}
 
-		if (!sdoRBeginObject(&ps->sdor)) {
+		if (!sdor_begin_object(&ps->sdor)) {
 			goto err;
 		}
 
@@ -89,32 +89,32 @@ int32_t msg49(SDOProt_t *ps)
 		 * 1. Fill OSI KV data structure
 		 * 2. Make appropriate module callback's
 		 */
-		sdoSdkSiKeyValue osiKV;
+		sdo_sdk_si_key_value osiKV;
 
-		if (!sdoOsiParsing(&ps->sdor, ps->SvInfoModListHead, &osiKV,
-				   &modRetVal)) {
-			LOG(LOG_ERROR, "SvInfo: OSI did not "
+		if (!sdo_osi_parsing(&ps->sdor, ps->sv_info_mod_list_head,
+				     &osiKV, &mod_ret_val)) {
+			LOG(LOG_ERROR, "Sv_info: OSI did not "
 				       "finished "
 				       "gracefully!\n");
 			goto err;
 		}
 		/*===============OSI=================*/
 
-		if (!sdoREndObject(&ps->sdor)) {
+		if (!sdor_end_object(&ps->sdor)) {
 			goto err;
 		}
 	}
 
-	if (!sdoREndObject(&ps->sdor)) {
+	if (!sdor_end_object(&ps->sdor)) {
 		goto err;
 	}
 
-	sdoRFlush(&ps->sdor);
+	sdor_flush(&ps->sdor);
 
 	/* Loop until all have been requested */
-	ps->ownerSuppliedServiceInfoNum++;
-	if (ps->ownerSuppliedServiceInfoNum >=
-	    ps->ownerSuppliedServiceInfoCount) {
+	ps->owner_supplied_service_info_num++;
+	if (ps->owner_supplied_service_info_num >=
+	    ps->owner_supplied_service_info_count) {
 		ps->state = SDO_STATE_TO2_SND_DONE;
 	} else {
 		ps->state = SDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;

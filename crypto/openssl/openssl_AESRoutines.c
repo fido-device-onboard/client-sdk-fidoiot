@@ -23,6 +23,7 @@
 #else
 #define CIPHER_TYPE EVP_aes_256_cbc()
 #endif /* AES_MODE_CTR_ENABLED */
+#define KEY_LENGTH_LOCAL 32 //256 bit
 
 #else
 
@@ -31,57 +32,60 @@
 #else
 #define CIPHER_TYPE EVP_aes_128_cbc()
 #endif /* AES_MODE_CTR_ENABLED */
+#define KEY_LENGTH_LOCAL 16 //128 bit
 
 #endif /* AES_256_BIT */
 
 /**
- * sdoCryptoAESEncrypt -  Perform AES encryption of the input text.
+ * crypto_hal_aes_encrypt -  Perform AES encryption of the input text.
  *
- * @param clearText
+ * @param clear_text
  *        Input text to be encrypted.
- * @param clearTextLength
+ * @param clear_text_length
  *        Plain text size in bytes.
- * @param cipherText
+ * @param cipher_text
  *        Encrypted text(output).
- * @param cipherLength
- *        Encrypted text size of cipherText in bytes. [INOUT]
- * @param blockSize
+ * @param cipher_length
+ *        Encrypted text size of cipher_text in bytes. [INOUT]
+ * @param block_size
  *        AES encryption block size in bytes. always 128 bits.
  * @param iv
  *        AES encryption initialization vector.
  * @param key
- *        Key in ByteArray format used in encryption.
- * @param keyLength
+ *        Key in Byte_array format used in encryption.
+ * @param key_length
  *        Key size in Bytes.
  * @return ret
  *        return 0 on success. -1 on failure.
- *        fills cipherLength in bytes while cipherText passed as NULL, & all
+ *        fills cipher_length in bytes while cipher_text passed as NULL, & all
  *        other parameters are passed as it is.
  */
-int32_t sdoCryptoAESEncrypt(const uint8_t *clearText, uint32_t clearTextLength,
-			    uint8_t *cipherText, uint32_t *cipherLength,
-			    size_t blockSize, const uint8_t *iv,
-			    const uint8_t *key, uint32_t keyLength)
+int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
+			       uint32_t clear_text_length, uint8_t *cipher_text,
+			       uint32_t *cipher_length, size_t block_size,
+			       const uint8_t *iv, const uint8_t *key,
+			       uint32_t key_length)
 {
 	int ret = -1;
 	int outlen = 0;
 	int offset = 0;
-	size_t exp_cipher_len = clearTextLength;
+	size_t exp_cipher_len = clear_text_length;
 	EVP_CIPHER_CTX *ctx = NULL;
 
 	/*
-	 * Check all parameters except cipherText, as if it's NULL,
-	 * cipherLength needs to be filled in with the expected size
+	 * Check all parameters except cipher_text, as if it's NULL,
+	 * cipher_length needs to be filled in with the expected size
 	 */
-	if (!clearText || !clearTextLength || !cipherLength ||
-	    SDO_AES_BLOCK_SIZE != blockSize || !iv || !key || !keyLength) {
+	if (!clear_text || !clear_text_length || !cipher_length ||
+	    SDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
+	    KEY_LENGTH_LOCAL != key_length) {
 		LOG(LOG_ERROR, "Invalid parameters received\n");
 		goto end;
 	}
 
 /*
- * CTR: cipherLength = clearTextLength
- * CBC: cipherLength = clearTextLength + padding bytes
+ * CTR: cipher_length = clear_text_length
+ * CBC: cipher_length = clear_text_length + padding bytes
  * Padding:
  * a. For non AES block aligned cleartext, padding extends
  *    the size to be multiple of AES block.
@@ -89,23 +93,24 @@ int32_t sdoCryptoAESEncrypt(const uint8_t *clearText, uint32_t clearTextLength,
  *    size by 1 AES block.
  */
 #ifdef AES_MODE_CBC_ENABLED
-	exp_cipher_len = ((clearTextLength / blockSize) + 1) * blockSize;
+	exp_cipher_len = ((clear_text_length / block_size) + 1) * block_size;
 #endif /* AES_MODE_CTR_ENABLED */
 
 	/* Fill in the expected cipher text length */
-	if (!cipherText) {
-		*cipherLength = exp_cipher_len;
+	if (!cipher_text) {
+		*cipher_length = exp_cipher_len;
 		ret = 0;
 		goto end;
 	}
 
-	/* If we reach here, cipherText is non-NULL, no need to check */
-	if (*cipherLength < exp_cipher_len) {
+	/* If we reach here, cipher_text is non-NULL, no need to check */
+	if (*cipher_length < exp_cipher_len) {
 		LOG(LOG_ERROR, "Invalid cleartext/ciphertext size received\n");
 		goto end;
 	}
 
-	if (!(ctx = EVP_CIPHER_CTX_new())) {
+	ctx = EVP_CIPHER_CTX_new();
+	if (!ctx) {
 		goto end;
 	}
 
@@ -114,14 +119,14 @@ int32_t sdoCryptoAESEncrypt(const uint8_t *clearText, uint32_t clearTextLength,
 	}
 
 	/* Common for cbc and ctr */
-	if (1 != EVP_EncryptUpdate(ctx, cipherText, &outlen, clearText,
-				   clearTextLength)) {
+	if (1 != EVP_EncryptUpdate(ctx, cipher_text, &outlen, clear_text,
+				   clear_text_length)) {
 		goto end;
 	}
 
 	offset += outlen;
 
-	if (!EVP_EncryptFinal_ex(ctx, cipherText + offset, &outlen)) {
+	if (!EVP_EncryptFinal_ex(ctx, cipher_text + offset, &outlen)) {
 		goto end;
 	}
 
@@ -135,33 +140,34 @@ end:
 }
 
 /**
- * sdoCryptoAESDecrypt -  Perform AES decryption of the cipher text.
+ * crypto_hal_aes_decrypt -  Perform AES decryption of the cipher text.
  *
- * @param clearText
+ * @param clear_text
  *        Decrypted text(output).
- * @param clearTextLength
+ * @param clear_text_length
  *        Decrypted text size in Byte. (IN/OUT)
- * @param cipherText
+ * @param cipher_text
  *        Encrypted text(input).
- * @param cipherLength
+ * @param cipher_length
  *        Encrypted text size in Byte.
- * @param blockSize
+ * @param block_size
  *        AES encryption block size in Byte. SDO_AES_BLOCK_SIZE
  * @param iv
  *        AES encryption initialization vector.
  * @param key
- *        Key in ByteArray format used in encryption.
- * @param keyLength
+ *        Key in Byte_array format used in encryption.
+ * @param key_length
  *        Key size in Bytes.
  * @return ret
  *        return 0 on success. -1 on failure.
- *        fills clearTextLength in bytes for maximum possible buffer size
- *        required to fill in the clearText, when clearText is passed as NULL
+ *        fills clear_text_length in bytes for maximum possible buffer size
+ *        required to fill in the clear_text, when clear_text is passed as NULL
  */
-int32_t sdoCryptoAESDecrypt(uint8_t *clearText, uint32_t *clearTextLength,
-			    const uint8_t *cipherText, uint32_t cipherLength,
-			    size_t blockSize, const uint8_t *iv,
-			    const uint8_t *key, uint32_t keyLength)
+int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
+			       const uint8_t *cipher_text,
+			       uint32_t cipher_length, size_t block_size,
+			       const uint8_t *iv, const uint8_t *key,
+			       uint32_t key_length)
 {
 	int ret = -1;
 	int outlen = 0;
@@ -169,60 +175,63 @@ int32_t sdoCryptoAESDecrypt(uint8_t *clearText, uint32_t *clearTextLength,
 	EVP_CIPHER_CTX *ctx = NULL;
 
 	/* Check all the incoming parameters */
-	if (!clearTextLength || !cipherText || !cipherLength ||
-	    SDO_AES_BLOCK_SIZE != blockSize || !iv || !key || !keyLength) {
+	if (!clear_text_length || !cipher_text || !cipher_length ||
+	    SDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
+	    KEY_LENGTH_LOCAL != key_length) {
 		LOG(LOG_ERROR, "Invalid paramters received\n");
 		goto end;
 	}
 
 	/*
-	 * If clearText is NULL, then return the size of clearText. Since,
-	 * for CBC, we cannot tell the precise length of clearText without
-	 * decryption, so, clearTextLength is returned to be same as
-	 * cipherLength. After decryption, clearTextLength will be updated
+	 * If clear_text is NULL, then return the size of clear_text. Since,
+	 * for CBC, we cannot tell the precise length of clear_text without
+	 * decryption, so, clear_text_length is returned to be same as
+	 * cipher_length. After decryption, clear_text_length will be updated
 	 * with the precise length.
 	 */
-	if (!clearText) {
-		*clearTextLength = cipherLength;
+	if (!clear_text) {
+		*clear_text_length = cipher_length;
 		ret = 0;
 		goto end;
 	}
 
 	/*
-	 * The caller has to ensure that the clearText is big enough to hold
+	 * The caller has to ensure that the clear_text is big enough to hold
 	 * complete clear data. The padding scheme is already known to caller,
 	 * so, expecting that the buffer sent in is at minimum equal to
 	 * ciphertext size.
 	 */
-	if (*clearTextLength < cipherLength) {
+	if (*clear_text_length < cipher_length) {
 		LOG(LOG_ERROR, "Invalid cleartext/ciphertext size received\n");
 		goto end;
 	}
 
 	/* Allocate the cipher context */
-	if (!(ctx = EVP_CIPHER_CTX_new()))
+	ctx = EVP_CIPHER_CTX_new();
+	if (!ctx) {
 		goto end;
+	}
 
 #if defined(AES_DEBUG)
-	LOG(LOG_DEBUG, "ciphered msg size: %d \n", cipherLength);
-	hexdump("Cipher txt to decrypt", cipherText, cipherLength);
+	LOG(LOG_DEBUG, "ciphered msg size: %d\n", cipher_length);
+	hexdump("Cipher txt to decrypt", cipher_text, cipher_length);
 #endif
 
 	if (1 != EVP_DecryptInit_ex(ctx, CIPHER_TYPE, NULL, key, iv)) {
 		goto end;
 	}
 
-	if (1 != EVP_DecryptUpdate(ctx, clearText, &outlen, cipherText,
-				   cipherLength)) {
+	if (1 != EVP_DecryptUpdate(ctx, clear_text, &outlen, cipher_text,
+				   cipher_length)) {
 		goto end;
 	}
 
 	offset += outlen; /* Backup the number of output bytes */
 
-	if (1 != EVP_DecryptFinal_ex(ctx, clearText + offset, &outlen))
+	if (1 != EVP_DecryptFinal_ex(ctx, clear_text + offset, &outlen))
 		goto end;
 
-	*clearTextLength = offset + outlen;
+	*clear_text_length = offset + outlen;
 	ret = 0; /* Mark the operation as success */
 
 end:

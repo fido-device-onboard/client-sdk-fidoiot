@@ -40,33 +40,29 @@ encoded with the RSAMODEXP format:
 
  */
 
-/* **************************************************************************
-// CONVERT2PKEY
-// Convert a public key into an OpenSSL PKEY for use by the libcrypto routines
-//
-// PURPOSE: Convert a public key into an OpenSSL key
-//
-// REQUIRE: An public key in SDOPublicKey structure
-//          A pointer to a PKEY structure, which will be allocated by this
-routine
-//          using OpenSSL's EVP_PKEY alloc and free functions
-//
-// PROMISE: if SDOPublicKey is a valid RSA public key in version 0.5 structure
-in
-RSAMODENC
-//          this routine will take the modulus and public key and format them
-into a PKEY structure
-//
-// RESULT: Return 0 with the modulus and exponent placed into a the PKEY
-structure in the "out" parameter
-//         or return -1 on failure
-//
-// Author: David M. Wheeler, 16 June 2016
-// Copyright (c) Intel 2016
-// ************************************************************************** */
+/* **************************************************************************/
+/*  CONVERT2PKEY */
+/*  Convert a public key into an OpenSSL PKEY for use by the libcrypto */
+/* routines */
+/*  PURPOSE: Convert a public key into an OpenSSL key */
+
+/*  REQUIRE: An public key in SDOPublic_key structure */
+/*           A pointer to a PKEY structure, which will be allocated by this */
+/* routine */
+/*           using OpenSSL's EVP_PKEY alloc and free functions */
+
+/*  PROMISE: if SDOPublic_key is a valid RSA public key in version 0.5  */
+/* structure in RSAMODENC */
+/*           this routine will take the modulus and public key and format  */
+/* them into a PKEY structure */
+
+/*  RESULT: Return 0 with the modulus and exponent placed into a the PKEY */
+/* structure in the "out" parameter */
+/*          or return -1 on failure */
+/***************************************************************************/
 static int convert2pkey(EVP_PKEY **out, RSA **rsa_in, const uint8_t *key1,
-			uint32_t keyParam1Length1, const uint8_t *key2,
-			uint32_t keyParam1Length2)
+			uint32_t key_param1Length1, const uint8_t *key2,
+			uint32_t key_param1Length2)
 {
 	RSA *rsa = NULL;
 
@@ -90,7 +86,7 @@ static int convert2pkey(EVP_PKEY **out, RSA **rsa_in, const uint8_t *key1,
 	if (*out == NULL) {
 		return -1;
 	}
-	BIGNUM *n = NULL;
+	BIGNUM * n = NULL;
 	BIGNUM *d = NULL;
 	BIGNUM *e = NULL;
 	BIGNUM *p = NULL;
@@ -102,32 +98,48 @@ static int convert2pkey(EVP_PKEY **out, RSA **rsa_in, const uint8_t *key1,
 	/* We need the RSA components non-NULL. */
 	if (rsa == NULL) {
 		return -1;
-	} else if ((n = BN_new()) == NULL) {
-		return -1;
-	} else if ((d = BN_new()) == NULL) {
-		return -1;
-	} else if ((e = BN_new()) == NULL) {
-		return -1;
-	} else if ((p = BN_new()) == NULL) {
-		return -1;
-	} else if ((q = BN_new()) == NULL) {
-		return -1;
-	} else if ((dmp1 = BN_new()) == NULL) {
-		return -1;
-	} else if ((dmq1 = BN_new()) == NULL) {
-		return -1;
-	} else if ((iqmp = BN_new()) == NULL) {
-		return -1;
+	}
+	n = BN_new();
+	if (n == NULL) {
+		goto err;
+	}
+	d = BN_new();
+	if (d == NULL) {
+		goto err;
+	}
+	e = BN_new();
+	if (e == NULL) {
+		goto err;
+	}
+	p = BN_new();
+	if (p == NULL) {
+		goto err;
+	}
+	q = BN_new();
+	if (q == NULL) {
+		goto err;
+	}
+	dmp1 = BN_new();
+	if (dmp1 == NULL) {
+		goto err;
+	}
+	dmq1 = BN_new();
+	if (dmq1 == NULL) {
+		goto err;
+	}
+	iqmp = BN_new();
+	if (iqmp == NULL) {
+		goto err;
 	}
 
 	/* Set verifier key's MODULUS. */
-	if (BN_bin2bn((const unsigned char *)key1, keyParam1Length1, n) ==
+	if (BN_bin2bn((const unsigned char *)key1, key_param1Length1, n) ==
 	    NULL) {
 		goto err;
 	}
 
 	/* Set verifier key's EXPONENT. */
-	if (BN_bin2bn((const unsigned char *)key2, keyParam1Length2, e) ==
+	if (BN_bin2bn((const unsigned char *)key2, key_param1Length2, e) ==
 	    NULL) {
 		goto err;
 	}
@@ -153,66 +165,69 @@ err:
 	return -1;
 }
 /**
- * sdoCryptoRSAEncrypt -  Encrypt the block passed using the public key
+ * crypto_hal_rsa_encrypt -  Encrypt the block passed using the public key
  * passed, the key must be RSA
- * @param hashType - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
- * @param keyEncoding - RSA Key encoding typee.
- * @param keyAlgorithm - RSA public key algorithm.
- * @param clearText - Input text to be encrypted.
- * @param clearTextLength - Plain text size in bytes.
- * @param cipherText - Encrypted text(output).
- * @param cipherTextLength - Encrypted text size in bytes.
- * @param keyParam1 - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length - size of public key1, type size_t.
- * @param keyParam2 - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length - size of public key2, type size_t
+ * @param hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
+ * @param key_encoding - RSA Key encoding typee.
+ * @param key_algorithm - RSA public key algorithm.
+ * @param clear_text - Input text to be encrypted.
+ * @param clear_text_length - Plain text size in bytes.
+ * @param cipher_text - Encrypted text(output).
+ * @param cipher_text_length - Encrypted text size in bytes.
+ * @param key_param1 - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length - size of public key1, type size_t.
+ * @param key_param2 - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length - size of public key2, type size_t
  * @return ret
  *        return 0 on success. -1 on failure.
- *        return cypherLength in bytes while cipherText passed as NULL, & all
+ *        return cypher_length in bytes while cipher_text passed as NULL, & all
  *        other parameters are passed as it is.
  */
-int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
-			    uint8_t keyAlgorithm, const uint8_t *clearText,
-			    uint32_t clearTextLength, uint8_t *cipherText,
-			    uint32_t cipherTextLength, const uint8_t *keyParam1,
-			    uint32_t keyParam1Length, const uint8_t *keyParam2,
-			    uint32_t keyParam2Length)
+int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
+			       uint8_t key_algorithm, const uint8_t *clear_text,
+			       uint32_t clear_text_length, uint8_t *cipher_text,
+			       uint32_t cipher_text_length,
+			       const uint8_t *key_param1,
+			       uint32_t key_param1Length,
+			       const uint8_t *key_param2,
+			       uint32_t key_param2Length)
 {
 	EVP_PKEY_CTX *ctx = NULL;
 	EVP_PKEY *pkey = NULL;
+
 	static const EVP_MD *evp_md;
 	RSA *rkey = NULL; /* The pubkey is converted to this RSA public key. */
 
 	unsigned char *out = NULL;
 	size_t outlen = 0;
-	uint32_t cipherCalLength = 0;
+	uint32_t cipher_cal_length = 0;
 	int ret = 0;
 
 	LOG(LOG_DEBUG, "rsa_encrypt starting.\n");
 
 	/* Make sure we have a correct type of key. */
-	if (keyEncoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    keyAlgorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type.\n");
 		return -1;
 	}
 
-	if (NULL == clearText || 0 == clearTextLength) {
+	if (NULL == clear_text || 0 == clear_text_length) {
 		LOG(LOG_ERROR, "Incorrect input text.\n");
 		return -1;
 	}
-	if (keyParam1 == NULL || keyParam1Length == 0) {
+	if (key_param1 == NULL || key_param1Length == 0) {
 		LOG(LOG_ERROR, "Missing Key1.\n");
 		return -1;
 	}
-	if (keyParam2 == NULL || keyParam2Length == 0) {
+	if (key_param2 == NULL || key_param2Length == 0) {
 		LOG(LOG_ERROR, "Missing Key2.\n");
 		return -1;
 	}
 
 	/* Convert the representation to an RSA key. */
-	if (convert2pkey(&pkey, &rkey, keyParam1, keyParam1Length, keyParam2,
-			 keyParam2Length) != 0) {
+	if (convert2pkey(&pkey, &rkey, key_param1, key_param1Length, key_param2,
+			 key_param2Length) != 0) {
 		LOG(LOG_ERROR,
 		    "Cannot convert public key to OpenSSL EVP_PKEY.\n ");
 		return -1;
@@ -220,27 +235,30 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 
 	LOG(LOG_DEBUG, "Public key converted to rkey & pkey.\n");
 	if (rkey)
-		cipherCalLength = RSA_size(rkey);
+		cipher_cal_length = RSA_size(rkey);
 
 	/* send back required cipher budffer size */
-	if (cipherText == NULL) {
+	if (cipher_text == NULL) {
 		RSA_free(rkey);
 		EVP_PKEY_free(pkey);
-		return cipherCalLength;
+		return cipher_cal_length;
 	}
 
 	/*When caller sends cipher buffer */
-	if (cipherCalLength > cipherTextLength)
+	if (cipher_cal_length > cipher_text_length)
 		return -1;
 
 	uint8_t encrypt[RSA_size(rkey)];
 	int encrypt_len = 0;
 	char err[130] = {0};
-	switch (hashType) {
+
+	switch (hash_type) {
 	case SDO_PK_HASH_SHA1:
-		if ((encrypt_len = RSA_public_encrypt(
-			 clearTextLength, (unsigned char *)clearText, encrypt,
-			 rkey, RSA_PKCS1_OAEP_PADDING)) == -1) {
+		encrypt_len = RSA_public_encrypt(
+		    clear_text_length, (unsigned char *)clear_text, encrypt,
+		    rkey, RSA_PKCS1_OAEP_PADDING);
+
+		if (encrypt_len == -1) {
 			ERR_load_crypto_strings();
 			ERR_error_string(ERR_get_error(), err);
 			LOG(LOG_ERROR, "Error encrypting message: %s.\n", err);
@@ -275,8 +293,8 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 		EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, evp_md);
 		/* Determine the length of buffer */
 		if (EVP_PKEY_encrypt(ctx, NULL, &outlen,
-				     (unsigned char *)clearText,
-				     clearTextLength) <= 0) {
+				     (unsigned char *)clear_text,
+				     clear_text_length) <= 0) {
 			/* Error	*/
 			LOG(LOG_ERROR, "Error in PKEY encrypt\n");
 			ret = -1;
@@ -290,8 +308,8 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 			goto error;
 		}
 		if (EVP_PKEY_encrypt(ctx, out, &outlen,
-				     (unsigned char *)clearText,
-				     clearTextLength) <= 0) {
+				     (unsigned char *)clear_text,
+				     clear_text_length) <= 0) {
 			/* Error */
 			LOG(LOG_ERROR, "PKEY encrypt failed\n");
 			ret = -1;
@@ -304,9 +322,9 @@ int32_t sdoCryptoRSAEncrypt(uint8_t hashType, uint8_t keyEncoding,
 	}
 	LOG(LOG_DEBUG, "rsa_encrypt, encrypt_len : %d.\n", encrypt_len);
 	/* Copy to the ecrypted buffer */
-	if (memcpy_s(cipherText, cipherCalLength, (char *)out,
-		     cipherCalLength) != 0) {
-		LOG(LOG_ERROR, "Memcpy failed for rsa encrypted msg \n");
+	if (memcpy_s(cipher_text, cipher_cal_length, (char *)out,
+		     cipher_cal_length) != 0) {
+		LOG(LOG_ERROR, "Memcpy failed for rsa encrypted msg\n");
 		ret = -1;
 	}
 error:
@@ -323,41 +341,43 @@ error:
 }
 
 /**
- * sdoCryptoRSALen - Returns the cipher length
- * @param keyParam1 - pointer of type uint8_t, holds the public key1.
- * @param keyParam1Length - size of public key1, type size_t.
- * @param keyParam2 - pointer of type uint8_t,holds the public key2.
- * @param keyParam2Length - size of public key2, type size_t
+ * crypto_hal_rsa_len - Returns the cipher length
+ * @param key_param1 - pointer of type uint8_t, holds the public key1.
+ * @param key_param1Length - size of public key1, type size_t.
+ * @param key_param2 - pointer of type uint8_t,holds the public key2.
+ * @param key_param2Length - size of public key2, type size_t
  * @return ret
- *        return cypherLength in bytes else 0 on failure.
+ *        return cypher_length in bytes else 0 on failure.
  */
-uint32_t sdoCryptoRSALen(const uint8_t *keyParam1, uint32_t keyParam1Length,
-			 const uint8_t *keyParam2, uint32_t keyParam2Length)
+uint32_t crypto_hal_rsa_len(const uint8_t *key_param1,
+			    uint32_t key_param1Length,
+			    const uint8_t *key_param2,
+			    uint32_t key_param2Length)
 {
 	EVP_PKEY *pkey = NULL;
 	RSA *rkey = NULL; /* The pubkey is converted to this RSA public key. */
-	uint32_t cipherCalLength = 0;
+	uint32_t cipher_cal_length = 0;
 
-	if ((NULL != keyParam1) && (0 != keyParam1Length) &&
-	    (NULL != keyParam2) && (0 != keyParam2Length)) {
+	if ((NULL != key_param1) && (0 != key_param1Length) &&
+	    (NULL != key_param2) && (0 != key_param2Length)) {
 		LOG(LOG_ERROR, "Invalid parameters.\n ");
 		return 0;
 	}
 	/* Convert the representation to an RSA key. */
-	if (convert2pkey(&pkey, &rkey, keyParam1, keyParam1Length, keyParam2,
-			 keyParam2Length) != 0) {
+	if (convert2pkey(&pkey, &rkey, key_param1, key_param1Length, key_param2,
+			 key_param2Length) != 0) {
 		LOG(LOG_ERROR,
 		    "Cannot convert public key to OpenSSL EVP_PKEY.\n ");
 		goto err;
 	}
 
 	if (NULL != rkey) {
-		cipherCalLength = RSA_size(rkey);
+		cipher_cal_length = RSA_size(rkey);
 	}
 
 err:
 	RSA_free(rkey);
 	EVP_PKEY_free(pkey);
 	/* send back required cipher budffer size */
-	return cipherCalLength;
+	return cipher_cal_length;
 }

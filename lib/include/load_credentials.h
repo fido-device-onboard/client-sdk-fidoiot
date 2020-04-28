@@ -15,25 +15,29 @@
 #define DATA_FILES "./data/"
 #define MAX_FILENAME_LEN 1024
 
-bool ReadNormalDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-				 SDODevCred_t *ourDevCred);
-bool ReadMfgDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-			      SDODevCred_t *ourDevCred);
-bool ReadSecureDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-				 SDODevCred_t *ourDevCred);
-bool WriteNormalDeviceCredentials(const char *devCredFile,
-				  sdoSdkBlobFlags flags,
-				  SDODevCred_t *ourDevCred);
-bool WriteMfgDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-			       SDODevCred_t *ourDevCred);
-bool WriteSecureDeviceCredentials(const char *devCredFile,
-				  sdoSdkBlobFlags flags,
-				  SDODevCred_t *ourDevCred);
+bool read_normal_device_credentials(const char *dev_cred_file,
+				    sdo_sdk_blob_flags flags,
+				    sdo_dev_cred_t *our_dev_cred);
+bool read_mfg_device_credentials(const char *dev_cred_file,
+				 sdo_sdk_blob_flags flags,
+				 sdo_dev_cred_t *our_dev_cred);
+bool read_secure_device_credentials(const char *dev_cred_file,
+				    sdo_sdk_blob_flags flags,
+				    sdo_dev_cred_t *our_dev_cred);
+bool write_normal_device_credentials(const char *dev_cred_file,
+				     sdo_sdk_blob_flags flags,
+				     sdo_dev_cred_t *our_dev_cred);
+bool write_mfg_device_credentials(const char *dev_cred_file,
+				  sdo_sdk_blob_flags flags,
+				  sdo_dev_cred_t *our_dev_cred);
+bool write_secure_device_credentials(const char *dev_cred_file,
+				     sdo_sdk_blob_flags flags,
+				     sdo_dev_cred_t *our_dev_cred);
 int load_credential(void);
 int load_mfg_secret(void);
-int store_credential(SDODevCred_t *ocred);
+int store_credential(sdo_dev_cred_t *ocred);
 void load_default_data(void);
-SDODevCred_t *app_get_credentials(void);
-SDODevCred_t *app_alloc_credentials(void);
+sdo_dev_cred_t *app_get_credentials(void);
+sdo_dev_cred_t *app_alloc_credentials(void);
 
 #endif /* __LOAD_CREDENTIALS_H__ */

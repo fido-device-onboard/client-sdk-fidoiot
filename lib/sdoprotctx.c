@@ -15,9 +15,9 @@
 
 #include "util.h"
 #include "sdoprot.h"
+#include "network_al.h"
 #include "sdoprotctx.h"
 #include "sdonet.h"
-#include "network_al.h"
 #include <stdlib.h>
 #include "load_credentials.h"
 #include "safe_lib.h"
@@ -26,9 +26,9 @@
 #define CONNECTION_RETRY 2
 
 /**
- * sdoProtCtxAlloc responsible for allocation of required protocol context.
+ * sdo_prot_ctx_alloc responsible for allocation of required protocol context.
  * @param protrun - pointer to function for intended protocol (DI/TO1/TO2).
- * @param protdata - pointer of type SDOProt_t, hold protocol related data.
+ * @param protdata - pointer of type sdo_prot_t, hold protocol related data.
  * @param host_ip, - Pointer to intended HOST's IP address (null if DNS is
  * present).
  * @param host_dns - Pointer to intended HOST's DNS (null if IP is present).
@@ -37,17 +37,20 @@
  * @return pointer to required protocol context on success, NULL if any error
  * occured.
  */
-SDOProtCtx_t *sdoProtCtxAlloc(bool (*protrun)(), SDOProt_t *protdata,
-			      SDOIPAddress_t *host_ip, char *host_dns,
-			      uint16_t host_port, bool tls)
+sdo_prot_ctx_t *sdo_prot_ctx_alloc(bool (*protrun)(sdo_prot_t *ps),
+				   sdo_prot_t *protdata,
+				   sdo_ip_address_t *host_ip,
+				   const char *host_dns, uint16_t host_port,
+				   bool tls)
 {
 	if (NULL == host_ip && NULL == host_dns) {
-		LOG(LOG_ERROR, "IP and DNS, both are found NULL!!\nPlease set "
+		LOG(LOG_ERROR, "IP and DNS, both are found NULL!!\n please set "
 			       "Server's IP/DNS and then proceed.\n");
 		return NULL;
 	}
 
-	SDOProtCtx_t *prot_ctx = sdoAlloc(sizeof(SDOProtCtx_t));
+	sdo_prot_ctx_t *prot_ctx = sdo_alloc(sizeof(sdo_prot_ctx_t));
+
 	if (prot_ctx == NULL)
 		return NULL;
 
@@ -67,91 +70,108 @@ SDOProtCtx_t *sdoProtCtxAlloc(bool (*protrun)(), SDOProt_t *protdata,
 /**
  * Internal API
  */
-void sdoProtCtxFree(SDOProtCtx_t *prot_ctx)
+void sdo_prot_ctx_free(sdo_prot_ctx_t *prot_ctx)
 {
 	if (prot_ctx) {
 		if (prot_ctx->host_dns)
-			sdoFree(prot_ctx->resolved_ip);
-		sdoFree(prot_ctx);
+			sdo_free(prot_ctx->resolved_ip);
+		sdo_free(prot_ctx);
 	}
 }
 
 /**
  * Internal API
  */
-bool sdoProtCtxConnect(SDOProtCtx_t *prot_ctx)
+static bool sdo_prot_ctx_connect(sdo_prot_ctx_t *prot_ctx)
 {
 	bool ret = false;
-	static int prevstate = 0;
+	static int prevstate;
 
 	if (prot_ctx->protdata->state == SDO_STATE_ERROR)
 		prot_ctx->protdata->state = prevstate;
 
 	switch (prot_ctx->protdata->state) {
-	case SDO_STATE_DI_APP_START:       /* type 10 */
+	case SDO_STATE_DI_APP_START: /* type 10 */
+		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_DI_SET_CREDENTIALS: /* type 11 */
 		if (prot_ctx->host_dns) {
-			if (!ResolveDn(prot_ctx->host_dns,
-				       &prot_ctx->resolved_ip,
-				       prot_ctx->host_port, NULL,
-				       is_mfg_proxy_defined())) {
+			if (!resolve_dn(prot_ctx->host_dns,
+					&prot_ctx->resolved_ip,
+					prot_ctx->host_port, NULL,
+					is_mfg_proxy_defined())) {
 				ret = false;
 				break;
 			}
 			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
+		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_DI_SET_HMAC: /* type 12 */
-	case SDO_STATE_DI_DONE:     /* type 13 */
-		ret = ConnectToManufacturer(prot_ctx->host_ip,
-					    prot_ctx->host_port,
-					    &prot_ctx->sock, NULL);
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_DI_DONE: /* type 13 */
+		ret = connect_to_manufacturer(prot_ctx->host_ip,
+					      prot_ctx->host_port,
+					      &prot_ctx->sock_hdl, NULL);
 		break;
-	case SDO_STATE_T01_SND_HELLO_SDO:    /* type 30 */
+	case SDO_STATE_T01_SND_HELLO_SDO: /* type 30 */
+		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_TO1_RCV_HELLO_SDOACK: /* type 31 */
 		if (prot_ctx->host_dns) {
-			if (!ResolveDn(prot_ctx->host_dns,
-				       &prot_ctx->resolved_ip,
-				       prot_ctx->host_port,
-				       (prot_ctx->tls ? &prot_ctx->ssl : NULL),
-				       is_rv_proxy_defined())) {
+			if (!resolve_dn(prot_ctx->host_dns,
+					&prot_ctx->resolved_ip,
+					prot_ctx->host_port,
+					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
+					is_rv_proxy_defined())) {
 				ret = false;
 				break;
 			}
 			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
+		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_TO1_SND_PROVE_TO_SDO: /* type 32 */
+		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_TO1_RCV_SDO_REDIRECT: /* type 33 */
-		ret = ConnectToRendezvous(
-		    prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock,
+		ret = connect_to_rendezvous(
+		    prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
 		    (prot_ctx->tls ? &prot_ctx->ssl : NULL));
 		break;
 	case SDO_STATE_T02_SND_HELLO_DEVICE: /* type 40 */
-	case SDO_STATE_TO2_RCV_PROVE_OVHDR:  /* type 41 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_RCV_PROVE_OVHDR: /* type 41 */
 		if (prot_ctx->host_dns) {
-			if (!ResolveDn(prot_ctx->host_dns,
-				       &prot_ctx->resolved_ip,
-				       prot_ctx->host_port, NULL,
-				       is_owner_proxy_defined())) {
+			if (!resolve_dn(prot_ctx->host_dns,
+					&prot_ctx->resolved_ip,
+					prot_ctx->host_port, NULL,
+					is_owner_proxy_defined())) {
 				ret = false;
 				break;
 			}
 			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
-	case SDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY:	    /* type 42 */
-	case SDO_STATE_T02_RCV_OP_NEXT_ENTRY:		     /* type 43 */
-	case SDO_STATE_TO2_SND_PROVE_DEVICE:		     /* type 44 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY: /* type 42 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_T02_RCV_OP_NEXT_ENTRY: /* type 43 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_SND_PROVE_DEVICE: /* type 44 */
+		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO: /* type 45 */
-	case SDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO:     /* type 46 */
-	case SDO_STATE_TO2_RCV_SETUP_DEVICE:		     /* type 47 */
-	case SDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO:  /* type 48 */
-	case SDO_STATE_T02_RCV_NEXT_OWNER_SERVICE_INFO:      /* type 49 */
-	case SDO_STATE_TO2_SND_DONE:			     /* type 50 */
-	case SDO_STATE_TO2_RCV_DONE_2:			     /* type 51 */
-		ret = ConnectToOwner(prot_ctx->host_ip, prot_ctx->host_port,
-				     &prot_ctx->sock, NULL);
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO: /* type 46 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_RCV_SETUP_DEVICE: /* type 47 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO: /* type 48 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_T02_RCV_NEXT_OWNER_SERVICE_INFO: /* type 49 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_SND_DONE: /* type 50 */
+		ATTRIBUTE_FALLTHROUGH;
+	case SDO_STATE_TO2_RCV_DONE_2: /* type 51 */
+		ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
+				       &prot_ctx->sock_hdl, NULL);
 		break;
 	default:
-		LOG(LOG_ERROR, "sdoProtCtxConnect reached unknown state \n");
+		LOG(LOG_ERROR, "%s reached unknown state\n", __func__);
 		break;
 	}
 	prevstate = prot_ctx->protdata->state;
@@ -159,23 +179,23 @@ bool sdoProtCtxConnect(SDOProtCtx_t *prot_ctx)
 }
 
 /**
- * sdoProtCtxRun responsible for running/maintaining DI, T01, T02 protocol
+ * sdo_prot_ctx_run responsible for running/maintaining DI, T01, T02 protocol
  * contexts and respond according to the state specified.
  * Managing the JSON packet to/from device to server is taken care.
  * Managing the ip/dns-to-ip resolution is taken care.
- * @param prot_ctx - Pointer of type SDOProtCtx_t, holds the all the
+ * @param prot_ctx - Pointer of type sdo_prot_ctx_t, holds the all the
  * information,
  * @return 0 on success, -1 on error.
  */
 
-int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
+int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 {
 	int ret = 0;
 	int n, size;
 	int retries = 0;
-	SDOBlock_t *sdob = NULL;
-	SDOR_t *sdor = NULL;
-	SDOW_t *sdow = NULL;
+	sdo_block_t *sdob = NULL;
+	sdor_t *sdor = NULL;
+	sdow_t *sdow = NULL;
 
 	if (!prot_ctx || !prot_ctx->protdata)
 		return -1;
@@ -183,7 +203,7 @@ int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
 	sdow = &prot_ctx->protdata->sdow;
 
 	// init connection set-up for send/receive packets
-	if (sdoConSetup(NULL, NULL, 0)) {
+	if (sdo_con_setup(NULL, NULL, 0)) {
 		LOG(LOG_ERROR, "Connection setup failed!\n");
 		return -1;
 	}
@@ -197,55 +217,57 @@ int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
 			break;
 		}
 
-		//=====================================================================
-		// Transmit outbound packet
-		//
+		/* ========================================================== */
+		/*  Transmit outbound packet */
 
-		// Protocol sets State as SDO_STATE_DONE at the end of the
-		// protocol(DI/T01/TO2)
-		// Hence, when state = SDO_STATE_DONE, we have nothing more left
-		// to
-		// send. Exit!!
+
+		/*  Protocol sets State as SDO_STATE_DONE at the end of the*/
+		/*  protocol(DI/T01/TO2) */
+		/*  Hence, when state = SDO_STATE_DONE, we have nothing more*/
+		/*  left to */
+		/*  send. Exit!! */
 		if (prot_ctx->protdata->state == SDO_STATE_DONE) {
 			ret = 0;
 			break;
 		}
 
-		if ((sdow->msgType < SDO_DI_APP_START) ||
-		    (sdow->msgType > SDO_TYPE_ERROR)) {
+		if ((sdow->msg_type < SDO_DI_APP_START) ||
+		    (sdow->msg_type > SDO_TYPE_ERROR)) {
 			ret = -1;
 			break;
 		}
 
-		if (!sdoProtCtxConnect(prot_ctx)) {
+		if (!sdo_prot_ctx_connect(prot_ctx)) {
 			/* Giving up, we tried enough to
-			 * re-establish */
+			 * re-establish
+			 */
 			ret = -1;
 			break;
 		}
 
-		size = sdow->b.blockSize;
+		size = sdow->b.block_size;
 
 		sdow->b.block[size] = 0;
 		retries = CONNECTION_RETRY;
 		do {
-			n = sdoConSendMessage(prot_ctx->sock,
-					      SDO_PROT_SPEC_VERSION,
-					      sdow->msgType, &sdow->b.block[0],
-					      size, prot_ctx->ssl);
+			n = sdo_con_send_message(
+			    prot_ctx->sock_hdl, SDO_PROT_SPEC_VERSION,
+			    sdow->msg_type, &sdow->b.block[0], size,
+			    prot_ctx->ssl);
 
 			if (n <= 0) {
-				if (sdoConDisconnect(prot_ctx->sock,
-						     prot_ctx->ssl)) {
+				if (sdo_con_disconnect(prot_ctx->sock_hdl,
+						       prot_ctx->ssl)) {
 					LOG(LOG_ERROR,
 					    "Error during socket close()\n");
 					ret = -1;
 					break;
 				}
 
-				if (sdoConnectionRestablish(prot_ctx)) {
+				if (sdo_connection_restablish(prot_ctx)) {
 					/* Giving up, we tried enough to
-					 * re-establish */
+					 * re-establish
+					 */
 					ret = -1;
 					break;
 				}
@@ -257,28 +279,29 @@ int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
 			break;
 		}
 
-		LOG(LOG_DEBUG, "Tx sdoProtCtxRun:body:%s\n\n",
+		LOG(LOG_DEBUG, "Tx sdo_prot_ctx_run:body:%s\n\n",
 		    &sdow->b.block[0]);
 
-		//=====================================================================
-		// Receive response
-		//
+		/* ========================================================== */
+		/*  Receive response */
+
 		sdob = &sdor->b;
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
 
-		if ((ret = sdoConRecvMsgHeader(prot_ctx->sock, &protver,
-					       (uint32_t *)&sdor->msgType,
-					       &msglen, prot_ctx->ssl)) == -1) {
-			LOG(LOG_ERROR, "sdoConRecvMsgHeader() Failed!\n");
+		ret = sdo_con_recv_msg_header(prot_ctx->sock_hdl, &protver,
+					      (uint32_t *)&sdor->msg_type,
+					      &msglen, prot_ctx->ssl);
+		if (ret == -1) {
+			LOG(LOG_ERROR, "sdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
 			break;
 		}
 
-		sdoRFlush(sdor);
+		sdor_flush(sdor);
 		sdob = &sdor->b;
-		sdoResizeBlock(sdob, msglen + 4);
+		sdo_resize_block(sdob, msglen + 4);
 
 		if (memset_s(sdob->block, msglen + 4, 0) != 0) {
 			LOG(LOG_ERROR, "Memset Failed\n");
@@ -286,18 +309,19 @@ int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
 			break;
 		}
 
-		sdob->blockSize = msglen;
+		sdob->block_size = msglen;
 
 		if (msglen > 0) {
 			retries = CONNECTION_RETRY;
 			n = 0;
 			do {
-				n = sdoConRecvMsgBody(prot_ctx->sock,
-						      &sdob->block[0], msglen,
-						      prot_ctx->ssl);
+				n = sdo_con_recv_msg_body(
+				    prot_ctx->sock_hdl, &sdob->block[0], msglen,
+				    prot_ctx->ssl);
 				if (n < 0) {
-					if (sdoConDisconnect(prot_ctx->sock,
-							     prot_ctx->ssl)) {
+					if (sdo_con_disconnect(
+						prot_ctx->sock_hdl,
+						prot_ctx->ssl)) {
 						LOG(LOG_ERROR, "Error during "
 							       "socket "
 							       "close()\n");
@@ -305,9 +329,11 @@ int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
 						break;
 					}
 
-					if (sdoConnectionRestablish(prot_ctx)) {
+					if (sdo_connection_restablish(
+						prot_ctx)) {
 						/* Giving up, we tried enough to
-						 * re-establish */
+						 * re-establish
+						 */
 						ret = -1;
 						break;
 					}
@@ -317,45 +343,45 @@ int sdoProtCtxRun(SDOProtCtx_t *prot_ctx)
 			if (n <= 0) {
 				LOG(LOG_ERROR, "Socket read not successful "
 					       "after retries!\n");
-				sdoRFlush(sdor);
+				sdor_flush(sdor);
 				ret = -1;
 				break;
 			}
 		}
 
-		if (sdoConDisconnect(prot_ctx->sock, prot_ctx->ssl)) {
+		if (sdo_con_disconnect(prot_ctx->sock_hdl, prot_ctx->ssl)) {
 			LOG(LOG_ERROR, "Error during socket close()\n");
 			ret = -1;
 			break;
 		}
 
-		LOG(LOG_DEBUG, "Rx sdoProtCtxRun:body:%s\n\n",
+		LOG(LOG_DEBUG, "Rx sdo_prot_ctx_run:body:%s\n\n",
 		    &sdor->b.block[0]);
 
-		sdoRSetHaveBlock(sdor);
+		sdor_set_have_block(sdor);
 
 		/*
 		 * When a REST error message(type 255) is sent over network,
 		 * the received response may have an empty body.
 		 */
-		if (msglen == 0 && sdow->msgType == SDO_TYPE_ERROR) {
+		if (msglen == 0 && sdow->msg_type == SDO_TYPE_ERROR) {
 			ret = -1;
 			break;
 		}
-		// ERROR case ?
-		if (sdor->msgType == SDO_TYPE_ERROR) {
+		 /* ERROR case ? */
+		if (sdor->msg_type == SDO_TYPE_ERROR) {
 			ret = -1;
 			break;
 		}
 	}
 
-	sdoConTeardown();
+	sdo_con_teardown();
 
 	if (sdob && sdob->block) {
-		sdob->blockMax = 0;
-		sdob->blockSize = 0;
+		sdob->block_max = 0;
+		sdob->block_size = 0;
 		sdob->cursor = 0;
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 	return ret;

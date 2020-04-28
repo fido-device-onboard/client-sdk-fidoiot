@@ -17,17 +17,17 @@
 /**
  * Convert a SDOBits object to a bignum_t
  */
-int byte_array_to_bn(bignum_t *bn, SDOByteArray_t *in)
+int byte_array_to_bn(bignum_t *bn, sdo_byte_array_t *in)
 {
 
 	if (in == NULL || bn == NULL) {
 		return -1;
 	}
-	if (in->byteSz == 0 || in->bytes == NULL) {
+	if (in->byte_sz == 0 || in->bytes == NULL) {
 		return -1;
 	}
 
-	return bn_bin2bn(in->bytes, in->byteSz, bn);
+	return bn_bin2bn(in->bytes, in->byte_sz, bn);
 }
 
 /**
@@ -36,24 +36,24 @@ int byte_array_to_bn(bignum_t *bn, SDOByteArray_t *in)
  * top of the array.
  * We must do the same thing if we are to interwork with java
  */
-SDOByteArray_t *bn_to_byte_array(bignum_t *in)
+sdo_byte_array_t *bn_to_byte_array(bignum_t *in)
 {
 	int len;
-	SDOByteArray_t *ba;
+	sdo_byte_array_t *ba;
 
 	if (in == NULL) {
 		return NULL;
 	}
 
 	len = bn_num_bytes(in);
-	ba = sdoByteArrayAlloc(len + 1);
+	ba = sdo_byte_array_alloc(len + 1);
 	if (ba == NULL) {
 		return NULL;
 	}
 
 	/* do the conversion*/
 	if (bn_bn2bin(in, ba->bytes) == 0) {
-		sdoByteArrayFree(ba);
+		sdo_byte_array_free(ba);
 		return NULL;
 	}
 
@@ -62,14 +62,15 @@ SDOByteArray_t *bn_to_byte_array(bignum_t *in)
 	 * zero byte
 	 */
 	if (ba->bytes[0] & 0x80) {
-		if (memmove_s(&ba->bytes[1], ba->byteSz, ba->bytes, len) != 0) {
+		if (memmove_s(&ba->bytes[1], ba->byte_sz, ba->bytes, len) !=
+		    0) {
 			LOG(LOG_ERROR, "Memmove Failed\n");
-			sdoByteArrayFree(ba);
+			sdo_byte_array_free(ba);
 			return NULL;
 		}
 		ba->bytes[0] = 0;
 	} else {
-		ba->byteSz--;
+		ba->byte_sz--;
 	}
 
 	return ba;

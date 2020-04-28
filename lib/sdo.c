@@ -12,12 +12,13 @@
 #include "base64.h"
 #include "cli.h"
 #include "sdokeyexchange.h"
+#include "network_al.h"
 #include "sdoprotctx.h"
 #include "sdonet.h"
 #include "sdoprot.h"
 #include "load_credentials.h"
 #include "network_al.h"
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 #include "util.h"
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,24 +27,24 @@
 
 #define HTTPS_TAG "https"
 
-int TO2_done = 0;
+int TO2_done;
 typedef struct app_data_s {
 	bool error_recovery;
 	bool recovery_enabled;
 	bool (*state_fn)(void);
-	SDODevCred_t *devcred;
+	sdo_dev_cred_t *devcred;
 	void *ssl;
-	SDOProt_t prot;
+	sdo_prot_t prot;
 	int err;
-	SDOServiceInfo_t *service_info;
+	sdo_service_info_t *service_info;
 	/* Temp, use the value in the configured rendezvous */
-	SDOIPAddress_t *rendezvousIPAddr;
+	sdo_ip_address_t *rendezvousIPAddr;
 	char *rendezvousdns;
 	uint32_t delaysec;
 	/* Error handling callback */
-	sdoSdkErrorCB error_callback;
-	/* Global SvInfo ModuleList head pointer */
-	sdoSdkServiceInfoModuleList_t *moduleList;
+	sdo_sdk_errorCB error_callback;
+	/* Global Sv_info Module_list head pointer */
+	sdo_sdk_service_info_module_list_t *module_list;
 } app_data_t;
 
 /* Globals */
@@ -58,7 +59,7 @@ static bool _STATE_Error(void);
 static bool _STATE_Shutdown(void);
 static bool _STATE_Shutdown_Error(void);
 
-static sdoSdkStatus app_initialize(void);
+static sdo_sdk_status app_initialize(void);
 static void app_close(void);
 
 #define ERROR()                                                                \
@@ -68,9 +69,9 @@ static void app_close(void);
 	}
 
 /**
- * sdoSdkRun is user API call to start device ownership
+ * sdo_sdk_run is user API call to start device ownership
  * transfer
- * sdoSdkInit should be called before calling this function
+ * sdo_sdk_init should be called before calling this function
  * If device supports Device Initialization (DI) protocol,
  * then the first time invoking of this call completes DI
  * and for the next invoke completes transfer ownership protocols
@@ -79,15 +80,16 @@ static void app_close(void);
  * invoking of this function will complete transfer ownership protocols.
  *
  * @return
- *        return SDO_SUCCESS on success. non-zero value from sdoSdkStatus enum.
+ *        return SDO_SUCCESS on success. non-zero value from sdo_sdk_status
+ * enum.
  */
-sdoSdkStatus sdoSdkRun(void)
+sdo_sdk_status sdo_sdk_run(void)
 {
-	sdoSdkStatus ret = SDO_ERROR;
+	sdo_sdk_status ret = SDO_ERROR;
 
 	if (!g_sdo_data) {
 		LOG(LOG_ERROR,
-		    "sdoSdk not initialized. Call sdoSdkInit first\n");
+		    "sdo_sdk not initialized. Call sdo_sdk_init first\n");
 		goto end;
 	}
 
@@ -112,110 +114,111 @@ sdoSdkStatus sdoSdkRun(void)
 
 end:
 	app_close();
-	/* This should be moved to sdoSdkExit when its available */
-	sdoFree(g_sdo_data);
+	/* This should be moved to sdo_sdk_exit when its available */
+	sdo_free(g_sdo_data);
 	return ret;
 }
 
 /**
  * Deallocate allocated  memories in DI protocol and exit from DI.
  *
- * @param appData
+ * @param app_data
  *        Pointer to the database containtain all sdo state variables.
  * @return ret
  *         None.
  */
-static void sdoProtDIExit(app_data_t *appData)
+static void sdo_protDIExit(app_data_t *app_data)
 {
-	SDOProt_t *ps = &appData->prot;
-	sdoRFlush(&ps->sdor);
+	sdo_prot_t *ps = &app_data->prot;
+
+	sdor_flush(&ps->sdor);
 	return;
 }
 
 /**
  * Release memory allocated as a part of DI protocol.
  *
- * @param appData
+ * @param app_data
  *        Pointer to the database holds all protocol state variables.
  * @return ret
  *         None.
  */
-static void sdoProtTO1Exit(app_data_t *appData)
+static void sdo_protTO1Exit(app_data_t *app_data)
 {
-	SDOProt_t *ps = &appData->prot;
+	sdo_prot_t *ps = &app_data->prot;
 
 	if (ps->n4) {
-		sdoByteArrayFree(ps->n4);
+		sdo_byte_array_free(ps->n4);
 		ps->n4 = NULL;
 	}
-	sdoRFlush(&ps->sdor);
+	sdor_flush(&ps->sdor);
 }
 
 /**
  * Release memory allocated as a part of TO2 protocol and exit.
  *
- * @param appData
+ * @param app_data
  *        Pointer to the database holds all protocol state variables.
  * @return ret
  *         None.
  */
-static void sdoProtTO2Exit(app_data_t *appData)
+static void sdo_protTO2Exit(app_data_t *app_data)
 {
-	SDOProt_t *ps = &appData->prot;
+	sdo_prot_t *ps = &app_data->prot;
 
-	if (ps->tlsKey != NULL) {
-		sdoPublicKeyFree(ps->tlsKey);
-		ps->tlsKey = NULL;
+	if (ps->tls_key != NULL) {
+		sdo_public_key_free(ps->tls_key);
+		ps->tls_key = NULL;
 	}
-	if (ps->localKeyPair != NULL) {
-		sdoPublicKeyFree(ps->localKeyPair);
-		ps->localKeyPair = NULL;
+	if (ps->local_key_pair != NULL) {
+		sdo_public_key_free(ps->local_key_pair);
+		ps->local_key_pair = NULL;
 	}
 	if (ps->ovoucher != NULL) {
-		sdoOvFree(ps->ovoucher);
+		sdo_ov_free(ps->ovoucher);
 		ps->ovoucher = NULL;
 	}
 	if (ps->rv != NULL) {
-		sdoRendezvousFree(ps->rv);
+		sdo_rendezvous_free(ps->rv);
 		ps->rv = NULL;
 	}
 	if (ps->osc != NULL) {
 		if (ps->osc->si != NULL) {
-			sdoServiceInfoFree(ps->osc->si);
+			sdo_service_info_free(ps->osc->si);
 			ps->osc->si = NULL;
 		}
-		sdoFree(ps->osc);
+		sdo_free(ps->osc);
 		ps->osc = NULL;
 	}
 	if (ps->iv != NULL) {
-		sdoIVFree(ps->iv);
+		sdo_iv_free(ps->iv);
 		ps->iv = NULL;
 	}
 	if (ps->new_pk != NULL) {
-		sdoPublicKeyFree(ps->new_pk);
+		sdo_public_key_free(ps->new_pk);
 		ps->new_pk = NULL;
 	}
 	if (ps->dns1 != NULL) {
-		sdoFree(ps->dns1);
+		sdo_free(ps->dns1);
 		ps->dns1 = NULL;
 	}
 	if (ps->n7 != NULL) {
-		sdoByteArrayFree(ps->n7);
+		sdo_byte_array_free(ps->n7);
 		ps->n7 = NULL;
 	}
 	if (ps->n7r != NULL) {
-		sdoByteArrayFree(ps->n7r);
+		sdo_byte_array_free(ps->n7r);
 		ps->n7r = NULL;
 	}
 
-	/* clear SvInfo PSI/DSI/OSI related data */
-	if (ps->dsiInfo) {
-		ps->dsiInfo->list_dsi = ps->SvInfoModListHead;
-		ps->dsiInfo->moduleDsiIndex = 0;
+	/* clear Sv_info PSI/DSI/OSI related data */
+	if (ps->dsi_info) {
+		ps->dsi_info->list_dsi = ps->sv_info_mod_list_head;
+		ps->dsi_info->module_dsi_index = 0;
 	}
-	sdoSvInfoClearModulePsiOsiIndex(ps->SvInfoModListHead);
-	ps->totalDsiRounds = 0;
-	sdoRFlush(&ps->sdor);
+	sdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
+	ps->total_dsi_rounds = 0;
+	sdor_flush(&ps->sdor);
 }
 /**
  * Allocate memory to hold device credentials which includes owner credentials
@@ -225,9 +228,9 @@ static void sdoProtTO2Exit(app_data_t *appData)
  *        return pointer to memory holding device credentials on success, NULL
  * on failure.
  */
-SDODevCred_t *app_alloc_credentials(void)
+sdo_dev_cred_t *app_alloc_credentials(void)
 {
-	g_sdo_data->devcred = sdoDevCredAlloc();
+	g_sdo_data->devcred = sdo_dev_cred_alloc();
 
 	if (!g_sdo_data->devcred)
 		LOG(LOG_ERROR, "Device Credentials allocation failed !!");
@@ -243,7 +246,7 @@ SDODevCred_t *app_alloc_credentials(void)
  *        return pointer to memory holding device credentials on success, NULL
  * if memory not allocated yet.
  */
-SDODevCred_t *app_get_credentials(void)
+sdo_dev_cred_t *app_get_credentials(void)
 {
 	return g_sdo_data->devcred;
 }
@@ -251,7 +254,7 @@ SDODevCred_t *app_get_credentials(void)
 /**
  * Internal API
  */
-static sdoSdkStatus app_initialize(void)
+static sdo_sdk_status app_initialize(void)
 {
 	int ret = SDO_ERROR;
 
@@ -269,7 +272,7 @@ static sdoSdkStatus app_initialize(void)
 #endif
 	g_sdo_data->recovery_enabled = false;
 	g_sdo_data->state_fn = &_STATE_TO1;
-	if (memset_s(&g_sdo_data->prot, sizeof(SDOProt_t), 0) != 0) {
+	if (memset_s(&g_sdo_data->prot, sizeof(sdo_prot_t), 0) != 0) {
 		LOG(LOG_ERROR, "Memset Failed\n");
 		return SDO_ERROR;
 	}
@@ -284,16 +287,17 @@ static sdoSdkStatus app_initialize(void)
 	}
 #endif
 
-	if (!sdoWInit(&g_sdo_data->prot.sdow)) {
-		LOG(LOG_ERROR, "sdoWInit() failed!\n");
+	if (!sdow_init(&g_sdo_data->prot.sdow)) {
+		LOG(LOG_ERROR, "sdow_init() failed!\n");
 		return SDO_ERROR;
 	}
-	if (!sdoRInit(&g_sdo_data->prot.sdor, NULL, NULL)) {
-		LOG(LOG_ERROR, "sdoRInit() failed!\n");
+	if (!sdor_init(&g_sdo_data->prot.sdor, NULL, NULL)) {
+		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		return SDO_ERROR;
 	}
 
-	if (g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READY1) {
+	if ((g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READY1) ||
+	    (g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READYN)) {
 		ret = load_mfg_secret();
 		if (ret)
 			return SDO_ERROR;
@@ -316,50 +320,54 @@ static sdoSdkStatus app_initialize(void)
 
 	/* Build up a test service info list */
 	char *get_modules = NULL;
-	g_sdo_data->service_info = sdoServiceInfoAlloc();
+
+	g_sdo_data->service_info = sdo_service_info_alloc();
 
 	if (!g_sdo_data->service_info) {
-		LOG(LOG_ERROR, "ServiceInfo List allocation failed!\n");
+		LOG(LOG_ERROR, "Service_info List allocation failed!\n");
 		return SDO_ERROR;
 	}
 
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:os", OS_NAME);
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:arch", ARCH);
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:version",
-			       OS_VERSION);
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:device",
-			       (char *)get_device_model());
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:sn",
-			       (char *)get_device_serial_number());
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:sep",
-			       SEPARATOR);
-	sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:bin",
-			       BIN_TYPE);
-	if (g_sdo_data->devcred->mfgBlk && g_sdo_data->devcred->mfgBlk->cu &&
-	    g_sdo_data->devcred->mfgBlk->cu->byteSz)
-		sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:cu",
-				       g_sdo_data->devcred->mfgBlk->cu->bytes);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:os",
+				    OS_NAME);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:arch",
+				    ARCH);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:version",
+				    OS_VERSION);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:device",
+				    (char *)get_device_model());
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:sn",
+				    (char *)get_device_serial_number());
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:sep",
+				    SEPARATOR);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:bin",
+				    BIN_TYPE);
+	if (g_sdo_data->devcred->mfg_blk && g_sdo_data->devcred->mfg_blk->cu &&
+	    g_sdo_data->devcred->mfg_blk->cu->byte_sz)
+		sdo_service_info_add_kv_str(
+		    g_sdo_data->service_info, "sdodev:cu",
+		    g_sdo_data->devcred->mfg_blk->cu->bytes);
 	else
-		sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:cu",
-				       "");
+		sdo_service_info_add_kv_str(g_sdo_data->service_info,
+					    "sdodev:cu", "");
 
-	if (g_sdo_data->devcred->mfgBlk && g_sdo_data->devcred->mfgBlk->ch &&
-	    g_sdo_data->devcred->mfgBlk->ch->hash->byteSz)
-		sdoServiceInfoAddKV(
+	if (g_sdo_data->devcred->mfg_blk && g_sdo_data->devcred->mfg_blk->ch &&
+	    g_sdo_data->devcred->mfg_blk->ch->hash->byte_sz)
+		sdo_service_info_add_kv(
 		    g_sdo_data->service_info,
-		    sdoKVAllocWithArray("sdodev:ch",
-					g_sdo_data->devcred->mfgBlk->ch->hash));
+		    sdo_kv_alloc_with_array(
+			"sdodev:ch", g_sdo_data->devcred->mfg_blk->ch->hash));
 	else
-		sdoServiceInfoAddKVStr(g_sdo_data->service_info, "sdodev:ch",
-				       "");
+		sdo_service_info_add_kv_str(g_sdo_data->service_info,
+					    "sdodev:ch", "");
 
-	if (sdoConstructModuleList(g_sdo_data->moduleList, &get_modules)) {
-		sdoServiceInfoAddKVStr(g_sdo_data->service_info,
-				       "sdodev:modules", get_modules);
-		sdoFree(get_modules);
+	if (sdo_construct_module_list(g_sdo_data->module_list, &get_modules)) {
+		sdo_service_info_add_kv_str(g_sdo_data->service_info,
+					    "sdodev:modules", get_modules);
+		sdo_free(get_modules);
 	}
 
-	if (sdoNullIPAddress(&g_sdo_data->prot.i1) == false) {
+	if (sdo_null_ipaddress(&g_sdo_data->prot.i1) == false) {
 		return SDO_ERROR;
 	}
 
@@ -368,9 +376,9 @@ static sdoSdkStatus app_initialize(void)
 
 /**
  * Get SDO device state
- * sdoSdkInit should be called before calling this function
+ * sdo_sdk_init should be called before calling this function
  *
- * @return sdoSdkDeviceState type
+ * @return sdo_sdk_device_state type
  *	SDO_STATE_PRE_DI  : Device is ready for DI
  *	SDO_STATE_PRE_TO1 : Device is ready for Ownership transfer
  *	SDO_STATE_IDLE    : Device's ownership transfer done
@@ -378,9 +386,9 @@ static sdoSdkStatus app_initialize(void)
  *	SDO_STATE_ERROR   : Error in getting device status
  *
  */
-sdoSdkDeviceState sdoSdkGetStatus(void)
+sdo_sdk_device_state sdo_sdk_get_status(void)
 {
-	sdoSdkDeviceState status = SDO_STATE_ERROR;
+	sdo_sdk_device_state status = SDO_STATE_ERROR;
 
 	if (g_sdo_data == NULL)
 		return SDO_STATE_ERROR;
@@ -393,7 +401,6 @@ sdoSdkDeviceState sdoSdkGetStatus(void)
 		status = SDO_STATE_PRE_TO1;
 	} else if (g_sdo_data->devcred->ST == SDO_DEVICE_STATE_IDLE) {
 		status = SDO_STATE_IDLE;
-		;
 	} else if (g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READYN) {
 		status = SDO_STATE_RESALE;
 	}
@@ -402,43 +409,44 @@ sdoSdkDeviceState sdoSdkGetStatus(void)
 }
 
 /**
- * API to register ServiceInfo modules, for later communicaton with Owner
+ * API to register Service_info modules, for later communicaton with Owner
  * server.
- * This API is exposed to all the SDO ServiceInfo modules, modules must call
+ * This API is exposed to all the SDO Service_info modules, modules must call
  * this
  * API for registering themselves to SDO.
  *
  * @param
- *        module: pointer to a 'SDO serviceInfo Module struct'
+ *        module: pointer to a 'SDO service_info Module struct'
  *
  * @return none
  */
 
-void sdoSdkServiceInfoRegisterModule(sdoSdkServiceInfoModule *module)
+void sdo_sdk_service_info_register_module(sdo_sdk_service_info_module *module)
 {
 	if (module == NULL)
 		return;
 
-	sdoSdkServiceInfoModuleList_t *new =
-	    sdoAlloc(sizeof(sdoSdkServiceInfoModuleList_t));
+	sdo_sdk_service_info_module_list_t *new =
+	    sdo_alloc(sizeof(sdo_sdk_service_info_module_list_t));
 
 	if (new == NULL) {
 		LOG(LOG_ERROR, "malloc failed\n");
 		return;
 	}
 
-	if (memcpy_s(&new->module, sizeof(sdoSdkServiceInfoModule), module,
-		     sizeof(sdoSdkServiceInfoModule)) != 0) {
+	if (memcpy_s(&new->module, sizeof(sdo_sdk_service_info_module), module,
+		     sizeof(sdo_sdk_service_info_module)) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
-		sdoFree(new);
+		sdo_free(new);
 		return;
 	}
 
-	if (g_sdo_data->moduleList == NULL) {
+	if (g_sdo_data->module_list == NULL) {
 		// 1st module to register
-		g_sdo_data->moduleList = new;
+		g_sdo_data->module_list = new;
 	} else {
-		sdoSdkServiceInfoModuleList_t *list = g_sdo_data->moduleList;
+		sdo_sdk_service_info_module_list_t *list =
+		    g_sdo_data->module_list;
 
 		while (list->next != NULL)
 			list = list->next;
@@ -447,30 +455,60 @@ void sdoSdkServiceInfoRegisterModule(sdoSdkServiceInfoModule *module)
 	}
 }
 
+static sdo_sdk_service_info_module_list_t *
+clear_modules_list(sdo_sdk_service_info_module_list_t *head)
+{
+	if (head->next != NULL) {
+		head->next = clear_modules_list(head->next);
+	}
+	sdo_free(head);
+	head = NULL;
+	return head;
+}
+
 /**
- * sdoSdkInit is the first function should be called before calling
+ * API to de register Service_info modules, for later communicaton with Owner
+ * server.
+ * This API is exposed to all the SDO Service_info modules, modules must call
+ * this
+ * API for de- registering themselves after SDO complete.
+ *
+ *
+ * @return none
+ */
+
+void sdo_sdk_service_info_deregister_module(void)
+{
+	sdo_sdk_service_info_module_list_t *list = g_sdo_data->module_list;
+	if (list) {
+		g_sdo_data->module_list = clear_modules_list(list);
+	}
+}
+
+/**
+ * sdo_sdk_init is the first function should be called before calling
  * any API function
- * @param errorHandlingCallback
+ * @param error_handling_callback
  * This is the Application’s error handling function and will be called by the
  * SDK when an error is encountered. This value can be NULL in which case,
  * errors will not be reported to the Application and the SDK will take the
  * appropriate recovery and/or restart action as required.
- * @param numModules - Number of Service Information modules contained in the
- * following moduleInformation list parameter. If no Application specific
+ * @param num_modules - Number of Service Information modules contained in the
+ * following module_information list parameter. If no Application specific
  * modules are available, this value should be zero.
- * @param moduleInformation - if no Application specific modules are available,
+ * @param module_information - if no Application specific modules are available,
  * this value should be NULL.
  * @return SDO_SUCCESS for true, else SDO_ERROR
  */
 
-sdoSdkStatus sdoSdkInit(sdoSdkErrorCB errorHandlingCallback,
-			uint32_t numModules,
-			sdoSdkServiceInfoModule *moduleInformation)
+sdo_sdk_status sdo_sdk_init(sdo_sdk_errorCB error_handling_callback,
+			    uint32_t num_modules,
+			    sdo_sdk_service_info_module *module_information)
 {
 	int ret;
 
 	/* sdo Global data initialization */
-	g_sdo_data = sdoAlloc(sizeof(app_data_t));
+	g_sdo_data = sdo_alloc(sizeof(app_data_t));
 
 	if (!g_sdo_data) {
 		LOG(LOG_ERROR, "malloc failed to alloc app_data_t\n");
@@ -480,19 +518,19 @@ sdoSdkStatus sdoSdkInit(sdoSdkErrorCB errorHandlingCallback,
 	g_sdo_data->err = 0;
 
 	/* Initialize Crypto services */
-	if (0 != sdoCryptoInit()) {
-		LOG(LOG_ERROR, "sdoCryptoInit failed!!\n");
+	if (0 != sdo_crypto_init()) {
+		LOG(LOG_ERROR, "sdo_crypto_init failed!!\n");
 		return SDO_ERROR;
 	}
 
-	sdoNetInit();
+	sdo_net_init();
 
-	if (!sdoWInit(&g_sdo_data->prot.sdow)) {
-		LOG(LOG_ERROR, "sdoWInit() failed!\n");
+	if (!sdow_init(&g_sdo_data->prot.sdow)) {
+		LOG(LOG_ERROR, "sdow_init() failed!\n");
 		return SDO_ERROR;
 	}
-	if (!sdoRInit(&g_sdo_data->prot.sdor, NULL, NULL)) {
-		LOG(LOG_ERROR, "sdoRInit() failed!\n");
+	if (!sdor_init(&g_sdo_data->prot.sdor, NULL, NULL)) {
+		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		return SDO_ERROR;
 	}
 
@@ -504,20 +542,24 @@ sdoSdkStatus sdoSdkInit(sdoSdkErrorCB errorHandlingCallback,
 	}
 
 #ifdef MODULES_ENABLED
-	if ((numModules == 0) || (numModules > SDO_MAX_MODULES) ||
-	    (moduleInformation == NULL) ||
-	    (moduleInformation->serviceInfoCallback == NULL))
+	if ((num_modules == 0) || (num_modules > SDO_MAX_MODULES) ||
+	    (module_information == NULL) ||
+	    (module_information->service_info_callback == NULL))
 		return SDO_ERROR;
 
 	/* register service-info modules */
-	for (int i = 0; i < numModules; i++) {
-		if (moduleInformation != NULL)
-			sdoSdkServiceInfoRegisterModule(&moduleInformation[i]);
+	for (uint32_t i = 0; i < num_modules; i++) {
+		if (module_information != NULL)
+			sdo_sdk_service_info_register_module(
+			    &module_information[i]);
 	}
+#else
+	(void)num_modules;
+	(void)module_information;
 #endif
 
 	/* Get the callback from user */
-	g_sdo_data->error_callback = errorHandlingCallback;
+	g_sdo_data->error_callback = error_handling_callback;
 
 	return SDO_SUCCESS;
 }
@@ -526,13 +568,14 @@ sdoSdkStatus sdoSdkInit(sdoSdkErrorCB errorHandlingCallback,
 /**
  * Internal API
  */
-void printServiceInfoModuleList(void)
+void print_service_info_module_list(void)
 {
-	sdoSdkServiceInfoModuleList_t *list = g_sdo_data->moduleList;
+	sdo_sdk_service_info_module_list_t *list = g_sdo_data->module_list;
+
 	if (list) {
 		while (list != NULL) {
-			LOG(LOG_DEBUG, "ServiceInfo module-name: %s\n",
-			    list->module.moduleName);
+			LOG(LOG_DEBUG, "Service_info module-name: %s\n",
+			    list->module.module_name);
 			list = list->next;
 		}
 	}
@@ -540,7 +583,7 @@ void printServiceInfoModuleList(void)
 #endif
 /**
  * Sets device state to Resale if all conditions are met.
- * sdoSdkInit should be called before calling this function
+ * sdo_sdk_init should be called before calling this function
  *
  * @return ret
  *        SDO_RESALE_NOT_SUPPORTED: Device doesnt support resale
@@ -549,10 +592,10 @@ void printServiceInfoModuleList(void)
  * resale.
  *        SDO_SUCCESS: Device set to resale state.
  */
-sdoSdkStatus sdoSdkResale(void)
+sdo_sdk_status sdo_sdk_resale(void)
 {
 	int ret;
-	sdoSdkStatus r = SDO_ERROR;
+	sdo_sdk_status r = SDO_ERROR;
 
 #ifdef DISABLE_RESALE
 	return SDO_RESALE_NOT_SUPPORTED;
@@ -587,12 +630,12 @@ sdoSdkStatus sdoSdkResale(void)
 		LOG(LOG_DEBUG, "Device is not ready for Resale\n");
 	}
 	if (g_sdo_data->devcred) {
-		sdoDevCredFree(g_sdo_data->devcred);
-		sdoFree(g_sdo_data->devcred);
+		sdo_dev_cred_free(g_sdo_data->devcred);
+		sdo_free(g_sdo_data->devcred);
 		g_sdo_data->devcred = NULL;
 	}
 
-	sdoFree(g_sdo_data);
+	sdo_free(g_sdo_data);
 	g_sdo_data = NULL;
 	return r;
 }
@@ -602,27 +645,29 @@ sdoSdkStatus sdoSdkResale(void)
  */
 static void app_close(void)
 {
-	SDOBlock_t *sdob;
+	sdo_block_t *sdob;
 
 	if (!g_sdo_data)
 		return;
 
-	sdoKexClose();
+	sdo_kex_close();
 
 	if (g_sdo_data->service_info) {
-		sdoServiceInfoFree(g_sdo_data->service_info);
+		sdo_service_info_free(g_sdo_data->service_info);
 		g_sdo_data->service_info = NULL;
 	}
 
+	sdo_sdk_service_info_deregister_module();
+
 	sdob = &g_sdo_data->prot.sdor.b;
 	if (sdob->block) {
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 
 	sdob = &g_sdo_data->prot.sdow.b;
 	if (sdob->block) {
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 }
@@ -639,9 +684,9 @@ static const uint16_t g_DI_PORT = 8039;
 static bool _STATE_DI(void)
 {
 	bool ret = false;
-	SDOProtCtx_t *prot_ctx = NULL;
-	sdoSdkStatus status = SDO_SUCCESS;
-	uint16_t diPort = g_DI_PORT;
+	sdo_prot_ctx_t *prot_ctx = NULL;
+	sdo_sdk_status status = SDO_SUCCESS;
+	uint16_t di_port = g_DI_PORT;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -654,86 +699,90 @@ static bool _STATE_DI(void)
 		       "-------------------------------------------"
 		       "-------------------------------------------\n");
 
-	sdoProtDIInit(&g_sdo_data->prot, g_sdo_data->devcred);
+	sdo_prot_di_init(&g_sdo_data->prot, g_sdo_data->devcred);
 
-	SDOIPAddress_t *manIPAddr = NULL;
+	sdo_ip_address_t *manIPAddr = NULL;
 
-#if defined(TARGET_OS_LINUX) || defined(TARGET_OS_MBEDOS)
+#if defined(TARGET_OS_LINUX) || defined(TARGET_OS_MBEDOS) ||                   \
+    defined(TARGET_OS_OPTEE)
 	char *mfg_dns = NULL;
 	int32_t fsize = 0;
 	char *buffer = NULL;
-	bool isMfgAddr = false;
+	bool is_mfg_addr = false;
 
-	fsize = sdoBlobSize((char *)MANUFACTURER_IP, SDO_SDK_RAW_DATA);
+	fsize = sdo_blob_size((char *)MANUFACTURER_IP, SDO_SDK_RAW_DATA);
 	if (fsize > 0) {
-		buffer = sdoAlloc(fsize + 1);
+		buffer = sdo_alloc(fsize + 1);
 		if (buffer == NULL) {
 			LOG(LOG_ERROR, "malloc failed\n");
 			goto end;
 		}
 
-		if (sdoBlobRead((char *)MANUFACTURER_IP, SDO_SDK_RAW_DATA,
-				(uint8_t *)buffer, fsize) == -1) {
+		if (sdo_blob_read((char *)MANUFACTURER_IP, SDO_SDK_RAW_DATA,
+				  (uint8_t *)buffer, fsize) == -1) {
 			LOG(LOG_ERROR, "Failed to read Manufacture DN\n");
-			sdoFree(buffer);
+			sdo_free(buffer);
 			goto end;
 		}
 
 		buffer[fsize] = '\0';
-		manIPAddr = sdoIPAddressAlloc();
+		manIPAddr = sdo_ipaddress_alloc();
 
 		if (!manIPAddr) {
 			LOG(LOG_ERROR, "Failed to alloc memory\n");
 			ERROR()
-			sdoFree(buffer);
+			sdo_free(buffer);
 			goto end;
 		}
-		int result = sdoPrintableToNet(buffer, manIPAddr->addr);
+		int result = sdo_printable_to_net(buffer, manIPAddr->addr);
+
 		if (result <= 0) {
 			LOG(LOG_ERROR, "Failed to convert Mfg address\n");
 			ERROR()
-			sdoFree(buffer);
+			sdo_free(buffer);
 			goto end;
 		}
 		manIPAddr->length = IPV4_ADDR_LEN;
-		sdoFree(buffer);
-		isMfgAddr = true;
+		sdo_free(buffer);
+		is_mfg_addr = true;
 	} else {
-		fsize = sdoBlobSize((char *)MANUFACTURER_DN, SDO_SDK_RAW_DATA);
+		fsize =
+		    sdo_blob_size((char *)MANUFACTURER_DN, SDO_SDK_RAW_DATA);
 		if (fsize > 0) {
-			buffer = sdoAlloc(fsize + 1);
+			buffer = sdo_alloc(fsize + 1);
 			if (buffer == NULL) {
 				LOG(LOG_ERROR, "malloc failed\n");
 				ERROR()
 				goto end;
 			}
-			if (sdoBlobRead((char *)MANUFACTURER_DN,
-					SDO_SDK_RAW_DATA, (uint8_t *)buffer,
-					fsize) == -1) {
+			if (sdo_blob_read((char *)MANUFACTURER_DN,
+					  SDO_SDK_RAW_DATA, (uint8_t *)buffer,
+					  fsize) == -1) {
 				LOG(LOG_ERROR,
 				    "Failed to real Manufacture DN\n");
-				sdoFree(buffer);
+				sdo_free(buffer);
 				goto end;
 			}
 			buffer[fsize] = '\0';
 			mfg_dns = buffer;
-			isMfgAddr = true;
+			is_mfg_addr = true;
 		}
 	}
-	if (isMfgAddr == false) {
+	if (is_mfg_addr == false) {
 		LOG(LOG_ERROR, "Failed to get neither ip/dn mfg address\n");
 		ERROR()
 		goto end;
 	}
 #else
 #ifdef MANUFACTURER_IP
-	manIPAddr = sdoIPAddressAlloc();
+	manIPAddr = sdo_ipaddress_alloc();
 	if (!manIPAddr) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
 		ERROR()
 		goto end;
 	}
-	int result = sdoPrintableToNet(MANUFACTURER_IP, manIPAddr->addr);
+	int result = sdo_printable_to_net(MANUFACTURER_IP, manIPAddr->addr);
+
 	if (result <= 0) {
 		LOG(LOG_ERROR, "Failed to convert Mfg address\n");
 		ERROR()
@@ -742,72 +791,68 @@ static bool _STATE_DI(void)
 	manIPAddr->length = IPV4_ADDR_LEN;
 #endif
 
-	char *mfg_dns = NULL;
+	const char *mfg_dns = NULL;
 #ifdef MANUFACTURER_DN
 	mfg_dns = MANUFACTURER_DN;
 #endif
 #endif
 
 	/* If MANUFACTURER_PORT file does not exists or is a blank file then,
-	   use existing global DI port(8039) else use configured value as DI
-	   port */
-	if (file_exists(MANUFACTURER_PORT)) {
-		fsize =
-		    sdoBlobSize((char *)MANUFACTURER_PORT, SDO_SDK_RAW_DATA);
+	 *  use existing global DI port(8039) else use configured value as DI
+	 *  port
+	 */
 
-		if ((fsize > 0) && (fsize <= SDO_PORT_MAX_LEN)) {
-			char portBuffer[SDO_PORT_MAX_LEN + 1] = {0};
-			char *extraString = NULL;
-			long configuredPort = 0;
+	fsize = sdo_blob_size((char *)MANUFACTURER_PORT, SDO_SDK_RAW_DATA);
 
-			if (sdoBlobRead((char *)MANUFACTURER_PORT,
-					SDO_SDK_RAW_DATA, (uint8_t *)portBuffer,
-					fsize) == -1) {
-				LOG(LOG_ERROR,
-				    "Failed to read manufacturer port\n");
-				goto end;
-			}
+	if ((fsize > 0) && (fsize <= SDO_PORT_MAX_LEN)) {
+		char port_buffer[SDO_PORT_MAX_LEN + 1] = {0};
+		char *extra_string = NULL;
+		unsigned long configured_port = 0;
 
-			configuredPort = strtol(portBuffer, &extraString, 10);
+		if (sdo_blob_read((char *)MANUFACTURER_PORT, SDO_SDK_RAW_DATA,
+				  (uint8_t *)port_buffer, fsize) == -1) {
+			LOG(LOG_ERROR, "Failed to read manufacturer port\n");
+			goto end;
+		}
 
-			if (strnlen_s(extraString, 1)) {
-				LOG(LOG_ERROR,
-				    "Invalid character encounered in the "
-				    "given port.\n");
-				goto end;
-			}
+		configured_port = strtoul(port_buffer, &extra_string, 10);
 
-			if (!((configuredPort >= SDO_PORT_MIN_VALUE) &&
-			      (configuredPort <= SDO_PORT_MAX_VALUE))) {
-				LOG(LOG_ERROR,
-				    "Manufacturer port value should be between "
-				    "[%d-%d].\n",
-				    SDO_PORT_MIN_VALUE, SDO_PORT_MAX_VALUE);
-				goto end;
-			}
+		if (strnlen_s(extra_string, 1)) {
+			LOG(LOG_ERROR, "Invalid character encounered in the "
+				       "given port.\n");
+			goto end;
+		}
 
-			diPort = (uint16_t)configuredPort;
-
-		} else if (fsize > 0) {
+		if (!((configured_port >= SDO_PORT_MIN_VALUE) &&
+		      (configured_port <= SDO_PORT_MAX_VALUE))) {
 			LOG(LOG_ERROR,
 			    "Manufacturer port value should be between "
-			    "[%d-%d]. "
-			    "It should not be zero prepended.\n",
+			    "[%d-%d].\n",
 			    SDO_PORT_MIN_VALUE, SDO_PORT_MAX_VALUE);
 			goto end;
 		}
+
+		di_port = (uint16_t)configured_port;
+
+	} else if (fsize > 0) {
+		LOG(LOG_ERROR,
+		    "Manufacturer port value should be between "
+		    "[%d-%d]. "
+		    "It should not be zero prepended.\n",
+		    SDO_PORT_MIN_VALUE, SDO_PORT_MAX_VALUE);
+		goto end;
 	}
 
-	LOG(LOG_DEBUG, "Manufacturer Port = %d.\n", diPort);
+	LOG(LOG_DEBUG, "Manufacturer Port = %d.\n", di_port);
 
-	prot_ctx = sdoProtCtxAlloc(sdo_process_states, &g_sdo_data->prot,
-				   manIPAddr, mfg_dns, diPort, false);
+	prot_ctx = sdo_prot_ctx_alloc(sdo_process_states, &g_sdo_data->prot,
+				      manIPAddr, mfg_dns, di_port, false);
 	if (prot_ctx == NULL) {
 		ERROR();
 		goto end;
 	}
 
-	if (sdoProtCtxRun(prot_ctx) != 0) {
+	if (sdo_prot_ctx_run(prot_ctx) != 0) {
 		LOG(LOG_ERROR, "DI failed.\n");
 		if (g_sdo_data->error_recovery) {
 			LOG(LOG_INFO, "Retrying,.....\n");
@@ -824,11 +869,11 @@ static bool _STATE_DI(void)
 					goto end;
 				}
 			}
-			sdoSleep(3); /* Sleep and retry */
+			sdo_sleep(3); /* Sleep and retry */
 			goto end;
 		} else {
 			ERROR()
-			sdoSleep(g_sdo_data->delaysec + sdoRandom() % 25);
+			sdo_sleep(g_sdo_data->delaysec + sdo_random() % 25);
 			if (g_sdo_data->error_callback)
 				status = g_sdo_data->error_callback(
 				    SDO_ERROR, SDO_DI_ERROR);
@@ -841,18 +886,16 @@ static bool _STATE_DI(void)
 
 #ifdef NO_PERSISTENT_STORAGE
 	g_sdo_data->state_fn = &_STATE_TO1;
-	sdoSleep(5);
+	sdo_sleep(5);
 #else
 	g_sdo_data->state_fn = &_STATE_Shutdown;
 #endif
 	ret = true;
 end:
-	sdoProtDIExit(g_sdo_data);
-	sdoProtCtxFree(prot_ctx);
-	sdoFree(manIPAddr);
-#ifndef TARGET_OS_OPTEE
-	sdoFree(mfg_dns);
-#endif
+	sdo_protDIExit(g_sdo_data);
+	sdo_prot_ctx_free(prot_ctx);
+	sdo_free(manIPAddr);
+	sdo_free(mfg_dns);
 	return ret;
 }
 
@@ -867,8 +910,8 @@ static bool _STATE_TO1(void)
 {
 	bool ret = false;
 	bool tls = false;
-	SDOProtCtx_t *prot_ctx = NULL;
-	sdoSdkStatus status = SDO_SUCCESS;
+	sdo_prot_ctx_t *prot_ctx = NULL;
+	sdo_sdk_status status = SDO_SUCCESS;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -881,26 +924,28 @@ static bool _STATE_TO1(void)
 		       "-------------------------------------------"
 		       "-------------------------------------------\n");
 
-	if (sdoProtTO1Init(&g_sdo_data->prot, g_sdo_data->devcred)) {
+	if (sdo_prot_to1_init(&g_sdo_data->prot, g_sdo_data->devcred)) {
 		goto end;
 	}
 
-	SDOProt_t *ps = &g_sdo_data->prot;
+	sdo_prot_t *ps = &g_sdo_data->prot;
 
 	// check for rendezvous list
-	if (!g_sdo_data->devcred->ownerBlk->rvlst ||
-	    g_sdo_data->devcred->ownerBlk->rvlst->numEntries == 0) {
-		LOG(LOG_ERROR, "Stored RendezvousList is empty!!\n");
+	if (!g_sdo_data->devcred->owner_blk->rvlst ||
+	    g_sdo_data->devcred->owner_blk->rvlst->num_entries == 0) {
+		LOG(LOG_ERROR, "Stored Rendezvous_list is empty!!\n");
 		ERROR();
 		goto end;
 	}
 
-	ps->rvIndex = ps->rvIndex + 1;
-	if (ps->rvIndex > g_sdo_data->devcred->ownerBlk->rvlst->numEntries)
-		ps->rvIndex = ps->rvIndex %
-			      g_sdo_data->devcred->ownerBlk->rvlst->numEntries;
-	SDORendezvous_t *rv = g_sdo_data->devcred->ownerBlk->rvlst->rvEntries;
-	for (int i = 1; i < ps->rvIndex; i++)
+	ps->rv_index = ps->rv_index + 1;
+	if (ps->rv_index > g_sdo_data->devcred->owner_blk->rvlst->num_entries)
+		ps->rv_index =
+		    ps->rv_index %
+		    g_sdo_data->devcred->owner_blk->rvlst->num_entries;
+	sdo_rendezvous_t *rv =
+	    g_sdo_data->devcred->owner_blk->rvlst->rv_entries;
+	for (int i = 1; i < ps->rv_index; i++)
 		rv = rv->next;
 
 	if (rv == NULL) {
@@ -908,15 +953,17 @@ static bool _STATE_TO1(void)
 		goto end;
 	} else {
 		/* use the rendevous address from credential file ... pick
-		 * first/only entry in the list */
+		 * first/only entry in the list
+		 */
 		if (!rv->ip && !rv->dn) {
-			// TODO put error cb	ERROR();
+			/* TODO put error cb	ERROR(); */
 			ret = true;
 			goto end;
 		}
 
 		/*if delay not specified in Rendezvous then 120s is default*/
 		int strcmp_result = -1;
+
 		if (rv->pr)
 			strcmp_s(HTTPS_TAG, sizeof(HTTPS_TAG), rv->pr->bytes,
 				 &strcmp_result);
@@ -925,14 +972,14 @@ static bool _STATE_TO1(void)
 	}
 
 	prot_ctx =
-	    sdoProtCtxAlloc(sdo_process_states, &g_sdo_data->prot, rv->ip,
-			    rv->dn ? rv->dn->bytes : NULL, *rv->po, tls);
+	    sdo_prot_ctx_alloc(sdo_process_states, &g_sdo_data->prot, rv->ip,
+			       rv->dn ? rv->dn->bytes : NULL, *rv->po, tls);
 	if (prot_ctx == NULL) {
 		ERROR();
 		goto end;
 	}
 
-	if (sdoProtCtxRun(prot_ctx) != 0) {
+	if (sdo_prot_ctx_run(prot_ctx) != 0) {
 		LOG(LOG_ERROR, "TO1 failed.\n");
 		if (g_sdo_data->error_recovery) {
 			LOG(LOG_INFO, "Retrying,.....\n");
@@ -948,13 +995,14 @@ static bool _STATE_TO1(void)
 					goto end;
 				}
 			}
-			sdoSleep(3);
+			sdo_sleep(3);
 			/* Error recovery is enabled, so, it's not the final
-			 * status */
+			 * status
+			 */
 			goto end;
 		} else {
 			ERROR()
-			sdoSleep(g_sdo_data->delaysec + sdoRandom() % 25);
+			sdo_sleep(g_sdo_data->delaysec + sdo_random() % 25);
 			if (g_sdo_data->error_callback)
 				status = g_sdo_data->error_callback(
 				    SDO_ERROR, SDO_TO1_ERROR);
@@ -968,8 +1016,8 @@ static bool _STATE_TO1(void)
 	g_sdo_data->state_fn = &_STATE_TO2;
 	ret = true;
 end:
-	sdoProtTO1Exit(g_sdo_data);
-	sdoProtCtxFree(prot_ctx);
+	sdo_protTO1Exit(g_sdo_data);
+	sdo_prot_ctx_free(prot_ctx);
 	return ret;
 }
 
@@ -982,10 +1030,10 @@ end:
  */
 static bool _STATE_TO2(void)
 {
-	SDOProtCtx_t *prot_ctx = NULL;
-	SDOBlock_t *sdob;
+	sdo_prot_ctx_t *prot_ctx = NULL;
+	sdo_block_t *sdob;
 	bool ret = false;
-	sdoSdkStatus status = SDO_SUCCESS;
+	sdo_sdk_status status = SDO_SUCCESS;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -998,28 +1046,28 @@ static bool _STATE_TO2(void)
 		       "-------------------------------------------"
 		       "-------------------------------------------\n");
 	/* Initialize the key exchange mechanism */
-	ret = sdoKexInit();
+	ret = sdo_kex_init();
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to initialize key exchange algorithm\n");
 		return SDO_ERROR;
 	}
 
-	if (!sdoProtTO2Init(&g_sdo_data->prot, g_sdo_data->service_info,
+	if (!sdo_prot_to2_init(&g_sdo_data->prot, g_sdo_data->service_info,
 
-			    g_sdo_data->devcred, g_sdo_data->moduleList)) {
+			       g_sdo_data->devcred, g_sdo_data->module_list)) {
 		LOG(LOG_ERROR, "TO2_Init() failed!\n");
 		goto err;
 	}
 
-	prot_ctx = sdoProtCtxAlloc(sdo_process_states, &g_sdo_data->prot,
-				   &g_sdo_data->prot.i1, g_sdo_data->prot.dns1,
-				   (uint16_t)g_sdo_data->prot.port1, false);
+	prot_ctx = sdo_prot_ctx_alloc(
+	    sdo_process_states, &g_sdo_data->prot, &g_sdo_data->prot.i1,
+	    g_sdo_data->prot.dns1, (uint16_t)g_sdo_data->prot.port1, false);
 	if (prot_ctx == NULL) {
 		ERROR();
 		goto err;
 	}
 
-	if (sdoProtCtxRun(prot_ctx) != 0) {
+	if (sdo_prot_ctx_run(prot_ctx) != 0) {
 		ERROR();
 		goto err;
 	}
@@ -1028,11 +1076,12 @@ static bool _STATE_TO2(void)
 		ERROR();
 		LOG(LOG_ERROR, "TO2 failed.\n");
 
-		/* Execute SvInfo type=FAILURE */
-		if (!sdoModExecSvInfotype(g_sdo_data->prot.SvInfoModListHead,
-					  SDO_SI_FAILURE)) {
-			LOG(LOG_ERROR,
-			    "SvInfo: One or more module's FAILURE CB failed\n");
+		/* Execute Sv_info type=FAILURE */
+		if (!sdo_mod_exec_sv_infotype(
+			g_sdo_data->prot.sv_info_mod_list_head,
+			SDO_SI_FAILURE)) {
+			LOG(LOG_ERROR, "Sv_info: One or more module's FAILURE "
+				       "CB failed\n");
 		}
 
 		goto err;
@@ -1040,7 +1089,7 @@ static bool _STATE_TO2(void)
 
 	g_sdo_data->state_fn = &_STATE_Shutdown;
 
-	sdoProtTO2Exit(g_sdo_data);
+	sdo_protTO2Exit(g_sdo_data);
 
 	LOG(LOG_DEBUG, "\n------------------------------------ TO2 Successful "
 		       "--------------------------------------\n\n");
@@ -1049,35 +1098,35 @@ static bool _STATE_TO2(void)
 	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 	TO2_done = 1;
 
-	SDOR_t *sdor = &prot_ctx->protdata->sdor;
-	SDOW_t *sdow = &prot_ctx->protdata->sdow;
+	sdor_t *sdor = &prot_ctx->protdata->sdor;
+	sdow_t *sdow = &prot_ctx->protdata->sdow;
 
 	sdob = &sdor->b;
 	if (sdob->block) {
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 
 	sdob = &sdow->b;
 	if (sdob->block) {
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 
 	ret = true;
 err:
-	sdoProtCtxFree(prot_ctx);
+	sdo_prot_ctx_free(prot_ctx);
 	if (g_sdo_data->prot.success == false) {
 		if (g_sdo_data->error_recovery) {
 			LOG(LOG_INFO, "Retrying TO2,.....\n");
 			g_sdo_data->recovery_enabled = true;
 			g_sdo_data->state_fn = &_STATE_TO1;
-			sdoProtTO2Exit(g_sdo_data);
+			sdo_protTO2Exit(g_sdo_data);
 			if (g_sdo_data->error_callback)
 				status = g_sdo_data->error_callback(
 				    SDO_WARNING, SDO_TO2_ERROR);
 
-			sdoSleep(3);
+			sdo_sleep(3);
 		} else {
 			if (g_sdo_data->error_callback)
 				status = g_sdo_data->error_callback(
@@ -1109,7 +1158,7 @@ static bool _STATE_Error(void)
 }
 
 /**
- * Sets device state to shutdown and sdoFrees all resources.
+ * Sets device state to shutdown and sdo_frees all resources.
  *
  * @return ret
  *         Returns true always.
@@ -1117,25 +1166,25 @@ static bool _STATE_Error(void)
 static bool _STATE_Shutdown(void)
 {
 	if (g_sdo_data->service_info) {
-		sdoServiceInfoFree(g_sdo_data->service_info);
+		sdo_service_info_free(g_sdo_data->service_info);
 		g_sdo_data->service_info = NULL;
 	}
 	if (g_sdo_data->devcred) {
-		sdoDevCredFree(g_sdo_data->devcred);
-		sdoFree(g_sdo_data->devcred);
+		sdo_dev_cred_free(g_sdo_data->devcred);
+		sdo_free(g_sdo_data->devcred);
 		g_sdo_data->devcred = NULL;
 	}
 
 	g_sdo_data->state_fn = NULL;
 
 	/* Closing all crypto related functions.*/
-	(void)sdoCryptoClose();
+	(void)sdo_crypto_close();
 
 	return true;
 }
 
 /**
- * Sets device state to shutdown and sdoFrees all resources.
+ * Sets device state to shutdown and sdo_frees all resources.
  * This function is only called when an Error occurs.
  *
  * @return ret

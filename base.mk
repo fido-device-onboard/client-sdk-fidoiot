@@ -22,17 +22,22 @@ CSTD ?= c99
 V ?= 0
 CLI ?= false
 DA ?= ecdsa256
-KEX ?= dh
-PK_ENC ?= rsa
+KEX ?= ecdh
+PK_ENC ?= ecdsa
 AES_MODE ?= ctr
 HTTPPROXY ?= true
 PROXY_DISCOVERY ?= false
-RESALE ?= false
+RESALE ?= true
 REUSE ?= true
 MODULES ?= false
 STORAGE ?= true
 RETRY ?= true
 CRYPTO_HW ?= false
+OPTIMIZE ?= 0
+
+ifneq ($(OPENSSL_BIN_ROOT),)
+CFLAGS += -I$(OPENSSL_BIN_ROOT)/include
+endif
 
 ifeq ($(MODULES), true)
 DFLAGS += -DMODULES_ENABLED
@@ -135,17 +140,27 @@ endif
 ### Debug/release build
 $(info BUILD = $(BUILD))
 ifeq ($(BUILD), debug)
-CFLAGS += -O0 -g
-ifeq ($(TARGET_OS), linux)
-DFLAGS += -DDEBUG -DLOG_LEVEL=2
+    CFLAGS += -O$(OPTIMIZE) -g
+    ifeq ($(TARGET_OS), linux)
+        ifeq ($(UNIT_TEST), true)
+            DFLAGS += -ULOG_LEVEL -DLOG_LEVEL=-1
+        else
+            DFLAGS += -DDEBUG -DLOG_LEVEL=2
+        endif
+    else
+        DFLAGS += -DLOG_LEVEL=3
+    endif
 else
-DFLAGS += -DLOG_LEVEL=3
-endif
-else ifeq ($(BUILD), release)
-CFLAGS += -Os -fomit-frame-pointer -s -Wl,-strip-debug
-DFLAGS += -DLOG_LEVEL=1
-else
-$(error Supported BUILD values are 'release' and 'debug')
+    ifeq ($(BUILD), release)
+        CFLAGS += -Os -fomit-frame-pointer -s -Wl,-strip-debug
+        ifeq ($(UNIT_TEST), true)
+            DFLAGS += -DLOG_LEVEL=-1
+        else
+            DFLAGS += -DLOG_LEVEL=1
+        endif
+    else
+        $(error Supported BUILD values are 'release' and 'debug')
+    endif
 endif
 
 # Blob path defines for SDO over Linux
@@ -173,9 +188,9 @@ ifeq ($(TARGET_OS), linux)
     endif
 ifeq ($(UNIT_TEST), true)
 ifneq ($(DA_FILE), pem)
-    DFLAGS += -DECDSA_PRIVKEY=\"$(PRJ_DIR)/data/$(DA)privkey.dat\"
+    DFLAGS += -DECDSA_PRIVKEY=\"$(PRJ_DIR)/data/test_ecdsaprivkey.dat\"
 else
-    DFLAGS += -DECDSA_PRIVKEY=\"$(PRJ_DIR)/data/$(DA)privkey.pem\"
+    DFLAGS += -DECDSA_PRIVKEY=\"$(PRJ_DIR)/data/test_ecdsaprivkey.pem\"
 endif
     DFLAGS += -DSDO_CACERT=\"$(PRJ_DIR)/data/test_cacert.bin\"
     DFLAGS += -DSDO_PUBKEY=\"$(PRJ_DIR)/data/test_pubkey.dat\"
@@ -266,13 +281,10 @@ endif
 endif
 
 ### We don't want any logs when running unit tests
-ifeq ($(UNIT_TEST), true)
-DFLAGS += -ULOG_LEVEL -DLOG_LEVEL=-1
-endif
 
 ### TARGET_OS validation
 #OS HAL include
-CFLAGS += -I$(BASE_DIR)/hal/os/include
+CFLAGS += -I$(BASE_DIR)/network/include
 CFLAGS += -I$(BASE_DIR)/storage/include
 
 $(info TARGET_OS = $(TARGET_OS))

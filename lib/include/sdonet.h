@@ -13,25 +13,26 @@
 #define OWNER_CONNECT_RETRIES 2
 #define RETRY_DELAY 1
 
-void sdoNetInit(void);
+void sdo_net_init(void);
 bool is_rv_proxy_defined(void);
 bool is_mfg_proxy_defined(void);
 bool is_owner_proxy_defined(void);
-bool setup_http_proxy(const char *filename, SDOIPAddress_t *sdoip,
+bool setup_http_proxy(const char *filename, sdo_ip_address_t *sdoip,
 		      uint16_t *port_num);
 
-bool ResolveDn(const char *dn, SDOIPAddress_t **ip, uint16_t port, void **ssl,
-	       bool proxy);
+bool resolve_dn(const char *dn, sdo_ip_address_t **ip, uint16_t port,
+		void **ssl, bool proxy);
 
-bool ConnectToManufacturer(SDOIPAddress_t *ip, uint16_t port, int *sock,
-			   void **ssl);
+bool connect_to_manufacturer(sdo_ip_address_t *ip, uint16_t port,
+			     sdo_con_handle *sock_hdl, void **ssl);
 
-bool ConnectToRendezvous(SDOIPAddress_t *ip, uint16_t port, int *sock,
-			 void **ssl);
+bool connect_to_rendezvous(sdo_ip_address_t *ip, uint16_t port,
+			   sdo_con_handle *sock_hdl, void **ssl);
 
-bool ConnectToOwner(SDOIPAddress_t *ip, uint16_t port, int *sock, void **ssl);
+bool connect_to_owner(sdo_ip_address_t *ip, uint16_t port,
+		      sdo_con_handle *sock_hdl, void **ssl);
 
 /* Try reconnecting to server if connection lost */
-int sdoConnectionRestablish(SDOProtCtx_t *prot_ctx);
+int sdo_connection_restablish(sdo_prot_ctx_t *prot_ctx);
 
 #endif /*__SDONET_H__ */

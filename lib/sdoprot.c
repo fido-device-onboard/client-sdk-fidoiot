@@ -9,7 +9,7 @@
  * various aspects of SDO protcol.
  */
 
-#include "sdoCryptoApi.h"
+#include "sdoCrypto.h"
 #include "util.h"
 #include "sdoprot.h"
 #include "load_credentials.h"
@@ -20,7 +20,8 @@
 #include "snprintf_s.h"
 
 /* This is a test mode to skip the CEC1702 signing and present a constant n4
- * nonce and signature.  These were generated in the server. */
+ * nonce and signature.  These were generated in the server.
+ */
 //#define CONSTANT_N4
 
 #ifndef asizeof
@@ -31,14 +32,14 @@
 #define TO1_ID_TO_STATE_FN(id) (id - SDO_STATE_T01_SND_HELLO_SDO)
 #define TO2_ID_TO_STATE_FN(id) (id - SDO_STATE_T02_SND_HELLO_DEVICE)
 
-typedef int (*state_func)(SDOProt_t *ps);
+typedef int (*state_func)(sdo_prot_t *ps);
 
 /*
  * State functions for DI
  */
 static state_func di_state_fn[] = {
-    msg10, /* DI.AppStart */
-    msg11, /* DI.SetCredentials */
+    msg10, /* DI.App_start */
+    msg11, /* DI.Set_credentials */
     msg12, /* DI.SetHMAC */
     msg13, /* DI.Done */
 };
@@ -49,24 +50,24 @@ static state_func di_state_fn[] = {
 static state_func to1_state_fn[] = {
     msg30, /* TO1.HelloSDO */
     msg31, /* TO1.HelloSDOAck */
-    msg32, /* TO1.ProveToSDO */
-    msg33, /* TO1.SDORedirect */
+    msg32, /* TO1.Prove_toSDO */
+    msg33, /* TO1.sdo_redirect */
 };
 
 /*
  * State functions for TO2
  */
 static state_func to2_state_fn[] = {
-    msg40, /* TO2.HelloDevice */
+    msg40, /* TO2.Hello_device */
     msg41, /* TO2.ProveOPHdr */
-    msg42, /* TO2.GetOPNextEntry */
-    msg43, /* TO2.OPNextEntry */
-    msg44, /* TO2.ProveDevice */
-    msg45, /* TO2.GetNextDeviceServiceInfo */
-    msg46, /* TO2.NextDeviceServiceInfo */
-    msg47, /* TO2.SetupDevice */
-    msg48, /* TO2.GetNextOwnerServiceInfo */
-    msg49, /* TO2.OwnerServiceInfo */
+    msg42, /* TO2.GetOPNext_entry */
+    msg43, /* TO2.OPNext_entry */
+    msg44, /* TO2.Prove_device */
+    msg45, /* TO2.Get_next_device_service_info */
+    msg46, /* TO2.Next_device_service_info */
+    msg47, /* TO2.Setup_device */
+    msg48, /* TO2.Get_next_owner_service_info */
+    msg49, /* TO2.Owner_service_info */
     msg50, /* TO2.Done */
     msg51, /* TO2.Done2 */
 };
@@ -78,35 +79,39 @@ static state_func to2_state_fn[] = {
  * a. Error handling to free all state data
  * b. When the state machine is completed successfully
  */
-static void ps_free(SDOProt_t *ps)
+static void ps_free(sdo_prot_t *ps)
 {
-	if (ps->SDORedirect.plainText) {
-		sdoByteArrayFree(ps->SDORedirect.plainText);
-		ps->SDORedirect.plainText = NULL;
+	if (ps->sdo_redirect.plain_text) {
+		sdo_byte_array_free(ps->sdo_redirect.plain_text);
+		ps->sdo_redirect.plain_text = NULL;
 	}
-	if (ps->SDORedirect.Obsig) {
-		sdoByteArrayFree(ps->SDORedirect.Obsig);
-		ps->SDORedirect.Obsig = NULL;
+	if (ps->sdo_redirect.obsig) {
+		sdo_byte_array_free(ps->sdo_redirect.obsig);
+		ps->sdo_redirect.obsig = NULL;
 	}
 	if (ps->n5) {
-		sdoByteArrayFree(ps->n5);
+		sdo_byte_array_free(ps->n5);
 		ps->n5 = NULL;
 	}
 	if (ps->n5r) {
-		sdoByteArrayFree(ps->n5r);
+		sdo_byte_array_free(ps->n5r);
 		ps->n5r = NULL;
 	}
-	if (ps->newOVHdrHMAC) {
-		sdoHashFree(ps->newOVHdrHMAC);
-		ps->newOVHdrHMAC = NULL;
+	if (ps->new_ov_hdr_hmac) {
+		sdo_hash_free(ps->new_ov_hdr_hmac);
+		ps->new_ov_hdr_hmac = NULL;
 	}
 	if (ps->n6) {
-		sdoByteArrayFree(ps->n6);
+		sdo_byte_array_free(ps->n6);
 		ps->n6 = NULL;
 	}
 	if (ps->n7r) {
-		sdoByteArrayFree(ps->n7r);
+		sdo_byte_array_free(ps->n7r);
 		ps->n7r = NULL;
+	}
+	if (ps->dsi_info) {
+		sdo_free(ps->dsi_info);
+		ps->dsi_info = NULL;
 	}
 }
 
@@ -116,15 +121,15 @@ static void ps_free(SDOProt_t *ps)
  *
  * @param ps
  *        Pointer to the database containtain all protocol state variables.
- * @param devCred
+ * @param dev_cred
  *        Pointer to the database containtain Device credentials.
  * @return ret
  *         None.
  */
-void sdoProtDIInit(SDOProt_t *ps, SDODevCred_t *devCred)
+void sdo_prot_di_init(sdo_prot_t *ps, sdo_dev_cred_t *dev_cred)
 {
 	ps->state = SDO_STATE_DI_INIT;
-	ps->devCred = devCred;
+	ps->dev_cred = dev_cred;
 	ps->success = false;
 }
 
@@ -136,10 +141,10 @@ void sdoProtDIInit(SDOProt_t *ps, SDODevCred_t *devCred)
  * @return
  *        "true" in case of success. "false" if failed.
  */
-bool sdo_process_states(SDOProt_t *ps)
+bool sdo_process_states(sdo_prot_t *ps)
 {
 	bool status = false;
-	int prevState = 0;
+	int prev_state = 0;
 	state_func state_fn = NULL;
 
 	for (;;) {
@@ -151,7 +156,7 @@ bool sdo_process_states(SDOProt_t *ps)
 		 * it means that the data read from network is pending, so, we
 		 * read data and come back here for the same message processing
 		 */
-		prevState = ps->state;
+		prev_state = ps->state;
 
 		switch (ps->state) {
 		/* DI states */
@@ -199,27 +204,27 @@ bool sdo_process_states(SDOProt_t *ps)
 		if (!state_fn)
 			break;
 
-		if (state_fn && state_fn(ps)) {
+		if (ps->state != SDO_STATE_DONE && state_fn && state_fn(ps)) {
 			char err_msg[64];
 
 			(void)snprintf_s_i(err_msg, sizeof(err_msg),
 					   "msg%d: message parse error",
 					   ps->state);
 			ps->state = SDO_STATE_ERROR;
-			sdoSendErrorMessage(&ps->sdow, MESSAGE_BODY_ERROR,
-					    ps->state, err_msg);
+			sdo_send_error_message(&ps->sdow, MESSAGE_BODY_ERROR,
+					       ps->state, err_msg);
 			ps_free(ps);
 			break;
 		}
 
 		/* If we reached with msg51 as ps->state, we are done */
-		if (prevState == SDO_STATE_TO2_RCV_DONE_2 &&
+		if (prev_state == SDO_STATE_TO2_RCV_DONE_2 &&
 		    ps->state == SDO_STATE_DONE) {
 			ps_free(ps);
 		}
 
 		/* Break for reading network data */
-		if (prevState == ps->state) {
+		if (prev_state == ps->state) {
 			status = true;
 			break;
 		}
@@ -234,19 +239,19 @@ bool sdo_process_states(SDOProt_t *ps)
  *
  * @param ps
  *        Pointer to the database containtain all protocol state variables.
- * @param devCred
+ * @param dev_cred
  *        Pointer to the database containtain Device credentials.
  * @return ret
  *         0 on success and -1 on failure
  */
-int32_t sdoProtTO1Init(SDOProt_t *ps, SDODevCred_t *devCred)
+int32_t sdo_prot_to1_init(sdo_prot_t *ps, sdo_dev_cred_t *dev_cred)
 {
-	if (!ps || !devCred || !devCred->ownerBlk) {
+	if (!ps || !dev_cred || !dev_cred->owner_blk) {
 		return -1;
 	}
 	ps->state = SDO_STATE_TO1_INIT;
-	ps->g2 = devCred->ownerBlk->guid;
-	ps->devCred = devCred;
+	ps->g2 = dev_cred->owner_blk->guid;
+	ps->dev_cred = dev_cred;
 	ps->success = false;
 	return 0;
 }
@@ -259,54 +264,55 @@ int32_t sdoProtTO1Init(SDOProt_t *ps, SDODevCred_t *devCred)
  *        Pointer to the database containtain all protocol state variables.
  * @param si
  *        Pointer to device service info database.
- * @param devCred
+ * @param dev_cred
  *        Pointer to the database containtain Device credentials.
- * @param moduleList
+ * @param module_list
  *        Global Module List Head Pointer.
  * @return
  *        true if success, false otherwise.
  *
  */
-bool sdoProtTO2Init(SDOProt_t *ps, SDOServiceInfo_t *si, SDODevCred_t *devCred,
-		    sdoSdkServiceInfoModuleList_t *moduleList)
+bool sdo_prot_to2_init(sdo_prot_t *ps, sdo_service_info_t *si,
+		       sdo_dev_cred_t *dev_cred,
+		       sdo_sdk_service_info_module_list_t *module_list)
 {
 	ps->state = SDO_STATE_T02_INIT;
-	ps->keyEncoding = SDO_OWNER_ATTEST_PK_ENC;
+	ps->key_encoding = SDO_OWNER_ATTEST_PK_ENC;
 
 	ps->success = false;
-	ps->serviceInfo = si;
-	ps->devCred = devCred;
-	ps->g2 = devCred->ownerBlk->guid;
-	ps->RoundTripCount = 0;
-	ps->iv = sdoAlloc(sizeof(SDOIV_t));
+	ps->service_info = si;
+	ps->dev_cred = dev_cred;
+	ps->g2 = dev_cred->owner_blk->guid;
+	ps->round_trip_count = 0;
+	ps->iv = sdo_alloc(sizeof(sdo_iv_t));
 	if (!ps->iv) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
 		return false;
 	}
 
 	/* Initialize svinfo related data */
-	if (moduleList) {
-		ps->SvInfoModListHead = moduleList;
-		ps->dsiInfo = sdoAlloc(sizeof(sdoSvInfoDsiInfo_t));
-		if (!ps->dsiInfo) {
+	if (module_list) {
+		ps->sv_info_mod_list_head = module_list;
+		ps->dsi_info = sdo_alloc(sizeof(sdo_sv_info_dsi_info_t));
+		if (!ps->dsi_info) {
 			return false;
 		}
 
-		ps->dsiInfo->list_dsi = ps->SvInfoModListHead;
-		ps->dsiInfo->moduleDsiIndex = 0;
+		ps->dsi_info->list_dsi = ps->sv_info_mod_list_head;
+		ps->dsi_info->module_dsi_index = 0;
 
-		/* Execute SvInfo type=START */
-		if (!sdoModExecSvInfotype(ps->SvInfoModListHead,
-					  SDO_SI_START)) {
+		/* Execute Sv_info type=START */
+		if (!sdo_mod_exec_sv_infotype(ps->sv_info_mod_list_head,
+					      SDO_SI_START)) {
 			LOG(LOG_ERROR,
-			    "SvInfo: One or more module's START failed\n");
-			sdoFree(ps->iv);
-			sdoFree(ps->dsiInfo);
+			    "Sv_info: One or more module's START failed\n");
+			sdo_free(ps->iv);
+			sdo_free(ps->dsi_info);
 			return false;
 		}
 	} else
 		LOG(LOG_DEBUG,
-		    "SvInfo: no modules are registered to the SDO!\n");
+		    "Sv_info: no modules are registered to the SDO!\n");
 
 	//	LOG(LOG_DEBUG, "Key Exchange Mode: %s\n", ps->kx->bytes);
 	//	LOG(LOG_DEBUG, "Cipher Suite: %s\n", ps->cs->bytes);
@@ -322,16 +328,17 @@ bool sdoProtTO2Init(SDOProt_t *ps, SDOServiceInfo_t *si, SDODevCred_t *devCred,
  * @return
  *        false if roundtrip limit exceeded, true otherwise.
  */
-bool sdoCheckTO2RoundTrips(SDOProt_t *ps)
+bool sdo_check_to2_round_trips(sdo_prot_t *ps)
 {
-	if (ps->RoundTripCount > MAX_TO2_ROUND_TRIPS) {
+	if (ps->round_trip_count > MAX_TO2_ROUND_TRIPS) {
 		LOG(LOG_ERROR, "Exceeded maximum number of TO2 rounds\n");
-		sdoSendErrorMessage(&ps->sdow, INTERNAL_SERVER_ERROR, ps->state,
-				    "Exceeded max number of rounds");
+		sdo_send_error_message(&ps->sdow, INTERNAL_SERVER_ERROR,
+				       ps->state,
+				       "Exceeded max number of rounds");
 		ps->state = SDO_STATE_ERROR;
 		return false;
 	}
-	ps->RoundTripCount++;
+	ps->round_trip_count++;
 	return true;
 }
 
@@ -343,27 +350,29 @@ bool sdoCheckTO2RoundTrips(SDOProt_t *ps)
  * @param sdow
  *        Pointer to outgoing JSON packet which has been composed by Protocol
  * APIs(DI_Run/TO1_Run/TO2_Run).
- * @param protName
+ * @param prot_name
  *        Name of Protocol(DI/TO1/TO2).
  * @param statep
  *        Current state of Protocol state machine.
  * @return
  *        true in case of new message received. flase if no message to read.
  */
-bool sdoProtRcvMsg(SDOR_t *sdor, SDOW_t *sdow, char *protName, int *statep)
+bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep)
 {
 	uint32_t mtype;
 
-	if (sdor->receive == NULL && !sdoRHaveBlock(sdor))
+	(void)sdow; /* Unused */
+
+	if (sdor->receive == NULL && !sdor_have_block(sdor))
 		return false;
 
-	if (!sdoRNextBlock(sdor, &mtype)) {
+	if (!sdor_next_block(sdor, &mtype)) {
 		LOG(LOG_ERROR, "expecting another block\n");
 		*statep = SDO_STATE_ERROR;
 		return false;
 	}
 	LOG(LOG_DEBUG, "%s: Received message type %" PRIu32 " : %d bytes\n",
-	    protName, mtype, sdor->b.blockSize);
+	    prot_name, mtype, sdor->b.block_size);
 
 	return true;
 }
@@ -371,20 +380,20 @@ bool sdoProtRcvMsg(SDOR_t *sdor, SDOW_t *sdow, char *protName, int *statep)
 /**
  * Internal API
  */
-void sdoSendErrorMessage(SDOW_t *sdow, int ecode, int msgnum,
-			 const char *errmsg)
+void sdo_send_error_message(sdow_t *sdow, int ecode, int msgnum,
+			    const char *errmsg)
 {
 	LOG(LOG_ERROR, "Sending Error Message\n");
 
-	sdoWNextBlock(sdow, SDO_TYPE_ERROR);
-	sdoWBeginObject(sdow);
-	sdoWriteTag(sdow, "ec");
-	sdoWriteUInt(sdow, ecode);
-	sdoWriteTag(sdow, "emsg");
-	sdoWriteUInt(sdow, msgnum);
-	sdoWriteTag(sdow, "em");
-	sdoWriteString(sdow, errmsg);
-	sdoWEndObject(sdow);
+	sdow_next_block(sdow, SDO_TYPE_ERROR);
+	sdow_begin_object(sdow);
+	sdo_write_tag(sdow, "ec");
+	sdo_writeUInt(sdow, ecode);
+	sdo_write_tag(sdow, "emsg");
+	sdo_writeUInt(sdow, msgnum);
+	sdo_write_tag(sdow, "em");
+	sdo_write_string(sdow, errmsg);
+	sdow_end_object(sdow);
 }
 
 #if 0
@@ -394,41 +403,41 @@ void sdoSendErrorMessage(SDOW_t *sdow, int ecode, int msgnum,
  * @param ecode - error code
  * @param msgnum - pointer to the SDO message number
  * @param errmsg - pointer to the error message string
- * @param errmsgSz - size of error message string
+ * @param errmsg_sz - size of error message string
  */
-void sdoReceiveErrorMessage(SDOR_t *sdor, int *ecode, int *msgnum, char *errmsg,
-			    int errmsgSz)
+void sdo_receive_error_message(sdor_t *sdor, int *ecode, int *msgnum,
+			       char *errmsg, int errmsg_sz)
 {
-	// Called after SDONextBlock...
-	// SDONextBlock(sdor, &mtype, &majVer, &minVer);
-	if (!sdoRBeginObject(sdor)) {
+	/* Called after SDONext_block... */
+	/* SDONext_block(sdor, &mtype, &maj_ver, &min_ver); */
+	if (!sdor_begin_object(sdor)) {
 		LOG(LOG_ERROR, "Begin Object not found.\n");
 		goto fail;
 	}
 	*ecode = 0;
 	*msgnum = 255;
-	if (strncpy_s(errmsg, errmsgSz, "error message parse failed",
-		      errmsgSz) != 0) {
+	if (strncpy_s(errmsg, errmsg_sz, "error message parse failed",
+		      errmsg_sz) != 0) {
 		LOG(LOG_ERROR, "strcpy() failed!\n");
 	}
-	if (!sdoReadExpectedTag(sdor, "ec"))
+	if (!sdo_read_expected_tag(sdor, "ec"))
 		goto fail;
-	*ecode = sdoReadUInt(sdor);
-	if (!sdoReadExpectedTag(sdor, "emsg"))
+	*ecode = sdo_read_uint(sdor);
+	if (!sdo_read_expected_tag(sdor, "emsg"))
 		goto fail;
-	*msgnum = sdoReadUInt(sdor);
-	if (!sdoReadExpectedTag(sdor, "em"))
+	*msgnum = sdo_read_uint(sdor);
+	if (!sdo_read_expected_tag(sdor, "em"))
 		goto fail;
-	if (!sdoReadString(sdor, errmsg, errmsgSz)) {
-		LOG(LOG_ERROR, "sdoReceiveErrorMessage(): sdoReadString() "
-			       "returned NULL!\n");
+	if (!sdo_read_string(sdor, errmsg, errmsg_sz)) {
+		LOG(LOG_ERROR, "%s(): sdo_read_string() "
+		    "returned NULL!\n", __func__);
 		goto fail;
 	}
-	if (!sdoREndObject(sdor)) {
+	if (!sdor_end_object(sdor)) {
 		LOG(LOG_ERROR, "End Object not found.\n");
 		goto fail;
 	}
 fail:
-	sdoRFlush(sdor);
+	sdor_flush(sdor);
 }
 #endif

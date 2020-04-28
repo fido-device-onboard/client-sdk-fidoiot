@@ -16,24 +16,28 @@
 #include "util.h"
 #include "safe_lib.h"
 #include "ec_key.h"
+#include "sdocred.h"
+#include "sdoCryptoHal.h"
 
 /**
- * _sdoGetDeviceCsr() - get the device CSR
+ * crypto_hal_get_device_csr() - get the device CSR
  */
-int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
+int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 {
 	int ret = -1;
 	char *csr_data = NULL;
 	size_t csr_size = 0;
 	EC_KEY *ec_key = NULL;
+
 	const EC_GROUP *ec_grp = NULL;
 	BIO *csr_mem_bio = NULL;
 	EC_POINT *pub_key = NULL;
+
 	const BIGNUM *privkey_bn = NULL;
 	X509_NAME *x509_name = NULL;
 	EVP_PKEY *ec_pkey = EVP_PKEY_new();
 	X509_REQ *x509_req = X509_REQ_new();
-	SDOByteArray_t *csr_byte_arr = NULL;
+	sdo_byte_array_t *csr_byte_arr = NULL;
 
 	if (!ec_pkey || !x509_req) {
 		ret = -1;
@@ -41,7 +45,7 @@ int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
 	}
 
 	/* Get the EC private key from storage */
-	ec_key = get_EC_KEY();
+	ec_key = get_ec_key();
 	if (!ec_key) {
 		LOG(LOG_ERROR, "Failed to load the ec key for CSR\n");
 		ret = -1;
@@ -165,7 +169,7 @@ int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
 	}
 
 	/* Allocate byte array to send back data to DI state machine */
-	csr_byte_arr = sdoByteArrayAlloc(csr_size);
+	csr_byte_arr = sdo_byte_array_alloc(csr_size);
 	if (!csr_byte_arr) {
 		LOG(LOG_ERROR,
 		    "Failed to allocate data for storing csr data\n");
@@ -182,22 +186,26 @@ int32_t _sdoGetDeviceCsr(SDOByteArray_t **csr)
 
 	ret = 0;
 err:
-#if 0 /* Freeing this leads to mem corruption */
-	if (ec_pkey)
-		EVP_PKEY_free(ec_pkey);
-#endif
 	if (csr_byte_arr && ret) {
-		sdoByteArrayFree(csr_byte_arr);
+		sdo_byte_array_free(csr_byte_arr);
 		csr_byte_arr = NULL;
 	}
-	if (csr_mem_bio)
+	if (csr_mem_bio) {
 		BIO_free(csr_mem_bio);
-	if (pub_key)
-		EC_POINT_free(pub_key);
-	if (ec_key)
+	}
+	if (ec_pkey) {
+		EVP_PKEY_free(ec_pkey);
+		ec_key = NULL; // evp_pkey_free clears attached ec_key too
+	}
+	if (ec_key) {
 		EC_KEY_free(ec_key);
-	if (x509_req)
+	}
+	if (pub_key) {
+		EC_POINT_free(pub_key);
+	}
+	if (x509_req) {
 		X509_REQ_free(x509_req);
+	}
 	*csr = csr_byte_arr;
 	return ret;
 }

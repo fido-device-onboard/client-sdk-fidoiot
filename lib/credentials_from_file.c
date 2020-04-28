@@ -17,62 +17,68 @@
 #include <stdlib.h>
 #include "util.h"
 #include "safe_lib.h"
-#include "sdoCryptoApi.h"
-#define verboseDumpPackets 0
+#include "sdoCrypto.h"
+#define verbose_dump_packets 0
 
 /**
  * Write the Device Credentials blob, contains our state
- * @param devCredFile - pointer of type const char to which credentails are
+ * @param dev_cred_file - pointer of type const char to which credentails are
  * to be written.
  * @param flags ///TO BE ADDED
  *
  *
- * @param ocred - pointer of type SDODevCred_t, holds the credentials for
- * writing to devCredFile.
+ * @param ocred - pointer of type sdo_dev_cred_t, holds the credentials for
+ * writing to dev_cred_file.
  * @return true if write and parsed correctly, otherwise false
  */
 
-bool WriteNormalDeviceCredentials(const char *devCredFile,
-				  sdoSdkBlobFlags flags, SDODevCred_t *ocred)
+bool write_normal_device_credentials(const char *dev_cred_file,
+				     sdo_sdk_blob_flags flags,
+				     sdo_dev_cred_t *ocred)
 {
 	bool ret = true;
+
+	if (!ocred || !dev_cred_file) {
+		return false;
+	}
 #ifndef NO_PERSISTENT_STORAGE
-	SDOW_t sdowriter, *sdow = &sdowriter;
-	if (!sdoWInit(sdow)) {
-		LOG(LOG_ERROR, "sdoWInit() failed!\n");
+	sdow_t sdowriter, *sdow = &sdowriter;
+
+	if (!sdow_init(sdow)) {
+		LOG(LOG_ERROR, "sdow_init() failed!\n");
 		return false;
 	}
 
-	sdoWNextBlock(sdow, SDO_DI_SET_CREDENTIALS);
-	sdoWBeginObject(sdow);
-	sdoWriteTag(sdow, "ST");
-	sdoWriteUInt(sdow, ocred->ST);
+	sdow_next_block(sdow, SDO_DI_SET_CREDENTIALS);
+	sdow_begin_object(sdow);
+	sdo_write_tag(sdow, "ST");
+	sdo_writeUInt(sdow, ocred->ST);
 
-	sdoWriteTag(sdow, "O");
-	sdoWBeginObject(sdow);
+	sdo_write_tag(sdow, "O");
+	sdow_begin_object(sdow);
 
-	sdoWriteTag(sdow, "pv");
-	sdoWriteUInt(sdow, ocred->ownerBlk->pv);
+	sdo_write_tag(sdow, "pv");
+	sdo_writeUInt(sdow, ocred->owner_blk->pv);
 
-	sdoWriteTag(sdow, "pe");
-	sdoWriteUInt(sdow, ocred->ownerBlk->pe);
+	sdo_write_tag(sdow, "pe");
+	sdo_writeUInt(sdow, ocred->owner_blk->pe);
 
-	sdoWriteTag(sdow, "g");
-	sdoByteArrayWriteChars(sdow, ocred->ownerBlk->guid);
+	sdo_write_tag(sdow, "g");
+	sdo_byte_array_write_chars(sdow, ocred->owner_blk->guid);
 
-	sdoWriteTag(sdow, "r");
-	sdoRendezvousListWrite(sdow, ocred->ownerBlk->rvlst);
+	sdo_write_tag(sdow, "r");
+	sdo_rendezvous_list_write(sdow, ocred->owner_blk->rvlst);
 
-	sdoWriteTag(sdow, "pkh");
-	sdoHashWrite(sdow, ocred->ownerBlk->pkh);
+	sdo_write_tag(sdow, "pkh");
+	sdo_hash_write(sdow, ocred->owner_blk->pkh);
 
-	sdoWEndObject(sdow);
-	sdoWEndObject(sdow);
+	sdow_end_object(sdow);
+	sdow_end_object(sdow);
 
 	/* Fill sdow buffer */
 
-	if (sdoBlobWrite((char *)devCredFile, flags, &sdow->b.block[0],
-			 sdow->b.blockSize) == -1) {
+	if (sdo_blob_write((char *)dev_cred_file, flags, &sdow->b.block[0],
+			   sdow->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Issue while writing Devcred blob\n");
 		ret = false;
 		goto end;
@@ -80,7 +86,7 @@ bool WriteNormalDeviceCredentials(const char *devCredFile,
 
 end:
 	if (sdow->b.block) {
-		sdoFree(sdow->b.block);
+		sdo_free(sdow->b.block);
 		sdow->b.block = NULL;
 	}
 #endif
@@ -89,41 +95,51 @@ end:
 
 /**
  * Write the Device Credentials blob, contains our Secret
- * @param devCredFile - pointer of type const char to which credentails are
+ * @param dev_cred_file - pointer of type const char to which credentails are
  * to be written.
  * @param flags - descriptor telling type of file
- * @param ocred - pointer of type SDODevCred_t, holds the credentials for
- * writing to devCredFile.
+ * @param ocred - pointer of type sdo_dev_cred_t, holds the credentials for
+ * writing to dev_cred_file.
  * @return true if write and parsed correctly, otherwise false
  */
 
-bool WriteSecureDeviceCredentials(const char *devCredFile,
-				  sdoSdkBlobFlags flags, SDODevCred_t *ocred)
+bool write_secure_device_credentials(const char *dev_cred_file,
+				     sdo_sdk_blob_flags flags,
+				     sdo_dev_cred_t *ocred)
 {
 	bool ret = true;
-#ifndef NO_PERSISTENT_STORAGE
-	SDOW_t sdowriter, *sdow = &sdowriter;
-	if (!sdoWInit(sdow)) {
-		LOG(LOG_ERROR, "sdoWInit() failed!\n");
+
+	(void)ocred; /* Unused warning */
+
+	if (!dev_cred_file) {
 		return false;
 	}
 
-	sdoWBeginObject(sdow);
-	sdoWriteTag(sdow, "Secret");
-	sdoWBeginSequence(sdow);
-	SDOByteArray_t **ovkey = getOVKey();
+#ifndef NO_PERSISTENT_STORAGE
+	sdow_t sdowriter, *sdow = &sdowriter;
+
+	if (!sdow_init(sdow)) {
+		LOG(LOG_ERROR, "sdow_init() failed!\n");
+		return false;
+	}
+
+	sdow_begin_object(sdow);
+	sdo_write_tag(sdow, "Secret");
+	sdow_begin_sequence(sdow);
+	sdo_byte_array_t **ovkey = getOVKey();
+
 	if (!ovkey || !*ovkey) {
 		ret = false;
 		goto end;
 	}
-	sdoWriteByteArrayField(sdow, (*ovkey)->bytes, INITIAL_SECRET_BYTES);
-	sdoWEndSequence(sdow);
-	sdoWEndObject(sdow);
+	sdo_write_byte_array_field(sdow, (*ovkey)->bytes, INITIAL_SECRET_BYTES);
+	sdow_end_sequence(sdow);
+	sdow_end_object(sdow);
 
 	/* Fill sdow buffer */
 
-	if (sdoBlobWrite((char *)devCredFile, flags, &sdow->b.block[0],
-			 sdow->b.blockSize) == -1) {
+	if (sdo_blob_write((char *)dev_cred_file, flags, &sdow->b.block[0],
+			   sdow->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Issue while writing Devcred blob\n");
 		ret = false;
 		goto end;
@@ -131,11 +147,11 @@ bool WriteSecureDeviceCredentials(const char *devCredFile,
 
 end:
 	if (sdow->b.block) {
-		if (memset_s(sdow->b.block, sdow->b.blockSize, 0)) {
+		if (memset_s(sdow->b.block, sdow->b.block_size, 0)) {
 			LOG(LOG_ERROR, "Failed to clear device credentials\n");
 			ret = false;
 		}
-		sdoFree(sdow->b.block);
+		sdo_free(sdow->b.block);
 	}
 #endif
 	return ret;
@@ -143,37 +159,44 @@ end:
 
 /**
  * Write the Device Credentials blob, contains our MFG Blk
- * @param devCredFile - pointer of type const char to which credentails are
+ * @param dev_cred_file - pointer of type const char to which credentails are
  * to be written.
  * @param flags - descriptor telling type of file
- * @param ocred - pointer of type SDODevCred_t, holds the credentials for
- * writing to devCredFile.
+ * @param ocred - pointer of type sdo_dev_cred_t, holds the credentials for
+ * writing to dev_cred_file.
  * @return true if write and parsed correctly, otherwise false
  */
-bool WriteMfgDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-			       SDODevCred_t *ocred)
+bool write_mfg_device_credentials(const char *dev_cred_file,
+				  sdo_sdk_blob_flags flags,
+				  sdo_dev_cred_t *ocred)
 {
 	bool ret = true;
-#ifndef NO_PERSISTENT_STORAGE
-	SDOW_t sdowriter, *sdow = &sdowriter;
-	if (!sdoWInit(sdow)) {
-		LOG(LOG_ERROR, "sdoWInit() failed!\n");
+
+	if (!ocred || !dev_cred_file) {
 		return false;
 	}
 
-	sdoWBeginObject(sdow);
-	sdoWriteTag(sdow, "M");
-	sdoWBeginObject(sdow);
+#ifndef NO_PERSISTENT_STORAGE
+	sdow_t sdowriter, *sdow = &sdowriter;
 
-	sdoWriteTag(sdow, "d");
-	sdoWriteString(sdow, ocred->mfgBlk->d->bytes);
+	if (!sdow_init(sdow)) {
+		LOG(LOG_ERROR, "sdow_init() failed!\n");
+		return false;
+	}
 
-	sdoWEndObject(sdow);
-	sdoWEndObject(sdow);
+	sdow_begin_object(sdow);
+	sdo_write_tag(sdow, "M");
+	sdow_begin_object(sdow);
+
+	sdo_write_tag(sdow, "d");
+	sdo_write_string(sdow, ocred->mfg_blk->d->bytes);
+
+	sdow_end_object(sdow);
+	sdow_end_object(sdow);
 
 	/* Fill sdow buffer */
-	if (sdoBlobWrite((char *)devCredFile, flags, &sdow->b.block[0],
-			 sdow->b.blockSize) == -1) {
+	if (sdo_blob_write((char *)dev_cred_file, flags, &sdow->b.block[0],
+			   sdow->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Issue while writing Devcred blob\n");
 		ret = false;
 		goto end;
@@ -181,7 +204,7 @@ bool WriteMfgDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
 
 end:
 	if (sdow->b.block) {
-		sdoFree(sdow->b.block);
+		sdo_free(sdow->b.block);
 		sdow->b.block = NULL;
 	}
 #endif
@@ -189,43 +212,49 @@ end:
 }
 
 /**
- * Read the Device Credentials blob, contains our state & ownerBlk
- * @param devCredFile - the blob the credentials are saved in
+ * Read the Device Credentials blob, contains our state & owner_blk
+ * @param dev_cred_file - the blob the credentials are saved in
  * @param flags - descriptor telling type of file
- * @param ourDevCred - pointer to the device credentials block,
+ * @param our_dev_cred - pointer to the device credentials block,
  * @return true if read and parsed correctly, otherwise false.
  */
-bool ReadNormalDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-				 SDODevCred_t *ourDevCred)
+bool read_normal_device_credentials(const char *dev_cred_file,
+				    sdo_sdk_blob_flags flags,
+				    sdo_dev_cred_t *our_dev_cred)
 {
-	SDOR_t sdoreader = {0};
-	SDOR_t *sdor = NULL;
-	SDOBlock_t *sdob = NULL;
+	sdor_t sdoreader = {0};
+	sdor_t *sdor = NULL;
+	sdo_block_t *sdob = NULL;
 
 	bool ret = false;
-	int32_t devCredLen = 0;
+	int32_t dev_cred_len = 0;
 
 	sdor = &sdoreader;
 	sdob = &(sdor->b);
 
-	if (!sdoRInit(sdor, NULL, NULL)) {
-		LOG(LOG_ERROR, "sdoRInit() failed!\n");
+	if (!our_dev_cred) {
+		goto end;
+	}
+
+	if (!sdor_init(sdor, NULL, NULL)) {
+		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		ret = false;
 		goto end;
 	}
 
-	if ((devCredLen = sdoBlobSize((char *)devCredFile, flags)) > 0) {
+	dev_cred_len = sdo_blob_size((char *)dev_cred_file, flags);
+	if (dev_cred_len > 0) {
 		// Resize sdob block size
-		sdoResizeBlock(sdob, devCredLen);
+		sdo_resize_block(sdob, dev_cred_len);
 	} else {
 		ret = false;
-		LOG(LOG_ERROR, "Failed: sdoBlobSize is %lu!\n",
-		    (unsigned long)devCredLen);
+		LOG(LOG_ERROR, "Failed: sdo_blob_size is %lu!\n",
+		    (unsigned long)dev_cred_len);
 		goto end;
 	}
 
-	if (sdoBlobRead((char *)devCredFile, flags, sdob->block, devCredLen) ==
-	    -1) {
+	if (sdo_blob_read((char *)dev_cred_file, flags, sdob->block,
+			  dev_cred_len) == -1) {
 		LOG(LOG_ERROR, "Could not read the device credentials blob\n");
 		ret = false;
 		goto end;
@@ -233,120 +262,120 @@ bool ReadNormalDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
 
 	LOG(LOG_DEBUG, "Reading Ownership Credential from blob: Normal.blob\n");
 
-	sdor->b.blockSize = devCredLen;
-	sdor->haveBlock = true;
+	sdor->b.block_size = dev_cred_len;
+	sdor->have_block = true;
 
 	// LOG(LOG_ERROR, "Normal Blob reading\n");
-	if (!sdoRBeginObject(sdor)) {
-		LOG(LOG_ERROR, "Begin object not found \n");
+	if (!sdor_begin_object(sdor)) {
+		LOG(LOG_ERROR, "Begin object not found\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "ST")) {
-		LOG(LOG_ERROR, "tag=ST not found \n");
+	if (!sdo_read_expected_tag(sdor, "ST")) {
+		LOG(LOG_ERROR, "tag=ST not found\n");
 		goto end;
 	}
 
-	ourDevCred->ST = sdoReadUInt(sdor);
+	our_dev_cred->ST = sdo_read_uint(sdor);
 
-	if (ourDevCred->ST < SDO_DEVICE_STATE_READY1) {
+	if (our_dev_cred->ST < SDO_DEVICE_STATE_READY1) {
 		ret = true;
 		goto end;
 	}
 
-	if (ourDevCred->ownerBlk != NULL) {
-		sdoCredOwnerFree(ourDevCred->ownerBlk);
-		ourDevCred->ownerBlk = NULL;
+	if (our_dev_cred->owner_blk != NULL) {
+		sdo_cred_owner_free(our_dev_cred->owner_blk);
+		our_dev_cred->owner_blk = NULL;
 	}
 
-	/* Memory allocating data.inside devCred. */
-	ourDevCred->ownerBlk = SDOCredOwnerAlloc();
-	if (!ourDevCred->ownerBlk) {
-		LOG(LOG_ERROR, "devCred's ownerBlk allocation failed\n");
+	/* Memory allocating data.inside dev_cred. */
+	our_dev_cred->owner_blk = sdo_cred_owner_alloc();
+	if (!our_dev_cred->owner_blk) {
+		LOG(LOG_ERROR, "dev_cred's owner_blk allocation failed\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "O")) {
-		LOG(LOG_ERROR, "tag=0 not found \n");
+	if (!sdo_read_expected_tag(sdor, "O")) {
+		LOG(LOG_ERROR, "tag=0 not found\n");
 		goto end;
 	}
 
-	if (!sdoRBeginObject(sdor)) {
-		LOG(LOG_ERROR, "Begin object not found \n");
+	if (!sdor_begin_object(sdor)) {
+		LOG(LOG_ERROR, "Begin object not found\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "pv")) {
-		LOG(LOG_ERROR, "tag=pv not found \n");
+	if (!sdo_read_expected_tag(sdor, "pv")) {
+		LOG(LOG_ERROR, "tag=pv not found\n");
 		goto end;
 	}
 
-	ourDevCred->ownerBlk->pv = sdoReadUInt(sdor);
-	if (!ourDevCred->ownerBlk->pv) {
+	our_dev_cred->owner_blk->pv = sdo_read_uint(sdor);
+	if (!our_dev_cred->owner_blk->pv) {
 		LOG(LOG_ERROR, "Own's pv read Error\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "pe")) {
-		LOG(LOG_ERROR, "tag=pe not found \n");
+	if (!sdo_read_expected_tag(sdor, "pe")) {
+		LOG(LOG_ERROR, "tag=pe not found\n");
 		goto end;
 	}
 
-	ourDevCred->ownerBlk->pe = sdoReadUInt(sdor);
-	if (!ourDevCred->ownerBlk->pe) {
+	our_dev_cred->owner_blk->pe = sdo_read_uint(sdor);
+	if (!our_dev_cred->owner_blk->pe) {
 		LOG(LOG_ERROR, "Own's pe read Error\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "g")) {
-		LOG(LOG_ERROR, "tag=g not found \n");
+	if (!sdo_read_expected_tag(sdor, "g")) {
+		LOG(LOG_ERROR, "tag=g not found\n");
 		goto end;
 	}
 
-	ourDevCred->ownerBlk->guid = sdoByteArrayAlloc(0);
-	if (!ourDevCred->ownerBlk->guid) {
-		LOG(LOG_ERROR, "Alloc failed \n");
+	our_dev_cred->owner_blk->guid = sdo_byte_array_alloc(0);
+	if (!our_dev_cred->owner_blk->guid) {
+		LOG(LOG_ERROR, "Alloc failed\n");
 		goto end;
 	}
 
-	if (!sdoByteArrayReadChars(sdor, ourDevCred->ownerBlk->guid)) {
+	if (!sdo_byte_array_read_chars(sdor, our_dev_cred->owner_blk->guid)) {
 		LOG(LOG_ERROR, "parsing guid: %s\n",
-		    ourDevCred->ownerBlk->guid->bytes);
+		    our_dev_cred->owner_blk->guid->bytes);
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "r")) {
-		LOG(LOG_ERROR, "tag=r not found \n");
+	if (!sdo_read_expected_tag(sdor, "r")) {
+		LOG(LOG_ERROR, "tag=r not found\n");
 		goto end;
 	}
 
-	ourDevCred->ownerBlk->rvlst = sdoRendezvousListAlloc();
-	if (!ourDevCred->ownerBlk->rvlst ||
-	    !sdoRendezvousListRead(sdor, ourDevCred->ownerBlk->rvlst)) {
+	our_dev_cred->owner_blk->rvlst = sdo_rendezvous_list_alloc();
+	if (!our_dev_cred->owner_blk->rvlst ||
+	    !sdo_rendezvous_list_read(sdor, our_dev_cred->owner_blk->rvlst)) {
 		LOG(LOG_ERROR, "Own's rvlist read Error\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "pkh")) {
-		LOG(LOG_ERROR, "tag=pkh not found \n");
+	if (!sdo_read_expected_tag(sdor, "pkh")) {
+		LOG(LOG_ERROR, "tag=pkh not found\n");
 		goto end;
 	}
 
-	ourDevCred->ownerBlk->pkh =
-	    sdoHashAlloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
-	if (!ourDevCred->ownerBlk->pkh ||
-	    !sdoHashRead(sdor, ourDevCred->ownerBlk->pkh)) {
+	our_dev_cred->owner_blk->pkh =
+	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
+	if (!our_dev_cred->owner_blk->pkh ||
+	    !sdo_hash_read(sdor, our_dev_cred->owner_blk->pkh)) {
 		LOG(LOG_ERROR, "Own's pkh read Error\n");
 		goto end;
 	}
 
-	if (!sdoREndObject(sdor)) {
-		LOG(LOG_ERROR, "End object not found \n");
+	if (!sdor_end_object(sdor)) {
+		LOG(LOG_ERROR, "End object not found\n");
 		goto end;
 	}
 
-	if (!sdoREndObject(sdor)) {
-		LOG(LOG_ERROR, "End object not found \n");
+	if (!sdor_end_object(sdor)) {
+		LOG(LOG_ERROR, "End object not found\n");
 		goto end;
 	}
 
@@ -354,7 +383,7 @@ bool ReadNormalDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
 
 end:
 	if (sdob->block) {
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 	return ret;
@@ -362,97 +391,102 @@ end:
 
 /**
  * Read the Device Credentials blob, contains our MFG Blk
- * @param devCredFile - the blob the credentials are saved in
+ * @param dev_cred_file - the blob the credentials are saved in
  * @param flags - descriptor telling type of file
- * @param ourDevCred - pointer to the device credentials block,
+ * @param our_dev_cred - pointer to the device credentials block,
  * @return true if read and parsed correctly, otherwise false.
  */
-bool ReadMfgDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-			      SDODevCred_t *ourDevCred)
+bool read_mfg_device_credentials(const char *dev_cred_file,
+				 sdo_sdk_blob_flags flags,
+				 sdo_dev_cred_t *our_dev_cred)
 {
-	bool ret = true;
-	size_t devCredLen = 0;
-	SDOR_t sdoreader = {0};
-	SDOR_t *sdor = NULL;
-	SDOBlock_t *sdob = NULL;
+	bool ret = false;
+	size_t dev_cred_len = 0;
+	sdor_t sdoreader = {0};
+	sdor_t *sdor = NULL;
+	sdo_block_t *sdob = NULL;
 
 	sdor = &sdoreader;
 	sdob = &(sdor->b);
 
-	if (!sdoRInit(sdor, NULL, NULL)) {
-		LOG(LOG_ERROR, "sdoRInit() failed!\n");
-		ret = false;
+	if (!our_dev_cred) {
 		goto end;
 	}
 
-	if ((devCredLen = sdoBlobSize((char *)devCredFile, flags)) > 0) {
+	if (!sdor_init(sdor, NULL, NULL)) {
+		LOG(LOG_ERROR, "sdor_init() failed!\n");
+		goto end;
+	}
+
+	dev_cred_len = sdo_blob_size((char *)dev_cred_file, flags);
+	if (dev_cred_len > 0) {
 		// Resize sdob block size
-		sdoResizeBlock(sdob, devCredLen);
+		sdo_resize_block(sdob, dev_cred_len);
 	} else {
-		LOG(LOG_ERROR, "Could not get %s!\n", (char *)devCredFile);
-		ret = false;
+		LOG(LOG_ERROR, "Could not get %s!\n", (char *)dev_cred_file);
 		goto end;
 	}
 
-	if (sdoBlobRead((char *)devCredFile, flags, sdob->block, devCredLen) ==
-	    -1) {
+	if (sdo_blob_read((char *)dev_cred_file, flags, sdob->block,
+			  dev_cred_len) == -1) {
 		LOG(LOG_ERROR, "Could not read the device credentials blob\n");
-		ret = false;
 		goto end;
 	}
 
 	LOG(LOG_DEBUG, "Reading Mfg block\n");
 
-	sdor->b.blockSize = devCredLen;
-	sdor->haveBlock = true;
+	sdor->b.block_size = dev_cred_len;
+	sdor->have_block = true;
 
 	// LOG(LOG_ERROR, "Mfg Blk reading\n");
-	if (!sdoRBeginObject(sdor)) {
-		LOG(LOG_ERROR, "Begin object not found \n");
+	if (!sdor_begin_object(sdor)) {
+		LOG(LOG_ERROR, "Begin object not found\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "M")) {
-		LOG(LOG_ERROR, "tag=M not found \n");
+	if (!sdo_read_expected_tag(sdor, "M")) {
+		LOG(LOG_ERROR, "tag=M not found\n");
 		goto end;
 	}
 
-	if (!sdoRBeginObject(sdor)) {
-		LOG(LOG_ERROR, "Begin object not found \n");
+	if (!sdor_begin_object(sdor)) {
+		LOG(LOG_ERROR, "Begin object not found\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "d")) {
-		LOG(LOG_ERROR, "tag=d not found \n");
+	if (!sdo_read_expected_tag(sdor, "d")) {
+		LOG(LOG_ERROR, "tag=d not found\n");
 		goto end;
 	}
 
-	ourDevCred->mfgBlk = sdoCredMfgAlloc();
-	if (!ourDevCred->mfgBlk) {
+	our_dev_cred->mfg_blk = sdo_cred_mfg_alloc();
+	if (!our_dev_cred->mfg_blk) {
 		LOG(LOG_ERROR, "Malloc for mfgblk failed");
 		goto end;
 	}
 
-	ourDevCred->mfgBlk->d = sdoStringAlloc();
+	our_dev_cred->mfg_blk->d = sdo_string_alloc();
 
-	if (!ourDevCred->mfgBlk->d ||
-	    !sdoStringRead(sdor, ourDevCred->mfgBlk->d)) {
-		LOG(LOG_ERROR, "Mfg's DevInfo read Error\n");
+	if (!our_dev_cred->mfg_blk->d ||
+	    !sdo_string_read(sdor, our_dev_cred->mfg_blk->d)) {
+		LOG(LOG_ERROR, "Mfg's Dev_info read Error\n");
 		goto end;
 	}
 
-	if (!sdoREndObject(sdor)) {
-		LOG(LOG_ERROR, "End object not found \n");
+	if (!sdor_end_object(sdor)) {
+		LOG(LOG_ERROR, "End object not found\n");
 		goto end;
 	}
 
-	if (!sdoREndObject(sdor)) {
-		LOG(LOG_ERROR, "End object not found \n");
+	if (!sdor_end_object(sdor)) {
+		LOG(LOG_ERROR, "End object not found\n");
 		goto end;
 	}
+	ret = true;
+
 end:
 	if (sdob->block) {
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
 	return ret;
@@ -460,100 +494,102 @@ end:
 
 /**
  * Read the Secure Device Credentials blob, contains our Secret
- * @param devCredFile - the blob the credentials are saved in
+ * @param dev_cred_file - the blob the credentials are saved in
  * @param flags - descriptor telling type of file
- * @param ourDevCred - pointer to the device credentials block,
+ * @param our_dev_cred - pointer to the device credentials block,
  * @return true if read and parsed correctly, otherwise false.
  */
-bool ReadSecureDeviceCredentials(const char *devCredFile, sdoSdkBlobFlags flags,
-				 SDODevCred_t *ourDevCred)
+bool read_secure_device_credentials(const char *dev_cred_file,
+				    sdo_sdk_blob_flags flags,
+				    sdo_dev_cred_t *our_dev_cred)
 {
-	bool ret = true;
-	size_t devCredLen = 0;
-	SDOR_t sdoreader = {0};
-	SDOR_t *sdor = NULL;
-	SDOBlock_t *sdob = NULL;
-	SDOByteArray_t *secret = NULL;
+	bool ret = false;
+	size_t dev_cred_len = 0;
+	sdor_t sdoreader = {0};
+	sdor_t *sdor = NULL;
+	sdo_block_t *sdob = NULL;
+	sdo_byte_array_t *secret = NULL;
+
+	(void)our_dev_cred; /* Unused Warning */
 
 	sdor = &sdoreader;
 	sdob = &(sdor->b);
 
-	if (!sdoRInit(sdor, NULL, NULL)) {
-		LOG(LOG_ERROR, "sdoRInit() failed!\n");
-		ret = false;
+	if (!sdor_init(sdor, NULL, NULL)) {
+		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		goto end;
 	}
 
-	if ((devCredLen = sdoBlobSize((char *)devCredFile, flags)) > 0) {
+	dev_cred_len = sdo_blob_size((char *)dev_cred_file, flags);
+	if (dev_cred_len > 0) {
 		// Resize sdob block size
-		sdoResizeBlock(sdob, devCredLen);
+		sdo_resize_block(sdob, dev_cred_len);
 	} else {
-		LOG(LOG_ERROR, "Could not get %s!\n", (char *)devCredFile);
-		ret = false;
+		LOG(LOG_ERROR, "Could not get %s!\n", (char *)dev_cred_file);
 		goto end;
 	}
-	if (sdoBlobRead((char *)devCredFile, flags, sdob->block, devCredLen) ==
-	    -1) {
+	if (sdo_blob_read((char *)dev_cred_file, flags, sdob->block,
+			  dev_cred_len) == -1) {
 		LOG(LOG_ERROR, "Could not read the device credentials blob\n");
-		ret = false;
 		goto end;
 	}
 
-	sdor->b.blockSize = devCredLen;
-	sdor->haveBlock = true;
+	sdor->b.block_size = dev_cred_len;
+	sdor->have_block = true;
 
-	if (!sdoRBeginObject(sdor)) {
-		LOG(LOG_ERROR, "Begin object not found \n");
+	if (!sdor_begin_object(sdor)) {
+		LOG(LOG_ERROR, "Begin object not found\n");
 		goto end;
 	}
 
-	if (!sdoReadExpectedTag(sdor, "Secret")) {
-		LOG(LOG_ERROR, "tag=Secret not found \n");
+	if (!sdo_read_expected_tag(sdor, "Secret")) {
+		LOG(LOG_ERROR, "tag=Secret not found\n");
 		goto end;
 	}
 
-	if (!sdoRBeginSequence(sdor)) {
+	if (!sdor_begin_sequence(sdor)) {
 		LOG(LOG_ERROR, "Beginning sequence not found.\n");
 		goto end;
 	}
 
-	secret = sdoByteArrayAlloc(INITIAL_SECRET_BYTES);
+	secret = sdo_byte_array_alloc(INITIAL_SECRET_BYTES);
 	if (!secret) {
-		LOG(LOG_ERROR, "DevCred Secret malloc Failed.\n");
+		LOG(LOG_ERROR, "Dev_cred Secret malloc Failed.\n");
 		goto end;
 	}
 
-	if (!sdoByteArrayReadChars(sdor, secret)) {
+	if (!sdo_byte_array_read_chars(sdor, secret)) {
 		LOG(LOG_ERROR, "Secret Read failure.\n");
 		goto end;
 	}
 
-	if (0 != setOVKey(secret, INITIAL_SECRET_BYTES)) {
+	if (0 != set_ov_key(secret, INITIAL_SECRET_BYTES)) {
 		LOG(LOG_ERROR, "Set HMAC secret failure.\n");
 		goto end;
 	}
 
-	if (!sdoREndSequence(sdor)) {
+	if (!sdor_end_sequence(sdor)) {
 		LOG(LOG_ERROR, "No End Sequence\n");
 		goto end;
 	}
 
-	if (!sdoREndObject(sdor)) {
-		LOG(LOG_ERROR, "End object not found \n");
+	if (!sdor_end_object(sdor)) {
+		LOG(LOG_ERROR, "End object not found\n");
 		goto end;
 	}
+	ret = true;
 
 end:
-	sdoByteArrayFree(secret);
+	sdo_byte_array_free(secret);
 
 	if (sdob->block) {
-		if (memset_s(sdob->block, sdob->blockSize, 0)) {
+		if (memset_s(sdob->block, sdob->block_size, 0)) {
 			LOG(LOG_ERROR, "Failed to clear device credentials\n");
 			ret = false;
 		}
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 	}
-	sdoRFlush(sdor);
+	sdor_flush(sdor);
 	return ret;
 }
 
@@ -561,23 +597,23 @@ end:
 /**
  * Internal API
  */
-static int sdoRFileRecv(SDOR_t *sdor, int nbytes)
+static int sdoRFile_recv(sdor_t *sdor, int nbytes)
 {
-	SDOBlock_t *sdob = &sdor->b;
-	FILE *f = sdor->receiveData;
+	sdo_block_t *sdob = &sdor->b;
+	FILE *f = sdor->receive_data;
 	int nread, limit;
 
 	limit = sdob->cursor + nbytes;
-	sdoResizeBlock(sdob, limit + 1);
+	sdo_resize_block(sdob, limit + 1);
 	nread = fread(&sdob->block[sdob->cursor], 1, nbytes, f);
 
-	if (verboseDumpPackets)
+	if (verbose_dump_packets)
 		LOG(LOG_DEBUG,
-		    "SDOR ReadFile, cursor %u blockSize:%u blockMax:%u\n",
-		    sdob->cursor, sdob->blockSize, sdob->blockMax);
+		    "SDOR Read_file, cursor %u block_size:%u block_max:%u\n",
+		    sdob->cursor, sdob->block_size, sdob->block_max);
 	limit = sdob->cursor + nread;
 	sdob->block[limit] = 0;
-	if (verboseDumpPackets)
+	if (verbose_dump_packets)
 		LOG(LOG_DEBUG, "%s\n", sdob->block);
 
 	return nread;
@@ -585,24 +621,24 @@ static int sdoRFileRecv(SDOR_t *sdor, int nbytes)
 #endif
 /**
  * Write and save the device credentials passed as an parameter ocred of type
- * SDODevCred_t.
- * @param ocred - Pointer of type SDODevCred_t, credentials to be copied
+ * sdo_dev_cred_t.
+ * @param ocred - Pointer of type sdo_dev_cred_t, credentials to be copied
  * @return 0 if success, else -1 on failure.
  */
-int store_credential(SDODevCred_t *ocred)
+int store_credential(sdo_dev_cred_t *ocred)
 {
 	/* Write in the file and save the Normal device credentials */
 	LOG(LOG_DEBUG, "Writing to %s blob\n", "Normal.blob");
-	if (!WriteNormalDeviceCredentials((char *)SDO_CRED_NORMAL,
-					  SDO_SDK_NORMAL_DATA, ocred)) {
+	if (!write_normal_device_credentials((char *)SDO_CRED_NORMAL,
+					     SDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not write to Normal Credentials blob\n");
 		return -1;
 	}
 
 	/* Write in the file and save the MFG device credentials */
 	LOG(LOG_DEBUG, "Writing to %s blob\n", "Mfg.blob");
-	if (!WriteMfgDeviceCredentials((char *)SDO_CRED_MFG,
-				       SDO_SDK_NORMAL_DATA, ocred)) {
+	if (!write_mfg_device_credentials((char *)SDO_CRED_MFG,
+					  SDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not write to MFG Credentials blob\n");
 		return -1;
 	}
@@ -610,8 +646,8 @@ int store_credential(SDODevCred_t *ocred)
 #if !defined(DEVICE_TPM20_ENABLED)
 	/* Write in the file and save the Secure device credentials */
 	LOG(LOG_DEBUG, "Writing to %s blob\n", "Secure.blob");
-	if (!WriteSecureDeviceCredentials((char *)SDO_CRED_SECURE,
-					  SDO_SDK_SECURE_DATA, ocred)) {
+	if (!write_secure_device_credentials((char *)SDO_CRED_SECURE,
+					     SDO_SDK_SECURE_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not write to Secure Credentials blob\n");
 		return -1;
 	}
@@ -621,23 +657,24 @@ int store_credential(SDODevCred_t *ocred)
 }
 
 /**
- * load_credentials function loads the State & OwnerBlk credentials from storage
+ * load_credentials function loads the State & Owner_blk credentials from
+ * storage
  *
  * @return
  *        return 0 on success. -1 on failure.
  */
 int load_credential(void)
 {
-	SDODevCred_t *ocred = app_alloc_credentials();
+	sdo_dev_cred_t *ocred = app_alloc_credentials();
 
 	if (!ocred)
 		return -1;
 
-	sdoDevCredInit(ocred);
+	sdo_dev_cred_init(ocred);
 
 	/* Read in the blob and save the device credentials */
-	if (!ReadNormalDeviceCredentials((char *)SDO_CRED_NORMAL,
-					 SDO_SDK_NORMAL_DATA, ocred)) {
+	if (!read_normal_device_credentials((char *)SDO_CRED_NORMAL,
+					    SDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
@@ -653,23 +690,23 @@ int load_credential(void)
 
 int load_mfg_secret(void)
 {
-	SDODevCred_t *ocred = app_get_credentials();
+	sdo_dev_cred_t *ocred = app_get_credentials();
 
 	if (!ocred)
 		return -1;
 
 #if !defined(DEVICE_TPM20_ENABLED)
 	// ReadHMAC Credentials
-	if (!ReadSecureDeviceCredentials((char *)SDO_CRED_SECURE,
-					 SDO_SDK_SECURE_DATA, ocred)) {
+	if (!read_secure_device_credentials((char *)SDO_CRED_SECURE,
+					    SDO_SDK_SECURE_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
 #endif
 
 	// ReadMFG block(MFG block will be used in message 47)
-	if (!ReadMfgDeviceCredentials((char *)SDO_CRED_MFG, SDO_SDK_NORMAL_DATA,
-				      ocred)) {
+	if (!read_mfg_device_credentials((char *)SDO_CRED_MFG,
+					 SDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}

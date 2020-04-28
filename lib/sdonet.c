@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include "storage_al.h"
 #include "rest_interface.h"
+#include "safe_str_lib.h"
 
 #if defined HTTPPROXY
 #ifdef TARGET_OS_FREERTOS
@@ -26,11 +27,11 @@
 #endif
 
 /* HTTP Proxy parameters */
-static SDOIPAddress_t rvproxy_ip;
+static sdo_ip_address_t rvproxy_ip;
 static uint16_t rvproxy_port;
-static SDOIPAddress_t mfgproxy_ip;
+static sdo_ip_address_t mfgproxy_ip;
 static uint16_t mfgproxy_port;
-static SDOIPAddress_t ownerproxy_ip;
+static sdo_ip_address_t ownerproxy_ip;
 static uint16_t ownerproxy_port;
 #endif // defined HTTPPROXY
 
@@ -87,9 +88,9 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 			   uint8_t *netip, uint16_t *proxy_port)
 {
 	int i = 0, ret = -1;
-	uint32_t numOfIPs = 0;
-	SDOIPAddress_t *ipList = NULL;
-	uint8_t *pch = NULL;
+	uint32_t num_ofIPs = 0;
+	sdo_ip_address_t *ip_list = NULL;
+	char *pch = NULL;
 	uint8_t *proxy = NULL;
 	char proxy_url[40] = {0};
 
@@ -99,7 +100,7 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 		return false;
 
 	if (pch)
-		proxy = pch + 3;
+		proxy = (uint8_t *)pch + 3;
 	else
 		proxy = (uint8_t *)proxydata;
 
@@ -107,34 +108,27 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 		proxy_url[i] = proxy[i];
 		i++;
 	}
-#if !defined(OPTEE_ADAPTATION)
+
 	// resolve dn proxy-chain.intel.com
-	if (sdoConDnsLookup(proxy_url, &ipList, &numOfIPs) == -1) {
+	if (sdo_con_dns_lookup(proxy_url, &ip_list, &num_ofIPs) == -1) {
 		LOG(LOG_ERROR, "DNS look-up failed!\n");
 		goto err;
 	}
 
 	/* Copy the network address to proxy */
 	/* TODO: iterate for proxy dn (only first one used) */
-	if (memcpy_s(netip, ipList->length, ipList->addr, ipList->length) !=
+	if (memcpy_s(netip, ip_list->length, ip_list->addr, ip_list->length) !=
 	    0) {
-		LOG(LOG_ERROR, "Memcpy failed for ip address copy \n");
+		LOG(LOG_ERROR, "Memcpy failed for ip address copy\n");
 		goto err;
 	}
-#else
-	if (strncpy_s((char *)netip, sizeof(sdoip->addr), proxy_url,
-		      sizeof(proxy_url)) != 0) {
-		LOG(LOG_ERROR, "optee: Memcpy failed for ip address copy \n");
-		goto err;
-	}
-#endif
 
 	if (proxy[i] == ':')
-		*proxy_port = atoi((const char *)&proxy[i + 1]);
+		*proxy_port = atoi((char *)&proxy[i + 1]);
 	ret = 0;
 err:
-	if (ipList)
-		sdoFree(ipList);
+	if (ip_list)
+		sdo_free(ip_list);
 	if (ret)
 		return false;
 	return true;
@@ -145,8 +139,9 @@ err:
  * using enviromental variables/ wpad protoco.
  * libproxy return proxy url for further processing.
  * get_netip_port do url to network fromated ip. function use that
- * to fill sdoip structure and port no as return value */
-static bool discover_proxy(SDOIPAddress_t *sdoip, uint16_t *port_num)
+ * to fill sdoip structure and port no as return value
+ */
+static bool discover_proxy(sdo_ip_address_t *sdoip, uint16_t *port_num)
 {
 	int ret = -1;
 	uint16_t proxy_port = 0;
@@ -157,7 +152,8 @@ static bool discover_proxy(SDOIPAddress_t *sdoip, uint16_t *port_num)
 	size_t nread = 0;
 
 	// Create a proxy factory instance
-	pxProxyFactory *pf = px_proxy_factory_new();
+	px_proxy_factory *pf = px_proxy_factory_new();
+
 	if (!pf)
 		return 1;
 
@@ -183,7 +179,7 @@ static bool discover_proxy(SDOIPAddress_t *sdoip, uint16_t *port_num)
 	}
 
 #if !defined(OPTEE_ADAPTATION)
-	sdoInitIPv4Address(sdoip, proxy);
+	sdo_init_ipv4_address(sdoip, proxy);
 #else
 	if (strncpy_s((char *)sdoip->addr, sizeof(sdoip->addr), proxy,
 		      sizeof(proxy)))
@@ -197,10 +193,10 @@ err:
 	// Free the proxy list
 	for (int i = 0; proxies[i]; i++) {
 		if (proxies[i])
-			sdoFree(proxies[i]);
+			sdo_free(proxies[i]);
 	}
 	if (proxies)
-		sdoFree(proxies);
+		sdo_free(proxies);
 
 	// Free the proxy factory
 	px_proxy_factory_free(pf);
@@ -212,7 +208,7 @@ err:
 #endif
 
 /* setup http proxy from file for further network operation operation */
-bool setup_http_proxy(const char *filename, SDOIPAddress_t *sdoip,
+bool setup_http_proxy(const char *filename, sdo_ip_address_t *sdoip,
 		      uint16_t *port_num)
 {
 	int ret = -1;
@@ -229,15 +225,16 @@ bool setup_http_proxy(const char *filename, SDOIPAddress_t *sdoip,
 		return false;
 	}
 
-	if (memset_s(sdoip, sizeof(SDOIPAddress_t), 0) != 0) {
+	if (memset_s(sdoip, sizeof(sdo_ip_address_t), 0) != 0) {
 		LOG(LOG_ERROR, "Clearing memory failed\n");
 		return false;
 	}
 
-	if ((nread = sdoBlobSize((char *)filename, SDO_SDK_RAW_DATA)) > 0) {
-		proxydata = sdoAlloc(nread);
-		if (sdoBlobRead((char *)filename, SDO_SDK_RAW_DATA, proxydata,
-				nread) == -1) {
+	nread = sdo_blob_size((char *)filename, SDO_SDK_RAW_DATA);
+	if (nread > 0) {
+		proxydata = sdo_alloc(nread);
+		if (sdo_blob_read((char *)filename, SDO_SDK_RAW_DATA, proxydata,
+				  nread) == -1) {
 			LOG(LOG_ERROR, "Could not read %s file\n", filename);
 			return false;
 		}
@@ -258,20 +255,13 @@ bool setup_http_proxy(const char *filename, SDOIPAddress_t *sdoip,
 		goto err;
 	}
 
-#if !defined(OPTEE_ADAPTATION)
-	sdoInitIPv4Address(sdoip, proxy);
-#else
-	if (strncpy_s((char *)sdoip->addr, sizeof(sdoip->addr), proxy,
-		      sizeof(proxy)))
-		return false;
-	sdoip->length = sizeof(sdoip->addr);
-#endif
+	sdo_init_ipv4_address(sdoip, proxy);
 	*port_num = proxy_port;
 
 	ret = 0;
 err:
 	if (proxydata)
-		sdoFree(proxydata);
+		sdo_free(proxydata);
 	if (ret)
 		return false;
 	return true;
@@ -280,7 +270,7 @@ err:
 /**
  * Initialize network related states and members.
  */
-void sdoNetInit(void)
+void sdo_net_init(void)
 {
 #if defined HTTPPROXY
 	if (setup_http_proxy(MFG_PROXY, &mfgproxy_ip, &mfgproxy_port)) {
@@ -332,14 +322,14 @@ void sdoNetInit(void)
  * @return ret
  *         true if successful. false in case of error.
  */
-bool ResolveDn(const char *dn, SDOIPAddress_t **ip, uint16_t port, void **ssl,
-	       bool proxy)
+bool resolve_dn(const char *dn, sdo_ip_address_t **ip, uint16_t port,
+		void **ssl, bool proxy)
 {
 	bool ret = false;
-	uint32_t numOfIPs = 0;
-	sdoConHandle sock = SDO_CON_INVALID_HANDLE;
-	SDOIPAddress_t *ipList = NULL;
-	RestCtx_t *rest = NULL;
+	uint32_t num_ofIPs = 0;
+	sdo_con_handle sock_hdl = SDO_CON_INVALID_HANDLE;
+	sdo_ip_address_t *ip_list = NULL;
+	rest_ctx_t *rest = NULL;
 
 	if (!dn || !ip) {
 		LOG(LOG_ERROR, "Invalid inputs\n");
@@ -351,48 +341,51 @@ bool ResolveDn(const char *dn, SDOIPAddress_t **ip, uint16_t port, void **ssl,
 	if (proxy) {
 
 		/* cache DNS to REST */
-		rest = getRESTContext();
+		rest = get_rest_context();
 
 		if (!rest) {
 			LOG(LOG_ERROR, "REST context is NULL!\n");
 			goto end;
 		}
 
-		if (!cacheHostDns(dn)) {
+		if (!cache_host_dns(dn)) {
 			LOG(LOG_ERROR, "REST DNS caching failed!\n");
 		} else
 			ret = true;
 		goto end;
 	}
 	// get list of IPs resolved to given DNS
-	if (sdoConDnsLookup(dn, &ipList, &numOfIPs) == -1) {
+	if (sdo_con_dns_lookup(dn, &ip_list, &num_ofIPs) == -1) {
 		LOG(LOG_ERROR, "DNS look-up failed!\n");
 		goto end;
 	}
 
-	if (ipList && numOfIPs > 0) {
+	if (ip_list && num_ofIPs > 0) {
 		// Iterate over IP-list to connect
 		uint32_t iter = 0;
-		while (iter != numOfIPs && sock == SDO_CON_INVALID_HANDLE) {
-			if (((sock =
-				  sdoConConnect((ipList + iter), port, ssl)) ==
-			     SDO_CON_INVALID_HANDLE)) {
+
+		while (iter != num_ofIPs &&
+		       sock_hdl == SDO_CON_INVALID_HANDLE) {
+
+			sock_hdl = sdo_con_connect((ip_list + iter), port,
+						   ssl);
+			if (sock_hdl == SDO_CON_INVALID_HANDLE) {
 				LOG(LOG_ERROR, "Failed to connect to "
 					       "server: retrying...\n");
 			}
 			iter++;
 		}
 
-		if (SDO_CON_INVALID_HANDLE != sock) {
-			sdoConDisconnect(sock, (ssl ? *ssl : NULL));
-			if (!cacheHostDns(dn)) {
+		if (SDO_CON_INVALID_HANDLE != sock_hdl) {
+			sdo_con_disconnect(sock_hdl, (ssl ? *ssl : NULL));
+			if (!cache_host_dns(dn)) {
 				LOG(LOG_ERROR, "REST DNS caching failed!\n");
 				goto end;
 			}
-			*ip = sdoAlloc(sizeof(SDOIPAddress_t));
-			if (0 != memcpy_s(*ip, sizeof(SDOIPAddress_t),
-					  ipList + (iter - 1),
-					  sizeof(SDOIPAddress_t))) {
+			*ip = sdo_alloc(sizeof(sdo_ip_address_t));
+			if (0 != memcpy_s(*ip, sizeof(sdo_ip_address_t),
+					  ip_list + (iter - 1),
+					  sizeof(sdo_ip_address_t))) {
 				LOG(LOG_ERROR, "Memcpy failed\n");
 				goto end;
 			}
@@ -404,8 +397,8 @@ bool ResolveDn(const char *dn, SDOIPAddress_t **ip, uint16_t port, void **ssl,
 		}
 	}
 end:
-	if (ipList) // free ipList
-		sdoFree(ipList);
+	if (ip_list) // free ip_list
+		sdo_free(ip_list);
 	return ret;
 }
 
@@ -415,35 +408,35 @@ end:
  *
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
- * @param sock: Sock fd for subsequent read/write/close.
+ * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param ssl:  ssl fd for subsequent read/write/close in case of https.
  *
  * @return ret
  *         true if successful. false in case of error.
  */
-bool ConnectToManufacturer(SDOIPAddress_t *ip, uint16_t port, int *sock,
-			   void **ssl)
+bool connect_to_manufacturer(sdo_ip_address_t *ip, uint16_t port,
+			     sdo_con_handle *sock_hdl, void **ssl)
 {
 	bool ret = false;
 	int retries = MANUFACTURER_CONNECT_RETRIES;
 
 	LOG(LOG_DEBUG, "Connecting to manufacturer Server\n");
 
-	if (!sock) {
+	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
 	/* cache ip/dns and port to REST */
 	if (ip) {
-		if (!cacheHostIP(ip)) {
+		if (!cache_host_ip(ip)) {
 			LOG(LOG_ERROR,
 			    "Mfg IP-address caching to REST failed!\n");
 			goto end;
 		}
 	}
 
-	if (!cacheHostPort(port)) {
+	if (!cache_host_port(port)) {
 		LOG(LOG_ERROR, "Mfg portno caching to REST failed!\n");
 		goto end;
 	}
@@ -461,12 +454,13 @@ bool ConnectToManufacturer(SDOIPAddress_t *ip, uint16_t port, int *sock,
 
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
-		if (((*sock = (int)sdoConConnect(ip, port, ssl)) ==
-		     SDO_CON_INVALID_HANDLE) &&
+
+		*sock_hdl = sdo_con_connect(ip, port, ssl);
+		if ((*sock_hdl == SDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO, "Failed to connect to Manufacturer "
 				      "server: retrying...\n");
-			sdoSleep(RETRY_DELAY);
+			sdo_sleep(RETRY_DELAY);
 		}
 	} else {
 		LOG(LOG_ERROR,
@@ -474,7 +468,7 @@ bool ConnectToManufacturer(SDOIPAddress_t *ip, uint16_t port, int *sock,
 		goto end;
 	}
 
-	if (SDO_CON_INVALID_HANDLE == *sock) {
+	if (SDO_CON_INVALID_HANDLE == *sock_hdl) {
 		LOG(LOG_ERROR,
 		    "Failed to connect to Manufacturer server: Giving up...\n");
 		goto end;
@@ -490,41 +484,41 @@ end:
  *
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
- * @param sock: Sock fd for subsequent read/write/close.
+ * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param ssl:  ssl fd for subsequent read/write/close in case of https.
  *
  * @return ret
  *         true if successful. false in case of error.
  */
-bool ConnectToRendezvous(SDOIPAddress_t *ip, uint16_t port, int *sock,
-			 void **ssl)
+bool connect_to_rendezvous(sdo_ip_address_t *ip, uint16_t port,
+			   sdo_con_handle *sock_hdl, void **ssl)
 {
 	bool ret = false;
 	int retries = RENDEZVOUS_CONNECT_RETRIES;
 
 	LOG(LOG_DEBUG, "Connecting to Rendezvous server\n");
 
-	if (!sock) {
+	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
 	/* cache ip/dns and port to REST */
 	if (ip) {
-		if (!cacheHostIP(ip)) {
+		if (!cache_host_ip(ip)) {
 			LOG(LOG_ERROR, "REST IP-address caching failed!\n");
 			goto end;
 		}
 	} else {
 	}
 
-	if (!cacheHostPort(port)) {
+	if (!cache_host_port(port)) {
 		LOG(LOG_ERROR, "RV portno caching to REST failed!\n");
 		goto end;
 	}
 
 	if (ssl)
-		if (!cacheTLSConnection()) {
+		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
 			goto end;
 		}
@@ -546,12 +540,13 @@ bool ConnectToRendezvous(SDOIPAddress_t *ip, uint16_t port, int *sock,
 
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
-		if (((*sock = sdoConConnect(ip, port, ssl)) ==
-		     SDO_CON_INVALID_HANDLE) &&
+
+		*sock_hdl = sdo_con_connect(ip, port, ssl);
+		if ((*sock_hdl == SDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO, "Failed to connect to Rendezvous server: "
 				      "retrying...\n");
-			sdoSleep(RETRY_DELAY);
+			sdo_sleep(RETRY_DELAY);
 		}
 	} else {
 		LOG(LOG_ERROR,
@@ -559,7 +554,7 @@ bool ConnectToRendezvous(SDOIPAddress_t *ip, uint16_t port, int *sock,
 		goto end;
 	}
 
-	if (SDO_CON_INVALID_HANDLE == *sock) {
+	if (SDO_CON_INVALID_HANDLE == *sock_hdl) {
 		LOG(LOG_ERROR,
 		    "Failed to connect to rendezvous: Giving up...\n");
 		goto end;
@@ -576,34 +571,35 @@ end:
  *
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
- * @param sock: Sock fd for subsequent read/write/close.
+ * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param ssl:  ssl fd for subsequent read/write/close in case of https.
  *
  * @return ret
  *         true if successful. false in case of error.
  */
-bool ConnectToOwner(SDOIPAddress_t *ip, uint16_t port, int *sock, void **ssl)
+bool connect_to_owner(sdo_ip_address_t *ip, uint16_t port,
+		      sdo_con_handle *sock_hdl, void **ssl)
 {
 	bool ret = false;
 	int retries = OWNER_CONNECT_RETRIES;
 
 	LOG(LOG_DEBUG, "Connecting to owner server\n");
 
-	if (!sock) {
+	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
 	/* cache ip/dns and port to REST */
 	if (ip) {
-		if (!cacheHostIP(ip)) {
+		if (!cache_host_ip(ip)) {
 			LOG(LOG_ERROR,
 			    "Owner IP-address caching to REST failed!\n");
 			goto end;
 		}
 	}
 
-	if (!cacheHostPort(port)) {
+	if (!cache_host_port(port)) {
 		LOG(LOG_ERROR, "Owner portno caching to REST failed!\n");
 		goto end;
 	}
@@ -622,19 +618,20 @@ bool ConnectToOwner(SDOIPAddress_t *ip, uint16_t port, int *sock, void **ssl)
 
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
-		if (((*sock = sdoConConnect(ip, port, ssl)) ==
-		     SDO_CON_INVALID_HANDLE) &&
+
+		*sock_hdl = sdo_con_connect(ip, port, ssl);
+		if ((*sock_hdl == SDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO,
 			    "Failed to connect to Owner server: retrying...\n");
-			sdoSleep(RETRY_DELAY);
+			sdo_sleep(RETRY_DELAY);
 		}
 	} else {
 		LOG(LOG_ERROR, "Invalid Connection info for Owner server!\n");
 		goto end;
 	}
 
-	if (SDO_CON_INVALID_HANDLE == *sock) {
+	if (SDO_CON_INVALID_HANDLE == *sock_hdl) {
 		LOG(LOG_ERROR, "Failed to connect to Owner: Giving up...\n");
 		goto end;
 	}
@@ -653,20 +650,20 @@ end:
  * handle etc..
  * @retval 0 on success. -1 on failure.
  */
-int sdoConnectionRestablish(SDOProtCtx_t *prot_ctx)
+int sdo_connection_restablish(sdo_prot_ctx_t *prot_ctx)
 {
 	int retries = OWNER_CONNECT_RETRIES;
 
 	/* re-connect using server-IP */
-	while (((prot_ctx->sock =
-		     sdoConConnect(prot_ctx->host_ip, prot_ctx->host_port,
-				   prot_ctx->ssl)) == SDO_CON_INVALID_HANDLE) &&
+	while (((prot_ctx->sock_hdl = sdo_con_connect(
+		     prot_ctx->host_ip, prot_ctx->host_port, prot_ctx->ssl)) ==
+		SDO_CON_INVALID_HANDLE) &&
 	       retries--) {
 		LOG(LOG_INFO, "Failed reconnecting to server: retrying...");
-		sdoSleep(RETRY_DELAY);
+		sdo_sleep(RETRY_DELAY);
 	}
 
-	if (prot_ctx->sock == SDO_CON_INVALID_HANDLE) {
+	if (prot_ctx->sock_hdl == SDO_CON_INVALID_HANDLE) {
 		LOG(LOG_ERROR, "Failed reconnecting to server: Giving up...");
 		return -1;
 	} else

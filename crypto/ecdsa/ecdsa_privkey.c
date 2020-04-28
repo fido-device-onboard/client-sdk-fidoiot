@@ -12,6 +12,7 @@
 #include "storage_al.h"
 #include "util.h"
 #include "safe_lib.h"
+#include "ecdsa_privkey.h"
 
 /**
  * Convert the stored ecdsa privkey to buffer
@@ -32,7 +33,7 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 	}
 
 	/* Get the ECDSA private key size from storage */
-	privkeysize = sdoBlobSize((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA);
+	privkeysize = sdo_blob_size((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA);
 	if (privkeysize <= 0) {
 		LOG(LOG_ERROR, "No ECDSA private key exists\n");
 		goto err;
@@ -44,14 +45,14 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 #endif
 
 	/* Read private key in buffer */
-	privkey = sdoAlloc(privkeysize + (is_pem ? 1 : 0));
+	privkey = sdo_alloc(privkeysize + (is_pem ? 1 : 0));
 	if (!privkey) {
 		LOG(LOG_ERROR, "Malloc Failed for ECDSA private key\n");
 		goto err;
 	}
 
-	ret = sdoBlobRead((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
-			  (uint8_t *)privkey, privkeysize);
+	ret = sdo_blob_read((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
+			    (uint8_t *)privkey, privkeysize);
 	if (ret == -1) {
 		LOG(LOG_ERROR, "Reading private key for ECDSA Failed\n");
 		goto err;
@@ -71,7 +72,7 @@ err:
 	if (privkey) {
 		if (memset_s(privkey, privkeysize, 0) != 0)
 			LOG(LOG_ERROR, "Memset Failed\n");
-		sdoFree(privkey);
+		sdo_free(privkey);
 	}
 	return ret;
 }

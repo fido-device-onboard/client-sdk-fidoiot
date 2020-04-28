@@ -35,8 +35,10 @@ include $(BASE_DIR)/base.mk
 O = build/$(TARGET_OS)/$(BUILD)/$(BOARD)
 ifeq "$(TARGET_OS)" "linux"
     export OBJ_DIR_TLS = $(O)/crypto
-    export OBJ_DIR_OS = $(O)/hal/os
+    export OBJ_DIR_OS = $(O)/network
     export OBJ_DIR_STORAGE = $(O)/storage/linux
+    export OBJ_DIR_STORAGE_COMMON = $(O)/storage/
+    export OBJ_DIR_MODULES =  $(O)/modules/
 endif
 ifeq ($(CRYPTO_HW), true)
     export OBJ_DIR_SE = $(O)/crypto/se
@@ -44,8 +46,17 @@ endif
 
 include $(BASE_DIR)/crypto/build.mk
 CFLAGS += $(CRYPTO_CFLAGS)
-CFLAGS += -I$(BASE_DIR)/hal/epid/include
+CFLAGS += -I$(BASE_DIR)/crypto/epid/include
 CFLAGS += -I$(BASE_DIR)/crypto/include -I$(BASE_DIR)/crypto/ecdsa/
+
+# Enable restrictive C-flags
+CFLAGS += -Wswitch-default -Wunused-parameter -Wsign-compare #-Wdeclaration-after-statement
+CFLAGS += -Wpedantic -Werror -Wimplicit-function-declaration -Wnested-externs -Wmissing-prototypes
+CFLAGS += -Wmissing-declarations -Wdiscarded-qualifiers -Wundef -Wincompatible-pointer-types
+CFLAGS += -Wunused-function -Wunused-variable -Wstrict-prototypes -Wshadow
+
+# Exceptions for now
+CFLAGS += -Wno-declaration-after-statement
 
 # Include storage into the build
 include $(BASE_DIR)/storage/build.mk
@@ -113,7 +124,7 @@ export OBJ_DIR_EPID = $(O)/epid
 export OBJ_DIR_APP = $(O)/app
 export MBEDOS_ROOT = $(BASE_DIR)/mbedos
 else
-export OBJ_DIR_EPID = $(O)/hal/epid
+export OBJ_DIR_EPID = $(O)/crypto/epid
 export OBJ_DIR_APP = $(O)/app
 export LIB_DIR = $(O)/lib/libsdo
 export ESP32_ROOT = $(BASE_DIR)/esp32
@@ -209,6 +220,10 @@ LDFLAGS += -L$(LIB_DIR)
 LDFLAGS += -z noexecstack -z relro -z now
 LDLIBS += -Wl,--whole-archive -lsdo
 
+ifneq ($(OPENSSL_BIN_ROOT),)
+LDFLAGS += -L$(OPENSSL_BIN_ROOT)/lib
+endif
+
 #Include Safe String library
 LDFLAGS +=-L$(SAFESTRING_ROOT)/
 LDLIBS +=-l:libsafestring.a
@@ -216,12 +231,14 @@ LDLIBS +=-l:libsafestring.a
 ifeq ($(PROXY_DISCOVERY), true)
 LDLIBS += -lproxy
 endif
+
 ifeq ($(MODULES), true)
 #Include Module libraries
-LDFLAGS +=-L$(SDO_SYS_ROOT)/ -L$(SERVICE_INFO_DEVICE_MODULE_ROOT)/sdo_sys
-LDLIBS +=-l:libsdo_sys.a
-LDFLAGS +=-L$(SDO_SYS_ROOT)/../utils -L$(SERVICE_INFO_DEVICE_MODULE_ROOT)/utils
-LDLIBS +=-l:libutil.a
+SERVICE_INFO_DEVICE_MODULE_ROOT = device_modules
+LDFLAGS += -L$(SERVICE_INFO_DEVICE_MODULE_ROOT)/utils
+LDLIBS += -l:libutil.a
+LDFLAGS += -L$(SERVICE_INFO_DEVICE_MODULE_ROOT)/sdo_sys
+LDLIBS += -l:libsdo_sys.a
 endif
 
 ifeq ($(TLS), openssl)
@@ -270,17 +287,24 @@ endif
 #end of linux
 
 ifeq ($(DA),epid)
-lib: obj_mkdir epid os gen_epid_blob hal
+lib: obj_mkdir epid os gen_epid_blob hal srvc_mods
 else #skip epid build in case DA=ecdsaXXX
-lib: obj_mkdir os gen_epid_blob hal
+lib: obj_mkdir os gen_epid_blob hal srvc_mods
 endif
 	$(MAKE) -C $(BASE_DIR)/lib -f lib.mk O=$(O) $(PARAM_LST)
 
+srvc_mods:
+ifeq ($(MODULES),true)
+	$(MAKE) -C $(SERVICE_INFO_DEVICE_MODULE_ROOT) O=$(O) $(PARAM_LST)
+else
+	$(info  service modules not used)
+endif
+
 epid:
-	$(MAKE) -C $(BASE_DIR)/hal/epid -f epid.mk O=$(O) $(PARAM_LST)
+	$(MAKE) -C $(BASE_DIR)/crypto/epid -f epid.mk O=$(O) $(PARAM_LST)
 
 os:
-	$(MAKE) -C $(BASE_DIR)/hal/os -f os.mk O=$(O) $(PARAM_LST)
+	$(MAKE) -C $(BASE_DIR)/network -f network.mk O=$(O) $(PARAM_LST)
 
 gen_epid_blob:
 	$(BASE_DIR)/gen_epid_blob.sh ./
@@ -295,6 +319,7 @@ ifeq ($(DA),$(filter $(DA),ecdsa256 ecdsa384 tpm20_ecdsa256 tpm20_ecdsa384))
 	mkdir -p $(O)/crypto/ecdsa/
 endif
 	mkdir -p $(O)/storage/$(TARGET_OS)
+
 
 lib-obj-y += $(srcs-y:.c=.o)
 $(lib-obj-y): %.o: %.c
@@ -319,6 +344,9 @@ clean:
 	echo '{"ST":1}' > ./data/Normal.blob
 	echo -n > ./data/Secure.blob
 	echo -n > ./data/raw.blob
+ifeq ($(MODULES),true)
+	$(MAKE) -C $(SERVICE_INFO_DEVICE_MODULE_ROOT) clean
+endif
 
 pristine: clean local-pristine
 
@@ -349,16 +377,16 @@ local-help:
 	$(info )
 	$(info List of supported TARGET_OS:)
 	$(info TARGET_OS=linux       # (Default))
-	$(info TARGET_OS=mbedos      # (Mbed OS v5.9.5))
+	$(info TARGET_OS=mbedos      # (Mbed OS v5.9.14))
 	$(info )
 	$(info List of supported boards (valid only when TARGET_OS=mbedos):)
 	$(info BOARD=NUCLEO_F767ZI   # (When building for STM32F767ZI MCU))
 	$(info BOARD=NUCLEO_F429ZI   # (When building for STM32F429ZI MCU))
 	$(info )
 	$(info List of key exchange options:)
-	$(info KEX=dh                # use Diffie-Hellman key exchange mechanism during TO2 (default))
+	$(info KEX=dh                # use Diffie-Hellman key exchange mechanism during TO2)
 	$(info KEX=asym              # use Asymmetric key exchange mechanism during TO2)
-	$(info KEX=ecdh              # use Elliptic-curve Diffie–Hellman key exchange mechanism during TO2)
+	$(info KEX=ecdh              # use Elliptic-curve Diffie–Hellman key exchange mechanism during TO2 (default))
 	$(info KEX=ecdh384           # use Elliptic-curve Diffie–Hellman 384 bit key exchange mechanism during TO2)
 	$(info )
 	$(info List of AES encryption modes:)
@@ -374,8 +402,8 @@ local-help:
 	$(info DA_FILE=pem           # only Use if ECDSA private keys are PEM encoded)
 	$(info )
 	$(info List of Public Key encoding/owner-attestation options:)
-	$(info PK_ENC=rsa            # Use RSAMODEXP-RSA2048RESTR public key encoding (default))
-	$(info PK_ENC=ecdsa          # Use ECDSA-X.509 based public key encoding)
+	$(info PK_ENC=rsa            # Use RSAMODEXP-RSA2048RESTR public key encoding)
+	$(info PK_ENC=ecdsa          # Use ECDSA-X.509 based public key encoding (default))
 	$(info )
 	$(info Underlying crypto library to be used:)
 	$(info TLS=openssl           # (Linux default, not supported for other TARGET_OS))

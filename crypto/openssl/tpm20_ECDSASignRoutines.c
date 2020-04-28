@@ -20,14 +20,15 @@
 /**
  * Sign a message using provided ECDSA Private Keys.
  * @param data - pointer of type uint8_t, holds the plaintext message.
- * @param dataLen - size of message, type size_t.
- * @param messageSignature - pointer of type unsigned char, which will be
+ * @param data_len - size of message, type size_t.
+ * @param message_signature - pointer of type unsigned char, which will be
  * by filled with signature.
- * @param signatureLength - size of signature, pointer of type size_t.
+ * @param signature_length - size of signature, pointer of type size_t.
  * @return 0 if success, else -1.
  */
-int32_t sdoECDSASign(const uint8_t *data, size_t dataLen,
-		     unsigned char *messageSignature, size_t *signatureLength)
+int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
+		       unsigned char *message_signature,
+		       size_t *signature_length)
 {
 	int32_t ret = -1;
 	const char *engine_id = "dynamic";
@@ -35,21 +36,21 @@ int32_t sdoECDSASign(const uint8_t *data, size_t dataLen,
 	EC_KEY *eckey = NULL;
 	uint8_t digest[SHA384_DIGEST_SIZE] = {0};
 	ENGINE *engine = NULL;
-	size_t hashLength = 0;
+	size_t hash_length = 0;
 
-	if (!data || !dataLen || !messageSignature || !signatureLength) {
+	if (!data || !data_len || !message_signature || !signature_length) {
 		LOG(LOG_ERROR, "Invalid Parameters received.");
 		goto error;
 	}
 #if defined(ECDSA256_DA)
-	hashLength = SHA256_DIGEST_SIZE;
-	if (SHA256(data, dataLen, digest) == NULL) {
+	hash_length = SHA256_DIGEST_SIZE;
+	if (SHA256(data, data_len, digest) == NULL) {
 		LOG(LOG_DEBUG, "SHA256 digest generation failed.");
 		goto error;
 	}
 #elif defined(ECDSA384_DA)
-	hashLength = SHA384_DIGEST_SIZE;
-	if (SHA384(data, dataLen, digest) == NULL) {
+	hash_length = SHA384_DIGEST_SIZE;
+	if (SHA384(data, data_len, digest) == NULL) {
 		LOG(LOG_DEBUG, "SHA384 digest generation failed.");
 		goto error;
 	}
@@ -101,8 +102,8 @@ int32_t sdoECDSASign(const uint8_t *data, size_t dataLen,
 	LOG(LOG_DEBUG, "ECDSA signature generation - "
 		       "ECC key successfully loaded.\n");
 
-	if (0 == ECDSA_sign(0, digest, hashLength, messageSignature,
-			    (unsigned int *)signatureLength, eckey)) {
+	if (0 == ECDSA_sign(0, digest, hash_length, message_signature,
+			    (unsigned int *)signature_length, eckey)) {
 		LOG(LOG_DEBUG, "Failed to generate ECDSA signature.\n");
 		goto error;
 	}

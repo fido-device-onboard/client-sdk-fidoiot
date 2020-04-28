@@ -7,13 +7,14 @@
 #define __SDOMODULES_H__
 
 /*
- * SDO module specific #defs (SvInfo)
+ * SDO module specific #defs (Sv_info)
  */
 #define SDO_MODULE_NAME_LEN 32
 #define SDO_MODULE_MSG_LEN 32
 #define SDO_MODULE_VALUE_LEN 100
-#ifdef TARGET_OS_OPTEE
-#define SDO_MAX_MODULES 1
+
+#ifdef EXTRA_MODULES
+#define SDO_MAX_MODULES 4
 #else
 #define SDO_MAX_MODULES 1
 #endif
@@ -21,7 +22,7 @@
 /*==================================================================*/
 /* Service Info module registration functionality */
 
-// enum for ServiceInfo Types
+// enum for Service_info Types
 typedef enum {
 	SDO_SI_START,
 	SDO_SI_GET_DSI_COUNT,
@@ -30,30 +31,32 @@ typedef enum {
 	SDO_SI_SET_OSI,
 	SDO_SI_END,
 	SDO_SI_FAILURE
-} sdoSdkSiType;
+} sdo_sdk_si_type;
 
-// enum for SvInfo module CB return value
+// enum for Sv_info module CB return value
 enum { SDO_SI_CONTENT_ERROR, SDO_SI_INTERNAL_ERROR, SDO_SI_SUCCESS };
 
-typedef struct sdoSdkSiKeyValue {
+typedef struct sdo_sdk_si_key_value {
 	char *key;
 	char *value;
-} sdoSdkSiKeyValue;
+} sdo_sdk_si_key_value;
 
 // callback to module
-typedef int (*sdoSdkServiceInfoCB)(sdoSdkSiType type, int *count,
-				   sdoSdkSiKeyValue *si);
+typedef int (*sdo_sdk_service_infoCB)(sdo_sdk_si_type type, int *count,
+				      sdo_sdk_si_key_value *si);
 
 /* module struct for modules */
 typedef struct {
-	char moduleName[SDO_MODULE_NAME_LEN];
-	sdoSdkServiceInfoCB serviceInfoCallback;
-} sdoSdkServiceInfoModule;
+	char module_name[SDO_MODULE_NAME_LEN];
+	sdo_sdk_service_infoCB service_info_callback;
+} sdo_sdk_service_info_module;
 
 // Modules CB
-extern int devconfig(sdoSdkSiType type, int *count, sdoSdkSiKeyValue *si);
-extern int keypair(sdoSdkSiType type, int *count, sdoSdkSiKeyValue *si);
-extern int sdo_sys(sdoSdkSiType type, int *count, sdoSdkSiKeyValue *si);
-extern int pelionconfig(sdoSdkSiType type, int *count, sdoSdkSiKeyValue *si);
+extern int devconfig(sdo_sdk_si_type type, int *count,
+		     sdo_sdk_si_key_value *si);
+extern int keypair(sdo_sdk_si_type type, int *count, sdo_sdk_si_key_value *si);
+extern int sdo_sys(sdo_sdk_si_type type, int *count, sdo_sdk_si_key_value *si);
+extern int pelionconfig(sdo_sdk_si_type type, int *count,
+			sdo_sdk_si_key_value *si);
 
 #endif /* __SDOTYPES_H__ */

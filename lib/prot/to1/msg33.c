@@ -13,7 +13,7 @@
 #include "sdoprot.h"
 
 /**
- * msg33() - TO1.SDORedirect
+ * msg33() - TO1.sdo_redirect
  * This is the last message of TO1. The device receives the owner info from RV.
  *
  * --- Message Format Begins ---
@@ -31,22 +31,22 @@
  * --- Message Format Begins ---
  *
  */
-int32_t msg33(SDOProt_t *ps)
+int32_t msg33(sdo_prot_t *ps)
 {
 	int ret = -1;
-	SDOSig_t sig = {0};
-	int sigBlockSz = -1;
-	int sigBlockEnd = -1;
-	SDOHash_t *obHash = NULL;
+	sdo_sig_t sig = {0};
+	int sig_block_sz = -1;
+	int sig_block_end = -1;
+	sdo_hash_t *ob_hash = NULL;
 	char buf[DEBUGBUFSZ] = {0};
-	uint8_t *plainText = NULL;
-	SDOPublicKey_t *tempPk = NULL;
+	uint8_t *plain_text = NULL;
+	sdo_public_key_t *temp_pk = NULL;
 	char prot[] = "SDOProtTO1";
 
-	LOG(LOG_DEBUG, "\nStarting SDO_STATE_TO1_RCV_SDO_REDIRECT\n");
+	LOG(LOG_DEBUG, "\n_starting SDO_STATE_TO1_RCV_SDO_REDIRECT\n");
 
 	/* Try to read from internal buffer */
-	if (!sdoProtRcvMsg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
 		ret = 0; /*Mark for retry */
 		goto err;
 	}
@@ -55,13 +55,13 @@ int32_t msg33(SDOProt_t *ps)
 	 * Mark the beginning of "bo". The signature is calculated over
 	 * braces to braces, so, saving the offset of starting "bo"
 	 */
-	if (!sdoBeginReadSignature(&ps->sdor, &sig)) {
+	if (!sdo_begin_read_signature(&ps->sdor, &sig)) {
 		LOG(LOG_ERROR, "Could not read begin of signature\n");
 		goto err;
 	}
 
 	/* Start parsing the "bo" (body) data now */
-	if (!sdoRBeginObject(&ps->sdor)) {
+	if (!sdor_begin_object(&ps->sdor)) {
 		goto err;
 	}
 
@@ -69,28 +69,28 @@ int32_t msg33(SDOProt_t *ps)
 	 * difference */
 
 	/* Read "i1" tag/value: IP address of owner */
-	if (!sdoReadExpectedTag(&ps->sdor, "i1")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "i1")) {
 		goto err;
 	}
-	if (sdoReadIPAddress(&ps->sdor, &ps->i1) != true) {
+	if (sdo_read_ipaddress(&ps->sdor, &ps->i1) != true) {
 		LOG(LOG_ERROR, "Read IP Address Failed\n");
 		goto err;
 	}
 
 	/* Read "dns1" tag/value: URL of owner */
-	if (!sdoReadExpectedTag(&ps->sdor, "dns1")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "dns1")) {
 		goto err;
 	}
-	ps->dns1 = sdoReadDNS(&ps->sdor);
+	ps->dns1 = sdo_read_dns(&ps->sdor);
 
 	/* Read "port1" tag/value: Port of owner machine */
-	if (!sdoReadExpectedTag(&ps->sdor, "port1")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "port1")) {
 		goto err;
 	}
-	ps->port1 = sdoReadUInt(&ps->sdor);
+	ps->port1 = sdo_read_uint(&ps->sdor);
 
 	/* Read "to0dh" tag/value: Owner hash sent to RV */
-	if (!sdoReadExpectedTag(&ps->sdor, "to0dh")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "to0dh")) {
 		goto err;
 	}
 
@@ -99,41 +99,41 @@ int32_t msg33(SDOProt_t *ps)
 	 * Do we have an API, where we just increased the cursor
 	 * and not read the data at all?
 	 */
-	obHash = sdoHashAllocEmpty();
-	if (!obHash || !sdoHashRead(&ps->sdor, obHash)) {
+	ob_hash = sdo_hash_alloc_empty();
+	if (!ob_hash || !sdo_hash_read(&ps->sdor, ob_hash)) {
 		goto err;
 	}
 
 	/* Mark the end of "bo" tag */
-	if (!sdoREndObject(&ps->sdor)) {
+	if (!sdor_end_object(&ps->sdor)) {
 		goto err;
 	}
 
 	/* Save the "bo" start and size. The signature is over this */
-	sigBlockEnd = ps->sdor.b.cursor;
-	sigBlockSz = sigBlockEnd - sig.sigBlockStart;
+	sig_block_end = ps->sdor.b.cursor;
+	sig_block_sz = sig_block_end - sig.sig_block_start;
 
 	/* Copy the full "bo" to ps */
-	plainText = sdoRGetBlockPtr(&ps->sdor, sig.sigBlockStart);
-	if (plainText == NULL) {
+	plain_text = sdor_get_block_ptr(&ps->sdor, sig.sig_block_start);
+	if (plain_text == NULL) {
 		ps->state = SDO_STATE_DONE;
 		goto err;
 	}
 
-	ps->SDORedirect.plainText = sdoByteArrayAlloc(sigBlockSz);
-	if (!ps->SDORedirect.plainText) {
+	ps->sdo_redirect.plain_text = sdo_byte_array_alloc(sig_block_sz);
+	if (!ps->sdo_redirect.plain_text) {
 		goto err;
 	}
-	if (memcpy_s(ps->SDORedirect.plainText->bytes, sigBlockSz, plainText,
-		     sigBlockSz) != 0) {
+	if (memcpy_s(ps->sdo_redirect.plain_text->bytes, sig_block_sz,
+		     plain_text, sig_block_sz) != 0) {
 		LOG(LOG_ERROR, "Memcpy failed\n");
 		goto err;
 	}
 
-	ps->SDORedirect.plainText->byteSz = sigBlockSz;
+	ps->sdo_redirect.plain_text->byte_sz = sig_block_sz;
 
 	/* Read the public key */
-	if (!sdoReadExpectedTag(&ps->sdor, "pk")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "pk")) {
 		goto err;
 	}
 
@@ -141,48 +141,48 @@ int32_t msg33(SDOProt_t *ps)
 	 * FIXME: Reading public key and freeing it. Why are we returning
 	 * a pointer to be freed
 	 */
-	tempPk = sdoPublicKeyRead(&ps->sdor);
-	if (tempPk) {
-		sdoPublicKeyFree(tempPk);
+	temp_pk = sdo_public_key_read(&ps->sdor);
+	if (temp_pk) {
+		sdo_public_key_free(temp_pk);
 	}
 
 	/* Read the "sg" tag/value */
-	if (!sdoReadExpectedTag(&ps->sdor, "sg")) {
+	if (!sdo_read_expected_tag(&ps->sdor, "sg")) {
 		goto err;
 	}
 
-	if (!sdoRBeginSequence(&ps->sdor)) {
+	if (!sdor_begin_sequence(&ps->sdor)) {
 		LOG(LOG_ERROR, "Not at beginning of sequence\n");
 		goto err;
 	}
 
 	/* These bytes will be thrown away, some issue with zero length */
-	ps->SDORedirect.Obsig = sdoByteArrayAlloc(16);
-	if (!ps->SDORedirect.Obsig) {
+	ps->sdo_redirect.obsig = sdo_byte_array_alloc(16);
+	if (!ps->sdo_redirect.obsig) {
 		goto err;
 	}
 
 	/* Read the signature to the signature object */
-	if (!sdoByteArrayRead(&ps->sdor, ps->SDORedirect.Obsig)) {
-		LOG(LOG_ERROR, "Obsig read error\n");
+	if (!sdo_byte_array_read(&ps->sdor, ps->sdo_redirect.obsig)) {
+		LOG(LOG_ERROR, "obsig read error\n");
 		goto err;
 	}
 
-	if (!sdoREndSequence(&ps->sdor)) {
+	if (!sdor_end_sequence(&ps->sdor)) {
 		goto err;
 	}
 
-	if (!sdoREndObject(&ps->sdor)) {
+	if (!sdor_end_object(&ps->sdor)) {
 		goto err;
 	}
 
 	/* TODO: Add support for signing message defined in spec
 	 * 0.8 */
 
-	sdoRFlush(&ps->sdor);
+	sdor_flush(&ps->sdor);
 
 	LOG(LOG_DEBUG, "Received redirect: %s\n",
-	    sdoIPAddressToString(&ps->i1, buf, sizeof buf) ? buf : "");
+	    sdo_ipaddress_to_string(&ps->i1, buf, sizeof buf) ? buf : "");
 
 	/* Mark as success and ready for TO2 */
 	ps->state = SDO_STATE_DONE;
@@ -190,12 +190,12 @@ int32_t msg33(SDOProt_t *ps)
 	LOG(LOG_DEBUG, "Complete SDO_STATE_TO1_RCV_SDO_REDIRECT\n");
 
 err:
-	if (ps->SDORedirect.Obsig && ret) {
-		sdoByteArrayFree(ps->SDORedirect.Obsig);
-		ps->SDORedirect.Obsig = NULL;
+	if (ps->sdo_redirect.obsig && ret) {
+		sdo_byte_array_free(ps->sdo_redirect.obsig);
+		ps->sdo_redirect.obsig = NULL;
 	}
-	if (obHash) {
-		sdoHashFree(obHash);
+	if (ob_hash) {
+		sdo_hash_free(ob_hash);
 	}
 	return ret;
 }

@@ -24,7 +24,7 @@
 #include "EthernetInterface.h"
 
 extern "C" int TO2_done;
-extern "C" void app_main();
+extern "C" void app_main(bool is_resale);
 
 #ifdef MODULES_ENABLED
 extern void cloud_main(SDBlockDevice *bd, FATFileSystem *fs);
@@ -35,6 +35,10 @@ extern void cloud_main(SDBlockDevice *bd, FATFileSystem *fs);
 SDBlockDevice bd(PE_6, PE_5, PE_2, PE_4);
 FATFileSystem fs(SD_MOUNT_POINT, &bd);
 #endif // defined(MBEDOS_SD_DATA)
+
+InterruptIn button(USER_BUTTON);
+DigitalOut led(LED1);
+double delay = 1000; // 1000 ms
 
 #if !defined(MBEDOS_SD_DATA)
 extern int initiate_files_firsttime(void);
@@ -83,7 +87,7 @@ void end_eth(void)
 	// delete &net;
 } // end end_eth
 
-int main()
+int do_onboarding(bool is_resale)
 {
 	int exit_code = MBEDTLS_EXIT_FAILURE;
 #ifdef MBED_MAJOR_VERSION
@@ -100,7 +104,7 @@ int main()
 		       exit_code);
 		return MBEDTLS_EXIT_FAILURE;
 	}
-	app_main();
+	app_main(is_resale);
 	if (TO2_done == 1) {
 #ifdef CLOUD_CLIENT
 		cloud_main(&bd, &fs);
@@ -115,4 +119,25 @@ int main()
 	mbedtls_platform_teardown(NULL);
 	printf("Done\n");
 	return 0;
+
+}
+
+void butn_released()
+{
+	do_onboarding(true);
+	delay = 200;
+	printf("Ready for resale -----\n");
+}
+
+int main()
+{
+
+	do_onboarding(false); //standard onboarding
+
+	button.rise(&butn_released);
+
+    while (1) {
+       led = !led;
+       thread_sleep_for(delay);
+    }
 }

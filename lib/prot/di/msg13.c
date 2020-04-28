@@ -19,35 +19,35 @@
  *
  * -no-body-
  */
-int32_t msg13(SDOProt_t *ps)
+int32_t msg13(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtDI";
-	SDODevCred_t *devCred = app_get_credentials();
+	sdo_dev_cred_t *dev_cred = app_get_credentials();
 
 	/* Check if we are able to read the device credentials from storage */
-	if (devCred == NULL) {
+	if (dev_cred == NULL) {
 		LOG(LOG_ERROR, "Device credentials missing\n");
 		goto err;
 	}
 
 	/* Read from the internal buffer to see if the data is there */
-	if (!sdoProtRcvMsg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
 		ret = 0; /* Try again */
 		goto err;
 	}
 
 	/* Generate hash of the public key received in msg11 */
-	sdoRFlush(&ps->sdor);
-	devCred->ownerBlk->pkh = sdoPubKeyHash(devCred->ownerBlk->pk);
-	if (!devCred->ownerBlk->pkh) {
+	sdor_flush(&ps->sdor);
+	dev_cred->owner_blk->pkh = sdo_pub_key_hash(dev_cred->owner_blk->pk);
+	if (!dev_cred->owner_blk->pkh) {
 		LOG(LOG_ERROR, "Hash creation of manufacturer pk failed\n");
 		goto err;
 	}
 
 	/* Update the state of device to be ready for TO1 */
-	ps->devCred->ST = SDO_DEVICE_STATE_READY1;
-	if (store_credential(ps->devCred) != 0) {
+	ps->dev_cred->ST = SDO_DEVICE_STATE_READY1;
+	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "Failed to store updated device state\n");
 		goto err;
 	}

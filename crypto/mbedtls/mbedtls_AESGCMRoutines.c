@@ -15,51 +15,52 @@
 #include "crypto_utils.h"
 #include "safe_lib.h"
 /**
- * sdoCryptoAESGcmEncrypt -  Perform Authenticated AES encryption on the input
- * plain text.
+ * sdo_crypto_aes_gcm_encrypt -  Perform Authenticated AES encryption on the
+ * input plain text.
  *
- * @param plainText
+ * @param plain_text
  *        input plain-text to modify.
- * @param plainTextLength
+ * @param plain_text_length
  *        plain-text size in bytes.
- * @param cipherText
+ * @param cipher_text
  *        Encrypted text(output).
- * @param cipherTextLength
- * 	  Max length of Cipher Text
+ * @param cipher_text_length
+ *	  Max length of Cipher Text
  * @param iv
  *        AES encryption IV.
- * @param ivLength
+ * @param iv_length
  *        AES encryption IV size in bytes.
  * @param key
- *        Key in ByteArray format used in encryption.
- * @param keyLength
+ *        Key in Byte_array format used in encryption.
+ * @param key_length
  *        Key size in Bytes. Only AES128 is supported
  * @param tag
  *        tag added during encryption (output).
- * @param tagLength
+ * @param tag_length
  *        tag size in Bytes.
  * @return ret
- *        return cipherLength in bytes during success and -1 during any error.
+ *        return cipher_length in bytes during success and -1 during any error.
  */
-int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
-			       uint32_t plainTextLength, uint8_t *cipherText,
-			       uint32_t cipherTextLength, const uint8_t *iv,
-			       uint32_t ivLength, const uint8_t *key,
-			       uint32_t keyLength, uint8_t *tag,
-			       uint32_t tagLength)
+int32_t sdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
+				   uint32_t plain_text_length,
+				   uint8_t *cipher_text,
+				   uint32_t cipher_text_length,
+				   const uint8_t *iv, uint32_t iv_length,
+				   const uint8_t *key, uint32_t key_length,
+				   uint8_t *tag, uint32_t tag_length)
 {
 	int32_t retval = -1;
 	mbedtls_gcm_context ctx = {0};
 
-	if (NULL == plainText || 0 == plainTextLength || NULL == cipherText ||
-	    NULL == iv || 0 == ivLength || NULL == key ||
-	    keyLength != PLATFORM_AES_KEY_DEFAULT_LEN || NULL == tag ||
-	    tagLength != AES_GCM_TAG_LEN) {
+	if (NULL == plain_text || 0 == plain_text_length ||
+	    NULL == cipher_text || NULL == iv || 0 == iv_length ||
+	    NULL == key || key_length != PLATFORM_AES_KEY_DEFAULT_LEN ||
+	    NULL == tag || tag_length != AES_GCM_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
 		goto end;
 	}
 
-	if (cipherTextLength < plainTextLength) {
+	if (cipher_text_length < plain_text_length) {
 		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
 		goto end;
 	}
@@ -69,7 +70,7 @@ int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
 
 	/* Initialise the GCM key */
 	retval = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES,
-				    (const unsigned char *)key, keyLength * 8);
+				    (const unsigned char *)key, key_length * 8);
 	if (retval != 0) {
 		LOG(LOG_ERROR, "Key initialization failed!\n");
 		retval = -1;
@@ -78,15 +79,15 @@ int32_t sdoCryptoAESGcmEncrypt(const uint8_t *plainText,
 
 	/* Do gcm crypt on data */
 	retval = mbedtls_gcm_crypt_and_tag(
-	    &ctx, MBEDTLS_GCM_ENCRYPT, plainTextLength,
-	    (const unsigned char *)iv, ivLength, NULL, 0,
-	    (const unsigned char *)plainText, cipherText, tagLength, tag);
+	    &ctx, MBEDTLS_GCM_ENCRYPT, plain_text_length,
+	    (const unsigned char *)iv, iv_length, NULL, 0,
+	    (const unsigned char *)plain_text, cipher_text, tag_length, tag);
 	if (retval != 0) {
 		LOG(LOG_ERROR, "AES GCM encrypt failed!\n");
 		retval = -1;
 		goto end;
 	} else {
-		retval = plainTextLength;
+		retval = plain_text_length;
 	}
 
 end:
@@ -96,52 +97,53 @@ end:
 }
 
 /**
- * sdoCryptoAESGcmDecrypt -  Perform Authenticated AES decryption on the input
- * cipher text.
+ * sdo_crypto_aes_gcm_decrypt -  Perform Authenticated AES decryption on the
+ * input cipher text.
  *
- * @param clearText
+ * @param clear_text
  *        output clear-text.
- * @param clearTextLength
+ * @param clear_text_length
  *        max plain-text buffer size in bytes.
- * @param cipherText
+ * @param cipher_text
  *        Encrypted text(input).
- * @param cipherTextLength
+ * @param cipher_text_length
  *        Encrypted cipher-text size in Byte.
  * @param iv
  *        AES encryption IV.
- * @param ivLength
+ * @param iv_length
  *        AES encryption IV size in bytes.
  * @param key
- *        Key in ByteArray format used in encryption.
- * @param keyLength
+ *        Key in Byte_array format used in encryption.
+ * @param key_length
  *        Key size in Bytes. Only AES128 is supported
  * @param tag
  *        input authenticated tag which got added during encryption.
- * @param tagLength
+ * @param tag_length
  *        tag size in Bytes.
  * @return ret
- *        return clearTextLength in bytes during success and -1 during any
+ *        return clear_text_length in bytes during success and -1 during any
  * error.
  */
-int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
-			       const uint8_t *cipherText,
-			       uint32_t cipherTextLength, const uint8_t *iv,
-			       uint32_t ivLength, const uint8_t *key,
-			       uint32_t keyLength, uint8_t *tag,
-			       uint32_t tagLength)
+int32_t sdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
+				   uint32_t clear_text_length,
+				   const uint8_t *cipher_text,
+				   uint32_t cipher_text_length,
+				   const uint8_t *iv, uint32_t iv_length,
+				   const uint8_t *key, uint32_t key_length,
+				   uint8_t *tag, uint32_t tag_length)
 {
 	int32_t retval = -1;
 	mbedtls_gcm_context ctx = {0};
 
-	if (NULL == clearText || NULL == cipherText || 0 == cipherTextLength ||
-	    NULL == iv || 0 == ivLength || NULL == key ||
-	    keyLength != PLATFORM_AES_KEY_DEFAULT_LEN || NULL == tag ||
-	    tagLength != AES_GCM_TAG_LEN) {
+	if (NULL == clear_text || NULL == cipher_text ||
+	    0 == cipher_text_length || NULL == iv || 0 == iv_length ||
+	    NULL == key || key_length != PLATFORM_AES_KEY_DEFAULT_LEN ||
+	    NULL == tag || tag_length != AES_GCM_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
 		goto end;
 	}
 
-	if (clearTextLength < cipherTextLength) {
+	if (clear_text_length < cipher_text_length) {
 		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
 		goto end;
 	}
@@ -151,7 +153,7 @@ int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
 
 	/* Initialise the GCM key */
 	retval = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES,
-				    (const unsigned char *)key, keyLength * 8);
+				    (const unsigned char *)key, key_length * 8);
 	if (retval != 0) {
 		LOG(LOG_ERROR, "Key initialization failed!\n");
 		retval = -1;
@@ -160,15 +162,15 @@ int32_t sdoCryptoAESGcmDecrypt(uint8_t *clearText, uint32_t clearTextLength,
 
 	/* Do gcm crypt on data */
 	retval = mbedtls_gcm_auth_decrypt(
-	    &ctx, cipherTextLength, (const unsigned char *)iv, ivLength, NULL,
-	    0, (const unsigned char *)tag, tagLength,
-	    (const unsigned char *)cipherText, clearText);
+	    &ctx, cipher_text_length, (const unsigned char *)iv, iv_length,
+	    NULL, 0, (const unsigned char *)tag, tag_length,
+	    (const unsigned char *)cipher_text, clear_text);
 	if (retval != 0) {
 		LOG(LOG_ERROR, "AES GCM encrypt failed!\n");
 		retval = -1;
 		goto end;
 	} else {
-		retval = cipherTextLength;
+		retval = cipher_text_length;
 	}
 
 end:

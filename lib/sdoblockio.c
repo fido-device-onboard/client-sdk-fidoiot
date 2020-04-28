@@ -22,21 +22,19 @@
 /*
  * Internal function prototypes
  */
-bool _readExpectedChar(SDOR_t *sdor, char expected);
-bool _readComma(SDOR_t *sdor);
-// bool _readExpectedCharNC(SDOR_t *sdor, char expected);
-void _padstring(SDOW_t *sdow, const char *s, int len, bool escape);
-void _writespecialchar(SDOW_t *sdow, char c);
+bool _read_expected_char(sdor_t *sdor, char expected);
+bool _read_comma(sdor_t *sdor);
+// bool _read_expected_charNC(sdor_t *sdor, char expected);
+void _padstring(sdow_t *sdow, const char *s, int len, bool escape);
+void _writespecialchar(sdow_t *sdow, char c);
 
 // These are intended to be inlined...
-int SDOBPeekc(SDOBlock_t *sdob);
-int sdoBGetC(SDOBlock_t *sdob);
-void sdoSkipC(SDOBlock_t *sdob);
-void sdoBPutC(SDOBlock_t *sdob, char c);
+void sdo_skipC(sdo_block_t *sdob);
+void sdoBPutC(sdo_block_t *sdob, char c);
 
-int SDOBPeekc(SDOBlock_t *sdob)
+int sdob_peekc(sdo_block_t *sdob)
 {
-	if ((NULL == sdob->block) || (sdob->cursor >= sdob->blockSize)) {
+	if ((NULL == sdob->block) || (sdob->cursor >= sdob->block_size)) {
 		return -1;
 	}
 	return sdob->block[sdob->cursor];
@@ -45,53 +43,55 @@ int SDOBPeekc(SDOBlock_t *sdob)
 /**
  * Internal API
  */
-int sdoBGetC(SDOBlock_t *sdob)
+int sdob_getc(sdo_block_t *sdob, char *c)
 {
-	if ((NULL == sdob->block) || (sdob->cursor >= sdob->blockSize)) {
+	if ((NULL == sdob->block) || (sdob->cursor >= sdob->block_size)) {
+		c = "";
 		return -1;
 	}
-	return sdob->block[sdob->cursor++];
+        *c = (char)sdob->block[sdob->cursor++];
+	return 0;
 }
 
 /**
  * Internal API
  */
-void sdoSkipC(SDOBlock_t *sdob)
+void sdo_skipC(sdo_block_t *sdob)
 {
-	if (sdob->cursor < sdob->blockSize)
+	if (sdob->cursor < sdob->block_size)
 		sdob->cursor++;
 }
 
 /**
  * Internal API
  */
-void sdoBPutC(SDOBlock_t *sdob, char c)
+void sdoBPutC(sdo_block_t *sdob, char c)
 {
-	if (sdob->cursor >= sdob->blockMax)
-		sdoResizeBlock(sdob, sdob->blockMax + 1);
+	if (sdob->cursor >= sdob->block_max)
+		sdo_resize_block(sdob, sdob->block_max + 1);
 	sdob->block[sdob->cursor++] = c;
 }
 
 /**
  * Internal API
  */
-void sdoBlockInit(SDOBlock_t *sdob)
+void sdo_block_init(sdo_block_t *sdob)
 {
 	if (sdob->block != NULL)
-		sdoFree(sdob->block);
+		sdo_free(sdob->block);
 	sdob->block = NULL;
-	sdob->blockMax = 0;
-	sdoBlockReset(sdob);
+	sdob->block_max = 0;
+	sdo_block_reset(sdob);
 }
 
 /**
  * Internal API
  */
-void sdoBlockReset(SDOBlock_t *sdob)
+void sdo_block_reset(sdo_block_t *sdob)
 {
 	if (sdob) {
 		sdob->cursor = 0;
-		sdob->blockSize = 0;
+		sdob->block_size = 0;
 	}
 }
 
@@ -99,7 +99,7 @@ void sdoBlockReset(SDOBlock_t *sdob)
 /**
  * Internal API
  */
-int hexitToInt(int c)
+int hexit_to_int(int c)
 {
 	if (c >= '0' && c <= '9')
 		return c - '0';
@@ -107,16 +107,16 @@ int hexitToInt(int c)
 		return c - 'a' + 10;
 	else if (c >= 'A' && c <= 'F')
 		return c - 'A' + 10;
-	else {
-		LOG(LOG_ERROR, "SDO: expected hex digit, got %c\n", c);
-		return 0;
-	}
+
+	LOG(LOG_ERROR, "SDO: expected hex digit, got %c\n", c);
+	return 0;
+
 }
 
 /**
  * Internal API
  */
-int intToHexit(int v)
+int int_to_hexit(int v)
 {
 	v &= 0xf;
 	return v + (v <= 9 ? '0' : 'a' - 10);
@@ -126,12 +126,13 @@ int intToHexit(int v)
 /**
  * Internal API
  */
-void sdoResizeBlock(SDOBlock_t *sdob, int need)
+void sdo_resize_block(sdo_block_t *sdob, int need)
 {
-	if (need > sdob->blockMax) {
-		int newSize = (need + SDO_BLOCKINC - 1) & SDO_BLOCK_MASK;
-		sdob->block = realloc(sdob->block, newSize);
-		sdob->blockMax = newSize;
+	if (need > sdob->block_max) {
+		int new_size = (need + SDO_BLOCKINC - 1) & SDO_BLOCK_MASK;
+
+		sdob->block = realloc(sdob->block, new_size);
+		sdob->block_max = new_size;
 
 		if (!sdob->block) {
 			LOG(LOG_ERROR, "realloc failure at %s:%d\r\n", __FILE__,
@@ -148,23 +149,23 @@ void sdoResizeBlock(SDOBlock_t *sdob, int need)
  * @param rcv - Pointer to function that can parse received file using SDOR(like
  *              sdoFILERecv).
  *
- * @param rcvData - Pointer to received file data.
+ * @param rcv_data - Pointer to received file data.
  *
  * @return
  *        return 0 on success. -ve value on failure.
  */
-bool sdoRInit(SDOR_t *sdor, SDOReceiveFcnPtr_t rcv, void *rcvData)
+bool sdor_init(sdor_t *sdor, SDOReceive_fcn_ptr_t rcv, void *rcv_data)
 {
-	if (memset_s(sdor, sizeof *sdor, 0) != 0) {
+	if (memset_s(sdor, sizeof(*sdor), 0) != 0) {
 		LOG(LOG_ERROR, "SDOR memset() failed!\n");
 		return false;
 	}
 
-	sdoBlockInit(&sdor->b);
+	sdo_block_init(&sdor->b);
 
 	sdor->receive = rcv;
-	sdor->receiveData = rcvData;
-	sdor->haveBlock = false;
+	sdor->receive_data = rcv_data;
+	sdor->have_block = false;
 
 	return true;
 }
@@ -172,87 +173,93 @@ bool sdoRInit(SDOR_t *sdor, SDOReceiveFcnPtr_t rcv, void *rcvData)
 /**
  * Internal API
  */
-int sdoRPeek(SDOR_t *sdor)
+int sdor_peek(sdor_t *sdor)
 {
-	SDOBlock_t *sdob = &sdor->b;
-	return SDOBPeekc(sdob);
+	sdo_block_t *sdob = &sdor->b;
+
+	return sdob_peekc(sdob);
 }
 
 /**
  * Internal API
  */
-void sdoRFlush(SDOR_t *sdor)
+void sdor_flush(sdor_t *sdor)
 {
-	SDOBlock_t *sdob = &sdor->b;
-	sdoBlockReset(sdob);
-	sdor->needComma = false;
-	sdor->haveBlock = false;
+	sdo_block_t *sdob = &sdor->b;
+
+	sdo_block_reset(sdob);
+	sdor->need_comma = false;
+	sdor->have_block = false;
 }
 
 /**
  * Internal API
  */
-bool sdoRHaveBlock(SDOR_t *sdor)
+bool sdor_have_block(sdor_t *sdor)
 {
-	return sdor->haveBlock;
+	return sdor->have_block;
 }
 
 /**
  * Internal API
  */
-void sdoRSetHaveBlock(SDOR_t *sdor)
+void sdor_set_have_block(sdor_t *sdor)
 {
-	sdor->haveBlock = true;
+	sdor->have_block = true;
 }
 
 /**
  * Internal API
  */
-bool sdoRNextBlock(SDOR_t *sdor, uint32_t *typep)
+bool sdor_next_block(sdor_t *sdor, uint32_t *typep)
 {
-	if (!sdor->haveBlock)
+	if (!sdor->have_block)
 		return false;
 
-	*typep = sdor->msgType;
-	//	sdoRBeginObject(sdor);
+	*typep = sdor->msg_type;
+	//	sdor_begin_object(sdor);
 	return true;
 }
 
 /**
  * Internal API
  */
-uint8_t *sdoRGetBlockPtr(SDOR_t *sdor, int fromCursor)
+uint8_t *sdor_get_block_ptr(sdor_t *sdor, int from_cursor)
 {
-	if (fromCursor < 0)
-		fromCursor = sdor->b.cursor;
-	if (fromCursor > sdor->b.blockSize) {
-		LOG(LOG_ERROR, "sdoRGetBlockPtr(%u) is too big\n", fromCursor);
+	if (from_cursor < 0)
+		from_cursor = sdor->b.cursor;
+	if (from_cursor > sdor->b.block_size) {
+		LOG(LOG_ERROR, "%s(%u) is too big\n",
+		    __func__, from_cursor);
 		return NULL;
 	}
-	return &sdor->b.block[fromCursor];
+	return &sdor->b.block[from_cursor];
 }
 
 /**
  * Internal API
  */
-uint8_t *sdoWGetBlockPtr(SDOW_t *sdow, int fromCursor)
+uint8_t *sdow_get_block_ptr(sdow_t *sdow, int from_cursor)
 {
-	if (fromCursor < 0)
-		fromCursor = sdow->b.cursor;
-	if (fromCursor > sdow->b.blockSize) {
-		LOG(LOG_ERROR, "sdoWGetBlockPtr(%u) is too big\n", fromCursor);
+	if (from_cursor < 0)
+		from_cursor = sdow->b.cursor;
+	if (from_cursor > sdow->b.block_size) {
+		LOG(LOG_ERROR, "%s(%u) is too big\n",
+		    __func__, from_cursor);
 		return NULL;
 	}
-	return &sdow->b.block[fromCursor];
+	return &sdow->b.block[from_cursor];
 }
 
 /**
  * Internal API
  */
-bool _readExpectedChar(SDOR_t *sdor, char expected)
+bool _read_expected_char(sdor_t *sdor, char expected)
 {
-	char c = sdoBGetC(&sdor->b);
-	if (c != expected) {
+	char c;
+	int ret_value = sdob_getc(&sdor->b, &c);
+
+	if ((0 != ret_value) || (c != expected)) {
 		LOG(LOG_ERROR, "expected '%c' at cursor %u, got '%c'.\n",
 		    expected, sdor->b.cursor - 1, c);
 		return false;
@@ -263,11 +270,11 @@ bool _readExpectedChar(SDOR_t *sdor, char expected)
 /**
  * Internal API
  */
-bool _readComma(SDOR_t *sdor)
+bool _read_comma(sdor_t *sdor)
 {
-	if (sdor->needComma) {
-		sdor->needComma = false;
-		return _readExpectedChar(sdor, ',');
+	if (sdor->need_comma) {
+		sdor->need_comma = false;
+		return _read_expected_char(sdor, ',');
 	}
 	return true;
 }
@@ -275,70 +282,74 @@ bool _readComma(SDOR_t *sdor)
 /**
  * Internal API
  */
-bool _readExpectedCharCommaBefore(SDOR_t *sdor, char expected)
+static bool _read_expected_char_comma_before(sdor_t *sdor, char expected)
 {
 	int r;
-	if (!_readComma(sdor)) {
+
+	if (!_read_comma(sdor)) {
 		LOG(LOG_ERROR, "we were expecting , here!\n");
 		return false;
 	}
 
-	r = _readExpectedChar(sdor, expected);
-	sdor->needComma = false;
+	r = _read_expected_char(sdor, expected);
+	sdor->need_comma = false;
 	return r;
 }
 
 /**
  * Internal API
  */
-bool _readExpectedCharCommaAfter(SDOR_t *sdor, char expected)
+static bool _read_expected_char_comma_after(sdor_t *sdor, char expected)
 {
-	int r = _readExpectedChar(sdor, expected);
-	sdor->needComma = true;
+	int r = _read_expected_char(sdor, expected);
+
+	sdor->need_comma = true;
 	return r;
 }
 
 /**
  * Internal API
  */
-bool sdoRBeginSequence(SDOR_t *sdor)
+bool sdor_begin_sequence(sdor_t *sdor)
 {
-	return _readExpectedCharCommaBefore(sdor, '[');
+	return _read_expected_char_comma_before(sdor, '[');
 }
 
 /**
  * Internal API
  */
-bool sdoREndSequence(SDOR_t *sdor)
+bool sdor_end_sequence(sdor_t *sdor)
 {
-	return _readExpectedCharCommaAfter(sdor, ']');
+	return _read_expected_char_comma_after(sdor, ']');
 }
 
 /**
  * Internal API
  */
-bool sdoRBeginObject(SDOR_t *sdor)
+bool sdor_begin_object(sdor_t *sdor)
 {
-	return _readExpectedCharCommaBefore(sdor, '{');
+	return _read_expected_char_comma_before(sdor, '{');
 }
 
 /**
  * Internal API
  */
-bool sdoREndObject(SDOR_t *sdor)
+bool sdor_end_object(sdor_t *sdor)
 {
-	return _readExpectedCharCommaAfter(sdor, '}');
+	return _read_expected_char_comma_after(sdor, '}');
 }
 
 /**
  * Internal API
  */
-void sdoRReadAndIgnoreUntil(SDOR_t *sdor, char expected)
+void sdor_read_and_ignore_until(sdor_t *sdor, char expected)
 {
 	char c;
+	int ret_value;
+
 	while (1) {
-		c = sdoBGetC(&sdor->b);
-		if (expected != c && c != '\0')
+		ret_value = sdob_getc(&sdor->b, &c);
+		if (0 == ret_value && expected != c && c != '\0')
 			continue;
 		break;
 	}
@@ -347,46 +358,46 @@ void sdoRReadAndIgnoreUntil(SDOR_t *sdor, char expected)
 /**
  * Internal API
  */
-void sdoRReadAndIgnoreUntilEndSequence(SDOR_t *sdor)
+void sdor_read_and_ignore_until_end_sequence(sdor_t *sdor)
 {
-	sdoRReadAndIgnoreUntil(sdor, ']');
-	sdor->needComma = true;
+	sdor_read_and_ignore_until(sdor, ']');
+	sdor->need_comma = true;
 }
 
 /**
  * Internal API
  */
-uint32_t sdoReadUInt(SDOR_t *sdor)
+uint32_t sdo_read_uint(sdor_t *sdor)
 {
 	uint32_t r = 0;
 	int c;
-	SDOBlock_t *sdob = &sdor->b;
+	sdo_block_t *sdob = &sdor->b;
 
-	if (!_readComma(sdor))
+	if (!_read_comma(sdor))
 		LOG(LOG_ERROR, "we were expecting , here!\n");
 
-	while ((c = SDOBPeekc(sdob)) != -1 && c >= '0' && c <= '9') {
-		sdoSkipC(sdob);
+	while ((c = sdob_peekc(sdob)) != -1 && c >= '0' && c <= '9') {
+		sdo_skipC(sdob);
 		r = (r * 10) + (c - '0');
 	}
-	sdor->needComma = true;
+	sdor->need_comma = true;
 	return r;
 }
 
 /**
  * Internal API
  */
-int sdoReadStringSz(SDOR_t *sdor)
+int sdo_read_string_sz(sdor_t *sdor)
 {
-	int n, saveCursor;
-	bool saveNeedComma;
+	int n, save_cursor;
+	bool save_need_comma;
 	char c;
 
-	saveNeedComma = sdor->needComma;
-	saveCursor = sdor->b.cursor;
-	n = sdoReadString(sdor, &c, 1);
-	sdor->b.cursor = saveCursor;
-	sdor->needComma = saveNeedComma;
+	save_need_comma = sdor->need_comma;
+	save_cursor = sdor->b.cursor;
+	n = sdo_read_string(sdor, &c, 1);
+	sdor->b.cursor = save_cursor;
+	sdor->need_comma = save_need_comma;
 	return n;
 }
 
@@ -395,20 +406,21 @@ int sdoReadStringSz(SDOR_t *sdor)
  * Read the complete array block without changing the cursor and
  * return the size required. i.e "[" to "]"
  */
-int sdoReadArraySz(SDOR_t *sdor)
+int sdo_read_array_sz(sdor_t *sdor)
 {
-	int saveCursor;
-	bool saveNeedComma;
+	int save_cursor;
+	bool save_need_comma;
 	char c;
-	uint32_t size_of_buffer = 0;
+	int32_t size_of_buffer = 0;
 	bool ct_end_wait = false;
+	int ret_value;
 
-	saveNeedComma = sdor->needComma;
-	saveCursor = sdor->b.cursor;
+	save_need_comma = sdor->need_comma;
+	save_cursor = sdor->b.cursor;
 	sdor->b.cursor--;
 	while (1) {
-		c = sdoBGetC(&sdor->b);
-		if (-1 == c) {
+		ret_value = sdob_getc(&sdor->b , &c);
+		if (-1 == ret_value) {
 			return -1;
 		}
 		size_of_buffer++;
@@ -426,8 +438,8 @@ int sdoReadArraySz(SDOR_t *sdor)
 		}
 	}
 
-	sdor->b.cursor = saveCursor;
-	sdor->needComma = saveNeedComma;
+	sdor->b.cursor = save_cursor;
+	sdor->need_comma = save_need_comma;
 	return size_of_buffer;
 }
 
@@ -436,20 +448,21 @@ int sdoReadArraySz(SDOR_t *sdor)
  * Read the complete array block without changing the cursor and
  * return the size populated in the buf. i.e "[" to "]"
  */
-int sdoReadArrayNoStateChange(SDOR_t *sdor, uint8_t *buf)
+int sdo_read_array_no_state_change(sdor_t *sdor, uint8_t *buf)
 {
-	int saveCursor;
-	bool saveNeedComma;
+	int save_cursor;
+	bool save_need_comma;
 	char c;
-	uint32_t size_of_buffer = 0;
+	int32_t size_of_buffer = 0;
 	bool ct_end_wait = false;
+	int ret_value;
 
-	saveNeedComma = sdor->needComma;
-	saveCursor = sdor->b.cursor;
+	save_need_comma = sdor->need_comma;
+	save_cursor = sdor->b.cursor;
 	sdor->b.cursor--;
 	while (1) {
-		c = sdoBGetC(&sdor->b);
-		if (-1 == c) {
+		ret_value = sdob_getc(&sdor->b, &c);
+		if (-1 == ret_value) {
 			return -1;
 		}
 		buf[size_of_buffer++] = c;
@@ -467,75 +480,79 @@ int sdoReadArrayNoStateChange(SDOR_t *sdor, uint8_t *buf)
 		}
 	}
 
-	sdor->b.cursor = saveCursor;
-	sdor->needComma = saveNeedComma;
+	sdor->b.cursor = save_cursor;
+	sdor->need_comma = save_need_comma;
 	return size_of_buffer;
 }
 
 /**
  * Internal API
  */
-int sdoReadString(SDOR_t *sdor, char *bufp, int bufSz)
+int sdo_read_string(sdor_t *sdor, char *bufp, int buf_sz)
 {
-	int n, c;
-	char *limit = bufp + (bufSz - 1);
-	SDOBlock_t *sdob = &sdor->b;
+	int n;
+	char c;
+	char *limit = bufp + (buf_sz - 1);
+	sdo_block_t *sdob = &sdor->b;
+	int ret_value;
 
-	if (!_readComma(sdor)) {
+	if (!_read_comma(sdor)) {
 		LOG(LOG_ERROR, "we were expecting , here!\n");
 		return 0;
 	}
 
-	if (!_readExpectedChar(sdor, '"')) {
+	if (!_read_expected_char(sdor, '"')) {
 		LOG(LOG_ERROR, "Expected char read is not \"\n");
 		return 0;
 	}
 
 	n = 0;
-	while ((c = sdoBGetC(sdob)) != '"' && c != -1) {
+	ret_value = sdob_getc(sdob, &c);
+	while (c != '"' && ret_value != -1) {
 		++n;
 		if (bufp < limit)
 			*bufp++ = c;
+		ret_value = sdob_getc(sdob, &c);
 	}
 	*bufp = 0;
-	sdor->needComma = true;
+	sdor->need_comma = true;
 	return n;
 }
 
 /**
  * Internal API
  */
-int sdoReadTag(SDOR_t *sdor, char *bufp, int bufSz)
+int sdo_read_tag(sdor_t *sdor, char *bufp, int buf_sz)
 {
-	int n = sdoReadString(sdor, bufp, bufSz);
+	int n = sdo_read_string(sdor, bufp, buf_sz);
 
-	if (!_readExpectedChar(sdor, ':')) {
+	if (!_read_expected_char(sdor, ':')) {
 		LOG(LOG_ERROR, "Expected char read is not :\n");
 		return 0;
 	}
 
-	sdor->needComma = false;
+	sdor->need_comma = false;
 	return n;
 }
 
 /**
  * Internal API
  */
-bool sdoReadTagFinisher(SDOR_t *sdor)
+bool sdo_read_tag_finisher(sdor_t *sdor)
 {
-	sdor->needComma = false;
-	return _readExpectedChar(sdor, ':');
+	sdor->need_comma = false;
+	return _read_expected_char(sdor, ':');
 }
 
 /**
  * Internal API
  */
-int sdoReadExpectedTag(SDOR_t *sdor, char *tag)
+int sdo_read_expected_tag(sdor_t *sdor, const char *tag)
 {
 	char buf[SDO_TAG_MAX_LEN] = {0};
 	int strcmp_result = 0;
 
-	sdoReadTag(sdor, &buf[0], sizeof buf);
+	sdo_read_tag(sdor, &buf[0], sizeof(buf));
 	strcmp_s(buf, SDO_TAG_MAX_LEN, tag, &strcmp_result);
 	if (strcmp_result == 0)
 		return 1;
@@ -547,48 +564,51 @@ int sdoReadExpectedTag(SDOR_t *sdor, char *tag)
 /**
  * Internal API
  */
-int sdoReadBigNumField(SDOR_t *sdor, uint8_t *bufp, int bufSz)
+int sdo_read_big_num_field(sdor_t *sdor, uint8_t *bufp, int buf_sz)
 {
-	return sdoReadBigNumAsteriskHack(sdor, bufp, bufSz, NULL);
+	return sdo_read_big_num_asterisk_hack(sdor, bufp, buf_sz, NULL);
 }
 
 /**
  * Internal API
  */
-int sdoReadBigNumAsteriskHack(SDOR_t *sdor, uint8_t *bufp, int bufSz,
-			      bool *haveAsterisk)
+int sdo_read_big_num_asterisk_hack(sdor_t *sdor, uint8_t *bufp, int buf_sz,
+			      bool *have_asterisk)
 {
 	int n, c, v;
-	uint8_t *limit = bufp + bufSz;
-	SDOBlock_t *sdob = &sdor->b;
+	uint8_t *limit = bufp + buf_sz;
+	sdo_block_t *sdob = &sdor->b;
+	int ret_value
 
-	if (!_readComma(sdor)) {
+	if (!_read_comma(sdor)) {
 		LOG(LOG_ERROR, "we were expecting , here!\n");
 		return 0;
 	}
 
-	if (!_readExpectedChar(sdor, '"')) {
+	if (!_read_expected_char(sdor, '"')) {
 		LOG(LOG_ERROR, "Expected char read is not \"\n");
 		return 0;
 	}
 
 	n = 0;
 	v = 0;
-	while ((c = sdoBGetC(sdob)) != '"' && c != -1) {
-		if (n == 0 && haveAsterisk != NULL && c == '*') {
-			*haveAsterisk = true;
+	ret_value = sdob_getc(sdob, &c);
+	while (c != '"' && ret_value != -1) {
+		if (n == 0 && have_asterisk != NULL && c == '*') {
+			*have_asterisk = true;
 			c = '0';
 		}
 		if ((n & 1) == 0) {
-			v = hexitToInt(c) << 4;
+			v = hexit_to_int(c) << 4;
 		} else {
-			v += hexitToInt(c);
+			v += hexit_to_int(c);
 			if (bufp < limit)
 				*bufp++ = v;
 		}
 		++n;
+		ret_value = sdob_getc(sdob, &c);
 	}
-	sdor->needComma = true;
+	sdor->need_comma = true;
 	return n >> 1;
 }
 #endif
@@ -596,21 +616,22 @@ int sdoReadBigNumAsteriskHack(SDOR_t *sdor, uint8_t *bufp, int bufSz,
 /**
  * Reads a byte array base64 into the buffer provided
  */
-int sdoReadByteArrayField(SDOR_t *sdor, int b64Sz, uint8_t *bufp, int bufSz)
+int sdo_read_byte_array_field(sdor_t *sdor, int b64Sz, uint8_t *bufp,
+			      int buf_sz)
 {
 	int converted = 0;
 
-	if (!_readComma(sdor)) {
+	if (!_read_comma(sdor)) {
 		LOG(LOG_ERROR, "we were expecting , here!\n");
 		goto err;
 	}
 
-	// LOG(LOG_ERROR, "SDOReadByteArray\n");
-	if (!_readExpectedChar(sdor, '"'))
+	// LOG(LOG_ERROR, "SDORead_byte_array\n");
+	if (!_read_expected_char(sdor, '"'))
 		goto err;
 
-	converted = b64ToBin((size_t)b64Sz, sdor->b.block, sdor->b.cursor,
-			     (size_t)bufSz, bufp, 0);
+	converted = b64To_bin((size_t)b64Sz, sdor->b.block, sdor->b.cursor,
+			      (size_t)buf_sz, bufp, 0);
 
 	if (converted == -1) {
 		LOG(LOG_ERROR, "Base64 string is invalid!\n");
@@ -618,10 +639,10 @@ int sdoReadByteArrayField(SDOR_t *sdor, int b64Sz, uint8_t *bufp, int bufSz)
 	}
 	sdor->b.cursor += b64Sz;
 
-	if (!_readExpectedChar(sdor, '"'))
+	if (!_read_expected_char(sdor, '"'))
 		goto err;
 
-	sdor->needComma = true;
+	sdor->need_comma = true;
 
 	return converted;
 
@@ -636,14 +657,14 @@ err:
 /**
  * SDOW - SDO Writer
  */
-bool sdoWInit(SDOW_t *sdow)
+bool sdow_init(sdow_t *sdow)
 {
-	if (memset_s(sdow, sizeof *sdow, 0) != 0) {
+	if (memset_s(sdow, sizeof(*sdow), 0) != 0) {
 		LOG(LOG_ERROR, "SDOW memset() failed!\n");
 		return false;
 	}
 
-	sdoBlockInit(&sdow->b);
+	sdo_block_init(&sdow->b);
 
 	return true;
 }
@@ -651,34 +672,36 @@ bool sdoWInit(SDOW_t *sdow)
 /**
  * Internal API
  */
-void sdoWBlockReset(SDOW_t *sdow)
+void sdow_block_reset(sdow_t *sdow)
 {
-	SDOBlock_t *sdob = &sdow->b;
-	sdob->cursor = sdob->blockSize = 0;
-	sdow->needComma = false;
+	sdo_block_t *sdob = &sdow->b;
+
+	sdob->cursor = sdob->block_size = 0;
+	sdow->need_comma = false;
 }
 
 /**
  * Internal API
  */
-int sdoWNextBlock(SDOW_t *sdow, int type)
+int sdow_next_block(sdow_t *sdow, int type)
 {
-	sdoWBlockReset(sdow);
-	sdow->msgType = type;
+	sdow_block_reset(sdow);
+	sdow->msg_type = type;
 	return true;
 }
 
 /**
  * Internal API
  */
-void _writeComma(SDOW_t *sdow)
+static void _write_comma(sdow_t *sdow)
 {
-	SDOBlock_t *sdob = &sdow->b;
-	if (sdow->needComma) {
-		sdow->needComma = false;
+	sdo_block_t *sdob = &sdow->b;
+
+	if (sdow->need_comma) {
+		sdow->need_comma = false;
 		sdoBPutC(sdob, ',');
-		if (sdob->blockSize < sdob->cursor)
-			sdob->blockSize = sdob->cursor;
+		if (sdob->block_size < sdob->cursor)
+			sdob->block_size = sdob->cursor;
 	}
 }
 
@@ -686,17 +709,18 @@ void _writeComma(SDOW_t *sdow)
  * Write a string to the block, extending block and converting
  * special characters.  Does NOT handle commas.
  */
-void _padstring(SDOW_t *sdow, const char *s, int len, bool escape)
+void _padstring(sdow_t *sdow, const char *s, int len, bool escape)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 	char ucode[10], *ucs;
 	unsigned char c;
+
 	while (len-- != 0 && (c = (unsigned char)*s++) != 0) {
 		if (escape &&
 		    (c < 0x20 || c > 0x7d || c == '[' || c == ']' || c == '"' ||
 		     c == '\\' || c == '{' || c == '}' || c == '&')) {
 
-			if (snprintf_s_i(ucode, sizeof ucode, "\\u%04x", c) <
+			if (snprintf_s_i(ucode, sizeof(ucode), "\\u%04x", c) <
 			    0) {
 				LOG(LOG_ERROR, "snprintf() failed!\n");
 				return;
@@ -709,28 +733,28 @@ void _padstring(SDOW_t *sdow, const char *s, int len, bool escape)
 			sdoBPutC(sdob, c);
 		}
 	}
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 
 /**
  * Internal API
  */
-void _writespecialchar(SDOW_t *sdow, char c)
+void _writespecialchar(sdow_t *sdow, char c)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 
-	_writeComma(sdow);
+	_write_comma(sdow);
 	sdoBPutC(sdob, c);
-	sdow->needComma = false;
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	sdow->need_comma = false;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 
 /**
  * Internal API
  */
-void sdoWBeginSequence(SDOW_t *sdow)
+void sdow_begin_sequence(sdow_t *sdow)
 {
 	_writespecialchar(sdow, '[');
 }
@@ -738,17 +762,17 @@ void sdoWBeginSequence(SDOW_t *sdow)
 /**
  * Internal API
  */
-void sdoWEndSequence(SDOW_t *sdow)
+void sdow_end_sequence(sdow_t *sdow)
 {
-	sdow->needComma = false;
+	sdow->need_comma = false;
 	_writespecialchar(sdow, ']');
-	sdow->needComma = true;
+	sdow->need_comma = true;
 }
 
 /**
  * Internal API
  */
-void sdoWBeginObject(SDOW_t *sdow)
+void sdow_begin_object(sdow_t *sdow)
 {
 	_writespecialchar(sdow, '{');
 }
@@ -756,97 +780,97 @@ void sdoWBeginObject(SDOW_t *sdow)
 /**
  * Internal API
  */
-void sdoWEndObject(SDOW_t *sdow)
+void sdow_end_object(sdow_t *sdow)
 {
-	sdow->needComma = false;
+	sdow->need_comma = false;
 	_writespecialchar(sdow, '}');
-	sdow->needComma = true;
+	sdow->need_comma = true;
 }
 
 /**
  * Internal API
  */
-void sdoWriteTag(SDOW_t *sdow, char *tag)
+void sdo_write_tag(sdow_t *sdow, const char *tag)
 {
-	sdoWriteString(sdow, tag);
-	sdow->needComma = false;
+	sdo_write_string(sdow, tag);
+	sdow->need_comma = false;
 	_writespecialchar(sdow, ':');
 }
 
 /**
  * Internal API
  */
-void sdoWriteTagLen(SDOW_t *sdow, char *tag, int len)
+void sdo_write_tag_len(sdow_t *sdow, const char *tag, int len)
 {
-	sdoWriteStringLen(sdow, tag, len);
-	sdow->needComma = false;
+	sdo_write_string_len(sdow, tag, len);
+	sdow->need_comma = false;
 	_writespecialchar(sdow, ':');
 }
 
 /**
  * Internal API
  */
-void sdoWriteUInt(SDOW_t *sdow, uint32_t i)
+void sdo_writeUInt(sdow_t *sdow, uint32_t i)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 	char num[20] = {0};
 
-	_writeComma(sdow);
+	_write_comma(sdow);
 	if (snprintf_s_i(num, sizeof(num), "%u", i) < 0) {
 		LOG(LOG_ERROR, "snprintf() failed!\n");
 		return;
 	}
 	_padstring(sdow, num, -1, false);
-	sdow->needComma = true;
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	sdow->need_comma = true;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 
 /**
  * Internal API
  */
-void sdoWriteString(SDOW_t *sdow, const char *s)
+void sdo_write_string(sdow_t *sdow, const char *s)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 
-	_writeComma(sdow);
+	_write_comma(sdow);
 	sdoBPutC(sdob, '"');
 	_padstring(sdow, s, -1, true);
 	sdoBPutC(sdob, '"');
-	sdow->needComma = true;
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	sdow->need_comma = true;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 
 /**
  * Internal API
  */
-void sdoWriteStringLen(SDOW_t *sdow, char *s, int len)
+void sdo_write_string_len(sdow_t *sdow, const char *s, int len)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 
-	_writeComma(sdow);
+	_write_comma(sdow);
 	sdoBPutC(sdob, '"');
 	_padstring(sdow, s, len, true);
 	sdoBPutC(sdob, '"');
-	sdow->needComma = true;
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	sdow->need_comma = true;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 #if 0
 /**
  * Internal API
  */
 // This is base16 as it should be
-void sdoWriteBigNumField(SDOW_t *sdow, uint8_t *bufp, int bufSz)
+void sdo_write_big_num_field(sdow_t *sdow, uint8_t *bufp, int buf_sz)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 	char hex[3];
 
-	_writeComma(sdow);
+	_write_comma(sdow);
 	sdoBPutC(sdob, '"');
-	while (bufSz-- > 0) {
-		if (snprintf_s_i(hex, sizeof hex, "%02X", *bufp++) < 0) {
+	while (buf_sz-- > 0) {
+		if (snprintf_s_i(hex, sizeof(hex), "%02X", *bufp++) < 0) {
 			LOG(LOG_ERROR, "snprintf() failed!\n");
 			return;
 		}
@@ -854,26 +878,26 @@ void sdoWriteBigNumField(SDOW_t *sdow, uint8_t *bufp, int bufSz)
 		sdoBPutC(sdob, hex[1]);
 	}
 	sdoBPutC(sdob, '"');
-	sdow->needComma = true;
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	sdow->need_comma = true;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 #endif
 /**
  * Internal API
  * This is base16 as it should be
  */
-void sdoWriteBigNum(SDOW_t *sdow, uint8_t *bufp, int bufSz)
+void sdo_write_big_num(sdow_t *sdow, uint8_t *bufp, int buf_sz)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 	char hex[3];
 
-	sdoWBeginSequence(sdow); // Write out the '['
-	sdoWriteUInt(sdow, bufSz);
-	_writeComma(sdow);
+	sdow_begin_sequence(sdow); // Write out the '['
+	sdo_writeUInt(sdow, buf_sz);
+	_write_comma(sdow);
 	sdoBPutC(sdob, '"');
-	while (bufSz-- > 0) {
-		if (snprintf_s_i(hex, sizeof hex, "%02X", *bufp++) < 0) {
+	while (buf_sz-- > 0) {
+		if (snprintf_s_i(hex, sizeof(hex), "%02X", *bufp++) < 0) {
 			LOG(LOG_ERROR, "snprintf() failed!\n");
 			return;
 		}
@@ -881,49 +905,50 @@ void sdoWriteBigNum(SDOW_t *sdow, uint8_t *bufp, int bufSz)
 		sdoBPutC(sdob, hex[1]);
 	}
 	sdoBPutC(sdob, '"');
-	sdoWEndSequence(sdow); // Write out the ']'
-	sdow->needComma = true;
-	if (sdob->blockSize < sdob->cursor)
-		sdob->blockSize = sdob->cursor;
+	sdow_end_sequence(sdow); // Write out the ']'
+	sdow->need_comma = true;
+	if (sdob->block_size < sdob->cursor)
+		sdob->block_size = sdob->cursor;
 }
 
 /**
  * Internal API
  */
 //#define WRBUF_LEN 20
-void sdoWriteByteArrayField(SDOW_t *sdow, uint8_t *bufp, int bufSz)
+void sdo_write_byte_array_field(sdow_t *sdow, uint8_t *bufp, int buf_sz)
 {
-	SDOBlock_t *sdob = &sdow->b;
+	sdo_block_t *sdob = &sdow->b;
 	int index;
 
-	int bufNeeded = binToB64Length(bufSz);
+	int buf_needed = bin_toB64Length(buf_sz);
 
 	// mbedtls expect larger size buffer
-	bufNeeded += 1;
-	// LOG(LOG_ERROR, "bufSz: %d, bufNeeded: %d\n", bufSz, bufNeeded);
+	buf_needed += 1;
+	// LOG(LOG_ERROR, "buf_sz: %d, buf_needed: %d\n", buf_sz, buf_needed);
 
-	if (bufNeeded) {
-		uint8_t *wrBuf = sdoAlloc(bufNeeded * sizeof(uint8_t));
-		if (wrBuf) {
-			// LOG(LOG_ERROR, "bufp: %p, bufSz: %d, wrBuf: %p\n",
+	if (buf_needed) {
+		uint8_t *wr_buf = sdo_alloc(buf_needed * sizeof(uint8_t));
+
+		if (wr_buf) {
+			// LOG(LOG_ERROR, "bufp: %p, buf_sz: %d, wr_buf: %p\n",
 			// bufp,
-			// bufSz,
-			// wrBuf);
+			// buf_sz,
+			// wr_buf);
 
 			// Convert the binary to a string
-			int strLen =
-			    binToB64(bufSz, bufp, 0, bufNeeded, wrBuf, 0);
-			// LOG(LOG_ERROR, "strLen: %d\n", strLen);
+			int str_len =
+			    bin_toB64(buf_sz, bufp, 0, buf_needed, wr_buf, 0);
+			// LOG(LOG_ERROR, "str_len: %d\n", str_len);
 
-			_writeComma(sdow);
+			_write_comma(sdow);
 			sdoBPutC(sdob, '"');
-			for (index = 0; index < strLen; index++)
-				sdoBPutC(sdob, wrBuf[index]);
+			for (index = 0; index < str_len; index++)
+				sdoBPutC(sdob, wr_buf[index]);
 			sdoBPutC(sdob, '"');
-			sdow->needComma = true;
-			if (sdob->blockSize < sdob->cursor)
-				sdob->blockSize = sdob->cursor;
-			sdoFree(wrBuf);
+			sdow->need_comma = true;
+			if (sdob->block_size < sdob->cursor)
+				sdob->block_size = sdob->cursor;
+			sdo_free(wr_buf);
 		}
 	}
 }
@@ -931,89 +956,96 @@ void sdoWriteByteArrayField(SDOW_t *sdow, uint8_t *bufp, int bufSz)
 /**
  * Internal API
  */
-void sdoWriteByteArray(SDOW_t *sdow, uint8_t *bufp, int bufSz)
+void sdo_write_byte_array(sdow_t *sdow, uint8_t *bufp, int buf_sz)
 {
-	sdoWBeginSequence(sdow); // Write out the '['
-	if (bufSz) {
-		sdoWriteUInt(sdow, bufSz); // Write out the number of bin
-					   // characters to come
-		_writeComma(sdow);
-		sdoWriteByteArrayField(sdow, bufp, bufSz); // "aBzd...==" added
+	sdow_begin_sequence(sdow); // Write out the '['
+	if (buf_sz) {
+		sdo_writeUInt(sdow, buf_sz); // Write out the number of bin
+					     // characters to come
+		_write_comma(sdow);
+		sdo_write_byte_array_field(sdow, bufp,
+					   buf_sz); // "a_bzd...==" added
 	} else {
-		sdoWriteUInt(sdow, 0);
-		_writeComma(sdow);
-		sdoWriteString(sdow, "");
+		sdo_writeUInt(sdow, 0);
+		_write_comma(sdow);
+		sdo_write_string(sdow, "");
 	}
-	sdoWEndSequence(sdow); // Write out the ']'
+	sdow_end_sequence(sdow); // Write out the ']'
 }
 
 /**
  * Internal API
  */
-void sdoWriteByteArrayOneInt(SDOW_t *sdow, uint32_t val1, uint8_t *bufp,
-			     int bufSz)
+void sdo_write_byte_array_one_int(sdow_t *sdow, uint32_t val1, uint8_t *bufp,
+				  int buf_sz)
 {
-	sdoWBeginSequence(sdow);   // Write out the '['
-	sdoWriteUInt(sdow, bufSz); // Write out the number bin of characters
-	_writeComma(sdow);
-	sdoWriteUInt(sdow, val1);
-	_writeComma(sdow);
-	if (bufSz > 0 && bufp != NULL)
-		sdoWriteByteArrayField(sdow, bufp, bufSz); // "aBzd...==" added
+	sdow_begin_sequence(sdow);   // Write out the '['
+	sdo_writeUInt(sdow, buf_sz); // Write out the number bin of characters
+	_write_comma(sdow);
+	sdo_writeUInt(sdow, val1);
+	_write_comma(sdow);
+	if (buf_sz > 0 && bufp != NULL)
+		sdo_write_byte_array_field(sdow, bufp,
+					   buf_sz); // "a_bzd...==" added
 	else {
-		sdoWriteString(sdow, ""); // Write an empty string
+		sdo_write_string(sdow, ""); // Write an empty string
 	}
-	sdoWEndSequence(sdow); // Write out the ']'
+	sdow_end_sequence(sdow); // Write out the ']'
 }
 
 /**
  * Internal API
  */
-void sdoWriteByteArrayOneIntFirst(SDOW_t *sdow, uint32_t val1, uint8_t *bufp,
-				  int bufSz)
+void sdo_write_byte_array_one_int_first(sdow_t *sdow, uint32_t val1,
+					uint8_t *bufp, int buf_sz)
 {
-	sdoWBeginSequence(sdow); // Write out the '['
-	sdoWriteUInt(sdow, val1);
-	_writeComma(sdow);
-	sdoWriteUInt(sdow, bufSz); // Write out the number of bin characters
-	_writeComma(sdow);
-	if (bufSz > 0 && bufp != NULL) {
-		sdoWriteByteArrayField(sdow, bufp, bufSz); // "aBzd...==" added
+	sdow_begin_sequence(sdow); // Write out the '['
+	sdo_writeUInt(sdow, val1);
+	_write_comma(sdow);
+	sdo_writeUInt(sdow, buf_sz); // Write out the number of bin characters
+	_write_comma(sdow);
+	if (buf_sz > 0 && bufp != NULL) {
+		sdo_write_byte_array_field(sdow, bufp,
+					   buf_sz); // "a_bzd...==" added
 	} else {
-		sdoWriteString(sdow, ""); // Write an empty string
+		sdo_write_string(sdow, ""); // Write an empty string
 	}
-	sdoWEndSequence(sdow); // Write out the ']'
+	sdow_end_sequence(sdow); // Write out the ']'
 }
 
 /**
  * Internal API used to write 2 arrays used for writing encrypted string.
  * Write "ct". IV, size, cipher text
  */
-void sdoWriteByteArrayTwoInt(SDOW_t *sdow, uint8_t *bufIv, uint32_t bufIvSz,
-			     uint8_t *bufp, uint32_t bufSz)
+void sdo_write_byte_array_two_int(sdow_t *sdow, uint8_t *buf_iv,
+				  uint32_t buf_iv_sz, uint8_t *bufp,
+				  uint32_t buf_sz)
 {
-	sdoWBeginSequence(sdow); /* Write out the '[' */
+	sdow_begin_sequence(sdow); /* Write out the '[' */
 
-	if (bufIvSz > 0 && bufIv != NULL) {
+	if (buf_iv_sz > 0 && buf_iv != NULL) {
 
-		sdoWBeginSequence(sdow);     /* Write out the '[' */
-		sdoWriteUInt(sdow, bufIvSz); /* Write out the number IV char */
-		_writeComma(sdow);
-		sdoWriteByteArrayField(sdow, bufIv, bufIvSz); /* IV data */
-		sdoWEndSequence(sdow); /* Write out the ']' */
+		sdow_begin_sequence(sdow); /* Write out the '[' */
+		sdo_writeUInt(sdow,
+			      buf_iv_sz); /* Write out the number IV char */
+		_write_comma(sdow);
+		sdo_write_byte_array_field(sdow, buf_iv,
+					   buf_iv_sz); /* IV data */
+		sdow_end_sequence(sdow);	       /* Write out the ']' */
 
 	} else {
-		sdoWriteString(sdow, ""); /* Write an empty string */
+		sdo_write_string(sdow, ""); /* Write an empty string */
 	}
 
-	_writeComma(sdow);
-	sdoWriteUInt(sdow, bufSz); /* Write out the number bin of characters */
-	_writeComma(sdow);
+	_write_comma(sdow);
+	sdo_writeUInt(sdow,
+		      buf_sz); /* Write out the number bin of characters */
+	_write_comma(sdow);
 
-	if (bufSz > 0 && bufp != NULL) {
-		sdoWriteByteArrayField(sdow, bufp, bufSz);
+	if (buf_sz > 0 && bufp != NULL) {
+		sdo_write_byte_array_field(sdow, bufp, buf_sz);
 	} else {
-		sdoWriteString(sdow, ""); /* Write an empty string */
+		sdo_write_string(sdow, ""); /* Write an empty string */
 	}
-	sdoWEndSequence(sdow); /* Write out the ']' */
+	sdow_end_sequence(sdow); /* Write out the ']' */
 }

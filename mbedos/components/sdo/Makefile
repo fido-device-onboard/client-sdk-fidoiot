@@ -22,8 +22,12 @@ SAFESTRING_IGNORE +='obj/*\n'
 SAFESTRING_IGNORE +='Debug/*\n'
 SAFESTRING_IGNORE +='objtest/*\n'
 
-GP_IGNORE_LST +='*_optee.c\n'
+GP_IGNORE_LST +='*.c\n'
 SE_IGNORE_LST +='se_*.c\n'
+OS_IGNORE_LST += '*_esp.c\n'
+OS_IGNORE_LST  += '*_linux.c\n'
+OS_IGNORE_LST += '*_optee.c\n'
+OS_IGNORE_LST += '*wifi_init.c\n'
 OPENSSL_IGNORE_LST +='*.c\n'
 
 LINUX_STORAGE_IGNORE_LIST += '*_linux.c\n'
@@ -46,8 +50,9 @@ endif
 	$(ECHOM) $(MBEDTLS_IGNORE_LST) > ./crypto/mbedtls/.mbedignore
 	$(ECHOM) $(COMMON_IGNORE_LST) > ./crypto/common/.mbedignore
 	$(ECHOM) $(OPENSSL_IGNORE_LST) > ./crypto/openssl/.mbedignore
-	$(ECHOM) $(OS_IGNORE_LST) > ./hal/os/.mbedignore
-	$(ECHOM) $(EPID_IGNORE) > ./hal/epid/.mbedignore
+	$(ECHOM) $(SE_IGNORE_LST) > ./crypto/se/.mbedignore
+	$(ECHOM) $(OS_IGNORE_LST) > ./network/.mbedignore
+	$(ECHOM) $(EPID_IGNORE) > ./crypto/epid/.mbedignore
 	$(ECHOM) $(LINUX_STORAGE_IGNORE_LIST) > ./storage/linux/.mbedignore
 	$(ECHOM) $(MBEDOS_STORAGE_IGNORE_LIST) > ./storage/mbedos/.mbedignore
 
@@ -66,17 +71,17 @@ endif
 ifeq ($(MODULES), true)
 	cp sdo/mbed_app.json_pelion sdo/mbed_app.json
 ifneq ($(DA),epid)
-	mbed-cli compile -m $(BOARD) -t GCC_ARM  --source=sdo --source=dms-agent/pelion --source=data --source=hal --source=crypto --source=storage --source=lib --source=include --source=keypair --source=devconfig --source=utils --source=sdo_sys  --source=safestring --source=mbed-os --source=simple-mbed-cloud-client -DCLOUD_CLIENT $(DFLAGS) --build=../$(OBJ_DIR_APP)
+	mbed-cli compile -m $(BOARD) -t GCC_ARM  --source=sdo --source=dms-agent/pelion --source=data --source=network --source=crypto --source=storage --source=lib --source=include --source=keypair --source=devconfig --source=utils --source=sdo_sys  --source=safestring --source=mbed-os --source=simple-mbed-cloud-client -DCLOUD_CLIENT $(DFLAGS) --build=../$(OBJ_DIR_APP)
 else
-	mbed-cli compile -m $(BOARD) -t GCC_ARM  --source=sdo --source=dms-agent/pelion --source=data --source=hal --source=crypto --source=storage --source=lib --source=include --source=../$(OBJ_DIR_EPID)  --source=keypair --source=devconfig --source=utils --source=sdo_sys  --source=safestring --source=mbed-os --source=simple-mbed-cloud-client -DCLOUD_CLIENT $(DFLAGS) --build=../$(OBJ_DIR_APP)
+	mbed-cli compile -m $(BOARD) -t GCC_ARM  --source=sdo --source=dms-agent/pelion --source=data --source=network --source=crypto --source=storage --source=lib --source=include --source=../$(OBJ_DIR_EPID)  --source=keypair --source=devconfig --source=utils --source=sdo_sys  --source=safestring --source=mbed-os --source=simple-mbed-cloud-client -DCLOUD_CLIENT $(DFLAGS) --build=../$(OBJ_DIR_APP)
 endif
 
 else
 	cp sdo/mbed_app.json_sdo_only sdo/mbed_app.json
 ifneq ($(DA),epid)
-	mbed-cli compile -m $(BOARD) -t GCC_ARM --source=sdo --source=data --source=hal --source=crypto --source=storage --source=lib --source=include --source=safestring --source=mbed-os $(DFLAGS) --build=../$(OBJ_DIR_APP)
+	mbed-cli compile -m $(BOARD) -t GCC_ARM --source=sdo --source=data --source=network --source=crypto --source=storage --source=lib --source=include --source=safestring --source=mbed-os $(DFLAGS) --build=../$(OBJ_DIR_APP)
 else #ifeq ($(DA),epid)
-	mbed-cli compile -m $(BOARD) -t GCC_ARM --source=sdo --source=data --source=hal --source=crypto --source=storage --source=lib --source=include --source=../$(OBJ_DIR_EPID) --source=safestring --source=mbed-os $(DFLAGS) --build=../$(OBJ_DIR_APP)
+	mbed-cli compile -m $(BOARD) -t GCC_ARM --source=sdo --source=data --source=network --source=crypto --source=storage --source=lib --source=include --source=../$(OBJ_DIR_EPID) --source=safestring --source=mbed-os $(DFLAGS) --build=../$(OBJ_DIR_APP)
 endif
 endif
 
@@ -137,7 +142,7 @@ clean:
 	rm -rf ./mbed-os
 	make -C epid clean
 	unlink data
-	unlink hal
+	unlink network
 	unlink crypto
 	unlink storage
 	unlink include

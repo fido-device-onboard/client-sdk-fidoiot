@@ -11,6 +11,7 @@
 #include <openssl/bn.h>
 #include <openssl/ec.h>
 #include <openssl/evp.h>
+#include <openssl/pem.h>
 #include "sdotypes.h"
 #include "storage_al.h"
 #include "util.h"
@@ -19,7 +20,7 @@
 #include "safe_lib.h"
 
 #ifdef ECDSA_PEM
-EC_KEY *get_EC_KEY(void)
+EC_KEY *get_ec_key(void)
 {
 	int ret = -1;
 	uint8_t *privkey = NULL;
@@ -70,7 +71,7 @@ err:
 			LOG(LOG_ERROR, "clearing ecdsa privkey failed\n");
 			ret = -1;
 		}
-		sdoFree(privkey);
+		sdo_free(privkey);
 	}
 	if (ecprivkey_evp)
 		EVP_PKEY_free(ecprivkey_evp);
@@ -83,7 +84,7 @@ err:
 	return ec_key;
 }
 #else
-EC_KEY *get_EC_KEY(void)
+EC_KEY *get_ec_key(void)
 {
 	int ret = 0;
 	uint8_t *privkey;
@@ -129,7 +130,7 @@ err:
 			LOG(LOG_ERROR, "Memset Failed\n");
 			ret = 0; /* Mark as fail */
 		}
-		sdoFree(privkey);
+		sdo_free(privkey);
 	}
 	if (ec_key && !ret) {
 		EC_KEY_free(ec_key);

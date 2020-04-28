@@ -1,5 +1,5 @@
 # Supply Chain Toolkit for Secure Device Onboard (SDO)
-The Supply Chain Toolkit generates a device certificate based in the Elliptic Curve Digital Signature Algorithm (ECDSA) as part of the Device Initialization (DI) protocol, enabling a seamless Ownership Transfer of the device to the new owner.
+The Supply Chain Toolkit generates a device certificate based on the Elliptic Curve Digital Signature Algorithm (ECDSA) as part of the Device Initialization (DI) protocol, enabling a seamless Ownership Transfer of the device to the new owner.
 
 ## DI.AppStart
 - This is the first message sent by the device to start the Ownership Transfer.
