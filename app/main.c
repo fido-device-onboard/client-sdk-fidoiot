@@ -25,11 +25,6 @@
 #include "se_provisioning.h"
 #endif
 
-#ifdef TARGET_OS_FREERTOS
-#include "wifi_init.h"
-#include "nvs_flash.h"
-#endif
-
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
 #define ERROR_RETRY_COUNT 5
@@ -245,8 +240,6 @@ static void print_device_status(void)
  */
 #ifdef TARGET_OS_LINUX
 int main(int argc, char **argv)
-#elif defined TARGET_OS_FREERTOS
-int app_main(bool is_resale)
 #else
 int app_main(bool is_resale)
 #endif
@@ -296,23 +289,6 @@ int app_main(bool is_resale)
 	setbuf(stdout, NULL);
 #endif
 
-#if defined TARGET_OS_FREERTOS
-	static nvs_handle storage = -1;
-	int err = nvs_flash_init();
-
-	if (err != ESP_OK) {
-		LOG(LOG_ERROR, "esp32 NVS init Failed.\n");
-		return -1;
-	}
-
-	err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &storage);
-	if (err != ESP_OK) {
-		LOG(LOG_ERROR, "esp32 NVS open Failed.\n");
-		return -1;
-	}
-
-	sdo_wifi_init();
-#endif
 #if defined TARGET_OS_MBEDOS
 /* TODO: ad nvs and network */
 #endif
@@ -338,9 +314,6 @@ int app_main(bool is_resale)
 		return -1;
 	}
 
-#ifdef TARGET_OS_FREERTOS
-	sdo_wifi_exit();
-#endif
 	// Return 0 on success
 	return 0;
 }
