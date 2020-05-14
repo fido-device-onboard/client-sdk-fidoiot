@@ -32,6 +32,9 @@
 /* AES enabled or not info in config zone */
 #define AES_ENABLED_OFFSET 13
 
+/* Prototype needed  */
+int se_provisioning(void);
+
 /***********************************/
 uint8_t slot_config[] = {
     0xAF, 0xCF, /* EC key, writes disabled but genkey allowed */
@@ -74,7 +77,7 @@ uint8_t key_config[] = {
 static void print_arr(uint8_t *arr, uint32_t len)
 {
 
-	for (int i = 0; i < len; i++) {
+	for (uint32_t i = 0; i < len; i++) {
 		if (0 == (i % 16) && (0 != i)) {
 			printf("\n");
 		}

@@ -152,7 +152,7 @@ int sdo_sys(sdoSdkSiType type, int *count, sdoSdkSiKeyValue *sv)
 				return SDO_SI_CONTENT_ERROR;
 			}
 
-			binLen = b64To_bin_length_(sv_value_len);
+			binLen = b64To_bin_length(sv_value_len);
 
 			if (!binLen) {
 				goto end;
@@ -174,7 +174,7 @@ int sdo_sys(sdoSdkSiType type, int *count, sdoSdkSiKeyValue *sv)
 			}
 
 			converted =
-			    b64To_bin_(sv_value_len, (uint8_t *)sv->value, 0,
+			    b64To_bin(sv_value_len, (uint8_t *)sv->value, 0,
 				       (size_t)binLen, binData, 0);
 			if (converted <= 0) {
 				goto end;

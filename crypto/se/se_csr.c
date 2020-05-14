@@ -127,7 +127,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 		LOG(LOG_ERROR, "Failed to allocate data.\n");
 		goto err;
 	}
-	uint32_t csr_size = SE_CSR_SIZE;
+        size_t csr_size = SE_CSR_SIZE;
 
 	/* Creates a DER formatted CSR from the SE. */
 	if (ATCA_SUCCESS !=

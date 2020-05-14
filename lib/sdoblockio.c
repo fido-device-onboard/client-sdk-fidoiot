@@ -31,6 +31,7 @@ void _writespecialchar(sdow_t *sdow, char c);
 // These are intended to be inlined...
 void sdo_skipC(sdo_block_t *sdob);
 void sdoBPutC(sdo_block_t *sdob, char c);
+int sdob_getc(sdo_block_t *sdob, char *c);
 
 int sdob_peekc(sdo_block_t *sdob)
 {
