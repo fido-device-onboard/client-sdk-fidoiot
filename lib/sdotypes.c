@@ -1227,60 +1227,8 @@ char *sdo_guid_to_string(sdo_byte_array_t *g, char *buf, int buf_sz)
  */
 void sdo_gid_write(sdow_t *sdow)
 {
-
-/*EPID 2.0 supports 128 bit GID*/
-
- /* TODO: As per spec GID should be converted into */
- /* networkbyte order, but server is supporting this */
- /* for for now send in little endian */
-#if 0
-	uint32_t hton_gid[4];
-	uint32_t *gid32;
-	/*Convert GID to network byte order*/
-	gid32 = (uint32_t *)gid;
-	hton_gid[0] = sdo_host_to_net_long(*gid32);
-	gid32++;
-	hton_gid[1] = sdo_host_to_net_long(*gid32);
-	gid32++;
-	hton_gid[2] = sdo_host_to_net_long(*gid32);
-	gid32++;
-	hton_gid[3] = sdo_host_to_net_long(*gid32);
-
-	/* epid_info eA
-	 * [
-	 *   epid_info_type(Uint8)  --> 3 for EPID2.0 Non-DAL
-	 *   length(Uint16),      --> length of GID (EPID 2.0 supports 128 bit
-	 * GID)
-	 *   info(Byte_array)      --> Byte_arry of GID
-	 *  ]
-	 *
-	 * "eA":[3,16,"GID Bytes"]
-	 */
-
-	/*Write 3 for EPID2.0*/
-	/* sdo_write_byte_array_one_int_first(sdow, SDOEPID_VERSION, */
-	/*				   (uint8_t *)hton_gid, */
-	/*				   sizeof(hton_gid)); */
-#endif
-
-	sdo_sig_info_t *eA = sdo_get_device_sig_infoeA();
-	uint8_t *publickey_buf = NULL;
-
-	if (eA && eA->pubkey && eA->pubkey->key1) {
-		publickey_buf = (uint8_t *)eA->pubkey->key1->bytes;
-	}
-
-	sdo_write_byte_array_one_int_first(sdow, SDO_PK_ALGO, publickey_buf,
+	sdo_write_byte_array_one_int_first(sdow, SDO_PK_ALGO, NULL,
 					   SDO_PK_EA_SIZE);
-}
-
-/**
- * Allocate EPID info and initialize to NULL
- * @return null
- */
-sdo_epid_info_eb_t *sdo_epid_info_eb_alloc_empty(void)
-{
-	return sdo_alloc(sizeof(sdo_epid_info_eb_t));
 }
 
 /**
@@ -1404,162 +1352,16 @@ end:
 	return retval;
 }
 
-/**
- * Read the EPID information
- * @param sdor - pointe to the read EPID information in JSON format
- * @return 0 on success and -1 on failure
- */
-int32_t sdo_epid_info_eb_read(sdor_t *sdor)
-{
-	uint8_t type;
-	uint16_t sig_rllen;
-	uint16_t pubkeylen;
-	uint8_t *b_sig_rl = NULL;
-	uint8_t *b_pubkey = NULL;
-	sdo_byte_array_t *sig_rl = NULL;
-	sdo_byte_array_t *pubkey = NULL;
-
-	/*
-	 * "eB":[Epid_type, len, "epid_info eB Byte_array"]
-	 *
-	 *epid_info eB
-	 * [
-	 *     UInt16   sig_rlSize,
-	 *     BYTE[sig_rlSize]	sig_rl,
-	 *     UInt16	public_key_size,
-	 *     BYTE[public_key_size]	public_key
-	 * ]
-	 */
-	if (!sdor)
-		return -1;
-
-	if (!sdor_begin_sequence(sdor))
-		return -1;
-
-	type = sdo_read_uint(sdor);
-	if (type != SDOEPID_VERSION) {
-		LOG(LOG_DEBUG, "Wrong EPID type\n");
-		return -1;
-	}
-
-	sdo_byte_array_t *eB = sdo_byte_array_alloc_with_int(0);
-
-	if (!eB)
-		return -1;
-
-	if (sdo_byte_array_read(sdor, eB) == 0) {
-		goto error;
-	}
-
-	sig_rllen = eB->bytes[0] << 8 | eB->bytes[1];
-
-	if (sig_rllen) {
-		b_sig_rl = (uint8_t *)sdo_alloc(sig_rllen);
-		if (!b_sig_rl) {
-			goto error;
-		}
-
-		if (memcpy_s(b_sig_rl, sig_rllen, eB->bytes + sizeof(sig_rllen),
-			     sig_rllen) != 0) {
-			LOG(LOG_ERROR, "Memcpy Failed\n");
-			goto error;
-		}
-	}
-
-	pubkeylen = eB->bytes[sizeof(sig_rllen) + sig_rllen] << 8 |
-		    eB->bytes[sizeof(sig_rllen) + sig_rllen + 1];
-
-	b_pubkey = (uint8_t *)sdo_alloc(pubkeylen);
-	if (!b_pubkey) {
-		goto error;
-	}
-
-	if (memcpy_s(b_pubkey, pubkeylen,
-		     eB->bytes + sizeof(sig_rllen) + sig_rllen +
-			 sizeof(pubkeylen),
-		     pubkeylen) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		goto error;
-	}
-
-	/*TODO: Does byte_sz needs to convert to LE ?*/
-	LOG(LOG_DEBUG, "Received eB len: %zu SigRLlen :%d pukeylen: %d\n",
-	    eB->byte_sz, sig_rllen, pubkeylen);
-
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "No End Sequence\n");
-		goto error;
-	}
-
-	sig_rl = sdo_alloc(sizeof(sdo_byte_array_t));
-	if (!sig_rl)
-		goto error;
-
-	pubkey = sdo_alloc(sizeof(sdo_byte_array_t));
-	if (!pubkey)
-		goto error;
-
-	sig_rl->bytes = b_sig_rl;
-	sig_rl->byte_sz = sig_rllen;
-
-	pubkey->bytes = b_pubkey;
-	pubkey->byte_sz = pubkeylen;
-
-	if(sdo_set_device_sig_infoeB(sig_rl, pubkey))
-		goto error;
-
-	sdo_byte_array_free(eB);
-	eB = NULL;
-
-
-	return 0;
-error:
-	if (eB) {
-		sdo_byte_array_free(eB);
-	}
-	if (b_sig_rl) {
-		sdo_free(b_sig_rl);
-	}
-	if (b_pubkey) {
-		sdo_free(b_pubkey);
-	}
-	if (sig_rl) {
-		sdo_free(sig_rl);
-	}
-	return -1;
-}
 
 /**
- * Read the EPID information or do a dummy read for ECDSA
+ * Do a dummy read for ECDSA
  * @param sdor - pointer to the read location in JSON format
  * @return 0 on success and -1 on failure
  */
 int32_t sdo_eb_read(sdor_t *sdor)
 {
-	sdo_sig_info_t *sig = sdo_get_device_sig_infoeA();
-
-	if (sig && sig->sig_type == SDOEPID_VERSION) {
-		return sdo_epid_info_eb_read(sdor);
-	}
-
 	int32_t ret = (false == sdo_ecdsa_dummyEBRead(sdor)) ? -1 : 0;
 	return ret;
-}
-
-/**
- * Free the EPID information
- * @param epid_info - pointer to the EPID information that has to be sdo_freed
- * @return none
- */
-void sdo_epid_info_eb_free(sdo_epid_info_eb_t *epid_info)
-{
-	if (!epid_info)
-		return;
-	sdo_byte_array_free(epid_info->sig_rl);
-	epid_info->sig_rl = NULL;
-	sdo_byte_array_free(epid_info->pubkey);
-	epid_info->pubkey = NULL;
-	sdo_free(epid_info);
 }
 
 /* -----------------------------------------------------------------------------
@@ -3905,7 +3707,6 @@ bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig)
 	int sig_block_end;
 	int sig_block_sz;
 	sdo_byte_array_t *sigtext = NULL;
-	sdo_sig_info_t *eA;
 	sdo_public_key_t *publickey;
 
 	if (!sdow || !sig) {
@@ -3947,11 +3748,10 @@ bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig)
 
 	/* ========================================================= */
 
-	/*Write GID to represent EPID public key*/
+	/*Write GID to represent public key*/
 	sdo_write_tag(sdow, "pk");
 
-	eA = sdo_get_device_sig_infoeA();
-	publickey = eA ? eA->pubkey : NULL;
+	publickey = NULL;
 
 	sdo_public_key_write(sdow, publickey);
 	sdo_write_tag(sdow, "sg");

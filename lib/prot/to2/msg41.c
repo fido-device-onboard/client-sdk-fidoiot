@@ -152,7 +152,7 @@ int32_t msg41(sdo_prot_t *ps)
 		goto err;
 	}
 
-	/* Handle both EPID and ECDSA cases */
+	/* Handle ECDSA */
 	if (0 != sdo_eb_read(&ps->sdor)) {
 		LOG(LOG_ERROR, "EB read in message 41 failed\n");
 		goto err;

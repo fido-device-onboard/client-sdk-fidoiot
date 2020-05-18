@@ -16,9 +16,6 @@
 #include "sdoCryptoHal.h"
 #include "util.h"
 #include <stdlib.h>
-#if defined(EPID_DA)
-#include "epid.h"
-#endif
 #include "safe_lib.h"
 
 #ifdef KEX_ASYM_ENABLED

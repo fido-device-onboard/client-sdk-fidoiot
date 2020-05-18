@@ -67,12 +67,12 @@ int32_t msg31(sdo_prot_t *ps)
 	LOG(LOG_DEBUG, "Received n4: %s\n",
 	    sdo_nonce_to_string(ps->n4->bytes, buf, sizeof buf) ? buf : "");
 
-	/* Read eB data: EPID or ECDSA */
+	/* Read eB data: ECDSA */
 	if (!sdo_read_expected_tag(&ps->sdor, "eB")) {
 		goto err;
 	}
 
-	/* Handle both EPID and ECDSA cases */
+	/* Handle ECDSA cases */
 	if (0 != sdo_eb_read(&ps->sdor)) {
 		LOG(LOG_ERROR, "EB read in message 31 failed\n");
 		goto err;

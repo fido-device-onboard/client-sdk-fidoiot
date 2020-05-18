@@ -56,22 +56,6 @@ $ make libsafestring.a
 
 After this step, the `libsafestring.a` library is created.
 
-### Intel(R) Enhanced Privacy ID [Intel(R) EPID] SDK (optional)
-<a href="https://intel-epid-sdk.github.io/">Intel EPID SDK</a> can be downloaded and built by running the `build_epid-sdk.sh` script. Follow these instructions to build the Intel EPID SDK:
-
-1. Copy `build_epid-sdk.sh` from the `<release-package-dir>/sdo-client-sdk/utils` to `build-warp7` directory:
-
-```shell
-$ cp <release-package-dir>/sdo-client-sdk/utils/build_epid-sdk.sh build-warp7/
-```
-
-2. Execute `build_epid-sdk.sh` to build Intel EPID SDK with the Arm compiler:
-
-```shell
-$ cd build-warp7/
-$ ./build_epid-sdk.sh
-```
-
 ## Building  SDO client-sdk
 The  SDO client-sdk for Arm Cortex-A7 platform is built using the Yocto Project-based build system. Follow these instructions to generate the  SDO client-sdk binaries:
 

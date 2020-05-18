@@ -22,25 +22,17 @@ $ mbed config -G GCC_ARM_PATH <Path to gcc-arm-none-eabi-6-2017-q2-update>/bin
 
 You do not have to build the `safestringlib` library for the Arm Mbed OS-based implementation because this will be done by SDO.
 
-## 4. Compiling Intel(R) Enhanced Privacy ID [Intel(R) EPID] SDK
-You do not have to build the `epid-sdk` library for the Arm Mbed OS-based implementation because this will be done by SDO.
-
-## 5. Compiling Service Info Modules (optional)
+## 4. Compiling Service Info Modules (optional)
 This step is not required because the SDO build system for Arm Mbed OS will build the device modules present in the `SERVICE_INFO_DEVICE_MODULE_ROOT` directory.
 
-## 6. Environment Variables
+## 5. Environment Variables
 
-Provide the safestringlib and epid-sdk path:
+Provide the safestringlib path:
 ```shell
 $ export SAFESTRING_ROOT=path/to/safestringlib
-$ export EPID_SDK_R6_ROOT=path/to/intel-epid-sdk-v6.0.1
-$ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
 ```
-> **Note:**
-> `EPID_SDK_R6_ROOT` is optional if the device attestation (DA) method is not Intel EPID.
-`SERVICE_INFO_DEVICE_MODULE_ROOT` is optional if the device module is not used.
 
-## 7. Compiling  SDO
+## 6. Compiling  SDO
 The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU Make tool</a>. SDO assumes that all requirements are set up from [  SDO Compilation Setup ](setup.md). The application is built using `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported.
 
 - To build STM32F767ZI:

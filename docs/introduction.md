@@ -15,7 +15,6 @@ The sdo-client-sdk is organized according to the following directory structure:
 
 	├── app               : SDO application
 	├── crypto            : Underlying cryptography and SSL/TLS shims
-	│   └── epid          : Intel® Enhanced Privacy ID (Intel® EPID)shims
 	├── data              : Data files, e.g. device credentials
 	├── docs              : Documentation
 	├── Network           : Hardware Abstraction Layer implementations

@@ -72,10 +72,6 @@
 #define SDO_PK_ALGO SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384
 #define SDO_PK_EA_SIZE 0
 #define SDO_PK_ENC SDO_CRYPTO_PUB_KEY_ENCODING_X509
-#elif defined(EPID_DA)
-#define SDO_PK_ALGO SDOEPID_VERSION
-#define SDO_PK_EA_SIZE SDOEPID20_GID_LEN
-#define SDO_PK_ENC SDO_CRYPTO_PUB_KEY_ENCODING_EPID
 #endif
 
 /* Function declarations */
@@ -90,7 +86,6 @@ int32_t sdo_kex_close(void);
 sdo_string_t *sdo_get_device_kex_method(void);
 sdo_string_t *sdo_get_device_crypto_suite(void);
 sdo_byte_array_t **getOVKey(void);
-sdo_epid_info_eb_t **get_device_sig_ctx(void);
 int32_t set_ov_key(sdo_byte_array_t *OVkey, size_t OVKey_len);
 int32_t sdo_ov_verify(uint8_t *message, uint32_t message_length,
 		      uint8_t *message_signature, uint32_t signature_length,
@@ -114,11 +109,6 @@ int32_t sdo_to2_chained_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
 			     size_t hmac_len, const uint8_t *previousHMAC,
 			     size_t previousHMACLength);
 int set_currentIV(uint8_t *iv);
-
-sdo_sig_info_t *sdo_get_device_sig_infoeA(void);
-int32_t sdo_set_device_sig_infoeA(uint8_t *eA, size_t *eALen);
-int32_t sdo_set_device_sig_infoeB(sdo_byte_array_t *sig_rl,
-				  sdo_byte_array_t *pubkey);
 
 int32_t sdo_device_sign(const uint8_t *message, size_t message_length,
 			sdo_byte_array_t **signature);

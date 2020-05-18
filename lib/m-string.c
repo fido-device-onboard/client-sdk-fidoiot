@@ -172,7 +172,8 @@ static int fill_base_m_string(uint8_t *m_string_bytes, size_t m_string_sz,
 		goto err;
 	}
 	*ofs += strnlen_s(model_number, MAX_MODEL_NO_SZ) + 1;
-#else /* PK_ENC_RSA or DA = epid*/
+
+#else /* PK_ENC_RSA */
 	/* Fill in the model number without NULL termination, no space for it */
 
 	ret = memcpy_s((char *)m_string_bytes + *ofs, m_string_sz - *ofs,
@@ -192,9 +193,9 @@ err:
  * Internal API
  * Fill in ps with non-CSR data. It is used for:
  * a. PK_ENC = rsa
- * b. PK_ENC = ecdsa DA = epid
+ * b. PK_ENC = ecdsa
  */
-#if defined(EPID_DA) || defined(PK_ENC_RSA)
+#if defined(PK_ENC_RSA)
 static int non_csr_m_string(sdo_prot_t *ps)
 {
 	int ret = -1;
@@ -301,18 +302,7 @@ err:
 		sdo_byte_array_free(csr);
 	return ret;
 }
-#elif defined(EPID_DA)
-int ps_get_m_string(sdo_prot_t *ps)
-{
-	/* Fill in the key id based on owner attestation */
-	if (snprintf_s_i(key_id, sizeof(key_id), "%u",
-			 SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) < 0) {
-		LOG(LOG_ERROR, "failed to fill in key id for ecdsa256\n");
-		return -1;
-	}
 
-	return non_csr_m_string(ps);
-}
 #endif /* #if defined (ECDSA256_DA) || defined (ECDSA384_DA) */
 
 #elif defined(PK_ENC_RSA)

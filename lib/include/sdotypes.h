@@ -259,14 +259,7 @@ typedef struct {
 	sdo_public_key_t *pubkey;
 } sdo_sig_info_t;
 
-typedef struct {
-	uint8_t epid_type;
-	sdo_byte_array_t *sig_rl; // EPID sig_rl
-	sdo_byte_array_t *pubkey; // EPID pubkey
-} sdo_epid_info_eb_t;
 int32_t sdo_epid_info_eb_read(sdor_t *sdor);
-void sdo_epid_info_eb_free(sdo_epid_info_eb_t *epid_info);
-sdo_epid_info_eb_t *sdo_epid_info_eb_alloc_empty(void);
 int32_t sdo_eb_read(sdor_t *sdor);
 
 sdo_public_key_t *sdo_public_key_alloc_empty(void);

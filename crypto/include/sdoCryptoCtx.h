@@ -8,7 +8,6 @@
 
 typedef struct sdo_dev_key_ctx {
 	sdo_sig_info_t *eA;
-	sdo_epid_info_eb_t *eB;
 } sdo_dev_key_ctx_t;
 
 typedef struct {

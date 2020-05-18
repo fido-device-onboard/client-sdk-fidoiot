@@ -159,9 +159,4 @@ if (${CRYPTO_HW} MATCHES true)
   endif()
   
 
-client_sdk_sources_if(
-  DA epid
-  epid/epid_sdk_interface.c
-  )
-
 

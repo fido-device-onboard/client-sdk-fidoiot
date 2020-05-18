@@ -69,10 +69,9 @@ export DEVCONFIG_ROOT=<Path-To-C-SDK-Device-Modules_cloud-Client>/devconfig
 export UTILS_ROOT=<Path-To-C-SDK-Device-Modules_cloud-Client>/utils
 export KEYPAIR_ROOT=<Path-To-C-SDK-Device-Modules_cloud-Client>/keypair
 export SAFESTRING_ROOT=<Path to Safestring>
-export EPID_SDK_R6_ROOT=<Path to epidsdk>
 export MANUFACTURER_DN=<Manufacturer IP Address>
 ```
-Note: Download safestring and epid-sdk from repositories mentioned in the [Links](#Links) section.
+Note: Download safestring from repositories mentioned in the [Links](#Links) section.
 
 Build using below command to generate binary: (Inside C-Code-SDK directory)
 
@@ -80,10 +79,6 @@ For ECDSA:
 
 ```bash
 make TARGET_OS=mbedos PK_ENC=rsa DA=ecdsa HTTPPROXY=false MODULES=true
-```
-For EPID:
-```bash
-make TARGET_OS=mbedos HTTPPROXY=false MODULES=true
 ```
 
 ## 6. Configuring and Running the dmssdk: <a name="Configuring_and_Running_the_dmssdk"></a>
@@ -155,4 +150,3 @@ Connected to Mbed Cloud. Endpoint Name: 016796abf1110000000000010010028c
 
 ## 9. Links <a name="Links"></a>
 1. C-SDK-safestring - https://github.intel.com/SDO/C-SDK-Safestring
-2. EPID SDK 6.0.1 - https://github.com/Intel-EPID-SDK/epid-sdk/archive/v6.0.1.tar.gz

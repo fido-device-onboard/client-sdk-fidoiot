@@ -55,33 +55,3 @@ cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backu
 cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
 cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
 cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
-
-echo "For epid_c_device *******"
-mkdir -p epid_c_device_bin
-mkdir -p epid_c_device_bin/blob_backup
-make pristine || true
-cmake -DBUILD=${BUILDTYPE} -DHTTPPROXY=true -DDA=epid -DPK_ENC=rsa -DKEX=asym
-make -j$(nproc)
-
-cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/epid_c_device_bin
-cp -a ${WORKSPACE}/data   ${WORKSPACE}/epid_c_device_bin
-cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/epid_c_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/epid_c_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/epid_c_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/epid_c_device_bin/blob_backup
-
-echo "For epid_c_device for Supply chain tool*******"
-mkdir -p epid_c_sct_device_bin
-mkdir -p epid_c_sct_device_bin/blob_backup
-make pristine || true
-cmake -DBUILD=${BUILDTYPE} -DPK_ENC=rsa -DDA=epid -DMANUFACTURER_TOOLKIT=true -DKEX=dh
-make -j$(nproc)
-
-cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/epid_c_sct_device_bin
-cp -a ${WORKSPACE}/data   ${WORKSPACE}/epid_c_sct_device_bin
-cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/epid_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/epid_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/epid_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/epid_c_sct_device_bin/blob_backup
-
-

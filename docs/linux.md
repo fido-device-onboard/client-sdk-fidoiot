@@ -25,39 +25,21 @@ From the root of the safestringlib, do the following:
  ```
 After this step, `libsafestring.a` library will be created.
 
-## 4. Compiling Intel(R) Enhanced Privacy ID (Intel(R) EPID) SDK – version 6.0.1
-
-To use Intel EPID for device attestation (DA), Intel EPID SDK must be installed. If any other DA method is used (e.g. ECDSA), this step can be skipped.
-
-Intel EPID SDK can be downloaded from <a href="https://intel-epid-sdk.github.io/">intel-epid-sdk</a>. Follow these instructions to build the Intel EPID SDK:
-
-From the root of the folder, do the following:
-
-```shell
-$ ./configure
-$ make
-$ make install
-```
-> **Note:** If `make` fails due to a misleading indentation error, add `-Wno-misleading-indentation` to compiler flags in the top-level makefile.
-
-
-## 5. Environment Variables
+## 4. Environment Variables
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
-Provide safestringlib and epid-sdk paths:
+Provide safestringlib paths:
 ```shell
 $ export SAFESTRING_ROOT=path/to/safestringlib
-$ export EPID_SDK_R6_ROOT=path/to/intel-epid-sdk-v6.0.1
 ```
-> **Note:** `EPID_SDK_R6_ROOT` is optional if the DA method is not Intel EPID.
 
-## 6. Compiling Service Info Modules (optional)
+## 5. Compiling Service Info Modules (optional)
 Provide the service info device module path to use the  SDO service info functionality:
 ```shell
 $ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
 ```
 Service-info device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, i.e. required service-info device modules must be built prior to this step, otherwise the  SDO client-sdk build will fail.
 
-## 7. Compiling  SDO
+## 6. Compiling  SDO
 
 The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. SDO assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the  SDO client-sdk.
 
@@ -73,7 +55,7 @@ Refer to the section. [SDO Build configurations] (build_conf.md)
 
 <a name="run_linux_sdo"></a>
 
-## 8. Running the application <!-- Ensuring generic updates are captured where applicable -->
+## 7 Running the application <!-- Ensuring generic updates are captured where applicable -->
 The  SDO Linux device is compatible with  SDO Java* Customer Reference Implementation (CRI) of manufacturer, rendezvous, and owner servers. 
 
 To test the  SDO Linux device against the  SDO Java CRI implementation, obtain the  SDO Java CRI manufacturer, rendezvous, and owner server binaries from the `<release-package-dir>/cri/` directory.

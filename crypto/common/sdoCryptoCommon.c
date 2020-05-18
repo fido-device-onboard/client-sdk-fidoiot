@@ -113,8 +113,6 @@ static void cleanup_ctx(void)
 		sdo_free(crypto_ctx.dev_key.eA);
 		crypto_ctx.dev_key.eA = NULL;
 	}
-	sdo_epid_info_eb_free(crypto_ctx.dev_key.eB);
-	crypto_ctx.dev_key.eB = NULL;
 
 	/* cleanup ovkey */
 	sdo_byte_array_free(crypto_ctx.OVKey);
@@ -142,10 +140,5 @@ int32_t sdo_crypto_random_bytes(uint8_t *random_buffer, size_t num_bytes)
  */
 int32_t sdo_get_device_csr(sdo_byte_array_t **csr)
 {
-#if !defined(EPID_DA)
 	return crypto_hal_get_device_csr(csr);
-#else //For ecdsa
-	(void)csr;
-	return 0;
-#endif
 }

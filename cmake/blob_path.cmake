@@ -181,7 +181,3 @@ file(WRITE ${BLOB_PATH}/data/Normal.blob "{\"ST\":1}")
 file(WRITE ${BLOB_PATH}/data/Secure.blob "")
 file(WRITE ${BLOB_PATH}/data/raw.blob "")
 
-#####
-if (${DA} STREQUAL epid)
-  execute_process(COMMAND /bin/bash ./gen_epid_blob.sh .)  
-endif()

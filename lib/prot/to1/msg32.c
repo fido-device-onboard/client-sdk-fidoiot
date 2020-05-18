@@ -34,7 +34,6 @@ int32_t msg32(sdo_prot_t *ps)
 {
 	int ret = -1;
 	sdo_sig_t sig = {0};
-	sdo_sig_info_t *eA;
 	sdo_public_key_t *publickey;
 
 	LOG(LOG_DEBUG, "Starting SDO_STATE_TO1_SND_PROVE_TO_SDO\n");
@@ -43,8 +42,7 @@ int32_t msg32(sdo_prot_t *ps)
 	sdow_next_block(&ps->sdow, SDO_TO1_TYPE_PROVE_TO_SDO);
 
 	/* Start Body/Begin Object "bo" tag */
-	eA = sdo_get_device_sig_infoeA();
-	publickey = eA ? eA->pubkey : NULL;
+	publickey = NULL;
 
 	if (!sdo_begin_write_signature(&ps->sdow, &sig, publickey)) {
 		LOG(LOG_ERROR, "Failed in writing the signature\n");

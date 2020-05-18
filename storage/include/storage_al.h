@@ -42,8 +42,6 @@ int32_t sdo_blob_write(const char *blob_name, sdo_sdk_blob_flags flags,
 
 int32_t sdo_blob_size(const char *blob_name, sdo_sdk_blob_flags flags);
 
-int32_t sdo_read_epid_key(uint8_t *buffer, uint32_t *size);
-
 int32_t create_hmac_normal_blob(void);
 
 #ifdef __cplusplus

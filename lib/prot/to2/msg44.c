@@ -41,18 +41,13 @@ int32_t msg44(sdo_prot_t *ps)
 	sdo_sig_t sig = {0};
 	sdo_byte_array_t *xB = NULL;
 	char buf[DEBUGBUFSZ] = {0};
-	sdo_sig_info_t *eA;
 	sdo_public_key_t *publickey;
 
 	LOG(LOG_DEBUG, "SDO_STATE_TO2_SND_PROVE_DEVICE: Starting\n");
 
 	sdow_next_block(&ps->sdow, SDO_TO2_PROVE_DEVICE);
 
-	eA = sdo_get_device_sig_infoeA();
-	publickey = eA ? eA->pubkey : NULL;
-
-	LOG(LOG_DEBUG, "EPID key is: %s\n",
-	    sdo_public_key_to_string(publickey, buf, sizeof(buf)) ? buf : "");
+	publickey = NULL;
 
 	/* Store the pointer to opening "{" for signing */
 	if (sdo_begin_write_signature(&ps->sdow, &sig, publickey) != true) {

@@ -530,28 +530,3 @@ exit:
 	}
 	return retval;
 }
-
-/**
- * sdo_read_epid_key will read the key from file/partition(raw)
- * @param buffer - pointer to the buffer
- * @param size - length of buffer passed in buffer
- * @return num of bytes write if success, -1 on error
- */
-int32_t sdo_read_epid_key(uint8_t *buffer, uint32_t *size)
-{
-
-	if (!buffer || !size)
-		return -1;
-
-	if (*size == 0) {
-		LOG(LOG_ERROR, "Can not read 0 bytes!\n");
-		return -1;
-	}
-
-	if (0 != read_buffer_from_file((char *)EPID_PRIVKEY, buffer, *size)) {
-		LOG(LOG_ERROR, "Failed to read %s file!\n", EPID_PRIVKEY);
-		return -1;
-	}
-
-	return (int32_t)*size;
-}
