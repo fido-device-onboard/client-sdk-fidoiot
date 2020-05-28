@@ -16,10 +16,10 @@ fi
 echo "For ecdsa_c_device (TPM) *******"
 mkdir -p tpm_ecdsa_c_device_bin
 mkdir -p tpm_ecdsa_c_device_bin/blob_backup
-make DA=tpm20_ecdsa256 pristine
-make BUILD=${BUILDTYPE} PK_ENC=ecdsa DA=tpm20_ecdsa256
+make pristine ||  cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 .
+make -j4
 
-cp -a ${WORKSPACE}/build/linux/${BUILDTYPE}/linux-client    ${WORKSPACE}/tpm_ecdsa_c_device_bin
+cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/tpm_ecdsa_c_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/tpm_ecdsa_c_device_bin
 cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/tpm_ecdsa_c_device_bin/blob_backup
 cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/tpm_ecdsa_c_device_bin/blob_backup
