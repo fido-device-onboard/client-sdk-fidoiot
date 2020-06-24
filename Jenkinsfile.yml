@@ -1,13 +1,14 @@
 node('ccode'){
     withEnv([
-        'REPO_CCODE=https://github.com/secure-device-onboard/client-sdk',
         'REPO_Safestring=https://github.com/intel/safestringlib.git',
         'REPO_EPID=https://github.com/Intel-EPID-SDK/epid-sdk.git',
         ])
   {
     stage('Clone Client-SDK'){
       cleanWs()
-      sh 'git clone "${REPO_CCODE}"'
+      dir('client-sdk'){
+        checkout scm
+      }
       sh 'git clone "${REPO_Safestring}"'
       sh 'git clone "${REPO_EPID}"'
       }
