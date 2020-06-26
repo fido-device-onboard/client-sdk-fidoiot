@@ -34,6 +34,7 @@
 #include "blob.h"
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
+#include "sdoCrypto.h"
 #endif
 
 #if !defined(DEVICE_TPM20_ENABLED)
