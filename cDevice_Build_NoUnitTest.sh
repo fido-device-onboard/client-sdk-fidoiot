@@ -18,7 +18,8 @@ fi
 echo "For ecdsa_c_device *******"
 mkdir -p ecdsa256_c_device_bin
 mkdir -p ecdsa256_c_device_bin/blob_backup
-make pristine ||  cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa256 -DKEX=ecdh
+make pristine || true
+cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa256 -DKEX=ecdh
 make -j4
 
 cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/ecdsa256_c_device_bin
@@ -31,7 +32,8 @@ cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa256_c_device_bin/blob_
 echo "For ecdsa_c_device for Supply chain tool*******"
 mkdir -p ecdsa256_c_sct_device_bin
 mkdir -p ecdsa256_c_sct_device_bin/blob_backup
-make pristine ||  cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa256 -DMANUFACTURER_TOOLKIT=true -DKEX=ecdh
+make pristine || true
+cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa256 -DMANUFACTURER_TOOLKIT=true -DKEX=ecdh
 make -j4
 
 cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/ecdsa256_c_sct_device_bin
@@ -43,7 +45,8 @@ cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa256_c_sct_device_bin/b
 
 mkdir -p ecdsa384_c_sct_device_bin
 mkdir -p ecdsa384_c_sct_device_bin/blob_backup
-make pristine ||  cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa384 -DMANUFACTURER_TOOLKIT=true -DKEX=ecdh384
+make pristine || true
+cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa384 -DMANUFACTURER_TOOLKIT=true -DKEX=ecdh384
 make -j4
 
 cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/ecdsa384_c_sct_device_bin
@@ -56,7 +59,8 @@ cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/b
 echo "For epid_c_device *******"
 mkdir -p epid_c_device_bin
 mkdir -p epid_c_device_bin/blob_backup
-make pristine ||  cmake -DBUILD=${BUILDTYPE} -DHTTPPROXY=true -DDA=epid -DPK_ENC=rsa -DKEX=asym
+make pristine || true
+cmake -DBUILD=${BUILDTYPE} -DHTTPPROXY=true -DDA=epid -DPK_ENC=rsa -DKEX=asym
 make -j4
 
 cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/epid_c_device_bin
@@ -69,7 +73,8 @@ cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/epid_c_device_bin/blob_back
 echo "For epid_c_device for Supply chain tool*******"
 mkdir -p epid_c_sct_device_bin
 mkdir -p epid_c_sct_device_bin/blob_backup
-make pristine ||  cmake -DBUILD=${BUILDTYPE} -DPK_ENC=rsa -DDA=epid -DMANUFACTURER_TOOLKIT=true -DKEX=dh
+make pristine || true
+cmake -DBUILD=${BUILDTYPE} -DPK_ENC=rsa -DDA=epid -DMANUFACTURER_TOOLKIT=true -DKEX=dh
 make -j4
 
 cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/epid_c_sct_device_bin
