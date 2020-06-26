@@ -439,6 +439,34 @@ set(CACHED_MANUFACTURER_TOOLKIT ${MANUFACTURER_TOOLKIT} CACHE STRING
 message("Selected MANUFACTURER_TOOLKIT ${MANUFACTURER_TOOLKIT}")
 
 ###########################################
+# FOR BUILD
+get_property(cached_build_value CACHE BUILD PROPERTY VALUE)
+
+set(build_cli_arg ${cached_build_value})
+if(build_cli_arg STREQUAL CACHED_BUILD)
+  unset(build_cli_arg)
+endif()
+
+set(build_app_cmake_lists ${BUILD})
+if(cached_build_value STREQUAL BUILD)
+  unset(build_app_cmake_lists)
+endif()
+
+if(CACHED_BUILD)
+  if ((build_cli_arg) AND (NOT(CACHED_BUILD STREQUAL build_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(BUILD ${CACHED_BUILD})
+elseif(build_cli_arg)
+  set(BUILD ${build_cli_arg})
+elseif(build_app_cmake_lists)
+  set(BUILD ${build_app_cmake_lists})
+endif()
+
+set(CACHED_BUILD ${BUILD} CACHE STRING "Selected BUILD")
+message("Selected BUILD ${BUILD}")
+
+###########################################
 # FOR BOARD
 get_property(cached_board_value CACHE BOARD PROPERTY VALUE)
 

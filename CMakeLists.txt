@@ -72,11 +72,14 @@ add_subdirectory(lib)
 add_subdirectory(network)
 add_subdirectory(storage)
 add_subdirectory(crypto)
-endif()
-
 if (${MODULES} MATCHES true)
   add_subdirectory(device_modules)
 endif()
+
+endif()
+
+
+
 
 
 if(${TARGET_OS} MATCHES linux)
