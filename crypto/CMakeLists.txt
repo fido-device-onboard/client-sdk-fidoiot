@@ -24,7 +24,7 @@ client_sdk_sources(
   )
 
 if (${KEX} MATCHES asym)
-        client_sdk_sources(common/sdokeyexchange_asym.c)
+  client_sdk_sources(common/sdokeyexchange_asym.c)
 endif()
 
 

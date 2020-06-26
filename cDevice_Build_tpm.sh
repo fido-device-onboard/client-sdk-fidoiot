@@ -18,7 +18,7 @@ mkdir -p tpm_ecdsa_c_device_bin
 mkdir -p tpm_ecdsa_c_device_bin/blob_backup
 make pristine || true
 cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 .
-make -j4
+make -j$(nproc)
 
 cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/tpm_ecdsa_c_device_bin
 cp -a ${WORKSPACE}/data   ${WORKSPACE}/tpm_ecdsa_c_device_bin

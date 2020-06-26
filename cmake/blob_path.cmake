@@ -9,12 +9,12 @@
 #set(BLOB_PATH ${BASE_DIR})
 
 if(NOT (DEFINED BLOB_PATH))
-set(BLOB_PATH .)
+  set(BLOB_PATH .)
 endif()
 
 if(TARGET_OS MATCHES linux)
   
-  Client_sdk_compile_definitions(
+  client_sdk_compile_definitions(
     -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
     -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
     -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
@@ -25,7 +25,7 @@ if(TARGET_OS MATCHES linux)
     -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
     )
   if (${DA} MATCHES tpm)
-    Client_sdk_compile_definitions(
+    client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
        -DDEVICE_MSTRING=\"${BLOB_PATH}/data/device_mstring\"
        -DTPM_ECDSA_DEVICE_KEY=\"${BLOB_PATH}/data/tpm_ecdsa_priv_pub_blob.key\"

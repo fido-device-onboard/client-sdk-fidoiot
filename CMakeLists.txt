@@ -94,32 +94,32 @@ if(${TARGET_OS} MATCHES linux)
   target_link_libraries(linux-client client_sdk)
 
 
-client_sdk_ld_options(
-  -L$ENV{SAFESTRING_ROOT}/
-  -l:libsafestring.a
-  -Wl,--no-whole-archive -lssl -lcrypto -ldl
-  )
-
-if (${TLS} STREQUAL openssl)
   client_sdk_ld_options(
+    -L$ENV{SAFESTRING_ROOT}/
+    -l:libsafestring.a
     -Wl,--no-whole-archive -lssl -lcrypto -ldl
     )
-elseif(${TLS} MATCHES mbedtls)
-  client_sdk_ld_options(
-    -Wl,--no-whole-archive -lmbedcrypto
-    -Wl,--no-whole-archive -lmbedtls -lmbedx509
-    )
-endif()
 
-if( ${DA} MATCHES tpm)
-  client_sdk_ld_options(-ltss2-esys -ltss2-mu -ltss2-tctildr)
-endif()
+  if (${TLS} STREQUAL openssl)
+    client_sdk_ld_options(
+      -Wl,--no-whole-archive -lssl -lcrypto -ldl
+      )
+  elseif(${TLS} MATCHES mbedtls)
+    client_sdk_ld_options(
+      -Wl,--no-whole-archive -lmbedcrypto
+      -Wl,--no-whole-archive -lmbedtls -lmbedx509
+      )
+  endif()
 
-if (${CRYPTO_HW} MATCHES true)
-  client_sdk_ld_options(
-    -L$ENV{CRYPTOAUTHLIB_ROOT}/lib/
-    -l:libcryptoauth.so)
-endif()
+  if( ${DA} MATCHES tpm)
+    client_sdk_ld_options(-ltss2-esys -ltss2-mu -ltss2-tctildr)
+  endif()
+
+  if (${CRYPTO_HW} MATCHES true)
+    client_sdk_ld_options(
+      -L$ENV{CRYPTOAUTHLIB_ROOT}/lib/
+      -l:libcryptoauth.so)
+  endif()
 
 endif() ### target_os linux
 
