@@ -111,6 +111,10 @@ elseif(${TLS} MATCHES mbedtls)
     )
 endif()
 
+if( ${DA} MATCHES tpm)
+  client_sdk_ld_options(-ltss2-esys -ltss2-mu -ltss2-tctildr)
+endif()
+
 if (${CRYPTO_HW} MATCHES true)
   client_sdk_ld_options(
     -L$ENV{CRYPTOAUTHLIB_ROOT}/lib/

@@ -24,7 +24,7 @@ if(TARGET_OS MATCHES linux)
     -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
     -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
     )
-  if (${DA} MATCHES tpm20)
+  if (${DA} MATCHES tpm)
     Client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
        -DDEVICE_MSTRING=\"${BLOB_PATH}/data/device_mstring\"

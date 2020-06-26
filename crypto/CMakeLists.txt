@@ -64,7 +64,17 @@ if (${TLS} STREQUAL openssl)
     endif()
 
 
-    if (${DA} MATCHES ecdsa)
+
+
+    if (${DA} MATCHES tpm)
+	  client_sdk_sources (
+	    openssl/tpm20_ECDSASignRoutines.c
+	    openssl/tpm20_Utils.c
+	    openssl/openssl_csr.c
+	    openssl/ec_key.c
+	    ecdsa/ecdsa_privkey.c)
+
+    elseif (${DA} MATCHES ecdsa)
       if (${CRYPTO_HW} MATCHES false)
 	  client_sdk_sources (
 	    openssl/openssl_ECDSASignRoutines.c
@@ -72,13 +82,6 @@ if (${TLS} STREQUAL openssl)
 	    openssl/ec_key.c
             ecdsa/ecdsa_privkey.c)
         endif()
-
-      elseif (${DA} MATCHES tpm)
-	  client_sdk_sources (
-	    openssl/tpm20_ECDSASignRoutines.c
-	    openssl/tpm20_Utils.c
-	    openssl/openssl_csr.c ec_key.c
-	    ecdsa/ecdsa_privkey.c)
     endif()
 
     if (${CRYPTO_HW} MATCHES true)
