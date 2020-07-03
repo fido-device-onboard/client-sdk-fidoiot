@@ -133,6 +133,7 @@ int32_t sdo_kex_close(void)
 	if (to2sym_ctx->initialization_vector) {
 		sdo_free(to2sym_ctx->initialization_vector);
 		to2sym_ctx->initialization_vector = NULL;
+		to2sym_ctx->ctr_value = 0U;
 	}
 
 	if (kex_ctx->context) {
