@@ -467,6 +467,63 @@ set(CACHED_BUILD ${BUILD} CACHE STRING "Selected BUILD")
 message("Selected BUILD ${BUILD}")
 
 ###########################################
+# FOR OPTIMIZE
+get_property(cached_optimize_value CACHE OPTIMIZE PROPERTY VALUE)
+
+set(optimize_cli_arg ${cached_optimize_value})
+if(optimize_cli_arg STREQUAL CACHED_OPTIMIZE)
+  unset(optimize_cli_arg)
+endif()
+
+set(optimize_app_cmake_lists ${OPTIMIZE})
+if(cached_optimize_value STREQUAL OPTIMIZE)
+  unset(optimize_app_cmake_lists)
+endif()
+
+if(CACHED_OPTIMIZE)
+  if ((optimize_cli_arg) AND (NOT(CACHED_OPTIMIZE STREQUAL optimize_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(OPTIMIZE ${CACHED_OPTIMIZE})
+elseif(optimize_cli_arg)
+  set(OPTIMIZE ${optimize_cli_arg})
+elseif(optimize_app_cmake_lists)
+  set(OPTIMIZE ${optimize_app_cmake_lists})
+endif()
+
+set(CACHED_OPTIMIZE ${OPTIMIZE} CACHE STRING "Selected OPTIMIZE")
+message("Selected OPTIMIZE ${OPTIMIZE}")
+
+###########################################
+# FOR RETRY
+get_property(cached_retry_value CACHE RETRY PROPERTY VALUE)
+
+set(retry_cli_arg ${cached_retry_value})
+if(retry_cli_arg STREQUAL CACHED_RETRY)
+  unset(retry_cli_arg)
+endif()
+
+set(retry_app_cmake_lists ${RETRY})
+if(cached_retry_value STREQUAL RETRY)
+  unset(retry_app_cmake_lists)
+endif()
+
+if(CACHED_RETRY)
+  if ((retry_cli_arg) AND (NOT(CACHED_RETRY STREQUAL retry_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(RETRY ${CACHED_RETRY})
+elseif(retry_cli_arg)
+  set(RETRY ${retry_cli_arg})
+elseif(retry_app_cmake_lists)
+  set(RETRY ${retry_app_cmake_lists})
+endif()
+
+set(CACHED_RETRY ${RETRY} CACHE STRING "Selected RETRY")
+message("Selected RETRY ${RETRY}")
+
+
+###########################################
 # FOR BOARD
 get_property(cached_board_value CACHE BOARD PROPERTY VALUE)
 

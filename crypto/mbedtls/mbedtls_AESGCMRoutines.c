@@ -50,19 +50,19 @@ int32_t sdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
 				   uint8_t *tag, uint32_t tag_length)
 {
 	int32_t retval = -1;
-	mbedtls_gcm_context ctx = {0};
+	static mbedtls_gcm_context ctx;
 
 	if (NULL == plain_text || 0 == plain_text_length ||
 	    NULL == cipher_text || NULL == iv || 0 == iv_length ||
 	    NULL == key || key_length != PLATFORM_AES_KEY_DEFAULT_LEN ||
 	    NULL == tag || tag_length != AES_GCM_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
-		goto end;
+		return retval;
 	}
 
 	if (cipher_text_length < plain_text_length) {
 		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
-		goto end;
+		return retval;
 	}
 
 	/* Initialise the context */
@@ -133,19 +133,19 @@ int32_t sdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
 				   uint8_t *tag, uint32_t tag_length)
 {
 	int32_t retval = -1;
-	mbedtls_gcm_context ctx = {0};
+	static mbedtls_gcm_context ctx;
 
 	if (NULL == clear_text || NULL == cipher_text ||
 	    0 == cipher_text_length || NULL == iv || 0 == iv_length ||
 	    NULL == key || key_length != PLATFORM_AES_KEY_DEFAULT_LEN ||
 	    NULL == tag || tag_length != AES_GCM_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
-		goto end;
+		return retval;
 	}
 
 	if (clear_text_length < cipher_text_length) {
 		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
-		goto end;
+		return retval;
 	}
 
 	/* Initialise the context */

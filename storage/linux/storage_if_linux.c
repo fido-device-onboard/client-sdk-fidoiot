@@ -464,7 +464,9 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 			buf, n_bytes,
 			write_context + PLATFORM_IV_DEFAULT_LEN +
 			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE,
-			write_context_len, iv, PLATFORM_IV_DEFAULT_LEN, aes_key,
+			write_context_len - (PLATFORM_IV_DEFAULT_LEN +
+			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE),
+			iv, PLATFORM_IV_DEFAULT_LEN, aes_key,
 			PLATFORM_AES_KEY_DEFAULT_LEN, tag,
 			AES_GCM_TAG_LEN) < 0) {
 			LOG(LOG_ERROR, "Encypting data failed during Secure "
