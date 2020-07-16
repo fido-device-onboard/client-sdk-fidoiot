@@ -15,6 +15,7 @@
 #include "sdoCrypto.h"
 #include "snprintf_s.h"
 #include "sdoCryptoHal.h"
+#include "storage_al.h"
 
 /*
  * Generate the "m" string value.
@@ -59,14 +60,67 @@
 
 /* All below sizes are excluding NULL termination */
 #define MAX_KEY_ID_SIZE 3
-#define MAX_DEVICE_SERIAL_SIZE 32
-#define MAX_MODEL_NUMBER_SIZE 2
+#define MAX_DEV_SERIAL_SZ 32
+#define MAX_MODEL_NO_SZ 32
 
 #if defined(MANUFACTURER_TOOLKIT)
 /* TODO: Device serial number source need to be fixed */
-static const char *device_serial = "abcdef";
-static const char *model_number = "0";
+#define DEF_SERIAL_NO "abcdef"
+#define DEF_MODEL_NO "0"
+static char device_serial[MAX_DEV_SERIAL_SZ];
+static char model_number[MAX_MODEL_NO_SZ];
 static char key_id[MAX_KEY_ID_SIZE];
+
+static int read_fill_modelserial(void)
+{
+	int ret = -1;
+	uint8_t def_serial_sz = 0;
+	uint8_t def_model_sz = 0;
+	int32_t fsize = 0;
+
+	fsize = sdo_blob_size((const char *)SERIAL_FILE, SDO_SDK_RAW_DATA);
+	if (fsize > 0) {
+
+		if (sdo_blob_read((const char *)SERIAL_FILE, SDO_SDK_RAW_DATA,
+				  (uint8_t *)device_serial, fsize) <= 0) {
+
+			LOG(LOG_ERROR, "Failed to get serial no\n");
+			goto err;
+		}
+	} else {
+		LOG(LOG_INFO, "No serialno file present!\n");
+
+		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
+		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ, DEF_SERIAL_NO,
+				def_serial_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to get serial no\n");
+			goto err;
+		}
+	}
+
+	fsize = sdo_blob_size((const char *)MODEL_FILE, SDO_SDK_RAW_DATA);
+	if (fsize > 0) {
+		if (sdo_blob_read((const char *)MODEL_FILE, SDO_SDK_RAW_DATA,
+				  (uint8_t *)model_number, fsize) <= 0) {
+			LOG(LOG_ERROR, "Failed to get serial no\n");
+			goto err;
+		}
+	} else {
+
+		LOG(LOG_INFO, "No model number file present!\n");
+		def_model_sz = strnlen_s(DEF_MODEL_NO, MAX_MODEL_NO_SZ);
+		ret = strncpy_s(model_number, MAX_MODEL_NO_SZ, DEF_MODEL_NO,
+				def_model_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to get model no\n");
+			goto err;
+		}
+	}
+	ret = 0;
+err:
+	return ret;
+}
 
 /**
  * Internal API
@@ -75,8 +129,8 @@ static char key_id[MAX_KEY_ID_SIZE];
 static uint32_t get_base_m_string_size(void)
 {
 	return strnlen_s(key_id, MAX_KEY_ID_SIZE) + 1 +
-	       strnlen_s(device_serial, MAX_DEVICE_SERIAL_SIZE) + 1 +
-	       strnlen_s(model_number, MAX_MODEL_NUMBER_SIZE);
+	       strnlen_s(device_serial, MAX_DEV_SERIAL_SZ) + 1 +
+	       strnlen_s(model_number, MAX_MODEL_NO_SZ);
 }
 
 /**
@@ -88,10 +142,8 @@ static int fill_base_m_string(uint8_t *m_string_bytes, size_t m_string_sz,
 {
 	int ret = -1;
 	size_t key_id_len = strnlen_s(key_id, MAX_KEY_ID_SIZE);
-	size_t device_serial_len =
-	    strnlen_s(device_serial, MAX_DEVICE_SERIAL_SIZE);
-	size_t model_number_len =
-	    strnlen_s(model_number, MAX_MODEL_NUMBER_SIZE);
+	size_t device_serial_len = strnlen_s(device_serial, MAX_DEV_SERIAL_SZ);
+	size_t model_number_len = strnlen_s(model_number, MAX_MODEL_NO_SZ);
 
 	/* Fill in the key ID. First param of m-string */
 	ret =
@@ -119,7 +171,7 @@ static int fill_base_m_string(uint8_t *m_string_bytes, size_t m_string_sz,
 		LOG(LOG_ERROR, "Failed to copy model number in m-string\n");
 		goto err;
 	}
-	*ofs += strnlen_s(model_number, MAX_MODEL_NUMBER_SIZE) + 1;
+	*ofs += strnlen_s(model_number, MAX_MODEL_NO_SZ) + 1;
 #else /* PK_ENC_RSA or DA = epid*/
 	/* Fill in the model number without NULL termination, no space for it */
 
@@ -129,7 +181,7 @@ static int fill_base_m_string(uint8_t *m_string_bytes, size_t m_string_sz,
 		LOG(LOG_ERROR, "Failed to copy model number in m-string\n");
 		goto err;
 	}
-	*ofs += strnlen_s(model_number, MAX_MODEL_NUMBER_SIZE);
+	*ofs += strnlen_s(model_number, MAX_MODEL_NO_SZ);
 #endif
 
 err:
@@ -149,6 +201,10 @@ static int non_csr_m_string(sdo_prot_t *ps)
 	uint32_t ofs = 0;
 	size_t m_string_sz = 0;
 	sdo_byte_array_t *m_string = NULL;
+
+	if (read_fill_modelserial()) {
+		return ret;
+	}
 
 	/* Get the total size of m-string (includes NULL + CSR) */
 	m_string_sz = get_base_m_string_size();
@@ -186,6 +242,10 @@ int ps_get_m_string(sdo_prot_t *ps)
 	size_t m_string_sz = 0;
 	sdo_byte_array_t *csr = NULL;
 	sdo_byte_array_t *m_string = NULL;
+
+	if (read_fill_modelserial()) {
+		return ret;
+	}
 
 	/* Get the CSR data */
 	ret = sdo_get_device_csr(&csr);

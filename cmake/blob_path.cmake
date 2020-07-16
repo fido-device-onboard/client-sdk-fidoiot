@@ -15,6 +15,8 @@ endif()
 if(TARGET_OS MATCHES linux)
   
   client_sdk_compile_definitions(
+    -DSERIAL_FILE=\"${BLOB_PATH}/data/manufacturer_sn.bin\"
+    -DMODEL_FILE=\"${BLOB_PATH}/data/manufacturer_mod.bin\"
     -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
     -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
     -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
@@ -98,6 +100,8 @@ if(TARGET_OS MATCHES linux)
 
   if (${TARGET_OS} MATCHES mbedos)
     client_sdk_compile_definitions(
+      -DSERIAL_FILE=\"${BLOB_PATH}/data/manufacturer_sn.bin\"
+      -DMODEL_FILE=\"${BLOB_PATH}/data/manufacturer_mod.bin\"
       -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
       -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
       -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
