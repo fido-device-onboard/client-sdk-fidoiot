@@ -5,12 +5,8 @@
 
 
 # Note all blobs and data will be made relative.
-# if absoulte is needed uncomment the following line
-#set(BLOB_PATH ${BASE_DIR})
-
-if(NOT (DEFINED BLOB_PATH))
-  set(BLOB_PATH .)
-endif()
+# if absoulte is needed declare BLOB_PATH on CLI
+# or export BLOB_PATH=<path>
 
 if(TARGET_OS MATCHES linux)
   

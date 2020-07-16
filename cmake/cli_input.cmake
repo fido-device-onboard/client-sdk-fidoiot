@@ -6,7 +6,7 @@
 
 ############################################################
 # cmake given defaults
-set(TARGET_OS linux)
+set (TARGET_OS linux)
 set (CSTD c99)
 set (TLS openssl)
 set (DA ecdsa256)
@@ -18,7 +18,7 @@ set (BUILD debug)
 set (TARGET_OS linux)
 set (HTTPPROXY true)
 set (PROXY_DISCOVERY false)
-set(OPTIMIZE 1)
+set (OPTIMIZE 1)
 set (MODULES false)
 set (DA_FILE der)
 set (CRYPTO_HW false)
@@ -28,6 +28,7 @@ set (unit-test false)
 set (MANUFACTURER_TOOLKIT false)
 set (STORAGE true)
 set (BOARD NUCLEO_F767ZI)
+set (BLOB_PATH .)
 
 #following are specific to only mbedos
 set (DATASTORE sd)
@@ -582,6 +583,36 @@ set(CACHED_DATASTORE ${DATASTORE} CACHE STRING "Selected DATASTORE")
 if(${TARGET_OS} STREQUAL mbedos)
   message("Selected DATASTORE ${DATASTORE}")
 endif()
+
+###########################################
+# FOR BLOB_PATH
+get_property(cached_blob_path_value CACHE BLOB_PATH PROPERTY VALUE)
+
+set(blob_path_cli_arg ${cached_blob_path_value})
+if(blob_path_cli_arg STREQUAL CACHED_BLOB_PATH)
+  unset(blob_path_cli_arg)
+endif()
+
+set(blob_path_app_cmake_lists ${BLOB_PATH})
+if(cached_blob_path_value STREQUAL BLOB_PATH)
+  unset(blob_path_app_cmake_lists)
+endif()
+
+if(CACHED_BLOB_PATH)
+  if ((blob_path_cli_arg) AND (NOT(CACHED_BLOB_PATH STREQUAL blob_path_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(BLOB_PATH ${CACHED_BLOB_PATH})
+elseif(blob_path_cli_arg)
+  set(BLOB_PATH ${blob_path_cli_arg})
+elseif(DEFINED ENV{BLOB_PATH})
+  set(BLOB_PATH $ENV{BLOB_PATH})
+elseif(blob_path_app_cmake_lists)
+  set(BLOB_PATH ${blob_path_app_cmake_lists})
+endif()
+
+set(CACHED_BLOB_PATH ${BLOB_PATH} CACHE STRING "Selected BLOB_PATH")
+message("Selected BLOB_PATH ${BLOB_PATH}")
 
 ###########################################
 # FOR WIFI_SSID
