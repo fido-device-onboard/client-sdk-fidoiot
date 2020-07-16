@@ -8,7 +8,12 @@ client_sdk_include_directories(
   include
   )
 
-client_sdk_sources(
+add_library(network "")
+
+client_sdk_sources_with_lib(
+  network
   network_if_linux.c
   rest_interface.c
   )
+
+target_link_libraries(network PUBLIC client_sdk_interface)

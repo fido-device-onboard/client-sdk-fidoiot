@@ -88,13 +88,14 @@ if(${TARGET_OS} MATCHES linux)
     target_sources(linux-client PRIVATE app/se_provisioning.c)
   endif()
   target_include_directories(linux-client PRIVATE app/include)
-  target_link_libraries(linux-client client_sdk)
+
+  # Link all the individual static libs into one single executable
+  target_link_libraries(linux-client client_sdk network storage crypto)
 
 
   client_sdk_ld_options(
     -L$ENV{SAFESTRING_ROOT}/
     -l:libsafestring.a
-    -Wl,--no-whole-archive -lssl -lcrypto -ldl
     )
 
   if (${TLS} STREQUAL openssl)

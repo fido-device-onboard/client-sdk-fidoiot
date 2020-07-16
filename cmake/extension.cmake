@@ -113,6 +113,23 @@ function(client_sdk_get_compile_options i)
   set(${i} ${temp_list} PARENT_SCOPE)
 endfunction()
 
+# first agrument needs to be the lib name then the rest should be the
+# paths to the files.
+function(client_sdk_sources_with_lib lib)
+  foreach(arg ${ARGN})
+    if(IS_ABSOLUTE ${arg})
+      set(path ${arg})
+    else()
+      set(path ${CMAKE_CURRENT_SOURCE_DIR}/${arg})
+    endif()
+
+    if(IS_DIRECTORY ${path})
+      message(FATAL_ERROR "client_sdk_sources() was called on a directory")
+    endif()
+
+    target_sources(${lib} PRIVATE ${path})
+  endforeach()
+endfunction()
 
 ############################################################
 # macros needed from compile based on CLI.
