@@ -1,7 +1,10 @@
 node('ccode'){
     withEnv([
         'REPO_Safestring=https://github.com/intel/safestringlib.git',
-        ])
+        "TEST_DIR=${WORKSPACE}/sdo-test",
+        "MANUFACTURER_DB_CONNECT_STRING=jdbc:mariadb://127.0.0.1:3306/sdo",
+        "RESELLER_DB_CONNECT_STRING=jdbc:mariadb://127.0.0.1:4306/sdo"
+      ])
   {
     stage('Clone Client-SDK'){
       cleanWs()
@@ -43,6 +46,74 @@ node('ccode'){
       '''
       print "Archive the artifacts"
       archiveArtifacts artifacts: 'client-sdk/tpm_*.tar.gz', fingerprint: true, allowEmptyArchive: false
+    }
+try{
+      stage('Run SmokeTest'){
+        checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'sdo-test']], userRemoteConfigs: [[credentialsId: 'sdo-automationgithubtoken', url: 'https://github.com/secure-device-onboard-ci/sdo-test']]])
+        sh '''
+          mkdir -p sdo-test/binaries/pri
+          mkdir -p sdo-test/binaries/supply-chain-tools
+          mkdir -p sdo-test/binaries/rendezvous-service
+          mkdir -p sdo-test/binaries/client-sdk/x86_ecdsa256_sct_bin
+          mkdir -p sdo-test/binaries/client-sdk/x86_ecdsa384_sct_bin
+        '''
+        print "copying the dependent binaries from pri, supply-chain-tools and rendezvous-service"
+        copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri/'
+        copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'supply-chain-tools/master', selector: lastSuccessful(), target: 'sdo-test/binaries/supply-chain-tools/'
+        copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'rendezvous-service/master', selector: lastSuccessful(), target: 'sdo-test/binaries/rendezvous-service'
+        print "Extract the dependent binaries to respective folders"
+        sh '''
+          tar -xvzf sdo-test/binaries/pri/demo.tar.gz -C sdo-test/binaries/pri/ --strip=1
+          tar -xvzf sdo-test/binaries/supply-chain-tools/demo.tar.gz -C sdo-test/binaries/supply-chain-tools/ --strip=1
+          tar -xvzf sdo-test/binaries/rendezvous-service/demo.tar.gz -C sdo-test/binaries/rendezvous-service/ --strip=1
+        '''
+        print "Copy client-sdk artifacts to sdo-test/binaries folder"
+        sh '''
+          tar -xvzf client-sdk/x86_ecdsa256_c_sct_bin.tar.gz -C sdo-test/binaries/client-sdk/x86_ecdsa256_sct_bin/ --strip=1
+          cp sdo-test/testFiles/keys/ecdsa256privkey.dat sdo-test/binaries/client-sdk/x86_ecdsa256_sct_bin/data/
+          tar -xvzf client-sdk/x86_ecdsa384_c_sct_bin.tar.gz -C sdo-test/binaries/client-sdk/x86_ecdsa384_sct_bin/ --strip=1
+          cp sdo-test/testFiles/keys/ecdsa384privkey.dat sdo-test/binaries/client-sdk/x86_ecdsa384_sct_bin/data/
+          cp -r sdo-test/binaries/client-sdk sdo-test
+        '''
+        print "Create tomcat containers running manufacturer & db"
+        sh '''
+          cd sdo-test/binaries/supply-chain-tools/docker_manufacturer/
+          docker-compose up -d --build
+          docker logs manufacturer-mariadb
+          docker logs manufacturer
+        '''
+        print "Client-SDK Device smoke Tests with PRI-RV, SCT-Manufacturer"
+        sh '''
+          cd sdo-test
+          mvn clean test -Dgroups=CdeviceTests
+        '''
+        print "Client-SDKDevice smoke Tests with Onprem-RV, SCT-Manufacturer"
+        sh '''
+          cd sdo-test
+          mvn clean test -Dgroups=CdeviceOnPremTests
+        '''
+        }
+    } finally {
+        print "stop tomcat containers running manufacturer & db"
+        sh '''
+          docker logs manufacturer-mariadb > mariadbLog.txt
+          docker logs manufacturer > manufacturerLog.txt
+          docker stop $(docker ps -a -q)
+          docker rm -v $(docker ps -a -q) -f
+          docker system prune -a -f
+          docker images -a
+          docker volume ls
+          docker ps -a
+        '''
+        print "Archive the smoke test logs "
+        sh 'mkdir SmokeTest_Log'
+        sh '''
+          cp -r manufacturerLog.txt SmokeTest_Log/
+          cp -r mariadbLog.txt SmokeTest_Log/
+          cp -r sdo-test/logs/*_log.txt SmokeTest_Log/
+          tar -zcvf SmokeTest_Log.tar.gz SmokeTest_Log
+        '''
+        archiveArtifacts artifacts: 'SmokeTest_Log.tar.gz', fingerprint: true, allowEmptyArchive: false
     }
   }
 }
