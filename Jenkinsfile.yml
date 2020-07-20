@@ -1,7 +1,6 @@
 node('ccode'){
     withEnv([
         'REPO_Safestring=https://github.com/intel/safestringlib.git',
-        'REPO_EPID=https://github.com/Intel-EPID-SDK/epid-sdk.git',
         ])
   {
     stage('Clone Client-SDK'){
@@ -10,35 +9,26 @@ node('ccode'){
         checkout scm
       }
       sh 'git clone "${REPO_Safestring}"'
-      sh 'git clone "${REPO_EPID}"'
       }
 
-    stage('Build safestring and EPID'){
+    stage('Build safestring'){
       sh '''
         cd $WORKSPACE/safestringlib
         echo 'Building safestring'
         git checkout v1.0.0
         mkdir obj
         make
-        cd $WORKSPACE/epid-sdk
-        git checkout v6.0.1
-        chmod +x configure
-        ./configure
-        make && make utest && make install
       '''
     }
 
     stage('Build ClientSDK'){
       sh '''
         export SAFESTRING_ROOT=$WORKSPACE/safestringlib
-        export EPID_SDK_R6_ROOT=$WORKSPACE/epid-sdk
         echo $SAFESTRING_ROOT
-        echo $EPID_SDK_R6_ROOT
         cd $WORKSPACE/client-sdk
         $WORKSPACE/client-sdk/cDevice_Build.sh
         tar -cvzf x86_ecdsa256_c_sct_bin.tar.gz ecdsa256_c_sct_device_bin
         tar -cvzf x86_ecdsa384_c_sct_bin.tar.gz ecdsa384_c_sct_device_bin
-        tar -cvzf x86_epid_c_sct_bin.tar.gz epid_c_sct_device_bin
       '''
       print "Archive the artifacts"
       archiveArtifacts artifacts: 'client-sdk/x86_*.tar.gz', fingerprint: true, allowEmptyArchive: false
@@ -47,7 +37,6 @@ node('ccode'){
     stage('Build TPM'){
       sh '''
         export SAFESTRING_ROOT=$WORKSPACE/safestringlib
-        export EPID_SDK_R6_ROOT=$WORKSPACE/epid-sdk
         cd $WORKSPACE/client-sdk
         ./cDevice_Build_tpm.sh
         tar -cvzf tpm_ecdsa_c_device_bin.tar.gz tpm_ecdsa_c_device_bin
