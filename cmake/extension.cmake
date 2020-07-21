@@ -262,6 +262,17 @@ endif()
 
 if(${HTTPPROXY} STREQUAL true)
   client_sdk_compile_definitions(-DHTTPPROXY)
+  if(${PROXY_DISCOVERY} STREQUAL true)
+    client_sdk_compile_definitions(-DPROXY_DISCOVERY)
+  endif()
+endif()
+
+if(${RESALE} STREQUAL true)
+  client_sdk_compile_definitions(-DRESALE_SUPPORTED)
+endif()
+
+if(${REUSE} STREQUAL true)
+  client_sdk_compile_definitions(-DREUSE_SUPPORTED)
 endif()
 
 ############################################################

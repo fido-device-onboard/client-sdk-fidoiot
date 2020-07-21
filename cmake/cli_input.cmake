@@ -30,6 +30,8 @@ set (STORAGE true)
 set (BOARD NUCLEO_F767ZI)
 set (BLOB_PATH .)
 set (TPM2_TCTI_TYPE tabrmd)
+set (RESALE false)
+set (REUSE true)
 
 #following are specific to only mbedos
 set (DATASTORE sd)
@@ -737,6 +739,7 @@ if(${TARGET_OS} STREQUAL mbedos)
 endif()
 
 ###########################################
+
 # FOR SPECIFYING TPM RESOURCE MANAGER
 get_property(cached_tpm2_tcti_type_value CACHE TPM2_TCTI_TYPE PROPERTY VALUE)
 
@@ -763,5 +766,62 @@ endif()
 
 set(CACHED_TPM2_TCTI_TYPE ${TPM2_TCTI_TYPE} CACHE STRING "Selected TPM2_TCTI_TYPE")
 message("Selected TPM2_TCTI_TYPE ${TPM2_TCTI_TYPE}")
+
+###########################################
+
+# FOR RESALE
+get_property(cached_resale_value CACHE RESALE PROPERTY VALUE)
+
+set(resale_cli_arg ${cached_resale_value})
+if(resale_cli_arg STREQUAL CACHED_RESALE)
+  unset(resale_cli_arg)
+endif()
+
+set(resale_app_cmake_lists ${RESALE})
+if(cached_resale_value STREQUAL RESALE)
+  unset(resale_app_cmake_lists)
+endif()
+
+if(CACHED_RESALE)
+  if ((resale_cli_arg) AND (NOT(CACHED_RESALE STREQUAL resale_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(RESALE ${CACHED_RESALE})
+elseif(resale_cli_arg)
+  set(RESALE ${resale_cli_arg})
+elseif(resale_app_cmake_lists)
+  set(RESALE ${resale_app_cmake_lists})
+endif()
+
+set(CACHED_RESALE ${RESALE} CACHE STRING "Selected RESALE")
+message("Selected RESALE ${RESALE}")
+
+###########################################
+# FOR REUSE
+get_property(cached_reuse_value CACHE REUSE PROPERTY VALUE)
+
+set(reuse_cli_arg ${cached_reuse_value})
+if(reuse_cli_arg STREQUAL CACHED_REUSE)
+  unset(reuse_cli_arg)
+endif()
+
+set(reuse_app_cmake_lists ${REUSE})
+if(cached_reuse_value STREQUAL REUSE)
+  unset(reuse_app_cmake_lists)
+endif()
+
+if(CACHED_REUSE)
+  if ((reuse_cli_arg) AND (NOT(CACHED_REUSE STREQUAL reuse_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(REUSE ${CACHED_REUSE})
+elseif(reuse_cli_arg)
+  set(REUSE ${reuse_cli_arg})
+elseif(reuse_app_cmake_lists)
+  set(REUSE ${reuse_app_cmake_lists})
+endif()
+
+set(CACHED_REUSE ${REUSE} CACHE STRING "Selected REUSE")
+message("Selected REUSE ${REUSE}")
 
 ###########################################
