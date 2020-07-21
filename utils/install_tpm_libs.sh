@@ -10,11 +10,11 @@ TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
 
-install_depnedencies() 
+install_dependencies()
 {
     echo "Install the dependencies..."
-    sudo apt -y update
-    sudo apt -y install \
+    apt -y update
+    apt -y install \
         autoconf-archive \
         libcmocka0 \
         libcmocka-dev \
@@ -33,7 +33,7 @@ install_depnedencies()
         pandoc \
         libcurl4-openssl-dev
 
-    sudo pip install pyyaml PyYAML
+    pip install pyyaml PyYAML
 }
 
 install_tpm2tss() 
@@ -47,13 +47,13 @@ install_tpm2tss()
 
     ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
     make -j$(nproc)
-    sudo make install
+    make install
     
-    sudo mkdir -p /var/lib/tpm
-    sudo userdel tss
-    sudo groupadd tss && sudo useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
-    sudo udevadm control --reload-rules && sudo udevadm trigger
-    sudo ldconfig
+    mkdir -p /var/lib/tpm
+    userdel tss
+    groupadd tss &&  useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
+    udevadm control --reload-rules &&  udevadm trigger
+    ldconfig
 }
 
 install_tpm2abrmd()
@@ -67,17 +67,17 @@ install_tpm2abrmd()
 
     ./configure --with-dbuspolicydir=/etc/dbus-1/system.d --with-systemdsystemunitdir=/lib/systemd/system/ --with-systemdpresetdir=/lib/systemd/system-preset/
     make
-    sudo make install
+    make install
 
-    sudo mv /usr/local/share/dbus-1/system-services/com.intel.tss2.Tabrmd.service /usr/share/dbus-1/system-services/
-    sudo ldconfig
-    sudo service tpm2-abrmd stop
-    sudo pkill -HUP dbus-daemon
-    sudo systemctl daemon-reload
-    sudo service tpm2-abrmd status
-    sudo service tpm2-abrmd start
-    sudo service tpm2-abrmd status
-    sudo systemctl enable tpm2-abrmd.service
+    mv /usr/local/share/dbus-1/system-services/com.intel.tss2.Tabrmd.service /usr/share/dbus-1/system-services/
+    ldconfig
+    service tpm2-abrmd stop
+    pkill -HUP dbus-daemon
+    systemctl daemon-reload
+    service tpm2-abrmd status
+    service tpm2-abrmd start
+    service tpm2-abrmd status
+    systemctl enable tpm2-abrmd.service
 }
 
 install_tpm2tools()
@@ -91,7 +91,7 @@ install_tpm2tools()
 
     ./configure
     make
-    sudo make install
+    make install
 }
 
 install_tpm2tssengine()
@@ -106,7 +106,7 @@ install_tpm2tssengine()
     ./bootstrap
     ./configure
     make -j$(nproc)
-    sudo make install
+    make install
 }
 
 uninstall_tpm2tss()
@@ -114,7 +114,7 @@ uninstall_tpm2tss()
     echo "Uninstall tpm2-tss...."
     cd $PARENT_DIR
     cd tpm2-tss-$TPM2_TSS_VER
-    sudo make uninstall
+    make uninstall
 }
 
 uninstall_tpm2abrmd()
@@ -122,8 +122,8 @@ uninstall_tpm2abrmd()
     echo "Uninstall tpm2-abrmd"
     cd $PARENT_DIR
     cd tpm2-abrmd-$TPM2_ABRMD_VER
-    sudo systemctl disable tpm2-abrmd.service
-    sudo make uninstall
+    systemctl disable tpm2-abrmd.service
+    make uninstall
 }
 
 uninstall_tpm2tools()
@@ -131,7 +131,7 @@ uninstall_tpm2tools()
     echo "Uninstall tpm2-tools...."
     cd $PARENT_DIR
     cd tpm2-tools-$TPM2_TOOLS_VER
-    sudo make uninstall
+    make uninstall
 }
 
 uninstall_tpm2tssengine()
@@ -139,13 +139,13 @@ uninstall_tpm2tssengine()
     echo "Uninstall tpm2-tss-engine...."
     cd $PARENT_DIR
     cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
-    sudo make uninstall
+    make uninstall
 }
 
 install()
 {
     echo -e "Installing all the tpm2 libraries..\n\n"
-    install_depnedencies
+    install_dependencies
     install_tpm2tss
     install_tpm2abrmd
     install_tpm2tools

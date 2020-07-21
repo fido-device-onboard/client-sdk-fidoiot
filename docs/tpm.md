@@ -39,6 +39,7 @@ $ ./install_tpm_libs.sh -i
 # Command to uninstall TPM libraries
 $ ./install_tpm_libs.sh -u
 ```
+> **Note:** Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM)
 
@@ -64,6 +65,8 @@ This is an optional but recommended library (daemon) to use TPM in the device. T
 
 The library can be downloaded from [tpm2-abrmd-2.2.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.2.0/tpm2-abrmd-2.2.0.tar.gz)
 
+Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see Section on Compiling SDO.
+
 ##### Build and Install process
 
 The build and installation process found at [tpm2-abrmd-2.2.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
@@ -80,17 +83,17 @@ The library can be downloaded from [tpm2-tools-4.0.1-download](https://github.co
 
 The build and installation process can be found at [tpm2-tools-4.0.1-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
 
-#### 2.1.4 tpm2-tss-engine
+#### 2.1.4 tpm2-tss-engine-1.1.0-rc0
 
-This library provides the OpenSSL engine, which performs the OpenSSL cryptography operation using the keys inside the TPM.  uses a specific commit version from the master branch of this library because currently, there is no release version of this library with the fix for the following issue:[github-issue-124](https://github.com/tpm2-software/tpm2-tss-engine/issues/124).
+This library provides the OpenSSL engine, which performs the OpenSSL cryptography operation using the keys inside the TPM.  uses release version 1.1.0-rc0 of the library.
 
 ##### Source code
 
-The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/820835977213ee28c0866f8eff623c307c618f5d.zip)
+The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0-rc0.zip)
 
 ##### Build and Install Process
 
-The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/820835977213ee28c0866f8eff623c307c618f5d/INSTALL.md)
+The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0-rc0/INSTALL.md)
 
 ## 3. Compiling Intel safestringlib
 
@@ -110,7 +113,7 @@ Provide safestringlib path:
 $ export SAFESTRING_ROOT=path/to/safestringlib
 ```
 
-## 6. Compiling Service Info Modules (optional)
+## 5. Compiling Service Info Modules (optional)
 
 Provide the service-info device module path to use the  SDO service-info functionality:
 ```shell
@@ -118,7 +121,7 @@ $ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
 ```
 Service-info device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, i.e. required service-info device modules must be built prior to this step, otherwise the  SDO client-sdk build will fail.
 
-## 7. Compiling  SDO
+## 6. Compiling  SDO
 
 The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the  SDO client-sdk.
 
@@ -126,10 +129,19 @@ Refer the TPM Library Setup steps given in Section 2 to compile TPM enabled SDO 
 
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md). 
 
-Example command to build SDO TPM client-sdk
+Example command to build SDO TPM client-sdk with the Resource Manager as TPM2-ABRMD (tabrmd)
 
 ```shell
-make pristine && make DA=tpm20_ecdsa256 PK_ENC=ecdsa
+make pristine
+cmake -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 .
+make -j$(nproc)
+```
+
+To use the in-kernel Resource Manager '/dev/tpmrm0', use the following command
+```shell
+make pristine
+cmake -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
+make -j$(nproc)
 ```
 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), Public-key encoding (PK_ENC) type, and SSL support (TLS).
@@ -137,7 +149,7 @@ Refer to the section [SDO Build configurations](build_conf.md)
 
 <a name="run_linux_sdo"></a>
 
-## 8. Running the application <!-- Ensuring generic updates are captured where applicable -->
+## 7. Running the application <!-- Ensuring generic updates are captured where applicable -->
 The  SDO Linux TPM device is compatible with  SDO Supply Chain Toolkit (SCT) - manufacturer and reseller, on prem rendezvous and owner container servers.
 
 To test the  SDO Linux device against the  SDO Supply Chain Toolkit (SCT) - manufacturer and reseller, on prem rendezvous and owner container server binaries from the `<release-package-dir>/SupplyChainTools/`, `<release-package-dir>/RendezvousServiceOnPrem/` and `<release-package-dir>/SDOIotPlatformSDK/` directory respectively.
@@ -150,7 +162,7 @@ After a successful compilation, the  SDO Linux device executable can be found at
 - Before executing `linux-client`, prepare for Device Initialization (DI) using
   manufacturer SCT. Refer to [ DI SCT Setup](tpm_di_setup.md). After the manufacturer SCT is set up,
   execute the TPM make ready script. Refer to [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh). Alternatively,
-  perform the steps listed in section 8.1 to initialise the device without using
+  perform the steps listed in section 7.1 to initialise the device without using
   [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
 
   Script execution command:
@@ -163,7 +175,7 @@ After a successful compilation, the  SDO Linux device executable can be found at
   with the credentials and is ready for ownership transfer. To run the device against the
   manufacturer SCT for the DI protocol, do the following:
   ```shell
-  $ ./build/linux/${BUILD}/linux-client
+  $ ./build/linux-client
   ```
 
 - To enable the device for owner transfer, configure the on prem rendezvous and owner container.
@@ -171,10 +183,12 @@ After a successful compilation, the  SDO Linux device executable can be found at
   servers are set up, execute `linux-client` again.
   
   ```shell
-  $ ./build/linux/${BUILD}/linux-client
+  $ ./build/linux-client
   ```
 
-### 8.1 Prepare SDO Client SDK Data Folder
+> **Note:** If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
+
+### 7.1 Prepare SDO Client SDK Data Folder
 
 #### Persistent Storage Index in TPM
 
@@ -209,7 +223,7 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
   $ export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/; openssl req -new -engine tpm2tss -keyform engine -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.sdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
   ```
 
-## 9. Troubleshooting Details
+## 8. Troubleshooting Details
 
 - TPM Authorization Failure while Running tpm2-tools Command.<br />
   Clear TPM from the BIOS. To run the TPM-based SDO implementation, the TPM on the device should not be owned.

@@ -29,6 +29,7 @@ set (MANUFACTURER_TOOLKIT false)
 set (STORAGE true)
 set (BOARD NUCLEO_F767ZI)
 set (BLOB_PATH .)
+set (TPM2_TCTI_TYPE tabrmd)
 
 #following are specific to only mbedos
 set (DATASTORE sd)
@@ -735,5 +736,32 @@ if(${TARGET_OS} STREQUAL mbedos)
   message("Selected MANUFACTURER_DN ${MANUFACTURER_DN}")
 endif()
 
+###########################################
+# FOR SPECIFYING TPM RESOURCE MANAGER
+get_property(cached_tpm2_tcti_type_value CACHE TPM2_TCTI_TYPE PROPERTY VALUE)
+
+set(tpm2_tcti_type_cli_arg ${cached_tpm2_tcti_type_value})
+if(tpm2_tcti_type_cli_arg STREQUAL CACHED_TPM2_TCTI_TYPE)
+  unset(tpm2_tcti_type_cli_arg)
+endif()
+
+set(tpm2_tcti_type_app_cmake_lists ${TPM2_TCTI_TYPE})
+if(cached_tpm2_tcti_type_value STREQUAL TPM2_TCTI_TYPE)
+  unset(tpm2_tcti_type_app_cmake_lists)
+endif()
+
+if(CACHED_TPM2_TCTI_TYPE)
+  if ((tpm2_tcti_type_cli_arg) AND (NOT(CACHED_TPM2_TCTI_TYPE STREQUAL tpm2_tcti_type_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(TPM2_TCTI_TYPE ${CACHED_TPM2_TCTI_TYPE})
+elseif(tpm2_tcti_type_cli_arg)
+  set(TPM2_TCTI_TYPE ${tpm2_tcti_type_cli_arg})
+elseif(tpm2_tcti_type_app_cmake_lists)
+  set(TPM2_TCTI_TYPE ${tpm2_tcti_type_app_cmake_lists})
+endif()
+
+set(CACHED_TPM2_TCTI_TYPE ${TPM2_TCTI_TYPE} CACHE STRING "Selected TPM2_TCTI_TYPE")
+message("Selected TPM2_TCTI_TYPE ${TPM2_TCTI_TYPE}")
 
 ###########################################

@@ -1,3 +1,4 @@
+export TPM2TOOLS_TCTI="tabrmd"
 export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/
 TPM_KEY_FILE_INSIDE_DATA_DIR="tpm_ecdsa_priv_pub_blob.key"
 DEVICE_MSTRING_FILE_INSIDE_DATA_DIR="device_mstring"
@@ -18,7 +19,7 @@ primary_key_type="ecc256:aes128cfb"
 
 usage() 
 {
-    echo "Usage: $0 -p <path of the parent to C-Device data directory> [-v verbose] [-c nist_p256/nist_p384, default:nist_p256] [-d device serial number for device mstring, default: intel-1234] [-m device model number for device mstring, default: model-123456]"
+    echo "Usage: $0 -p <path of the parent to C-Device data directory> [-v verbose] [-c nist_p256/nist_p384, default:nist_p256] [-d device serial number for device mstring, default: intel-1234] [-m device model number for device mstring, default: model-123456] [-i use /dev/tpmrm0 as Resource Manager, if not provided TPM2-ABRMD will be used]"
     exit 2
 }
 
@@ -38,8 +39,10 @@ check_curve()
 parse_args() 
 {
     OPTIND=1
+    USE_TABRMD=2
+    USE_TPMRM0=3
 
-    while getopts "p:c:d:m:h:v" opt; do 
+    while getopts "p:c:d:m:h:v:i" opt; do
         case ${opt} in
             p ) found_path=1;
                 PARENT_DIR=$OPTARG
@@ -52,6 +55,8 @@ parse_args()
               ;;
             m ) DEVICE_MSTRING_MODEL_NUM=$OPTARG
                 echo "Device Model Number for Device mstring has been Updated to : $DEVICE_MSTRING_MODEL_NUM"
+              ;;
+            i ) export TPM2TOOLS_TCTI="device:/dev/tpmrm0"
               ;;
             v ) verbose=1
               ;;
@@ -92,6 +97,8 @@ execute_cmd_on_failure_exit()
 }
 
 parse_args "$@"
+
+echo "$TPM2TOOLS_TCTI in use as Resource Manager"
 
 #Prepare all files path
 tpm_endorsement_primary_key_ctx=$PARENT_DIR"/"$TPM_ENDORSEMENT_PRIMARY_KEY_CTX
@@ -160,4 +167,3 @@ rm -f $tpm_endorsement_primary_key_ctx
 
 #Set manufacturer IP
 echo -n $MANUFACTURER_IP > $PARENT_DIR"/manufacturer_ip.bin"
-
