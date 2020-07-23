@@ -54,6 +54,7 @@ sdo_sdk_status sdo_sdk_init(sdo_sdk_errorCB error_handling_callback,
 			    uint32_t num_modules,
 			    sdo_sdk_service_info_module *module_information);
 
+void sdo_sdk_deinit(void);
 int sdo_de_init(void);
 
 #endif /* __MP_H__ */

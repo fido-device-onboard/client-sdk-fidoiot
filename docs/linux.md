@@ -79,6 +79,16 @@ To run the device against the manufacturer CRI for the DI protocol, do the follo
   $ ./build/linux/${BUILD}/linux-client
   ```
 
+## 7. Compiling and runing of unit tests for SDO
+  Unit-test framework is located inside tests folder.
+
+  Use following command to compile and running.
+
+  ```shell
+  $ make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa .; make
+  ```
+
+
 **Steps to upgrade the OpenSSL toolkit to version 1.1.1f**
 
 1. If libssl-dev is installed, remove it:

@@ -230,6 +230,13 @@ static void sdo_protTO2Exit(app_data_t *app_data)
  */
 sdo_dev_cred_t *app_alloc_credentials(void)
 {
+	if (!g_sdo_data) {
+		return NULL;
+	}
+	if (g_sdo_data->devcred) {
+		sdo_dev_cred_free(g_sdo_data->devcred);
+		sdo_free(g_sdo_data->devcred);
+	}
 	g_sdo_data->devcred = sdo_dev_cred_alloc();
 
 	if (!g_sdo_data->devcred)
@@ -473,6 +480,7 @@ clear_modules_list(sdo_sdk_service_info_module_list_t *head)
  * this
  * API for de- registering themselves after SDO complete.
  *
+ * @param none
  *
  * @return none
  */
@@ -482,6 +490,16 @@ void sdo_sdk_service_info_deregister_module(void)
 	sdo_sdk_service_info_module_list_t *list = g_sdo_data->module_list;
 	if (list) {
 		g_sdo_data->module_list = clear_modules_list(list);
+	}
+}
+
+void sdo_sdk_deinit(void)
+{
+	(void)sdo_crypto_close();
+
+	app_close();
+	if (g_sdo_data) {
+		sdo_free(g_sdo_data);
 	}
 }
 
@@ -670,6 +688,13 @@ static void app_close(void)
 		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
+
+	if (g_sdo_data->devcred) {
+		sdo_dev_cred_free(g_sdo_data->devcred);
+		sdo_free(g_sdo_data->devcred);
+		g_sdo_data->devcred = NULL;
+	}
+
 }
 
 static const uint16_t g_DI_PORT = 8039;
