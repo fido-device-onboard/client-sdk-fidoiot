@@ -80,7 +80,6 @@ char sample_rest[] = "I am test sample test file\n2nd part shouldn't come\r\n"
 		     "Can I really break the code?";
 char sample_rest2[] = " ";
 char *start = sample_rest;
-static int sockread_cond = 0;
 static int return_socket = -1;
 static int strncpy_normal = true;
 static int recv_configured = 1;
@@ -177,22 +176,6 @@ TEST_CASE("sdo_prot_ctx_alloc", "[protctx][sdo]")
 	prot_ctx = sdo_prot_ctx_alloc(&sdo_prot_dummy, &protdata, NULL, NULL,
 				      host_port, true);
 	TEST_ASSERT_NULL(prot_ctx);
-}
-
-int __wrap_sdo_socket_read(int sock, uint8_t *buf, ssize_t nbytes, void *ssl)
-{
-	(void)sock;
-	(void)ssl;
-	if (sockread_cond == 0)
-		return -1;
-	else {
-		if (sockread_cond == SIMULATE_SOCKREAD) {
-			memcpy_s(buf, nbytes, start, nbytes);
-			start += nbytes;
-			return nbytes;
-		} else
-			return sockread_cond;
-	}
 }
 
 ssize_t __wrap_recv(int sockfd, void *buf, size_t len, int flags)

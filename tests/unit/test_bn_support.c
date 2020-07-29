@@ -453,30 +453,39 @@ TEST_CASE("bn_to_byte_array", "[bn_support][sdo]")
 	/* Invalid input. */
 	ba = bn_to_byte_array(NULL);
 	TEST_ASSERT_NULL(ba);
-	if (ba)
+	if (ba != NULL) {
 		sdo_byte_array_free(ba);
+		ba = NULL;
+	}
 
 	/* Test out of memory case. */
 	simul_out_of_mem = true;
 	ba = bn_to_byte_array(n);
 	TEST_ASSERT_NULL(ba);
 	simul_out_of_mem = false;
-	if (ba)
+	if (ba != NULL) {
 		sdo_byte_array_free(ba);
+		ba = NULL;
+	}
 
 	/* Test bn_bn2bin failure. */
 	simul_bn_bn2bin_error = true;
 	ba = bn_to_byte_array(n);
 	TEST_ASSERT_NULL(ba);
 	simul_bn_bn2bin_error = false;
-	if (ba)
+	if (ba != NULL) {
 		sdo_byte_array_free(ba);
+		ba = NULL;
+	}
 
 	/* Valid call. */
 	ba = bn_to_byte_array(n);
 	TEST_ASSERT_NOT_NULL(ba);
-	if (ba)
+	if (ba != NULL) {
 		sdo_byte_array_free(ba);
+		ba = NULL;
+	}
+
 	simul_9_byte_alloc = false;
 	simul_bn_mbedtls_mpi_size = false;
 	real_bn2bin_enabled = true;

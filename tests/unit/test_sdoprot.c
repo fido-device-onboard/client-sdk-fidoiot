@@ -162,9 +162,10 @@ static int32_t configureWNormal_blob(void)
 		goto err;
 	}
 
-	if (fp1)
-		fclose(fp1);
 err:
+	if (fp1) {
+		fclose(fp1);
+	}
 	return -1;
 }
 #ifdef TARGET_OS_FREERTOS

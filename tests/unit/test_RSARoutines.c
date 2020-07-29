@@ -129,7 +129,7 @@ sdo_public_key_t *getSDOpk(RSA *r)
 	const BIGNUM *d = NULL;
 	const BIGNUM *e = NULL;
 	int sizeofpkmodulus = 0;
-	unsigned char *pkmodulusbuffer = malloc(sizeofpkmodulus);
+	unsigned char *pkmodulusbuffer = NULL;
 
 	RSA_get0_key(r, &n, &e, &d);
 	if (!n || !e)
@@ -362,7 +362,7 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 #ifdef HEXDEBUG
 	hexdump("CYPHERTEXT", cipher_text, cipher_length);
 #endif
-	if (cipher_text) {
+	if (cipher_text != NULL) {
 		free(cipher_text);
 		cipher_text = NULL;
 	}
@@ -415,8 +415,9 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "RSA Encryption Failed");
 
 	/* clean up */
-	if (cipher_text)
+	if (cipher_text != NULL) {
 		free(cipher_text);
+	}
 	sdo_byte_array_free(testdata);
 	sdo_public_key_free(pk);
 #ifdef USE_OPENSSL

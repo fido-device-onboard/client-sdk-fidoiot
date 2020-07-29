@@ -291,8 +291,9 @@ void test_aes_encrypt_packet(void)
 	hash_alloc_fail_case = false;
 	hash_free_fail_case = false;
 
-	if (last_pkt->hmac)
+	if (last_pkt->hmac != NULL) {
 		sdo_hash_free(last_pkt->hmac);
+	}
 	ret = sdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 

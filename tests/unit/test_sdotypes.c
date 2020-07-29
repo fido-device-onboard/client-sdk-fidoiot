@@ -503,10 +503,12 @@ void test_sdo_hash_read(void)
 	memset_s(sdor.b.block, 10, '[');
 	ret = sdo_hash_read(&sdor, &hp);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	if (hp.hash)
+	if (hp.hash) {
 		sdo_byte_array_free(hp.hash);
-	if (sdor.b.block)
+	}
+	if (sdor.b.block_size != 0) {
 		sdo_free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -593,8 +595,9 @@ void test_sdo_read_ipaddress(void)
 
 	ret = sdo_read_ipaddress(&sdor, &sdoip);
 	TEST_ASSERT_FALSE(ret);
-	if (sdor.b.block)
+	if (sdor.b.block_size != 0) {
 		free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -679,14 +682,18 @@ void test_sdo_compare_public_keys(void)
 	key4.byte_sz = 0;
 	ret = sdo_compare_public_keys(&pk1, &pk2);
 	TEST_ASSERT_FALSE(ret);
-	if (key1.bytes)
+	if (key1.bytes) {
 		sdo_free(key1.bytes);
-	if (key2.bytes)
+	}
+	if (key2.byte_sz != 0) {
 		sdo_free(key2.bytes);
-	if (key3.bytes)
+	}
+	if (key3.bytes) {
 		sdo_free(key3.bytes);
-	if (key4.bytes)
+	}
+	if (key4.byte_sz != 0) {
 		sdo_free(key4.bytes);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -764,8 +771,9 @@ void test_sdo_public_key_write(void)
 
 	sdo_public_key_write(&sdow, NULL);
 	TEST_ASSERT_TRUE(1);
-	if (sdow.b.block)
+	if (sdow.b.block != NULL) {
 		sdo_free(sdow.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -828,8 +836,9 @@ void test_sdo_public_key_read(void)
 	memset_s(sdor.b.block + 3, 7, '[');
 	ret = sdo_public_key_read(NULL);
 	TEST_ASSERT_NULL(ret);
-	if (sdor.b.block)
+	if (sdor.b.block_size != 0) {
 		sdo_free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -907,8 +916,9 @@ void test_sdo_rendezvous_write(void)
 	ret = sdo_rendezvous_write(&sdow, rv);
 	TEST_ASSERT_TRUE(ret);
 	sdo_rendezvous_free(rv);
-	if (sdow.b.block)
+	if (sdow.b.block != NULL) {
 		sdo_free(sdow.b.block);
+	}
 }
 
 extern int keyfromstring(char *key);
@@ -962,8 +972,9 @@ void test_sdo_rendezvous_read(void)
 	ret = sdo_rendezvous_read(&sdor, rv);
 	TEST_ASSERT_FALSE(ret);
 	free(rv);
-	if (sdor.b.block)
+	if (sdor.b.block_size != 0) {
 		sdo_free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1025,8 +1036,9 @@ void test_sdo_rendezvous_list_read(void)
 	memset_s(sdor.b.block, 10, '[');
 	ret = sdo_rendezvous_list_read(&sdor, &list);
 	TEST_ASSERT_FALSE(ret);
-	if (sdor.b.block)
+	if (sdor.b.block_size != 0) {
 		sdo_free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1048,8 +1060,9 @@ void test_sdo_rendezvous_list_write(void)
 
 	ret = sdo_rendezvous_list_write(&sdow, &list);
 	TEST_ASSERT_TRUE(ret);
-	if (sdow.b.block)
+	if (sdow.b.block != NULL) {
 		sdo_free(sdow.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1076,8 +1089,9 @@ void test_sdo_encrypted_packet_read(void)
 
 	ret = sdo_encrypted_packet_read(&sdor);
 	TEST_ASSERT_NULL(ret);
-	if (sdor.b.block)
+	if (sdor.b.block_size != 0) {
 		sdo_free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1129,8 +1143,9 @@ void test_sdo_encrypted_packet_write(void)
 	sdo_encrypted_packet_write(NULL, NULL);
 	sdo_encrypted_packet_write(&sdow, &pkt);
 	TEST_ASSERT_TRUE(1);
-	if (sdow.b.block)
+	if (sdow.b.block != NULL) {
 		sdo_free(sdow.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1199,8 +1214,9 @@ void test_sdo_begin_write_signature(void)
 
 	ret = sdo_begin_write_signature(&sdow, &sig, &pk);
 	TEST_ASSERT_TRUE(ret);
-	if (sdow.b.block)
+	if (sdow.b.block != NULL) {
 		sdo_free(sdow.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1225,8 +1241,9 @@ void test_sdo_end_write_signature(void)
 	ret = sdo_end_write_signature(&sdow, &sig);
 	TEST_ASSERT_FALSE(ret);
 #endif
-	if (sdow.b.block)
+	if (sdow.b.block != NULL) {
 		free(sdow.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1252,8 +1269,9 @@ void test_sdo_begin_readHMAC(void)
 	sdow_begin_object((sdow_t *)&sdor);
 	ret = sdo_begin_readHMAC(&sdor, &sig_block_start);
 	TEST_ASSERT_FALSE(ret);
-	if (sdor.b.block)
+	if (sdor.b.block != NULL) {
 		free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1379,8 +1397,9 @@ void test_sdo_read_pk_null(void)
 	ret = sdo_read_pk_null(&sdor);
 	TEST_ASSERT_FALSE(ret);
 
-	if (sdor.b.block)
+	if (sdor.b.block != NULL) {
 		sdo_free(sdor.b.block);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS

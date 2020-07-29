@@ -179,8 +179,9 @@ err:
 		SSL_CTX_free(test_ctx);
 		test_ctx = NULL;
 	}
-	if (ssl)
+	if (ssl != NULL) {
 		SSL_free(ssl);
+	}
 	return NULL;
 }
 
