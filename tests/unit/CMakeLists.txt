@@ -161,11 +161,14 @@ foreach(unit_test ${UNIT_TEST_SOURCES})
     )
 
   target_link_libraries(${unit_test_exe}
+    -Wl,--start-group
     ${unit_test_exe}_lib
     unity
     client_sdk
+    network storage crypto
     ${${unit_test_exe}_flags}
     -Wl,--gc-sections
+    -Wl,--end-group
     )
 
 
