@@ -85,12 +85,12 @@ try{
         print "Client-SDK Device smoke Tests with PRI-RV, SCT-Manufacturer"
         sh '''
           cd sdo-test
-          mvn clean test -Dgroups=CdeviceTests
+          mvn clean verify -Dgroups=CdeviceTests
         '''
         print "Client-SDKDevice smoke Tests with Onprem-RV, SCT-Manufacturer"
         sh '''
           cd sdo-test
-          mvn clean test -Dgroups=CdeviceOnPremTests
+          mvn clean verify -Dgroups=CdeviceOnPremTests
         '''
         }
     } finally {
