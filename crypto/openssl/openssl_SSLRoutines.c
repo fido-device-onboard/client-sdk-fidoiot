@@ -15,6 +15,7 @@
 #include <openssl/err.h>
 #include <openssl/conf.h>
 
+static SSL_CTX *ctx;
 /**
  * Set up a SSL/TLS connection bound to socket fd passed to the API.
  *
@@ -25,7 +26,7 @@
  */
 void *sdo_ssl_setup(int sock)
 {
-	SSL_CTX *ctx = NULL;
+
 	SSL *ssl = NULL;
 
 	const SSL_METHOD *method;
@@ -38,12 +39,14 @@ void *sdo_ssl_setup(int sock)
 
 	SSL_load_error_strings();
 	method = SSLv23_method();
-	if (!(NULL != method))
+	if (!(NULL != method)) {
 		goto err;
+	}
 
 	ctx = SSL_CTX_new(method);
-	if (!(ctx != NULL))
+	if (!(ctx != NULL)) {
 		goto err;
+	}
 
 	SSL_CTX_set_options(ctx, flags);
 	if (0 == SSL_CTX_set_cipher_list(ctx, PREFERRED_CIPHERS)) {
@@ -52,15 +55,23 @@ void *sdo_ssl_setup(int sock)
 	}
 
 	ssl = SSL_new(ctx);
-	if (ssl == NULL)
+	if (ssl == NULL) {
 		goto err;
-	if (0 == SSL_set_fd(ssl, sock))
+	}
+	if (0 == SSL_set_fd(ssl, sock)) {
 		goto err;
+	}
 
 	return (void *)ssl;
 err:
-	if (ssl)
+	if(ctx) {
+		SSL_CTX_free(ctx);
+		ctx = NULL;
+	}
+
+	if (ssl) {
 		SSL_free(ssl);
+	}
 	return NULL;
 }
 
@@ -98,6 +109,10 @@ int sdo_ssl_connect(void *ssl)
  */
 int sdo_ssl_close(void *ssl)
 {
+	if(NULL == ssl) {
+		return -1;
+	}
+
 	int ret = SSL_shutdown((SSL *)ssl);
 
 	if (ret <= 0) {
@@ -119,6 +134,10 @@ int sdo_ssl_close(void *ssl)
 	}
 
 	SSL_free((SSL *)ssl);
+	if(ctx) {
+		SSL_CTX_free(ctx);
+		ctx = NULL;
+	}
 
 	return 0;
 }
