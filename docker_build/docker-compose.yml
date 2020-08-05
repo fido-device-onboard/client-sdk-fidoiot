@@ -1,0 +1,30 @@
+# Copyright 2020 Intel Corporation
+# SPDX-License-Identifier: Apache 2.0
+
+version: "2.4"
+
+services:
+
+  client_sdk_builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        use_remote : ${use_remote}
+    image: client_sdk_builder
+    container_name: client_sdk_builder
+    restart: on-failure:5
+    # Mapping to the user workspace of 'sdouser' as created in the Dockerfile.
+    # If the username is updated in the Dockerfile, please replace 'sdouser' with the same.
+    volumes:
+      - ./../../client-sdk:/home/sdouser/client-sdk:rw
+    environment:
+      - http_proxy=${http_proxy}
+      - https_proxy=${https_proxy}
+      - no_proxy=${no_proxy}
+      - use_remote=${use_remote}
+    mem_limit: 1536m
+    mem_reservation: 1000m
+    cpu_shares: 5
+    pids_limit: 100
+    network_mode: bridge
