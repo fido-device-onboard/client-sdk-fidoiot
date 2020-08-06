@@ -105,7 +105,7 @@ install_tpm2tssengine()
 
     ./bootstrap
     ./configure
-    make -j$(nproc)
+    make -j$(nproc) --with-enginesdir=/usr/local/lib/engines-1.1/
     make install
 }
 
