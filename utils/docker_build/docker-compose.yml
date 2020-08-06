@@ -17,7 +17,7 @@ services:
     # Mapping to the user workspace of 'sdouser' as created in the Dockerfile.
     # If the username is updated in the Dockerfile, please replace 'sdouser' with the same.
     volumes:
-      - ./../../client-sdk:/home/sdouser/client-sdk:rw
+      - ./../../../client-sdk:/home/sdouser/client-sdk:rw
     environment:
       - http_proxy=${http_proxy}
       - https_proxy=${https_proxy}
