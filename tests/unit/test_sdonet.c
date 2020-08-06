@@ -21,8 +21,10 @@ void tear_down(void);
 bool __wrap_cache_host_dns(char *dns);
 bool __wrap_cache_host_ip(sdo_ip_address_t *ip);
 bool __wrap_cache_host_port(uint16_t port);
-int32_t __wrap_sdo_con_dns_lookup(char *dns, sdo_ip_address_t **ip_list, uint32_t *ip_list_size);
-sdo_con_handle __wrap_sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port, void **ssl);
+int32_t __wrap_sdo_con_dns_lookup(char *dns, sdo_ip_address_t **ip_list,
+				  uint32_t *ip_list_size);
+sdo_con_handle __wrap_sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port,
+				      void **ssl);
 sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz);
 bool __wrap_sdor_init(sdor_t *sdor, SDOReceive_fcn_ptr_t rcv, void *rcv_data);
 void test_setup_http_proxy(void);

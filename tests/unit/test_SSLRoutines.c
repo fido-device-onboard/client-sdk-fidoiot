@@ -72,7 +72,7 @@ uint32_t ssl_shutdown;
 void __real_SSL_free(SSL *ssl);
 void __wrap_SSL_free(SSL *ssl)
 {
-	if(ssl_free) {
+	if (ssl_free) {
 		__real_SSL_free(ssl);
 		return;
 	}
@@ -106,7 +106,8 @@ int __wrap_SSL_write(void)
 
 int __wrap_SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str)
 {
-	(void)ctx; (void)str;
+	(void)ctx;
+	(void)str;
 	return 1;
 }
 SSL_CTX *__real_SSL_CTX_new(void);
@@ -158,7 +159,7 @@ SSL *test_ssl_init(void)
 	}
 
 	test_ctx = SSL_CTX_new(method);
-	if (!(test_ctx != NULL)){
+	if (!(test_ctx != NULL)) {
 		goto err;
 	}
 
@@ -175,7 +176,7 @@ SSL *test_ssl_init(void)
 
 	return ssl;
 err:
-	if(test_ctx) {
+	if (test_ctx) {
 		SSL_CTX_free(test_ctx);
 		test_ctx = NULL;
 	}
@@ -189,12 +190,13 @@ err:
 #endif
 
 void cleanup_ssl_struct(void *ssl);
-void cleanup_ssl_struct(void *ssl) {
+void cleanup_ssl_struct(void *ssl)
+{
 	if (ssl) {
 		sdo_ssl_close(ssl);
 		SSL_free((SSL *)ssl);
 	}
-	if(test_ctx) {
+	if (test_ctx) {
 		SSL_CTX_free(test_ctx);
 	}
 }
@@ -294,7 +296,7 @@ TEST_CASE("ssl_close", "[SSLRoutines][sdo]")
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "-ve:1 SSL shutdown Failed");
 err:
 	ssl_shutdown = 1;
-	if(test_ctx) {
+	if (test_ctx) {
 		SSL_CTX_free(test_ctx);
 	}
 #endif

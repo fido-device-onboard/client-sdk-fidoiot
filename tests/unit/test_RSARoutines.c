@@ -20,7 +20,7 @@ void test_rsasigverification(void);
 void showPK(sdo_public_key_t *pk);
 RSA *generateRSA_key(void);
 int sha256_sign(unsigned char *msg, unsigned int mlen, unsigned char *out,
-                unsigned int *outlen, RSA *r);
+		unsigned int *outlen, RSA *r);
 sdo_public_key_t *getSDOpk(RSA *r);
 
 /*** Unity functions. ***/
@@ -505,7 +505,7 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 			/* force a failure by using a modified/different message
 			 */
 			crypto_hal_random_bytes(testdata->bytes,
-						 BUFF_SIZE_8_BYTES);
+						BUFF_SIZE_8_BYTES);
 #ifdef HEXDEBUG
 			hexdump("MODIFIED CLEARTEXT", testdata->bytes,
 				testdata->byte_sz);

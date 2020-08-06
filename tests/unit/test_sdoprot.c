@@ -19,11 +19,14 @@
 /*** Unity Declarations. ***/
 void set_up(void);
 void tear_down(void);
-sdo_key_value_t **__wrap_sdo_service_info_get(sdo_service_info_t *si, int key_num);
+sdo_key_value_t **__wrap_sdo_service_info_get(sdo_service_info_t *si,
+					      int key_num);
 sdo_dev_cred_t *__wrap_app_get_credentials(void);
-bool __wrap_sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep);
+bool __wrap_sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name,
+			     int *statep);
 sdo_cred_mfg_t *__wrap_sdo_cred_mfg_alloc(void);
-bool __wrap_sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig, sdo_public_key_t *pk);
+bool __wrap_sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
+				      sdo_public_key_t *pk);
 void __wrap_sdo_byte_array_write_chars(sdow_t *sdow, sdo_byte_array_t *ba);
 void test_sdo_protDIRun(void);
 void test_sdo_protTO2Run(void);
@@ -217,7 +220,8 @@ void test_sdo_protDIRun(void)
 
 int dummy(sdor_t *a, int b)
 {
-	(void)a; (void)b;
+	(void)a;
+	(void)b;
 	return 0;
 }
 

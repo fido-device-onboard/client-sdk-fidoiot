@@ -1807,7 +1807,9 @@ void test_sdo_osi_parsing(void)
 
 static int cb(sdo_sdk_si_type type, int *count, sdo_sdk_si_key_value *si)
 {
-	(void)type; (void)count; (void)si;
+	(void)type;
+	(void)count;
+	(void)si;
 	return SDO_SI_CONTENT_ERROR;
 }
 

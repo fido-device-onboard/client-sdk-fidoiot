@@ -40,7 +40,6 @@ void test_app_alloc_credentials(void);
 /*** Wrapper Functions ***/
 bool __real_sdor_next_block(sdor_t *sdor, uint32_t *typep);
 
-
 #ifdef TARGET_OS_LINUX
 void *__real_sdo_alloc(size_t size);
 void *__wrap_sdo_alloc(size_t size)
@@ -321,7 +320,6 @@ void test_read_normal_device_credentials(void)
 					     SDO_SDK_NORMAL_DATA, Normal_cred);
 	TEST_ASSERT_TRUE(ret);
 	sdo_sdk_deinit();
-
 }
 
 #ifdef TARGET_OS_FREERTOS

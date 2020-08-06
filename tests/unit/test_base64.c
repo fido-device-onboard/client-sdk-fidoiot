@@ -107,8 +107,8 @@ void test_bin_toB64(void)
 #endif
 {
 	/* Check that 0 is returned if Base64 is not initialised. */
-	uint8_t *bin_bytes=0;
-	uint8_t *b64Bytes=0;
+	uint8_t *bin_bytes = 0;
+	uint8_t *b64Bytes = 0;
 
 	TEST_ASSERT_EQUAL_INT(
 	    -1, bin_toB64(0, bin_bytes, NO_OFFSET, 0, b64Bytes, NO_OFFSET));
@@ -164,8 +164,8 @@ void test_b64To_bin(void)
 #endif
 {
 	/* Check that 0 is returned if Base64 is not initialised. */
-	uint8_t *bin_bytes=0;
-	uint8_t *b64Bytes=0;
+	uint8_t *bin_bytes = 0;
+	uint8_t *b64Bytes = 0;
 
 	TEST_ASSERT_EQUAL_INT(
 	    -1, b64To_bin(0, b64Bytes, NO_OFFSET, 0, bin_bytes, NO_OFFSET));

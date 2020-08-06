@@ -274,8 +274,8 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][sdo]")
 #endif // save privkey in pem/bin format
 
 	// Signature will be received as a part of sigtestdata.
-	result = crypto_hal_ecdsa_sign(testdata->bytes, testdata->byte_sz, sigtestdata,
-				&siglen);
+	result = crypto_hal_ecdsa_sign(testdata->bytes, testdata->byte_sz,
+				       sigtestdata, &siglen);
 	TEST_ASSERT_EQUAL(0, result);
 
 #ifdef USE_OPENSSL
@@ -344,7 +344,8 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][sdo]")
 	TEST_ASSERT_NOT_EQUAL(0, result);
 #endif
 	// Negative test case
-	result = crypto_hal_ecdsa_sign(NULL, testdata->byte_sz, sigtestdata, &siglen);
+	result = crypto_hal_ecdsa_sign(NULL, testdata->byte_sz, sigtestdata,
+				       &siglen);
 	TEST_ASSERT_NOT_EQUAL(0, result);
 
 #ifdef USE_OPENSSL

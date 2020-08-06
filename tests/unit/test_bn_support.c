@@ -55,7 +55,7 @@ sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz);
 bignum_t *__wrap_BN_bin2bn(const unsigned char *s, int len, bignum_t *ret);
 int __wrap_BN_bn2bin(const bignum_t *a, unsigned char *to);
 int __wrap_BN_mod_exp(bignum_t *r, bignum_t *a, const bignum_t *p,
-                       const bignum_t *m, BN_CTX *ctx);
+		      const bignum_t *m, BN_CTX *ctx);
 int __wrap_crypto_hal_random_bytes(const uint8_t *rand_data, size_t num_bytes);
 int __wrap_BN_rand(BIGNUM *rnd, int bits, int top, int bottom);
 void test_bn_bin2bn(void);
@@ -174,7 +174,8 @@ int __wrap_mbedtls_mpi_write_binary(const mbedtls_mpi *X, unsigned char *buf,
 #else  /* USE_OPENSSL */
 bignum_t *__wrap_BN_bin2bn(const unsigned char *s, int len, bignum_t *ret)
 {
-	(void)s; (void)len;
+	(void)s;
+	(void)len;
 	printf("BN_bin2bn with err=%d\n", simul_bn_bin2bn_error);
 	if (simul_bn_bin2bn_error) {
 		return NULL;
@@ -186,7 +187,8 @@ bignum_t *__wrap_BN_bin2bn(const unsigned char *s, int len, bignum_t *ret)
 /* Needed for bn_bn2bin */
 int __wrap_BN_bn2bin(const bignum_t *a, unsigned char *to)
 {
-	(void)a; (void)to;
+	(void)a;
+	(void)to;
 	if (simul_bn_bn2bin_error) {
 		return 0;
 	}
@@ -211,7 +213,11 @@ int __wrap_mbedtls_mpi_exp_mod(bignum_t *r, bignum_t *a, const bignum_t *p,
 int __wrap_BN_mod_exp(bignum_t *r, bignum_t *a, const bignum_t *p,
 		      const bignum_t *m, BN_CTX *ctx)
 {
-	(void)r; (void)a; (void)p; (void)m; (void)ctx;
+	(void)r;
+	(void)a;
+	(void)p;
+	(void)m;
+	(void)ctx;
 	if (simul_bn_mod_exp_error) {
 		return 0;
 	}
@@ -247,7 +253,10 @@ int __wrap_crypto_hal_random_bytes(const uint8_t *rand_data, size_t num_bytes)
 #ifdef USE_OPENSSL
 int __wrap_BN_rand(BIGNUM *rnd, int bits, int top, int bottom)
 {
-	(void)rnd; (void)bits; (void)top; (void)bottom;
+	(void)rnd;
+	(void)bits;
+	(void)top;
+	(void)bottom;
 	if (simul_bn_rand_error) {
 		return 0;
 	}
