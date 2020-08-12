@@ -1,9 +1,0 @@
-os/wifi_init.c
-os/network_if_esp.c
-os/network_if_linux.c
-os/network_if_optee.c
-os/storage_if_esp.c
-os/storage_if_linux.c
-os/storage_if_optee.c
-os/util_optee.c
-
