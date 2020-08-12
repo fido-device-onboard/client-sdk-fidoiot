@@ -115,5 +115,7 @@ try{
         '''
         archiveArtifacts artifacts: 'SmokeTest_Log.tar.gz', fingerprint: true, allowEmptyArchive: false
     }
+    //Clean workspace after build is successfull
+    cleanWs cleanWhenFailure: false, cleanWhenNotBuilt: false, notFailBuild: true   
   }
 }
