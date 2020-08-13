@@ -54,9 +54,15 @@ cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/ecdsa384_c_sct_device_
 cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
 cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
 
-echo " *****Running Unit Tests*********" 
-make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa ; make -j$(nproc)
-make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=cbc -DDA=ecdsa256 -DPK_ENC=ecdsa ; make -j$(nproc)
-make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh384 -DAES_MODE=ctr -DDA=ecdsa384 -DPK_ENC=ecdsa ; make -j$(nproc)
-make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh384 -DAES_MODE=cbc -DDA=ecdsa384 -DPK_ENC=ecdsa ; make -j$(nproc)
-make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa -DDA_FILE=pem ; make -j$(nproc)
+echo " *****Running Unit Tests*********"
+TEST_OUTPUT="build/unit-test-output.txt"
+rm -f $TEST_OUTPUT
+make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa ; make -j$(nproc) | tee -a $TEST_OUTPUT
+make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=cbc -DDA=ecdsa256 -DPK_ENC=ecdsa ; make -j$(nproc) | tee -a $TEST_OUTPUT
+make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh384 -DAES_MODE=ctr -DDA=ecdsa384 -DPK_ENC=ecdsa ; make -j$(nproc) | tee -a $TEST_OUTPUT
+make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh384 -DAES_MODE=cbc -DDA=ecdsa384 -DPK_ENC=ecdsa ; make -j$(nproc) | tee -a $TEST_OUTPUT
+make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa -DDA_FILE=pem ; make -j$(nproc) | tee -a $TEST_OUTPUT
+
+fail_count=$(awk '/Tests Failed  :/ {split($0,a,": "); count+=a[2]} END{print count}' $TEST_OUTPUT)
+echo "Found $fail_count unit-test failure(s)."
+exit $fail_count
