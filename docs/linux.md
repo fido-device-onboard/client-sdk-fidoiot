@@ -41,13 +41,14 @@ Service-info device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MOD
 
 ## 6. Compiling  SDO
 
-The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. SDO assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the  SDO client-sdk.
+The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. SDO assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the  SDO client-sdk.
 
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md).
 
 ```shell
-$ make TARGET_OS=linux BUILD=debug pristine
-$ make TARGET_OS=linux BUILD=debug
+$ make pristine
+$ cmake -DTARGET_OS=linux -DBUILD=debug .
+$ make
 ```
 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), public-key encoding (PK_ENC) type, and SSL support (TLS).

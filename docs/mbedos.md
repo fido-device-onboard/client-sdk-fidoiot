@@ -37,14 +37,16 @@ The  SDO client-sdk build system is based on <a href="https://www.gnu.org/softwa
 
 - To build STM32F767ZI:
    ```shell
-   $ make TARGET_OS=mbedos BUILD=debug BOARD=NUCLEO_F767ZI pristine
-   $ make TARGET_OS=mbedos BUILD=debug BOARD=NUCLEO_F767ZI
+   $ make pristine
+   $ cmake -DTARGET_OS=mbedos -DBUILD=debug -DBOARD=NUCLEO_F767ZI .
+   $ make
    ```
 
 - To build STM32F429ZI:
    ```shell
-   $ make TARGET_OS=mbedos BUILD=debug BOARD=NUCLEO_F429ZI pristine
-   $ make TARGET_OS=mbedos BUILD=debug BOARD=NUCLEO_F429ZI
+   $ make pristine
+   $ cmake -DTARGET_OS=mbedos -DBUILD=debug -DBOARD=NUCLEO_F429ZI .
+   $ make
    ```
 
 > **Note:** To build the Arm Mbed OS (STM32F767ZI or STM32F429ZI) platforms, only the microSD* card is used as a data-store to store  SDO device credentials (device internal flash is not supported).

@@ -32,46 +32,47 @@ SDO implementation for ARM devices uses Microchip AT608A as the secure element.
 
 2. Get CryptoAuthlib source code.
    ``` bash
-   cd ~
-   git clone https://github.com/MicrochipTech/cryptoauthlib.git cryptoauthlib
+   $ cd ~
+   $ git clone https://github.com/MicrochipTech/cryptoauthlib.git cryptoauthlib
    ```
 
 3. Install the shared binary object. Prerequisite for this step is cmake should be available.
    And note this has to be build for Raspberry Pi(RPI) which is an ARM platform. Cross compile or native build
    on RPI is users choice. The following steps show how it is done on RPI.
    ``` bash
-   cd ~/cryptoauthlib
-   cmake .
-   make
-   make install
+   $ cd ~/cryptoauthlib
+   $ cmake .
+   $ make
+   $ make install
    ```
 
 4. Enable the I2C driver on the RPI. Uncomment 'dtparam=i2c_arm=on` in boot config. 
    ```bash
-   sudo vi /boot/config.txt
+   $ sudo vi /boot/config.txt
    # uncomment i2c
-   sudo reboot
+   $ sudo reboot
    ```
 
 5. Check if the device is up and running.
    ```bash
-   sudo i2cdetect -y 1
+   $ sudo i2cdetect -y 1
    ```
    Note: i2cdetect is run on i2c bus 1. Therefore "-y 1", there maybe devices in which this
    might not be true. Refer to the hardware spec for the correct bus number.
 
 6. Setting up the build Environment for SE.
    ``` bash
-   sudo chmod +666 /dev/i2c-1
-   export CRYPTOAUTHLIB_ROOT=~/cryptoauthlib
+   $ sudo chmod +666 /dev/i2c-1
+   $ export CRYPTOAUTHLIB_ROOT=~/cryptoauthlib
    ```
 
 7. Do a [regular build](./linux.md) of SDO with an additional parameter CRYPTO_HW=true.
    Note: only ECDSA is supported from SE.
    ```bash
-   cd <c-code-sdk folder>
-   make CRYPTO_HW=true PK_ENC=ecdsa KEX=ecdh
-   ./build/linux/debug/linux-client
+   $ cd <c-code-sdk folder>
+   $ cmake -DCRYPTO_HW=true -DPK_ENC=ecdsa -DKEX=ecdh .
+   $ make
+   $ ./build/linux/debug/linux-client
    ```
 
 8. Note that first time the provisioning will take place it will create a device.csr.pem file
