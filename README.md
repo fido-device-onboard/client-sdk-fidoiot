@@ -3,7 +3,6 @@
 [ Introduction ](docs/introduction.md) <br>
 [  SDO Compilation Setup ](docs/setup.md)
 - [ Safestring ](docs/setup.md#safestring) <br>
-- [ Intel® Enhanced Privacy ID (Intel® EPID) SDK ](docs/setup.md#epid_sdk) <br>
 - [ Service Info Modules ](docs/setup.md#si_info_modules)
 - [ Manufacturer CRI Network Address ](docs/setup.md#manuf_addr)
 - [ ECDSA Private Key Generation ](docs/setup.md#ecdsa_priv)
