@@ -75,7 +75,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 {
 	int ret = -1;
 	size_t exp_cipher_len = 0;
-	mbedtls_cipher_context_t cipher_ctx;
+	static mbedtls_cipher_context_t cipher_ctx;
 	const mbedtls_cipher_info_t *cipher_info;
 	size_t olen = 0;
 
@@ -206,7 +206,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 {
 	int ret = -1;
 	size_t olen = 0, ofs = 0;
-	mbedtls_cipher_context_t cipher_ctx;
+	static mbedtls_cipher_context_t cipher_ctx;
 	const mbedtls_cipher_info_t *cipher_info = NULL;
 
 	/* Check all the incoming parameters */
