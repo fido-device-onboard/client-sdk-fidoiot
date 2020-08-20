@@ -1508,6 +1508,8 @@ char *sdo_hash_type_to_string(int hash_type)
 		return "HMAC_SHA512";
 	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
 		return "HMAC_SHA384";
+	default:
+		return "NONE";
 	}
 	if (snprintf_s_i(buf, sizeof(buf), "-type%u?", hash_type) < 0) {
 		LOG(LOG_ERROR, "snprintf() failed!\n");
@@ -2530,6 +2532,11 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 		sdo_write_ipaddress(sdow, rv->ip);
 	}
 
+	if (rv->dn != NULL) {
+		sdo_write_tag(sdow, "dn");
+		sdo_write_string_len(sdow, rv->dn->bytes, rv->dn->byte_sz);
+	}
+
 	if (rv->po != NULL) {
 		sdo_write_tag(sdow, "po");
 		sdo_writeUInt(sdow, *rv->po);
@@ -2540,10 +2547,6 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 		sdo_writeUInt(sdow, *rv->pow);
 	}
 
-	if (rv->dn != NULL) {
-		sdo_write_tag(sdow, "dn");
-		sdo_write_string_len(sdow, rv->dn->bytes, rv->dn->byte_sz);
-	}
 
 	if (rv->sch != NULL) {
 		sdo_write_tag(sdow, "sch");
