@@ -2654,7 +2654,6 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	TEST_ASSERT_EQUAL(1, ret);
 	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
-	pubkey = NULL;
 #else
 	int curve = 0;
 	unsigned char key_buf[DER_PUBKEY_LEN_MAX] = {0};
@@ -2703,7 +2702,6 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	TEST_ASSERT_EQUAL(0, ret);
 	pubkey->key1->bytes = (uint8_t *)key_buf;
 	pubkey->key1->byte_sz = (size_t)key_buf_len;
-	pubkey = NULL;
 #endif
 #endif
 

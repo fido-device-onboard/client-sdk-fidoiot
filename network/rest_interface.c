@@ -76,16 +76,15 @@ bool cache_host_dns(const char *dns)
 		goto err;
 	}
 
-	if (!rest->host_dns) {
-		rest->host_dns = sdo_alloc(len + 1);
-		if (!rest->host_dns)
-			goto err;
-	} else {
-		if (memset_s(rest->host_dns, sizeof(rest->host_dns), 0) != 0) {
-			ret = false;
-			goto err;
-		}
+	if (rest->host_dns) {
+		sdo_free(rest->host_dns);
 	}
+
+	rest->host_dns = sdo_alloc(len + 1);
+	if (!rest->host_dns) {
+		goto err;
+	}
+
 	if (strcpy_s(rest->host_dns, len + 1, dns) != 0)
 		goto err;
 
@@ -114,13 +113,13 @@ bool cache_host_ip(sdo_ip_address_t *ip)
 		goto err;
 	}
 
+	if (rest->host_ip) {
+		sdo_free(rest->host_ip);
+	}
+
+	rest->host_ip = sdo_alloc(sizeof(sdo_ip_address_t));
 	if (!rest->host_ip) {
-		rest->host_ip = sdo_alloc(sizeof(sdo_ip_address_t));
-		if (!rest->host_ip)
-			goto err;
-	} else {
-		if (memset_s(rest->host_ip, sizeof(rest->host_ip), 0) != 0)
-			goto err;
+		goto err;
 	}
 
 	if (memcpy_s(rest->host_ip, sizeof(sdo_ip_address_t), ip,

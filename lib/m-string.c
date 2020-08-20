@@ -79,7 +79,7 @@ static int read_fill_modelserial(void)
 	int32_t fsize = 0;
 
 	fsize = sdo_blob_size((const char *)SERIAL_FILE, SDO_SDK_RAW_DATA);
-	if (fsize > 0) {
+	if ((fsize > 0) && (fsize <= MAX_DEV_SERIAL_SZ)) {
 
 		if (sdo_blob_read((const char *)SERIAL_FILE, SDO_SDK_RAW_DATA,
 				  (uint8_t *)device_serial, fsize) <= 0) {
@@ -100,7 +100,7 @@ static int read_fill_modelserial(void)
 	}
 
 	fsize = sdo_blob_size((const char *)MODEL_FILE, SDO_SDK_RAW_DATA);
-	if (fsize > 0) {
+	if ((fsize > 0) && (fsize <= MAX_MODEL_NO_SZ)) {
 		if (sdo_blob_read((const char *)MODEL_FILE, SDO_SDK_RAW_DATA,
 				  (uint8_t *)model_number, fsize) <= 0) {
 			LOG(LOG_ERROR, "Failed to get serial no\n");
