@@ -3,17 +3,15 @@
 ## 1. Intel safestringlib
 SDO client-sdk uses safestringlib for string and memory operations to prevent serious security vulnerabilities (e.g. buffer overflows).
 
-1. For Open Portable Trusted Execution Environment (OPTEE) builds, download safestring from <a href="https://gitlab.devtools.intel.com/c-code-sdk/optee/safestring-optee">safestring-optee</a>
-
-2. For non-OPTEE builds (e.g. Linux*, Arm Mbed* OS, and Arm Mbed Linux OS), download safestring from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0`.
+1. For Linux*/ Arm Mbed* OS/ Arm Mbed Linux OS builds, download safestring from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>.
 
 ## 2. Service-Info Device Modules Path (Optional):
 To provide the service-info device module path to use the SDO service-info functionality:
 
 <a name="manuf_addr"></a>
 
-## 3. Setting the Manufacturer Customer Reference Implementation (CRI) Network Address
-To set the manufacturer CRI network (domain name or IP) address, that the device executing SDO will connect to, during the Device Initialization (DI) protocol:
+## 3. Setting the Manufacturer Network Address
+To set the manufacturer network address(domain name or IP) that SDO Linux device uses during Device Initialization (DI) protocol:
 
 ```shell
 # To set the manufacturer DNS
@@ -79,7 +77,7 @@ The following are steps to generate the private key file for ECDSA-based devices
 
 ## 5.  SDO Credentials REUSE Protocol
 
- The SDO credentials REUSE feature allows  SDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner CRI sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
+ The SDO credentials REUSE feature allows  SDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
 
 Specifically, if TO2.SetupDevice.r3, TO2.SetupDevice.g3, and TO2.SetupDevice.pk match the corresponding values held by the device, the device will not generate a Hash-based Message Authentication Code (HMAC), which then allows the original ownership proxy (OP) to be used for another (and subsequent) onboarding(s) by reusing the same device credentials multiple times.
 
@@ -92,9 +90,8 @@ $ ./reuse_oc.sh
 
 Activating the device credentials will in turn, activate the  SDO device and configure the  SDO device to run multiple onboarding(s). This can be useful in several test and development environments, where multiple onboardings are common.
 
-> **Note:** To run  SDO Client-SDK binaries in REUSE mode, the following configuration need to be taken care of while launching  SDO CRIs:
-> * Set owner CRI property `org.sdo.owner.reuse-enabled=true`.
-> * Manufacturer and Owner CRI must share the same key-pair when the TO0 and TO2 protocols are run.
+> **Note:** To run  SDO Client-SDK binaries in REUSE mode, the following configuration need to be taken care of while launching  SDO servers:
+> * Manufacturer and Owner servers must share the same key-pair when the TO0 and TO2 protocols are run.
 ## 6. HTTP-proxy configuration (optional)
 If the device is located behind a proxy server, the proxy server details must be provided to the device. For the same purpose, there are three files (each for the manufacturer, rendezvous, and owner servers) in which the proxy server details should be specified in the required format, before connecting to the respective server. These files can be created or removed as required.
 

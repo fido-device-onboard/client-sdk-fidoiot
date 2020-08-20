@@ -12,7 +12,6 @@
 [ Linux* Reference Implementation ](docs/linux.md) <br>
 [ Arm* Mbed* OS Reference Implementation ](docs/mbedos.md) <br>
 [ Arm* Mbed* Linux* Reference Implementation ](docs/mbed_linux.md) <br>
-[ Open Portable Trusted Execution Environment (OP-TEE) Reference Implementation ](docs/optee.md) <br>
 [Security Implications](docs/security_implications.md)
 
 

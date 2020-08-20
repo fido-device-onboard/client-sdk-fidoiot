@@ -9,12 +9,12 @@
 - MICROUSB cable.
 
 ## 2. Software requirements:
-- Linux* OS (Ubuntu* OS version 16.04 LTS) as host machine.
+- Linux* OS (Ubuntu* OS version 18.04 LTS) as host machine.
 - Arm* Mbed* CLI (mbed-cli) ([version 1.7.5](https://github.com/ARMmbed/mbed-cli/blob/1.7.5/README.md)) can also be installed using [this](https://pypi.org/project/mbed-cli/) link.
-- Arm cross-compiler toolchain (`gcc-arm-none-eabi-6-2017-q2-update`) can be downloaded from [this](https://launchpad.net/gcc-arm-embedded/+series) link.
+- Arm cross-compiler toolchain (`gcc 7-2018-q2-update`) can be downloaded from [this](https://launchpad.net/gcc-arm-embedded/+series) link.
 - Configure the Arm cross-compiler toolchain globally by setting `GCC_ARM_PATH` through mbed-cli:
   ```shell
-$ mbed config -G GCC_ARM_PATH <Path to gcc-arm-none-eabi-6-2017-q2-update>/bin
+$ mbed config -G GCC_ARM_PATH <Path to gcc cross compiler>/bin
   ```
   . Use  [this](https://os.mbed.com/docs/mbed-os/v5.7/tools/configuring-mbed-cli.html) link for detailed steps.
 
@@ -54,20 +54,20 @@ The  SDO client-sdk build system is based on <a href="https://www.gnu.org/softwa
 For an advanced build configuration, refer to [Advanced Build Configuration.](build_conf.md)
 
 ## 8. Executing  SDO
-The  SDO for the Linux device is compatible with the  SDO Java* CRI (Customer Reference Implementation) implementation of the manufacturer, rendezvous,
-and owner servers. These CRI implementations can be downloaded from the `<release-package-dir>/cri/`
-directory.
+The  SDO for the Linux device is compatible with the  SDO implementation of the manufacturer, rendezvous,
+and owner servers. These server implementations can be downloaded from their appropriate 
+directories.
 
 After a successful compilation, the  SDO M4/M7 device executable can be found at
-`<path-to-sdo-client-sdk>/mbedos/components/build/mbedos/${BUILD}/${BOARD}/app/sdo.bin`.
+`<path-to-sdo-client-sdk>/build/sdo.bin`.
 
-> **Note:** ${BUILD} can be either `debug` or `release`, depending on the compilation step.
->           ${BOARD} can be either `NUCLEO_F767ZI` or `NUCLEO_F429ZI`, depending on the compilation step.
+> **Note:** Build can be either `debug` or `release`, depending on the compilation step.
+>           Board can be either `NUCLEO_F767ZI` or `NUCLEO_F429ZI`, depending on the compilation step.
 
 To flash the M4/M7-based device executable `sdo.bin`, mount the `/media/${user}/NODE_FXXXZI1/` and then copy the compiled  SDO executable file to the respective device:
 
 ```shell
-$ cp mbedos/components/build/mbedos/debug/NUCLEO_FXXXZI/app/sdo.bin  /media/${user}/NODE_FXXXZI1/
+$ cp build/sdo.bin  /media/${user}/NODE_FXXXZI1/
 $ umount /media/${user}/NODE_FXXXZI1/
 ```
 
@@ -97,13 +97,13 @@ $ umount /media/${user}/NODE_FXXXZI1/
 >                            ------------------                  --------------------
 
 * After `sdo.bin` is flashed to the device, the device will run the device initialization (DI) protocol.
-- Before booting the board, you need to prepare for DI using the manufacturer CRI.
-  Refer to [ DI CRI Setup](DI_setup.md). After the manufacturer CRI is set up,
+- Before booting the board, you need to prepare for DI using the Supply Chain Toolkit(sct).
+  Refer to [ DI Setup](DI_setup.md). After the SCT is set up,
   
   open four terminals:
-1. **Terminal#1:** Starts the  SDO manufacturer CRI server.
-2. **Terminal#2:** Starts the  SDO rendezvous CRI server.
-3. **Terminal#3:** Starts the  SDO owner CRI server.
+1. **Terminal#1:** Starts the  SDO SCT server.
+2. **Terminal#2:** Starts the  SDO rendezvous server.
+3. **Terminal#3:** Starts the  SDO owner server.
 4. **Terminal#4:** Starts the  SDO client-sdk device application (for the  SDO M4/M70-based device, use the terminal to open the serial port, to view the stdout).
 
   
@@ -111,9 +111,9 @@ $ umount /media/${user}/NODE_FXXXZI1/
   ownership transfer.
 On successful execution of the DI protocol, the device will be configured with the required  SDO credentials and the ownership proxy (.op) file will be generated.
 
-- To enable the device for ownership transfer, you need to configure the Rendezvous and Owner CRI.
+- To enable the device for ownership transfer, you need to configure the Rendezvous and Owner.
   Refer to [Ownership Transfer Setup](ownership_transfer.md). After these
-  CRIs are set up, the CRIs are ready for device onboarding.
+  servers are set up and are ready for device onboarding.
 
 **To onboard the device:**
 Reset the device to start onboarding. 

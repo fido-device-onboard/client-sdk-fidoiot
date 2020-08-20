@@ -57,30 +57,30 @@ Refer to the section. [SDO Build configurations] (build_conf.md)
 <a name="run_linux_sdo"></a>
 
 ## 7 Running the application <!-- Ensuring generic updates are captured where applicable -->
-The  SDO Linux device is compatible with  SDO Java* Customer Reference Implementation (CRI) of manufacturer, rendezvous, and owner servers. 
+The  SDO Linux device is compatible with  SDO Supply Chain Toolkit (SCT), PRI rendezvous, and owner servers(OC).
 
-To test the  SDO Linux device against the  SDO Java CRI implementation, obtain the  SDO Java CRI manufacturer, rendezvous, and owner server binaries from the `<release-package-dir>/cri/` directory.
+To test the  SDO Linux device against the  SDO Java PRI implementation, obtain the  SCT binaries along with PRI rendezvous and PRI owner binaries from their respective directories.
 
-After a successful compilation, the  SDO Linux device executable can be found at `<path-to-sdo-client-sdk>/build/linux/${BUILD}/linux-client`.
-> **Note:** ${BUILD} can be either `debug` or `release` based on the compilation step.
+After a successful compilation, the  SDO Linux device executable can be found at `<path-to-sdo-client-sdk>/build/linux-client`.
+> **Note:** Built binary can be either `debug` or `release` based on the compilation step.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) using the
-  manufacturer CRI. Refer to [ DI CRI Setup](DI_setup.md). After the manufacturer CRI is set up,
+  SCT. Refer to [ DI SCT Setup](DI_setup.md). After SCT is set up,
   execute `linux-client`. The device is now initialized with the credentials and is ready for ownership transfer.
-To run the device against the manufacturer CRI for the DI protocol, do the following:
+To run the device against the SCT for the DI protocol, do the following:
   ```shell
-  $ ./build/linux/${BUILD}/linux-client
+  $ ./build/linux-client
   ```
 
-- To enable the device for ownership transfer, configure the rendezvous and owner CRIs.
+- To enable the device for ownership transfer, configure the rendezvous and owner containers.
   Refer to [ Ownership Transfer Setup ](ownership_transfer.md). After these
-  CRIs are set up, execute `linux-client` again.
+  are set up, execute `linux-client` again.
   
   ```shell
-  $ ./build/linux/${BUILD}/linux-client
+  $ ./build/linux-client
   ```
 
-## 7. Compiling and runing of unit tests for SDO
+## 8. Compiling and runing of unit tests for SDO
   Unit-test framework is located inside tests folder.
 
   Use following command to compile and running.

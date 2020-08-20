@@ -17,13 +17,10 @@ The sdo-client-sdk is organized according to the following directory structure:
 	├── crypto            : Underlying cryptography and SSL/TLS shims
 	├── data              : Data files, e.g. device credentials
 	├── docs              : Documentation
-	├── Network           : Hardware Abstraction Layer implementations
-	├── host              : Client Application (CA) for SDO TA
+	├── network           : Hardware Abstraction Layer implementations
 	├── include           : Top level public headers
 	├── lib               : SDO Device Library
-	├── mak               : Device attestation key file selection
 	├── mbedos            : Arm Mbed OS-specific build configurations
 	├── storage           : OS-specific storage abstraction
-	├── ta                : User Trusted Application (UTA) - SDO lib
 	└── utils             : Utilities
 
