@@ -2717,9 +2717,8 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	if (validkey)
 		RSA_free(validkey);
 #else
-	if (pubkey != NULL) {
-		sdo_public_key_free(pubkey);
-	}
+	sdo_public_key_free(pubkey);
+
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
