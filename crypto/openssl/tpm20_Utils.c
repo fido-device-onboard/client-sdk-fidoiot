@@ -45,7 +45,7 @@ int32_t sdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 	int32_t ret = -1, ret_val = -1, file_size = 0;
 	size_t hashed_length = 0;
 	size_t offset = 0;
-	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
+	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160] = {0};
 	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
 	ESYS_CONTEXT *esys_context = NULL;
 	ESYS_TR primary_key_handle = ESYS_TR_NONE;
@@ -89,7 +89,8 @@ int32_t sdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	file_size = get_file_size(tpmHMACPriv_key);
 
-	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
+	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
+	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160) {
 		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
 		goto err;
 	}
@@ -366,7 +367,7 @@ int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 	TPML_PCR_SELECTION creationPCR = {0};
 	/* Using same buffer for both public and private context,
 	   private context size > public context size */
-	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
+	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160] = {0};
 	size_t offset = 0;
 
 	if (!tpmHMACPub_key || !tpmHMACPriv_key) {
@@ -676,6 +677,8 @@ int32_t is_valid_tpm_data_protection_key_present(void)
 		(TPM_HMAC_PUB_KEY_CONTEXT_SIZE ==
 		 get_file_size(TPM_HMAC_DATA_PUB_KEY)) &&
 		file_exists(TPM_HMAC_DATA_PRIV_KEY) &&
-		(TPM_HMAC_PRIV_KEY_CONTEXT_SIZE ==
+		(TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 ==
+		 get_file_size(TPM_HMAC_DATA_PRIV_KEY) ||
+		TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160 ==
 		 get_file_size(TPM_HMAC_DATA_PRIV_KEY)));
 }

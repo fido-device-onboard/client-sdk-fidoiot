@@ -9,7 +9,8 @@
 #include <tss2/tss2_mu.h>
 #include <tss2/tss2_tctildr.h>
 
-#define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE 128
+#define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 128
+#define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160 160
 #define TPM_HMAC_PUB_KEY_CONTEXT_SIZE 48
 
 #if defined(ECDSA256_DA)
