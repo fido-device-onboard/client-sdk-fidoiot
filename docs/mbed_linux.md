@@ -7,7 +7,7 @@ This document can be used as a quick guide to build and execute Secure Device On
 - WaRP7* development platform with an [i.MX 7Solo](https://www.nxp.com/products/processors-and-microcontrollers/arm-based-processors-and-mcus/i.mx-applications-processors/i.mx-7-processors/i.mx-7solo-processors-heterogeneous-processing-with-arm-cortex-a7-and-cortex-m4-cores:i.MX7S) processor.
 - Two MICROUSB cables (one for power supply, another for serial communication).
 
-Note : WaRP7 is a deprecited hardware. Client-sdk tested on it. But client-sdk can work on any mbedlinux boards for A7 or A8.
+Note : WaRP7 is a deprecited hardware. Client-sdk tested on it. But client-sdk can work on any mbedlinux boards for A7.
 
 ## Software requirements:
 
@@ -46,7 +46,7 @@ The  SDO client-sdk for Arm Cortex-A7 platform is built using the Yocto Project-
 4. Add the `meta-intel-sdo` layer information by setting the `BBLAYERS` flag in the BitBake configuration file (the BitBake configuration file can be found at `build-warp7/machine-imx7s-warp-mbl/mbl-manifest/conf/bblayers.conf`):
 
 ```shell
-    BBLAYERS = ${OEROOT}/layer/meta-intel-sdo
+    BBLAYERS = ${OEROOT}/layers/meta-intel-sdo
 ```
 
 5. Specify to install  SDO `clientsdk-mbedtls` packages into the image by setting the `IMAGE_INSTALL_APPEND` flag in the local configuration file (the local configuration file can be found at `build-warp7/machine-imx7s-warp-mbl/mbl-manifest/conf/local.conf`):

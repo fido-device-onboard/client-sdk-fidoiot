@@ -79,19 +79,17 @@ The following are steps to generate the private key file for ECDSA-based devices
 
  The SDO credentials REUSE feature allows  SDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
 
-Specifically, if TO2.SetupDevice.r3, TO2.SetupDevice.g3, and TO2.SetupDevice.pk match the corresponding values held by the device, the device will not generate a Hash-based Message Authentication Code (HMAC), which then allows the original ownership proxy (OP) to be used for another (and subsequent) onboarding(s) by reusing the same device credentials multiple times.
+Specifically, if TO2.SetupDevice.r3, TO2.SetupDevice.g3, and TO2.SetupDevice.pk match the corresponding values held by the device, the device will not generate a Hash-based Message Authentication Code (HMAC), which then allows the original ownership voucher (OV) to be used for another (and subsequent) onboarding(s) by reusing the same device credentials multiple times.
 
-However, the device will still deactivate  SDO after onboarding and it will need to be reactivated before it can be run again. To activate the device credentials for an already onboarded  SDO device, run the `reuse_oc.sh` script from the root of the repository:
+However, device client binary must be generated using -DREUSE=true flag:
 
 ```shell
-$ cd <path-to-sdo-client-sdk>
-$ ./reuse_oc.sh
+$ cmake -DREUSE=true
 ```
-
 Activating the device credentials will in turn, activate the  SDO device and configure the  SDO device to run multiple onboarding(s). This can be useful in several test and development environments, where multiple onboardings are common.
 
 > **Note:** To run  SDO Client-SDK binaries in REUSE mode, the following configuration need to be taken care of while launching  SDO servers:
-> * Manufacturer and Owner servers must share the same key-pair when the TO0 and TO2 protocols are run.
+> * “TO2_CREDENTIAL_REUSE_ENABLED=true” should be set in ocs.env file in Owner server (iot-platform-sdk).
 ## 6. HTTP-proxy configuration (optional)
 If the device is located behind a proxy server, the proxy server details must be provided to the device. For the same purpose, there are three files (each for the manufacturer, rendezvous, and owner servers) in which the proxy server details should be specified in the required format, before connecting to the respective server. These files can be created or removed as required.
 

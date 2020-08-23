@@ -14,5 +14,3 @@
 [ Arm* Mbed* Linux* Reference Implementation ](docs/mbed_linux.md) <br>
 [Security Implications](docs/security_implications.md)
 
-
-Readme file
