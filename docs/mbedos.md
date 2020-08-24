@@ -14,7 +14,7 @@
 - Arm cross-compiler toolchain (`gcc 7-2018-q2-update`) can be downloaded from [this](https://launchpad.net/gcc-arm-embedded/+series) link.
 - Configure the Arm cross-compiler toolchain globally by setting `GCC_ARM_PATH` through mbed-cli:
   ```shell
-$ mbed config -G GCC_ARM_PATH <Path to gcc cross compiler>/bin
+  $ mbed config -G GCC_ARM_PATH <Path to gcc cross compiler>/bin
   ```
   . Use  [this](https://os.mbed.com/docs/mbed-os/v5.7/tools/configuring-mbed-cli.html) link for detailed steps.
 
@@ -78,7 +78,6 @@ $ umount /media/${user}/NODE_FXXXZI1/
 > the application will read the  SDO device credentials from the microSD card and proceeds further for onboarding.
 > Ensure that the microSD card with the microSD card module breakout board is properly connected to the M4/M7-based device before running
 > the  SDO application. Hardware connection and pin details can be found in the following diagram:
->>>>>>> 17eefdf... Added sdo-client-sdk.
 >
 >                            ------------------                  --------------------
 >                           |   M4/M7 Board    |                | MMC Breakout Board |
@@ -104,7 +103,7 @@ $ umount /media/${user}/NODE_FXXXZI1/
 1. **Terminal#1:** Starts the  SDO SCT server.
 2. **Terminal#2:** Starts the  SDO rendezvous server.
 3. **Terminal#3:** Starts the  SDO owner server.
-4. **Terminal#4:** Starts the  SDO client-sdk device application (for the  SDO M4/M70-based device, use the terminal to open the serial port, to view the stdout).
+4. **Terminal#4:** Starts the  SDO client-sdk device application (for the  SDO M4/M7-based device, use the terminal to open the serial port, to view the stdout).
 
   
   Boot up the board. The device will be flashed with the credentials and becomes ready for
