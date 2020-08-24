@@ -1,14 +1,14 @@
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 16.04/18.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute  Secure Device Onboard (SDO).
+`Ubuntu* OS version 18.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute  Secure Device Onboard (SDO).
 
 The  SDO build and execution depend on OpenSSL* toolkit version 1.1.1f. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
-## 1. Packages requirements when setting up TPM2.0 (on Ubuntu OS version 16.04/18.04):
+## 1. Packages requirements when setting up TPM2.0 (on Ubuntu OS version 18.04):
 
 OpenSSL* toolkit version 1.1.1f. Follow the steps given in Section 10 to update the openssl version to 1.1.1f.
 
-## 2. TPM* Library Installation (for Ubuntu OS version 16.04/18.04):
+## 2. TPM* Library Installation (for Ubuntu OS version 18.04):
 
  SDO TPM based client-sdk uses TPM-TSS 2.3.1, TPM2-ABRMD 2.2.0 and TPM2-TOOLS 4.0.1 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
@@ -17,7 +17,7 @@ To compile and execute TPM enabled SDO Client-SDK use one of the appropriate com
 * Script usage command
 
 ```shell
-$ ./install_tpm_libs.sh. -h
+$ ./install_tpm_libs.sh -h
 ```
 
 * TPM-TSS library setup to enable TPM enabled SDO Client-SDK code compilation
@@ -43,7 +43,7 @@ $ ./install_tpm_libs.sh -u
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM)
 
-Following steps should be performed if SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup SDO TPM libraries. Install only tpm2-tss library to enable TPM enabled SDO Client-SDK code compilation. To enable compilation and execution of TPM enabled SDO Client-SDK code install allthree libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools and tpm2-tss-engine
+Following steps should be performed if SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup SDO TPM libraries. Install only tpm2-tss library to enable TPM enabled SDO Client-SDK code compilation. To enable compilation and execution of TPM enabled SDO Client-SDK code install all three libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools and tpm2-tss-engine
 
 #### 2.1.1 tpm2-tss-2.3.1
 
@@ -150,9 +150,9 @@ Refer to the section [SDO Build configurations](build_conf.md)
 <a name="run_linux_sdo"></a>
 
 ## 7. Running the application <!-- Ensuring generic updates are captured where applicable -->
-The  SDO Linux TPM device is compatible with  SDO Supply Chain Toolkit (SCT) - manufacturer and reseller, on prem rendezvous and owner container servers.
+The SDO Linux TPM device is compatible with  SDO Supply Chain Toolkit (SCT) - Manufacturer and Reseller, Rendezvous and IoT-Platform-SDK servers.
 
-To test the  SDO Linux device against the  SDO Supply Chain Toolkit (SCT) - manufacturer and reseller, on prem rendezvous and owner container server binaries from the `<release-package-dir>/SupplyChainTools/`, `<release-package-dir>/RendezvousServiceOnPrem/` and `<release-package-dir>/SDOIotPlatformSDK/` directory respectively.
+To test the  SDO Linux device against the  SDO Supply Chain Toolkit (SCT) - Manufacturer and Reseller, Rendezvous and IoT-Platform-SDK server binaries from the `<release-package-dir>/SupplyChainTools/`, `<release-package-dir>/RendezvousServiceOnPrem/` and `<release-package-dir>/SDOIotPlatformSDK/` directory respectively.
 
 Refer the TPM Library Setup steps given in Section 2 to compile and execute TPM enabled SDO Client-SDK
 
@@ -160,7 +160,7 @@ After a successful compilation, the  SDO Linux device executable can be found at
 > **Note:** ${BUILD} can be either `debug` or `release` based on the compilation step.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) using
-  manufacturer SCT. Refer to [ DI SCT Setup](tpm_di_setup.md). After the manufacturer SCT is set up,
+  SCT Manufacturer. Refer to [ DI SCT Setup](tpm_di_setup.md). After the SCT Manufacturer is set up,
   execute the TPM make ready script. Refer to [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh). Alternatively,
   perform the steps listed in section 7.1 to initialise the device without using
   [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
@@ -173,12 +173,12 @@ After a successful compilation, the  SDO Linux device executable can be found at
 
 - Once the TPM make ready script is executed successfully, the device is now initialized
   with the credentials and is ready for ownership transfer. To run the device against the
-  manufacturer SCT for the DI protocol, do the following:
+  SCT Manufacturer for the DI protocol, do the following:
   ```shell
   $ ./build/linux-client
   ```
 
-- To enable the device for owner transfer, configure the on prem rendezvous and owner container.
+- To enable the device for owner transfer, configure the Rendezvous and IoT-Platform-SDK.
   Refer to [ Ownership Transfer Setup ](tpm_ownership_transfer.md). After these
   servers are set up, execute `linux-client` again.
   
@@ -202,7 +202,7 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 #### Primary Key Generation from Endorsement Hierarchy
 
  ```shell
-  $ tpm2_createprimary -C e -g sha256 -G ecc256:aes128cbc -c data/tpm_primary_key.ctx -V 
+  $ tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
   ```
 
 #### Load the Primary Key into TPM Persistent Memory

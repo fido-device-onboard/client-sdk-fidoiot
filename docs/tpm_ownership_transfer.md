@@ -1,5 +1,4 @@
 # Ownership Transfer: TO1, TO2 protocols:
-During this time, it is assumed that ownership proxy (.op) file is already transferred from
-manufacturer server to the owner server and owner server has registered itself to the rendezvous
-server i.e. TO0 is successful. Please refer to `<release-package-dir>/SupplyChainTools/docker_manufacturer/README.md` document for
-more details.
+During this time, it is assumed that ownership voucher is already transferred from
+SCT Manufacturer server to the IoT-Platform-SDK server. Then, IoT-Platform-SDK registers its association with the client to Rendezvous i.e. TO0 is successful. The client, can then proceed with TO1 and TO2 protocols. Please refer to [this](https://secure-device-onboard.github.io/docs/protocol-specification/detailed-protocol-description/) for more informtion on Transfer Ownership protocols.
+Please refer to [SCT Manufacturer README](https://github.com/secure-device-onboard/supply-chain-tools/blob/master/README.md) and [IoT-Platform-SDK README](https://github.com/secure-device-onboard/iot-platform-sdk/blob/master/README.md) document for more details on setting up these servers.
