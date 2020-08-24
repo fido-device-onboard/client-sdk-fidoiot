@@ -21,7 +21,7 @@ RUN mkdir -p /home/sdouser/client-sdk/ ; chown -R sdouser:sdouser /home/sdouser/
 
 WORKDIR /home/sdouser/client-sdk/
 
-ENV SAFESTRING_ROOT=/home/sdouser/client-sdk/safestringlib \
+ENV SAFESTRING_ROOT=/home/sdouser/safestringlib \
     DEBIAN_FRONTEND=noninteractive
 
 RUN unset DEBIAN_FRONTEND
@@ -29,6 +29,10 @@ RUN echo "proxy $http_proxy"
 RUN cd /tmp/ && wget https://raw.githubusercontent.com/secure-device-onboard/client-sdk/master/utils/install_tpm_libs.sh
 RUN sed 's/sudo//g' /tmp/install_tpm_libs.sh > /tmp/tpm_libs.sh
 RUN yes | bash /tmp/tpm_libs.sh -i
+
+WORKDIR /home/sdouser/
+RUN git clone http://github.com/intel/safestringlib.git
+RUN cd safestringlib/ && make
 
 WORKDIR /home/sdouser/client-sdk/
 ENTRYPOINT ./utils/docker_build/build.sh

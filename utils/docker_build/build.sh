@@ -6,10 +6,8 @@
 REMOTE_URL=https://github.com/secure-device-onboard/client-sdk.git
 REMOTE_BRANCH=master
 
-git clone http://github.com/intel/safestringlib.git
-cd safestringlib/ && make
-cd .. && rm -f CMakeCache.txt
-export SAFESTRING_ROOT=/home/sdouser/client-sdk/safestringlib
+rm -f CMakeCache.txt
+export SAFESTRING_ROOT=/home/sdouser/safestringlib
 
 if [ "$use_remote" = "1" ]; then
   echo "Building $REMOTE_URL : $REMOTE_BRANCH"
