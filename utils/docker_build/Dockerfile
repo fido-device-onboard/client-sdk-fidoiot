@@ -24,10 +24,6 @@ WORKDIR /home/sdouser/client-sdk/
 ENV SAFESTRING_ROOT=/home/sdouser/client-sdk/safestringlib \
     DEBIAN_FRONTEND=noninteractive
 
-RUN git clone http://github.com/intel/safestringlib.git
-RUN cd safestringlib/ && make
-RUN cd .. && rm -f CMakeCache.txt
-
 RUN unset DEBIAN_FRONTEND
 RUN echo "proxy $http_proxy"
 RUN cd /tmp/ && wget https://raw.githubusercontent.com/secure-device-onboard/client-sdk/master/utils/install_tpm_libs.sh
