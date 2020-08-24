@@ -90,7 +90,7 @@ RESALE=true           # Resale feature enabled
 List of options to clean targets:
 pristine              # cleanup by remove generated files
 
-Supported values for C standerd are: C90 and C99
+Supported values for C standard are: C90 and C99
 ```
 
 ## Crypto library support

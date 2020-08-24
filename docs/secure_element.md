@@ -69,7 +69,7 @@ SDO implementation for ARM devices uses Microchip AT608A as the secure element.
 7. Do a [regular build](./linux.md) of SDO with an additional parameter CRYPTO_HW=true.
    Note: only ECDSA is supported from SE.
    ```bash
-   $ cd <c-code-sdk folder>
+   $ cd <client-sdk folder>
    $ cmake -DCRYPTO_HW=true -DPK_ENC=ecdsa -DKEX=ecdh .
    $ make
    $ ./build/linux/debug/linux-client

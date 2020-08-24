@@ -18,7 +18,7 @@ This implementation is built using Yocto Project* and provides facilities to run
 > **Note:** Compilation steps are documented in the [ sdo-client-sdk for Arm Mbed Linux OS](mbed_linux.md) readme file.
 
 ## Building Arm Mbed Linux OS
-Download and build the Arm Mbed Linux OS source code, after following the steps mentioned in [this](https://os.mbed.com/docs/mbed-linux-os/v0.9/getting-started/building-an-mbl-image.html) link. 
+Download and build the Arm Mbed Linux OS source code, after following the steps mentioned in [this](https://github.com/ARMmbed/mbl-docs/tree/v0.9/Docs) link. **Use 0.9 release brach for all repos.**
 
 > **Note:** The current supported version of the Arm Mbed Linux OS is `mbl-os-0.9`.
 
@@ -39,9 +39,9 @@ The  SDO client-sdk for Arm Cortex-A7 platform is built using the Yocto Project-
 	$ cp -rf <release-package-dir>/sdo-client-sdk/utils/meta-intel-sdo/recipes-connectivity/clientsdk-mbedtls build-warp7/machine-imx7s-warp-mbl/mbl-manifest/layers/meta-intel-sdo/recipes-connectivity/clientsdk-mbedtls
 ```
 
-3. Modify `clientsdk-mbedtls.bb` inside build-warp7/machine-imx7s-warp-mbl/mbl-manifest/layers/meta-intel-sdo/recipes-connectivity/clientsdk-mbedtls folder to configure and build the c-code-sdk source code for configurations other than the default (optional).
+3. Modify `clientsdk-mbedtls.bb` inside build-warp7/machine-imx7s-warp-mbl/mbl-manifest/layers/meta-intel-sdo/recipes-connectivity/clientsdk-mbedtls folder to configure and build the client-sdk source code for configurations other than the default (optional).
 
->**Note:** By default, `clientsdk-mbedtls.bb` is configured with the default build configuration for Mbed linux. To see the  SDO default configuration and other details, refer to the [Building  SDO c-code-sdk](build_conf.md) section of the `<release-package-dir>/client-sdk/README.md` document.
+>**Note:** By default, `clientsdk-mbedtls.bb` is configured with the default build configuration for Mbed linux. To see the  SDO default configuration and other details, refer to the [Building  SDO client-sdk](build_conf.md) section of the `<release-package-dir>/client-sdk/README.md` document.
 
 4. Add the `meta-intel-sdo` layer information by setting the `BBLAYERS` flag in the BitBake configuration file (the BitBake configuration file can be found at `build-warp7/machine-imx7s-warp-mbl/mbl-manifest/conf/bblayers.conf`):
 
@@ -62,7 +62,7 @@ The  SDO client-sdk for Arm Cortex-A7 platform is built using the Yocto Project-
 
 To flash the WaRP7 device with the build image, follow the steps in the [this](https://os.mbed.com/docs/mbed-linux-os/v0.6/first-image/warp7-devices.html) link.
 
-After the device is flashed, use the [Setting up a WI-FI* connection](https://os.mbed.com/docs/mbed-linux-os/v0.6/first-image/connecting-to-a-network-and-pelion-device-management.html#setting-up-a-wi-fi-connection) link to connect the device to the Wi-Fi* network for the first time.
+After the device is flashed, use the [Setting up a WI-FI* connection](https://github.com/ARMmbed/mbl-docs/blob/v0.9/Docs/install_mbl_on_device/connect_network_and_pelion/connect_network.md) connect the device to the Wi-Fi* network for the first time.
 
 ## Running  SDO
 After a successful flash, the  SDO Cortex-A7 device executable can be found at `<device-root>/opt/sdo/linux-client`. Follow the steps in the [Execution](./linux.md#run_linux_sdo) section of [this](./linux.md) document to run the  SDO Cortex-A7 application against the  SDO Customer Reference Implementation (CRI) implementation.

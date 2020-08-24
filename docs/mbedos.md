@@ -22,17 +22,14 @@
 
 You do not have to build the `safestringlib` library for the Arm Mbed OS-based implementation because this will be done by SDO.
 
-## 4. Compiling Service Info Modules (optional)
-This step is not required because the SDO build system for Arm Mbed OS will build the device modules present in the `SERVICE_INFO_DEVICE_MODULE_ROOT` directory.
-
-## 5. Environment Variables
+## 4. Environment Variables
 
 Provide the safestringlib path:
 ```shell
 $ export SAFESTRING_ROOT=path/to/safestringlib
 ```
 
-## 6. Compiling  SDO
+## 5. Compiling  SDO
 The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU Make tool</a>. SDO assumes that all requirements are set up from [  SDO Compilation Setup ](setup.md). The application is built using `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported.
 
 - To build STM32F767ZI:
@@ -53,7 +50,7 @@ The  SDO client-sdk build system is based on <a href="https://www.gnu.org/softwa
 
 For an advanced build configuration, refer to [Advanced Build Configuration.](build_conf.md)
 
-## 8. Executing  SDO
+## 6. Executing  SDO
 The  SDO for the Linux device is compatible with the  SDO implementation of the manufacturer, rendezvous,
 and owner servers. These server implementations can be downloaded from their appropriate 
 directories.

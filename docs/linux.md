@@ -31,14 +31,7 @@ Provide safestringlib paths:
 $ export SAFESTRING_ROOT=path/to/safestringlib
 ```
 
-## 5. Compiling Service Info Modules (optional)
-Provide the service info device module path to use the  SDO service info functionality:
-```shell
-$ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
-```
-Service-info device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, i.e. required service-info device modules must be built prior to this step, otherwise the  SDO client-sdk build will fail.
-
-## 6. Compiling  SDO
+## 5. Compiling  SDO
 
 The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. SDO assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the  SDO client-sdk.
 
@@ -55,7 +48,7 @@ Refer to the section. [SDO Build configurations](build_conf.md)
 
 <a name="run_linux_sdo"></a>
 
-## 7 Running the application <!-- Ensuring generic updates are captured where applicable -->
+## 6. Running the application <!-- Ensuring generic updates are captured where applicable -->
 The  SDO Linux device is compatible with  SDO Supply Chain Toolkit (SCT), PRI rendezvous, and owner servers(OC).
 
 To test the  SDO Linux device against the  SDO Java PRI implementation, obtain the  SCT binaries along with PRI rendezvous and PRI owner binaries from their respective directories.
@@ -79,7 +72,7 @@ To run the device against the SCT for the DI protocol, do the following:
   $ ./build/linux-client
   ```
 
-## 8. Compiling and runing of unit tests for SDO
+## 7. Compiling and runing of unit tests for SDO
   Unit-test framework is located inside tests folder.
 
   Use following command to compile and running.
