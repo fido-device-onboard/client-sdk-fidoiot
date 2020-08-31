@@ -4,7 +4,7 @@
 [  SDO Compilation Setup ](docs/setup.md)
 - [ Safestring ](docs/setup.md#safestring) <br>
 - [ Service Info Modules ](docs/setup.md#si_info_modules)
-- [ Manufacturer CRI Network Address ](docs/setup.md#manuf_addr)
+- [ Manufacturer Network Address ](docs/setup.md#manuf_addr)
 - [ ECDSA Private Key Generation ](docs/setup.md#ecdsa_priv)
 - [ HTTP_PROXY ](docs/setup.md#http_proxy)
 

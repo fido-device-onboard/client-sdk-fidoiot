@@ -5,12 +5,8 @@ SDO client-sdk uses safestringlib for string and memory operations to prevent se
 
 1. For Linux*/ Arm Mbed* OS/ Arm Mbed Linux OS builds, download safestring from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>.
 
-## 2. Service-Info Device Modules Path (Optional):
-To provide the service-info device module path to use the SDO service-info functionality:
-
 <a name="manuf_addr"></a>
-
-## 3. Setting the Manufacturer Network Address
+## 2. Setting the Manufacturer Network Address
 To set the manufacturer network address(domain name or IP) that SDO Linux device uses during Device Initialization (DI) protocol:
 
 ```shell
@@ -37,7 +33,7 @@ $ echo -n <manufacturer server-port> > data/manufacturer_port.bin
 > **Note:** By default, `manufacturer_dn.bin` is configured with "localhost". If both IP and domain name are set, the IP takes precedence over domain name.
 
 <a name="ecdsa_priv"></a>
-## 4. Elliptic Curve Digital Signature Algorithm (ECDSA) Private Key File Generation
+## 3. Elliptic Curve Digital Signature Algorithm (ECDSA) Private Key File Generation
 The following are steps to generate the private key file for ECDSA-based devices, only EC Curve `P-256` and `P-384` are supported.
 
 *  Generate EC private key (optional, if not already generated):
@@ -75,7 +71,7 @@ The following are steps to generate the private key file for ECDSA-based devices
 
 <a name="http_proxy"></a>
 
-## 5.  SDO Credentials REUSE Protocol
+## 4.  SDO Credentials REUSE Protocol
 
  The SDO credentials REUSE feature allows  SDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
 
@@ -90,7 +86,7 @@ Activating the device credentials will in turn, activate the  SDO device and con
 
 > **Note:** To run  SDO Client-SDK binaries in REUSE mode, the following configuration need to be taken care of while launching  SDO servers:
 > * “TO2_CREDENTIAL_REUSE_ENABLED=true” should be set in ocs.env file in Owner server (iot-platform-sdk).
-## 6. HTTP-proxy configuration (optional)
+## 5. HTTP-proxy configuration (optional)
 If the device is located behind a proxy server, the proxy server details must be provided to the device. For the same purpose, there are three files (each for the manufacturer, rendezvous, and owner servers) in which the proxy server details should be specified in the required format, before connecting to the respective server. These files can be created or removed as required.
 
 Each proxy file is located in the `data/` directory and named as follows:
