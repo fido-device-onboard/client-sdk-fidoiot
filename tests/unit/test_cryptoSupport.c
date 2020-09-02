@@ -1673,16 +1673,9 @@ TEST_CASE("crypto_support_sdo_set_kex_paramA_invalid", "[crypto_support][sdo]")
 	encrypt_key = getSDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
-	sdo_byte_array_t pA;
-
-	/* invalid key */
-	pA.bytes = NULL;
-	pA.byte_sz = 0;
 	ret = sdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	//	ret = sdo_set_kex_paramA(&pA, encrypt_key);
-	//	TEST_ASSERT_EQUAL_INT(-1, ret);
 	ret = sdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	if (encrypt_key)

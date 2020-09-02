@@ -50,6 +50,7 @@ client_sdk_compile_options(
   -Wno-declaration-after-statement
   -Wold-style-declaration
   -Wold-style-definition
+  -Wall
   )
 
 client_sdk_compile_options(
@@ -96,6 +97,7 @@ if(${TARGET_OS} MATCHES linux)
   client_sdk_ld_options(
     -L$ENV{SAFESTRING_ROOT}/
     -l:libsafestring.a
+    -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
     )
 
   if (${TLS} STREQUAL openssl)
