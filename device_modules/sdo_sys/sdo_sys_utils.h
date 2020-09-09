@@ -19,8 +19,10 @@
 
 #else
 #define ModuleFree(x)                                                          \
-	free(x);                                                               \
-	x = NULL;
+	{								       \
+		free(x);                                                       \
+		x = NULL;						       \
+	}
 #endif
 
 typedef enum { SDO_SYS_MOD_MSG_WRITE, SDO_SYS_MOD_MSG_EXEC } sdoSysModMsg;
