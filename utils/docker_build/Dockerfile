@@ -1,7 +1,10 @@
 # Copyright 2020 Intel Corporation
 # SPDX-License-Identifier: Apache 2.0
 
-FROM ubuntu:bionic
+FROM ubuntu:20.04
+
+ENV SAFESTRING_ROOT=/home/sdouser/safestringlib \
+    DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y git \
@@ -11,18 +14,13 @@ RUN apt-get update && \
     ruby \
     wget \
     tar \
-    unzip \
-    python \
-    python-pip
+    unzip
 
 # Create a user 'sdouser'. If the user name is updated, please update the same in docker-compose.yaml.
 RUN useradd -ms /bin/bash sdouser
 RUN mkdir -p /home/sdouser/client-sdk/ ; chown -R sdouser:sdouser /home/sdouser/client-sdk/
 
 WORKDIR /home/sdouser/client-sdk/
-
-ENV SAFESTRING_ROOT=/home/sdouser/safestringlib \
-    DEBIAN_FRONTEND=noninteractive
 
 RUN unset DEBIAN_FRONTEND
 RUN echo "proxy $http_proxy"
