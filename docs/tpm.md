@@ -1,16 +1,16 @@
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 18.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute  Secure Device Onboard (SDO).
+`Ubuntu* OS version 20.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute Secure Device Onboard (SDO).
 
-The  SDO build and execution depend on OpenSSL* toolkit version 1.1.1g. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The SDO build and execution depend on OpenSSL* toolkit version 1.1.1g. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
-## 1. Packages requirements when setting up TPM2.0 (on Ubuntu OS version 18.04):
+## 1. Packages Requirements when Setting up TPM2.0 (on Ubuntu* OS version 20.04):
 
 OpenSSL* toolkit version 1.1.1g. Follow the steps given in Section 10 to update the openssl version to 1.1.1g.
 
-## 2. TPM* Library Installation (for Ubuntu OS version 18.04):
+## 2. TPM* Library Installation (for Ubuntu OS version 20.04):
 
- SDO TPM based client-sdk uses TPM-TSS 2.3.1, TPM2-ABRMD 2.2.0 and TPM2-TOOLS 4.0.1 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+SDO TPM based client-sdk uses TPM-TSS 2.3.1, TPM2-ABRMD 2.2.0 and TPM2-TOOLS 4.0.1 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM enabled SDO Client-SDK use one of the appropriate commands:
 
@@ -39,15 +39,15 @@ $ ./install_tpm_libs.sh -i
 # Command to uninstall TPM libraries
 $ ./install_tpm_libs.sh -u
 ```
-> **Note:** Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
+> ***Note:*** Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM)
 
-Following steps should be performed if SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup SDO TPM libraries. Install only tpm2-tss library to enable TPM enabled SDO Client-SDK code compilation. To enable compilation and execution of TPM enabled SDO Client-SDK code install all three libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools and tpm2-tss-engine
+Following steps should be performed if SDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup SDO TPM libraries. Install only tpm2-tss library to enable TPM enabled SDO Client-SDK code compilation. To enable compilation and execution of TPM enabled SDO Client-SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-tss-engine.
 
 #### 2.1.1 tpm2-tss-2.3.1
 
-This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM.  uses release version 2.3.1 of the library.
+This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM. It uses release version 2.3.1 of the library.
 
 ##### Source Code
 
@@ -59,23 +59,23 @@ The build and installation process can be found at [tpm2-tss-2.3.1-install](http
 
 #### 2.1.2 tpm2-abrmd-2.2.0
 
-This is an optional but recommended library (daemon) to use TPM in the device. This daemon will act as a resource manager for the TPM, for all I/O calls that happen with the device.  uses release version 2.2.0 of the library.
+This is an optional but recommended library (daemon) to use TPM in the device. This daemon will act as a resource manager for the TPM, for all I/O calls that happen with the device. It uses release version 2.2.0 of the library.
 
-##### Source code
+##### Source Code
 
 The library can be downloaded from [tpm2-abrmd-2.2.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.2.0/tpm2-abrmd-2.2.0.tar.gz)
 
 Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see Section on Compiling SDO.
 
-##### Build and Install process
+##### Build and Install Process
 
 The build and installation process found at [tpm2-abrmd-2.2.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
 #### 2.1.3 tpm2-tools-4.0.1
 
-This library provides the necessary tools to interact and perform operations using the TPM, to the users.  uses release version 4.0.1 of the library.
+This library provides the necessary tools to interact and perform operations using the TPM, to the users. It uses release version 4.0.1 of the library.
 
-##### Source code
+##### Source Code
 
 The library can be downloaded from [tpm2-tools-4.0.1-download](https://github.com/tpm2-software/tpm2-tools/releases/download/4.0.1/tpm2-tools-4.0.1.tar.gz)
 
@@ -85,9 +85,9 @@ The build and installation process can be found at [tpm2-tools-4.0.1-install](ht
 
 #### 2.1.4 tpm2-tss-engine-1.1.0-rc0
 
-This library provides the OpenSSL engine, which performs the OpenSSL cryptography operation using the keys inside the TPM.  uses release version 1.1.0-rc0 of the library.
+This library provides the OpenSSL engine, which performs the OpenSSL cryptography operation using the keys inside the TPM. It uses release version 1.1.0-rc0 of the library.
 
-##### Source code
+##### Source Code
 
 The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0-rc0.zip)
 
@@ -97,7 +97,7 @@ The build and installation process can be found at [tpm2-tss-engine-install](htt
 
 ## 3. Compiling Intel safestringlib
 
- SDO client-sdk uses safestringlib for string and memory operations to prevent serious security vulnerabilities (e.g. buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
+SDO client-sdk uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
  $ mkdir obj
@@ -115,15 +115,15 @@ $ export SAFESTRING_ROOT=path/to/safestringlib
 
 ## 5. Compiling Service Info Modules (optional)
 
-Provide the service-info device module path to use the  SDO service-info functionality:
+Provide the service-info device module path to use the SDO service-info functionality:
 ```shell
 $ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
 ```
-Service-info device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, i.e. required service-info device modules must be built prior to this step, otherwise the  SDO client-sdk build will fail.
+Service-info device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, that is, required service-info device modules must be built prior to this step, otherwise the SDO client-sdk build will fail.
 
-## 6. Compiling  SDO
+## 6. Compiling SDO
 
-The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the  SDO client-sdk.
+The SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the SDO client-sdk.
 
 Refer the TPM Library Setup steps given in Section 2 to compile TPM enabled SDO Client-SDK. 
 
@@ -149,15 +149,15 @@ Refer to the section [SDO Build configurations](build_conf.md)
 
 <a name="run_linux_sdo"></a>
 
-## 7. Running the application <!-- Ensuring generic updates are captured where applicable -->
-The SDO Linux TPM device is compatible with  SDO Supply Chain Toolkit (SCT) - Manufacturer and Reseller, Rendezvous and IoT-Platform-SDK servers.
+## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
+The SDO Linux TPM device is compatible with  SDO Supply Chain Toolkit (SCT) - Manufacturer and Reseller, Rendezvous, and IoT-Platform-SDK servers.
 
-To test the  SDO Linux device against the  SDO Supply Chain Toolkit (SCT) - Manufacturer and Reseller, Rendezvous and IoT-Platform-SDK server binaries from the `<release-package-dir>/SupplyChainTools/`, `<release-package-dir>/RendezvousServiceOnPrem/` and `<release-package-dir>/SDOIotPlatformSDK/` directory respectively.
+To test the SDO Linux device against the SDO Supply Chain Toolkit (SCT) - Manufacturer and Reseller, Rendezvous and IoT-Platform-SDK server binaries from the `<release-package-dir>/SupplyChainTools/`, `<release-package-dir>/RendezvousServiceOnPrem/` and `<release-package-dir>/SDOIotPlatformSDK/` directory respectively.
 
 Refer the TPM Library Setup steps given in Section 2 to compile and execute TPM enabled SDO Client-SDK
 
 After a successful compilation, the  SDO Linux device executable can be found at `<path-to-sdo-client-sdk>/build/linux/${BUILD}/linux-client`.
-> **Note:** ${BUILD} can be either `debug` or `release` based on the compilation step.
+> ***Note:*** ${BUILD} can be either `debug` or `release` based on the compilation step.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) using
   SCT Manufacturer. Refer to [ DI SCT Setup](tpm_di_setup.md). After the SCT Manufacturer is set up,
@@ -186,13 +186,13 @@ After a successful compilation, the  SDO Linux device executable can be found at
   $ ./build/linux-client
   ```
 
-> **Note:** If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
+> ***Note:*** If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
 
 ### 7.1 Prepare SDO Client SDK Data Folder
 
 #### Persistent Storage Index in TPM
 
-Find a persistent storage index that is unused in the TPM and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use following command. SDO uses the 0x81000001 index for the following command examples.
+Find a persistent storage index that is unused in the TPM and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. SDO uses the 0x81000001 index for the following command examples.
 
  ```shell
   $ tpm2_getcap handles-persistent
@@ -248,9 +248,9 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
   ```shell
   $ openssl version
   ```
-  If the OpenSSL toolkit version in your machine is earlier than version 1.1.1g, follow the steps given in Section10 to update the openssl version to 1.1.1g.
+  If the OpenSSL toolkit version in your machine is earlier than version 1.1.1g, follow the steps given in Section10 to update the OpenSSL version to 1.1.1g.
 
-## Steps to upgrade the OpenSSL* toolkit to version 1.1.1g
+## Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1g
 
 ```shell
 # 1. If libssl-dev is installed, remove it:
@@ -273,7 +273,7 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 # 5. Issue the command 
 
   $ make 
-  (You may need to run “sudo apt install make gcc” before running this command successfully).
+  (You may need to run `sudo apt install make gcc` before running this command successfully).
 
 # 6. Check for possible errors.
 

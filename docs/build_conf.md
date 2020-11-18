@@ -1,4 +1,4 @@
-# Build configuration
+# Build Configuration
 There following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
 - DA: Device Attestation Algorithm
@@ -7,7 +7,7 @@ There following are some of the options to choose when building the device:
 - PK_ENC: Owner Attestation Algorithm
 - TLS: SSL support
 
-## Default configuration
+## Default Configuration
 
 ```shell
   BUILD = debug #build mode
@@ -21,7 +21,7 @@ There following are some of the options to choose when building the device:
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
 
-## Custom build
+## Custom Build
 The default configuration can be overridden by using more options in `cmake`.<br>
 For example, to build the `STM32F429ZI` device:
 - BUILD: Debug mode
@@ -93,7 +93,7 @@ pristine              # cleanup by remove generated files
 Supported values for C standard are: C90 and C99
 ```
 
-## Crypto library support
+## Crypto Library Support
 a. TARGET_OS=linux supports
    - openssl
 (`linux` denotes the Linux* OS.)
