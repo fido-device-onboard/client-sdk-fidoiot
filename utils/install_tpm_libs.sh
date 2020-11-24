@@ -4,7 +4,7 @@ TPM2_ABRMD_VER="2.2.0"
 TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
 TPM2_TOOLS_VER="4.0.1"
 TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
-TPM2_TSS_ENGINE_VER=1.1.0-rc0
+TPM2_TSS_ENGINE_VER=1.1.0
 TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v$TPM2_TSS_ENGINE_VER.zip"
 
 PARENT_DIR=`pwd`
