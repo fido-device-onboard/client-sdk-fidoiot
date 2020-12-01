@@ -7,7 +7,7 @@ The SDO build and execution depend on OpenSSL* toolkit version 1.1.1g. Users mus
 
 ```shell
 $ sudo apt-get install python-setuptools clang-format dos2unix ruby \
-  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-38-0 doxygen
+  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
 ```
 ## 2. Packages Requirements when Executing Binaries (on Ubuntu OS version 20.04):
 
@@ -83,33 +83,28 @@ To run the device against the SCT for the DI protocol, do the following:
 
 **Steps to Upgrade the OpenSSL Toolkit to Version 1.1.1g**
 
-1. If libssl-dev is installed, remove it:
-```shell
-sudo apt-get remove --auto-remove libssl-dev
-sudo apt-get remove --auto-remove libssl-dev:i386
-```
-2. Pull the tarball: wget https://www.openssl.org/source/openssl-1.1.1g.tar.gz
+1. Pull the tarball: wget https://www.openssl.org/source/openssl-1.1.1g.tar.gz
 
-3. Unpack the tarball with `tar -zxf openssl-1.1.1g.tar.gz && cd openssl-1.1.1g`
+2. Unpack the tarball with `tar -zxf openssl-1.1.1g.tar.gz && cd openssl-1.1.1g`
 
-4. Issue the command `./config`.
+3. Issue the command `./config`.
 
-5. Issue the command `make ` (You may need to run ‘sudo apt install make gcc’ before running this command successfully).
+4. Issue the command `make ` (You may need to run ‘sudo apt install make gcc’ before running this command successfully).
 
-6. Run `make test` to check for possible errors.
+5. Run `make test` to check for possible errors.
 
-7. Backup the current OpenSSL binary: `sudo mv /usr/bin/openssl ~/tmp`
+6. Backup the current OpenSSL binary: `sudo mv /usr/bin/openssl ~/tmp`
 
-8. Issue the command `sudo make install`.
+7. Issue the command `sudo make install`.
 
-9. Create a symbolic link from the newly installed binary to the default location:
+8. Create a symbolic link from the newly installed binary to the default location:
 
    `sudo ln -s /usr/local/bin/openssl /usr/bin/openssl`
 
-10. Run the command `sudo ldconfig` to update symlinks and rebuild the library cache.
+9. Run the command `sudo ldconfig` to update symlinks and rebuild the library cache.
     Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL toolkit.
 
-11. Issue the following command from the terminal:
+10. Issue the following command from the terminal:
 
     ```
     openssl version
