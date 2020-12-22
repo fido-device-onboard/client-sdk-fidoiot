@@ -138,6 +138,7 @@ TEST_CASE("sdo_bits_alloc_with", "[sdo_types][sdo]")
 void test_sdo_bits_alloc_with(void)
 #endif
 {
+	LOG(LOG_ERROR, "SDOW memset() failed!\n");
 	uint8_t *data;
 	sdo_bits_t *ret;
 

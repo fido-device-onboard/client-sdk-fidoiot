@@ -258,10 +258,11 @@ bool sdo_process_states(sdo_prot_t *ps);
 bool sdo_check_to2_round_trips(sdo_prot_t *ps);
 
 void sdo_send_error_message(sdow_t *sdow, int ecode, int msgnum,
-			    const char *emsg);
+					char *emsg);
 void sdo_receive_error_message(sdor_t *sdor, int *ecode, int *msgnum,
 			       char *emsg, int emsg_sz);
 bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep);
 
 int ps_get_m_string(sdo_prot_t *ps);
+int ps_get_m_string_cbor(sdo_byte_array_t *mstring);
 #endif /* __SDOPROT_H__ */

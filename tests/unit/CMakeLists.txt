@@ -27,23 +27,24 @@ client_sdk_get_compile_options(c_ops)
 # note sequence needs to be maintained for proper execution.
 set (UNIT_TEST_SOURCES
   test_ECDSAVerifyRoutines.c
-  test_sample.c
+  # test_sample.c
   test_hal_os.c
-  test_sdoprot.c
+  # test_sdoprot.c
   test_base64.c
-  test_sdotypes.c
+  # test_sdotypes.c
   test_sdonet.c
   test_RSARoutines.c
-  test_sdo.c
-  test_credentials.c
+  # test_sdo.c
+  # test_credentials.c
   test_cryptoSupport.c
   test_bn_support.c
   test_utils.c
   test_cryptoUtils.c
   test_AESRoutines.c
-  test_protctx.c
+  # test_protctx.c
   test_SSLRoutines.c
   test_ECDSASignRoutines.c
+  test_sdoblockio.c
 )
 
 set (test_sample_flags -Wl,-wrap,sdo_read_string_sz)

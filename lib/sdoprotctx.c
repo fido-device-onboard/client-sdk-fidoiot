@@ -358,7 +358,7 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 		LOG(LOG_DEBUG, "Rx sdo_prot_ctx_run:body:%s\n\n",
 		    &sdor->b.block[0]);
 
-		sdor_set_have_block(sdor);
+		sdor->have_block = true;
 
 		/*
 		 * When a REST error message(type 255) is sent over network,
@@ -378,9 +378,7 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 	sdo_con_teardown();
 
 	if (sdob && sdob->block) {
-		sdob->block_max = 0;
 		sdob->block_size = 0;
-		sdob->cursor = 0;
 		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}

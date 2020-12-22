@@ -292,7 +292,6 @@ int ps_get_m_string(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "Failed to copy csr-data\n");
 		goto err;
 	}
-
 	sdo_byte_array_write_chars(&ps->sdow, m_string);
 
 err:
@@ -323,12 +322,13 @@ int ps_get_m_string(sdo_prot_t *ps)
 #endif
 #else /* If Manufacturer toolkit is not defined */
 /**
+ * TO-DO : Not needed anymore. Remove this.
  * Internal API
  * TODO: Delete this function once manufacturer toolkit is ON by default
  */
 int ps_get_m_string(sdo_prot_t *ps)
 {
-	sdo_write_string(&ps->sdow, "device-serial");
+	// sdo_write_string(&ps->sdow, "device-serial");
 	return 0;
 }
 #endif

@@ -298,7 +298,7 @@ static sdo_sdk_status app_initialize(void)
 		LOG(LOG_ERROR, "sdow_init() failed!\n");
 		return SDO_ERROR;
 	}
-	if (!sdor_init(&g_sdo_data->prot.sdor, NULL, NULL)) {
+	if (!sdor_init(&g_sdo_data->prot.sdor)) {
 		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		return SDO_ERROR;
 	}
@@ -547,7 +547,7 @@ sdo_sdk_status sdo_sdk_init(sdo_sdk_errorCB error_handling_callback,
 		LOG(LOG_ERROR, "sdow_init() failed!\n");
 		return SDO_ERROR;
 	}
-	if (!sdor_init(&g_sdo_data->prot.sdor, NULL, NULL)) {
+	if (!sdor_init(&g_sdo_data->prot.sdor)) {
 		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		return SDO_ERROR;
 	}

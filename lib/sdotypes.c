@@ -712,29 +712,26 @@ int sdo_byte_array_read_chars(sdor_t *sdor, sdo_byte_array_t *ba)
 		ba->bytes = NULL;
 	}
 
-	int b64Len = sdo_read_string_sz(sdor);
-	// LOG(LOG_ERROR, "b64Len_reported %d\n", b64Len);
 	// Determine the needed length
-	int bin_len = b64To_bin_length(b64Len);
-
-	LOG(LOG_DEBUG, "Byte Array len %d\n", bin_len);
+	size_t bin_len;
 
 	// DEBUG - added for correct buff allocation
-	if (bin_len) {
+	if (sdor_string_length(sdor, &bin_len)) {
+		LOG(LOG_DEBUG, "Byte Array len %zu\n", bin_len);
+
 		// Allocate a BPBits for the array
 		ba->bytes = sdo_alloc(bin_len * sizeof(uint8_t));
 		if (!ba->bytes)
 			return 0;
 		// Now read the byte array
-		int result_len =
-		    sdo_read_byte_array_field(sdor, b64Len, ba->bytes, bin_len);
-		ba->byte_sz = result_len;
-		return result_len;
+		// TO-DO : Evaluate if its duplicate. This should have contained char* instead of uint8_t*
+		// as per the method name.
+		bool result =
+		    sdor_byte_string(sdor, ba->bytes, bin_len);
+		if (result)
+			ba->byte_sz = bin_len;
+		return bin_len;
 	}
-
-	char c;
-
-	sdo_read_string(sdor, &c, 1);
 	return 0;
 }
 
@@ -756,31 +753,30 @@ int sdo_byte_array_read(sdor_t *sdor, sdo_byte_array_t *ba)
 		ba->byte_sz = 0;
 	}
 
-	int bin_len_reported = sdo_read_uint(sdor);
 	// Determine the needed length
-	int b64Len = bin_toB64Length(bin_len_reported);
+	size_t bin_len;
 
-	if (b64Len) {
+	if (sdor_string_length(sdor, &bin_len)) {
 
 		// LOG(LOG_ERROR, "B64 Array len %d\n", bin_len_reported);
 
-		// Allocate a BPBits for the array,
-		// Allocate 3 bytes extra for max probable decodaed output
-		bin_len_reported += 3;
-		ba->bytes = sdo_alloc((bin_len_reported) * sizeof(uint8_t));
+		ba->bytes = sdo_alloc((bin_len) * sizeof(uint8_t));
 		if (!ba->bytes)
 			return 0;
 		// Now read the byte array
-		int result_len = sdo_read_byte_array_field(
-		    sdor, b64Len, ba->bytes, bin_len_reported);
-		ba->byte_sz = result_len;
-		return result_len;
+		bool result = sdor_byte_string(sdor, ba->bytes, bin_len);
+		if (result)
+			ba->byte_sz = bin_len;
+		return bin_len;
 	} else {
 		return 0;
 	}
 }
 
 /**
+ * TO-DO : Used by Encrypted message. Method needs to be re-written.
+ * Update during TO2 implementation.
+ * 
  * Read a base64 byte array,
  * Format: [[ size of ivdata ,ivdata], size of cipher text, "base64 cipher
  * text"]
@@ -790,7 +786,7 @@ int sdo_byte_array_read(sdor_t *sdor, sdo_byte_array_t *ba)
  * @param iv_data - byte array fir iv data
  * @return the size of the data read if seccess else zero
  */
-
+/*
 int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 				  sdo_byte_array_t **ct_string,
 				  uint8_t *iv_data)
@@ -805,11 +801,10 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 		goto err;
 	}
 
-	/* read sequence:
-	 * 1. [size of iv, iv_data]
-	 * 2. size of cipher text
-	 * 3. cipher text
-	 */
+	// read sequence:
+	// 1. [size of iv, iv_data]
+	// 2. size of cipher text
+	// 3. cipher text
 	uint32_t ct_size = sdo_read_array_sz(sdor) + 1;
 
 	if ((*ct_string != NULL) || (0 == ct_size)) {
@@ -829,9 +824,9 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 		goto err;
 	}
 
-	/* The json object for IV */
+	// The json object for IV
 	sdor_begin_sequence(sdor);
-	/* Get binary length reported */
+	// Get binary length reported
 	iv_size_reported = sdo_read_uint(sdor);
 
 	if (iv_size_reported <= 0 && iv_size_reported > 16) {
@@ -841,7 +836,7 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 
 	iv_size_64 = bin_toB64Length(iv_size_reported);
 
-	/* Read from the array i.e " " */
+	// Read from the array i.e " "
 	iv_data_size = sdo_read_byte_array_field(sdor, iv_size_64,
 						  iv_data, AES_IV);
 	if (0 == iv_data_size) {
@@ -852,7 +847,7 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 
 	sdor_end_sequence(sdor); // e.g.: [16,"8Qy3c_bxI7NQ+Ef0XAAAAAA=="]
 
-	/* Get cipher text binary length reported */
+	// Get cipher text binary length reported
 	bin_len_reported = sdo_read_uint(sdor);
 
 	if (bin_len_reported <= 0) {
@@ -860,7 +855,7 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 		goto err;
 	}
 
-	/* Get incoming B64 string length (it must be a multiple of 4) */
+	// Get incoming B64 string length (it must be a multiple of 4)
 	b64Len_reported = sdo_read_string_sz(sdor);
 
 	if ((b64Len_reported <= 0) || (b64Len_reported % 4 != 0)) {
@@ -868,7 +863,7 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 		goto err;
 	}
 
-	/* Calculated expected B64 length using binary length reported */
+	// Calculated expected B64 length using binary length reported
 	b64Len_expected = bin_toB64Length(bin_len_reported);
 
 	if (b64Len_reported != b64Len_expected) {
@@ -877,7 +872,7 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 		goto err;
 	}
 
-	/* Allocate required array */
+	//Allocate required array
 	if (ba->bytes)
 		goto err;
 
@@ -886,32 +881,36 @@ int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
 	if (!ba->bytes)
 		goto err;
 
-	/* Now read the byte array */
+	// Now read the byte array
 	ret = sdo_read_byte_array_field(sdor, b64Len_reported, ba->bytes,
 					bin_len_reported);
 	ba->byte_sz = ret;
 err:
 	return ret;
 }
+*/
 
 /**
+ * TO-DO : Probably need to pass correct length, and evaluate if its a duplicate of sdo_byte_array_write().
+ * 
  * Byte array is represented as "byte array in base64"
  * @param sdow - pointer to the written data
  * @param ba - pointer to the byte array that holds data to be read from
  */
 void sdo_byte_array_write_chars(sdow_t *sdow, sdo_byte_array_t *ba)
 {
-	sdo_write_byte_array_field(sdow, ba->bytes, ba->byte_sz);
+	sdow_byte_string(sdow, ba->bytes, ba->byte_sz);
 }
 
 /**
+ * TO-DO : Probably need to pass size.
  * Byte array is represented as {len,"byte array in base64"}
  * @param sdow - pointer to the written data
  * @param ba - pointer to the byte array that holds data to be read from
  */
 void sdo_byte_array_write(sdow_t *sdow, sdo_byte_array_t *ba)
 {
-	sdo_write_byte_array(sdow, ba->bytes, ba->byte_sz);
+	sdow_byte_string(sdow, ba->bytes, ba->byte_sz);
 }
 
 //------------------------------------------------------------------------------
@@ -1170,15 +1169,17 @@ bool sdo_string_read(sdor_t *sdor, sdo_string_t *b)
 	// Clear the passed sdo_string_t object's buffer
 	sdo_string_init(b);
 
-	int _len = sdo_read_string_sz(sdor);
+	size_t _len;
 
-	if (!sdo_string_resize(b, (_len + 1))) {
-		LOG(LOG_ERROR, "String Resize failed!, requested str_len %d\n",
+	if (!sdor_string_length(sdor, &_len) || !sdo_string_resize(b, (_len + 1))) {
+		LOG(LOG_ERROR, "String Resize failed!, requested str_len %zu\n",
 		    (_len + 1));
 		return false;
 	}
 
-	sdo_read_string(sdor, b->bytes, b->byte_sz);
+	// TO-DO : Is +1 really needed?
+	b->byte_sz = _len + 1;
+	sdor_text_string(sdor, b->bytes, b->byte_sz);
 	return true;
 }
 
@@ -1227,8 +1228,11 @@ char *sdo_guid_to_string(sdo_byte_array_t *g, char *buf, int buf_sz)
  */
 void sdo_gid_write(sdow_t *sdow)
 {
-	sdo_write_byte_array_one_int_first(sdow, SDO_PK_ALGO, NULL,
-					   SDO_PK_EA_SIZE);
+	sdow_start_array(sdow, 2);
+	sdow_unsigned_int(sdow, SDO_PK_ALGO);
+	sdo_byte_array_t *empty_byte_array = sdo_byte_array_alloc(0);
+	sdow_byte_string(sdow, empty_byte_array->bytes, empty_byte_array->byte_sz);
+	sdow_end_array(sdow);
 }
 
 /**
@@ -1241,61 +1245,6 @@ sdo_cert_chain_t *sdo_cert_chain_alloc_empty(void)
 }
 
 /**
- * Read the Certificate chain
- * @param sdor - pointe to the read EPID information in JSON format
- * @return pointer to the read certificate chain
- */
-sdo_cert_chain_t *sdo_cert_chain_read(sdor_t *sdor)
-{
-	sdo_cert_chain_t *Cert_chain = sdo_cert_chain_alloc_empty();
-
-	if (NULL == Cert_chain) {
-		LOG(LOG_ERROR, "Malloc Failed!\n");
-		goto err;
-	}
-
-	/* Read the total chain len */
-	Cert_chain->len = sdo_read_uint(sdor);
-	if (Cert_chain->len == 0) {
-		LOG(LOG_ERROR, "Invalid Cert chain length reported!\n");
-		goto err;
-	}
-
-	/* Read the type */
-	Cert_chain->type = sdo_read_uint(sdor);
-	if (Cert_chain->len == 0) {
-		LOG(LOG_ERROR, "Invalid Cert chain length reported!\n");
-		goto err;
-	}
-
-	/* Read the total number of certificate entries */
-	Cert_chain->num_entries = sdo_read_uint(sdor);
-	if (Cert_chain->num_entries == 0) {
-		LOG(LOG_ERROR, "Invalid Cert chain num entries reported!\n");
-		goto err;
-	}
-
-	Cert_chain->cert = sdo_byte_array_alloc(Cert_chain->len);
-	if (Cert_chain->cert == 0) {
-		LOG(LOG_ERROR,
-		    "Invalid number of entries in Cert Chain reported!\n");
-		goto err;
-	}
-
-	if (!sdo_byte_array_read(sdor, Cert_chain->cert)) {
-		LOG(LOG_ERROR, "Invalid Cert chain received!\n");
-		goto err;
-	}
-
-	return Cert_chain;
-
-err:
-	if (Cert_chain)
-		sdo_free(Cert_chain);
-	return NULL;
-}
-
-/**
  * Read the Dummy EB i.e. [13, 0, ""] sent when ECDSA based device-attestation
  * is used.
  * @param sdor - pointe to the read EPID information in JSON format
@@ -1304,46 +1253,44 @@ err:
 bool sdo_ecdsa_dummyEBRead(sdor_t *sdor)
 {
 	bool retval = false;
-	uint8_t type = 0;
-	uint8_t exptype = 0;
-	uint8_t len = 0;
-	char buf[1] = {0};
-	uint8_t temp = 0;
+	// TO-DO : Revisit signed vs unsigned int here.
+	uint64_t type = 0;
+	uint64_t exptype = 0;
+	uint8_t *buf;
 
 	/* "eB":[13,0,""] */
 
 	if (!sdor)
 		goto end;
 
-	if (!sdor_begin_sequence(sdor)) {
+	if (!sdor_start_array(sdor)) {
 		LOG(LOG_ERROR, "No begin Sequence\n");
 		goto end;
 	}
 
 	exptype = SDO_PK_ALGO;
 
-	type = sdo_read_uint(sdor);
+	sdor_unsigned_int(sdor, &type);
 	if (type != exptype) {
 		LOG(LOG_ERROR,
-		    "Invalid ECDSA pubkey type, expected %d, got %d\n", exptype,
+		    "Invalid ECDSA pubkey type, expected %"PRIu64", got %"PRIu64"\n", exptype,
 		    type);
 		goto end;
 	}
 
-	len = sdo_read_uint(sdor);
-
-	// read empty string
-	temp = sdo_read_string(sdor, buf, len);
-
-	LOG(LOG_DEBUG, "Received ecdsa EB of len: %d\n", temp);
-
-	if (len != 0 || temp != 0) {
-		LOG(LOG_ERROR, "Got non-zero length EB in case of ECDSA!\n");
+	// read empty byte
+	// TO-DO : Read empty byte here.
+	buf = sdo_alloc(0);
+	if (!sdor_byte_string(sdor, buf, 0)) {
+		LOG(LOG_ERROR, "Invalid eBSigInfo!\n");
 		goto end;
 	}
 
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "No End Sequence\n");
+	LOG(LOG_DEBUG, "Received eBSigInfo\n");
+
+
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "No End Array\n");
 		goto end;
 	}
 	retval = true;
@@ -1551,84 +1498,52 @@ char *sdo_hash_to_string(sdo_hash_t *hp, char *buf, int buf_sz)
  */
 int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
 {
-	int b64Len_reported = 0;
 
 	if (!sdor || !hp)
 		return 0;
 
-	if (!sdor_begin_sequence(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "Not at beginning of Array\n");
 		return 0;
 	}
 
 	// LOG(LOG_ERROR, "Reading hash\n");
+	// Read the hash type value
+	// TO-DO : Revisit use of int vs uint64_t
+	/*
+	if (!sdor_unsigned_int(sdor, &hp->hash_type)) {
+		LOG(LOG_ERROR, "Invalid hashType\n");
+		return 0;
+	}
+	*/
 
 	// Read the bin character length
-	int mbin_len_reported = sdo_read_uint(sdor);
-
-	// Read the hash type value
-	hp->hash_type = sdo_read_uint(sdor);
+	size_t mbin_len_reported;
+	if (!sdor_string_length(sdor, &mbin_len_reported) || mbin_len_reported <= 0) {
+		LOG(LOG_ERROR, "Empty hash found!\n");
+		return 0;
+	}
 
 	// Make sure we have a byte array to resize
 	if (hp->hash == NULL) {
-		hp->hash = sdo_byte_array_alloc(8);
+		hp->hash = sdo_byte_array_alloc(mbin_len_reported);
 		if (!hp->hash) {
 			LOG(LOG_ERROR, "Alloc failed\n");
 			return 0;
 		}
 	}
 
-	// LOG(LOG_ERROR, "sdo_hash_read next char: '%c'\n",
-	// sdor->b.block[sdor->b.cursor+1]);
-
-	/* Get incoming B64 string length (it must be a multiple of 4) */
-	b64Len_reported = sdo_read_string_sz(sdor);
-	if ((b64Len_reported <= 0) || (b64Len_reported % 4 != 0)) {
-		LOG(LOG_ERROR, "Invalid input B64 string!\n");
+	if (!sdor_byte_string(sdor, hp->hash->bytes, mbin_len_reported)) {
+		LOG(LOG_ERROR, "Invalid hash!\n");
 		return 0;
 	}
+	hp->hash->byte_sz = mbin_len_reported;
 
-	/* Calculated expected B64 length using binary length reported */
-	// Calculate b64Len to read the buffer.
-	int b64Len = bin_toB64Length(mbin_len_reported);
-
-	if (b64Len_reported != b64Len) {
-		LOG(LOG_ERROR, "Incoming B64 string length is not proportional "
-			       "to binary length reported!\n");
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "End Array not found!\n");
 		return 0;
 	}
-
-	// TODO: Introduction of a check wud be needed : (b64Len != 0)
-	// LOG(LOG_ERROR, "sdo_hash_read : %d\n", bin_len);
-	// Allocate 3 bytes extra for max probable decodaed output
-	// Resize the byte array buffer to required length
-
-	if (mbin_len_reported &&
-	    sdo_bits_resize(hp->hash, mbin_len_reported + 3) == false) {
-		sdo_byte_array_free(hp->hash);
-		LOG(LOG_ERROR, "SDOBits_resize failed\n");
-		return 0;
-	}
-	// LOG(LOG_ERROR, "Hash resized to match, len: %d\n",
-	// hp->hash->byte_sz);
-
-	// Convert buffer from base64 to binary
-	int was_read = sdo_read_byte_array_field(sdor, b64Len, hp->hash->bytes,
-						 hp->hash->byte_sz);
-
-	// LOG(LOG_ERROR, "Byte array read, was_read : %d, byte_sz: %d\n",
-	// was_read, hp->hash->byte_sz);
-	// char dbuf[128];
-	// LOG(LOG_ERROR, "Buf : %s\n", sdo_byte_array_to_string(hp->hash, dbuf,
-	// 128));
-
-	hp->hash->byte_sz = was_read;
-
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
-		return 0;
-	}
-	return was_read;
+	return hp->hash->byte_sz;
 }
 
 /**
@@ -1639,11 +1554,18 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
  */
 void sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp)
 {
-	sdo_write_byte_array_one_int(sdow, hp->hash_type, hp->hash->bytes,
-				     hp->hash->byte_sz);
+	/*sdo_write_byte_array_one_int(sdow, hp->hash_type, hp->hash->bytes,
+				     hp->hash->byte_sz);*/
+	if (!sdow || !hp)
+		return;
+	sdow_start_array(sdow, 2);
+	sdow_signed_int(sdow, hp->hash_type);
+	sdow_byte_string(sdow, hp->hash->bytes, hp->hash->byte_sz);
+	sdow_end_array(sdow);
 }
 
 /**
+ * TO-DO : Empty byte here?
  * Write out a NULL value hash
  * @param sdow - pointer to the output buffer
  * @return none
@@ -1652,7 +1574,8 @@ void sdo_hash_null_write(sdow_t *sdow)
 {
 	if (!sdow)
 		return;
-	sdo_write_byte_array_one_int(sdow, SDO_CRYPTO_HASH_TYPE_NONE, NULL, 0);
+	sdo_hash_t *hp = sdo_hash_alloc_empty();
+	sdo_hash_write(sdow, hp);
 }
 
 //------------------------------------------------------------------------------
@@ -1877,27 +1800,25 @@ bool sdo_read_ipaddress(sdor_t *sdor, sdo_ip_address_t *sdoip)
 	if (!IP)
 		return false;
 
-	if (!sdor_begin_sequence(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
+	size_t ip_length;
+	if (!sdor_string_length(sdor, &ip_length) || ip_length != IPV4_ADDR_LEN) {
+		LOG(LOG_ERROR, "Invalid IP Address length\n");
 		sdo_byte_array_free(IP);
 		return false;
 	}
 
-	if (!sdo_byte_array_read(sdor, IP)) {
+	if (!sdor_byte_string(sdor, IP->bytes, ip_length)) {
 		sdo_byte_array_free(IP);
 		return false;
 	}
 
-	sdoip->length = IP->byte_sz;
-	if (memcpy_s(&sdoip->addr[0], sdoip->length, IP->bytes, IP->byte_sz) !=
+	sdoip->length = ip_length;
+	if (memcpy_s(&sdoip->addr[0], sdoip->length, IP->bytes, ip_length) !=
 	    0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		return false;
 	}
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
-		return false;
-	}
+
 	sdo_byte_array_free(IP);
 	return true;
 }
@@ -1910,7 +1831,8 @@ bool sdo_read_ipaddress(sdor_t *sdor, sdo_ip_address_t *sdoip)
  */
 void sdo_write_ipaddress(sdow_t *sdow, sdo_ip_address_t *sdoip)
 {
-	sdo_write_byte_array(sdow, &sdoip->addr[0], sdoip->length);
+	sdow_byte_string(sdow, &sdoip->addr[0], sdoip->length);
+	// sdo_write_byte_array(sdow, &sdoip->addr[0], sdoip->length);
 }
 
 /**
@@ -1934,20 +1856,23 @@ void SDODNSEmpty(sdo_dns_name_t *b)
 char *sdo_read_dns(sdor_t *sdor)
 {
 	char *buf;
-	int len;
+	size_t len;
 
 	/* read length of DNS */
-	len = sdo_read_string_sz(sdor);
+	if (sdor_string_length(sdor, &len) || len <= 0) {
+		// TO-DO : Evaluate this
+		// sdo_free(buf);
+		return NULL;
+	}
 
 	buf = sdo_alloc(len + 1);
 
 	if (!buf)
 		return NULL;
 
-	sdo_read_string(sdor, buf, len + 1);
-
-	if (len == 0) {
+	if(!sdor_text_string(sdor, buf, len + 1)) {
 		sdo_free(buf);
+		LOG(LOG_ERROR, "DNSAddress read failed\n");
 		return NULL;
 	}
 
@@ -1955,6 +1880,8 @@ char *sdo_read_dns(sdor_t *sdor)
 }
 
 /**
+ * TO-DO : Pass in the AppID's length.
+ * 
  * Write the APPID
  * @param sdow - pointer to the written APPID
  */
@@ -1966,8 +1893,9 @@ void sdo_app_id_write(sdow_t *sdow)
 	/* AppID is always bytes according specification, so we can hardcode it
 	 * here
 	 */
-	sdo_write_byte_array_one_int(sdow, SDO_APP_ID_TYPE_BYTES,
-				     (uint8_t *)&appid, sizeof(appid));
+	sdow_byte_string(sdow, (uint8_t *)&appid, sizeof(appid));
+	/*sdo_write_byte_array_one_int(sdow, SDO_APP_ID_TYPE_BYTES,
+				     (uint8_t *)&appid, sizeof(appid));*/
 }
 
 //------------------------------------------------------------------------------
@@ -2142,6 +2070,8 @@ const char *sdo_pk_enc_to_string(int enc)
 }
 
 /**
+ * TO-DO : Update Public key structure.
+ * 
  * Write a full public key to the output buffer
  * @param sdow - output buffer to hold JSON representation
  * @param pk - pointer to the sdo_public_key_t object
@@ -2152,26 +2082,30 @@ void sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
 	if (!sdow)
 		return;
 
-	sdow_begin_sequence(sdow);
 	if (pk == NULL || pk->key1->byte_sz == 0) {
 		// Write null key (pknull)
+		/*
 		sdo_writeUInt(sdow, 0);
 		sdo_writeUInt(sdow, 0);
 		sdow_begin_sequence(sdow);
 		sdo_writeUInt(sdow, 0);
 		sdow_end_sequence(sdow);
 		sdow_end_sequence(sdow);
+		*/
 		return;
 	}
 	// LOG(LOG_ERROR, "------- pk is %lu bytes long\n",
 	// pk->key1->byte_sz);
-	sdo_writeUInt(sdow, pk->pkalg);
-	sdo_writeUInt(sdow, pk->pkenc);
-	sdo_write_byte_array(sdow, pk->key1->bytes, pk->key1->byte_sz);
+	sdow_start_array(sdow, 3);
+	sdow_unsigned_int(sdow, pk->pkalg);
+	sdow_unsigned_int(sdow, pk->pkenc);
+	sdow_byte_string(sdow, pk->key1->bytes, pk->key1->byte_sz);
+	/*
 	if (pk->pkenc == SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP) {
-		sdo_write_byte_array(sdow, pk->key2->bytes, pk->key2->byte_sz);
+		sdow_byte_string(sdow, pk->key2->bytes, pk->key2->byte_sz);
 	}
-	sdow_end_sequence(sdow);
+	*/
+	sdow_end_array(sdow);
 	// LOG(LOG_ERROR, "SDOWrite_public_key_stub: pklen:%u pkalg:%u pkenc:%u
 	// \n",
 	// pk->bits.byte_sz, pk->pkalg, pk->pkenc);
@@ -2346,6 +2280,8 @@ char *sdo_public_key_to_string(sdo_public_key_t *pk, char *buf, int bufsz)
 }
 
 /**
+ * TO-DO : Needs to be re-written.
+ * 
  * Read the public key information
  * @param sdor - read public key info
  * return pointer to the struct of type public key if success else error code
@@ -2358,17 +2294,16 @@ sdo_public_key_t *sdo_public_key_read(sdor_t *sdor)
 	if (!sdor)
 		return NULL;
 
-	if (!sdor_begin_sequence(sdor))
+	if (!sdor_start_array(sdor))
 		goto err;
-	pkalg = sdo_read_uint(sdor);
-	pkenc = sdo_read_uint(sdor);
+	if (!sdor_signed_int(sdor, &pkalg))
+		goto err;
+	if (!sdor_signed_int(sdor, &pkenc))
+		goto err;
 
 	if (!pkalg || !pkenc)
 		goto err;
-
-	if (!sdor_begin_sequence(sdor))
-		goto err;
-
+	/*
 	// There will now be one or two Bytearray values
 	sdo_byte_array_t *baK1 = sdo_byte_array_alloc_with_int(0);
 
@@ -2427,13 +2362,15 @@ sdo_public_key_t *sdo_public_key_read(sdor_t *sdor)
 	    "Public_key_read pkalg: %d. pkenc: %d, key1: %zu, key2: %zu\n",
 	    pk->pkalg, pk->pkenc, pk->key1 ? pk->key1->byte_sz : 0,
 	    pk->key2 ? pk->key2->byte_sz : 0);
-
+	*/
 	return pk;
 err:
+	/*
 	sdor_read_and_ignore_until_end_sequence(sdor);
 	if (!sdor_end_sequence(sdor)) {
 		LOG(LOG_ERROR, "End Sequence not found!\n");
 	}
+	*/
 	return NULL;
 }
 
@@ -2504,6 +2441,8 @@ void sdo_rendezvous_free(sdo_rendezvous_t *rv)
 }
 
 /**
+ * TO-DO : Need to loop through RV instructions.
+ * 
  * Write a rendezvous object to the output buffer
  * @param sdow - the buffer pointer
  * @param rv - pointer to the rendezvous object to write
@@ -2513,12 +2452,11 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 {
 	if (!sdow || !rv)
 		return false;
-
-	sdow_begin_sequence(sdow);
-
-	sdow->need_comma = false;
+	
+	sdow_start_array(sdow, 1);
+	// sdow_start_cbor_array(sdow, 1);
+/*
 	sdo_writeUInt(sdow, rv->num_params);
-	sdow->need_comma = true;
 
 	sdow_begin_object(sdow);
 
@@ -2595,7 +2533,7 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 
 	sdow_end_object(sdow);
 	sdow_end_sequence(sdow);
-
+*/
 	return true;
 }
 
@@ -2666,6 +2604,8 @@ int keyfromstring(const char *key)
 }
 
 /**
+ * TO-DO : Re-write based on the new format.
+ * 
  * Read the rendezvous from the input buffer
  * @param sdor - the input buffer object
  * @param rv - pointer to the rendezvous object to fill
@@ -2679,15 +2619,16 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 	if (!sdor || !rv)
 		return false;
 
-	if (!sdor_begin_sequence(sdor))
+	if (!sdor_start_array(sdor))
 		ret = false;
-	int num_rv_entries = sdo_read_uint(sdor);
-
-	if (!sdor_begin_object(sdor))
+	if (!sdor_start_array(sdor))
+		ret = false;
+	if (!sdor_start_array(sdor))
 		ret = false;
 
 	LOG(LOG_DEBUG, "%s started\n", __func__);
 
+	/*
 	int index, result;
 	size_t key_buf_sz = 24;
 	char key_buf[key_buf_sz];
@@ -2724,7 +2665,7 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 			if (result == 0 || result > (int)str_buf_sz)
 				return false;
 
-			/*if not for device skip it*/
+			// if not for device skip it
 			int strcmp_result = 0;
 
 			strcmp_s(str_buf, str_buf_sz, "dev", &strcmp_result);
@@ -2780,7 +2721,7 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 			*rv->po = sdo_read_uint(sdor);
 			break;
 
-		/* valid only for OWNER */
+		// valid only for OWNER
 		case POW:
 			if (!sdo_read_tag_finisher(sdor))
 				return false;
@@ -3029,7 +2970,7 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 		LOG(LOG_ERROR, "No End Sequence\n");
 		ret = false;
 	}
-
+	*/
 	return ret;
 }
 
@@ -3166,6 +3107,8 @@ sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_list_t *list, int num)
 }
 
 /**
+ * TO-DO : Method re-qrite
+ * 
  * Reads the rendezvous info from the sdor w.r.t the number of entries.
  * @param sdor - Pointer of type sdor_t as input.
  * @param list- Pointer to the sdo_rendezvous_list_t list to be filled.
@@ -3177,6 +3120,7 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 	if (!sdor || !list)
 		return false;
 
+	/*
 	if (!sdor_begin_sequence(sdor))
 		return false;
 	// Find out how many entries we should expect
@@ -3205,11 +3149,14 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 		    "%s : Final sequence not found\n", __func__);
 		return false;
 	}
+	*/
 	LOG(LOG_DEBUG, "%s read\n", __func__);
 	return true;
 }
 
 /**
+ * TO-DO : Rewrite based on new structure.
+ * 
  * Writes out the entire Rendezvous list as sequences inside a sequence.
  * @param sdow - Pointer of type sdow to be filled.
  * @param list- Pointer to the sdo_rendezvous_list_t list from which sdow will
@@ -3222,6 +3169,7 @@ bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list)
 	if (!sdow || !list)
 		return false;
 
+	/*
 	sdow_begin_sequence(sdow);
 	sdo_writeUInt(sdow, list->num_entries);
 
@@ -3237,7 +3185,7 @@ bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list)
 		sdo_rendezvous_write(sdow, entry_Ptr);
 	}
 	sdow_end_sequence(sdow);
-
+	*/
 	return true;
 }
 
@@ -3271,6 +3219,8 @@ void sdo_encrypted_packet_free(sdo_encrypted_packet_t *pkt)
 }
 
 /**
+ * TO-DO : Commenting this method's content. This will be updated during TO2 implementation.
+ * 
  * Read an Encrypted Message Body object from the SDOR buffer
  * @param sdor - pointer to the character buffer to parse
  * @return a newly allocated SDOEcnrypted_packet object if successful, otherwise
@@ -3282,7 +3232,7 @@ sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 
 	if (!sdor)
 		goto error;
-
+/*
 	if (!sdor_begin_object(sdor)) {
 		LOG(LOG_ERROR, "Object beginning not found\n");
 		goto error;
@@ -3315,7 +3265,7 @@ sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 		goto error;
 	}
 
-	/* Read the buffer and populate the required structs */
+	// Read the buffer and populate the required structs
 	if (!sdo_byte_array_read_with_type(sdor, pkt->em_body, &pkt->ct_string,
 					   pkt->iv)) {
 		LOG(LOG_ERROR, "Byte-array read failed!\n");
@@ -3333,10 +3283,10 @@ sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 	if (!pkt->hmac)
 		goto error;
 
-	/* Read the HMAC */
-	/* Expect "hmac" tag */
+	// Read the HMAC
+	// Expect "hmac" tag
 	if (!sdo_read_expected_tag(sdor, "hmac")) {
-		/* Very bad, must have the "hmac" tag */
+		// Very bad, must have the "hmac" tag
 		LOG(LOG_ERROR,
 		    "%s : Did not find 'hmac' tag\n", __func__);
 		goto error;
@@ -3347,7 +3297,7 @@ sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 		goto error;
 	}
 
-	/*number of bytes of hmac */
+	// number of bytes of hmac
 	uint32_t hmac_size = sdo_read_uint(sdor);
 
 	int b64Len = bin_toB64Length(hmac_size);
@@ -3368,7 +3318,7 @@ sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 		goto error;
 	}
 
-	/* Convert buffer from base64 to binary */
+	// Convert buffer from base64 to binary
 	if (0 == sdo_read_byte_array_field(sdor, b64Len, pkt->hmac->hash->bytes,
 					   pkt->hmac->hash->byte_sz)) {
 		LOG(LOG_ERROR, "Unable to read hmac\n");
@@ -3387,7 +3337,8 @@ sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 	}
 
 	return pkt;
-
+*/
+	return NULL;
 error:
 	sdo_encrypted_packet_free(pkt);
 	return NULL;
@@ -3462,6 +3413,8 @@ bool sdo_write_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv, int len)
 }
 
 /**
+ * TO-DO : Method rewrite.
+ * 
  * Write out an Encrypted Message Body object to the sdow buffer
  * @param sdow - Output buffer to write the JASON packet representation
  * @param pkt - the packet to be written out
@@ -3471,9 +3424,9 @@ void sdo_encrypted_packet_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 {
 	if (!sdow || !pkt)
 		return;
-
+	/*
 	sdow_begin_object(sdow);
-	/* Write the Encrypted Message Block data */
+	// Write the Encrypted Message Block data
 	if (pkt->em_body && pkt->em_body->byte_sz) {
 		sdo_write_tag(sdow, "ct");
 
@@ -3486,7 +3439,7 @@ void sdo_encrypted_packet_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 		sdo_write_string(sdow, "");
 	}
 
-	/* Write the Encrypted Message Block HMAC */
+	// Write the Encrypted Message Block HMAC
 	sdo_write_tag(sdow, "hmac");
 	if (pkt->hmac != NULL) {
 
@@ -3494,10 +3447,11 @@ void sdo_encrypted_packet_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 				     pkt->hmac->hash->byte_sz);
 
 	} else {
-		/* HMAC was NULL, do not crash... */
+		// HMAC was NULL, do not crash...
 		sdo_hash_null_write(sdow);
 	}
 	sdow_end_object(sdow);
+	*/
 }
 
 #if 0
@@ -3626,7 +3580,7 @@ bool sdo_encrypted_packet_unwind(sdor_t *sdor, sdo_encrypted_packet_t *pkt,
 	}
 
 	sdob->block_size = cleartext->byte_sz;
-	sdor->have_block = true;
+	// sdor->have_block = true;
 err:
 	if (pkt)
 		sdo_encrypted_packet_free(pkt);
@@ -3688,7 +3642,10 @@ bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
 {
 	if (!sdow)
 		return false;
-
+	// TO-DO : Added now, so that arguments are used.
+	if (!sig || !pk)
+		return false;
+	/*
 	if (memset_s(sig, sizeof(*sig), 0)) {
 		LOG(LOG_ERROR, "Memset Failed\n");
 		return false;
@@ -3696,7 +3653,8 @@ bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
 	sig->pk = pk;
 	sdow_begin_object(sdow);
 	sdo_write_tag(sdow, "bo");
-	sig->sig_block_start = sdow->b.cursor;
+	// sig->sig_block_start = sdow->b.cursor;
+	*/
 	return true;
 }
 
@@ -3707,20 +3665,23 @@ bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
  */
 bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig)
 {
+	/*
 	int sig_block_end;
 	int sig_block_sz;
 	sdo_byte_array_t *sigtext = NULL;
 	sdo_public_key_t *publickey;
+	*/
 
 	if (!sdow || !sig) {
 		LOG(LOG_ERROR, "Invalid arguments\n");
 		return false;
 	}
 
-	sig_block_end = sdow->b.cursor;
+	/*
+	// sig_block_end = sdow->b.cursor;
 	sig_block_sz = sig_block_end - sig->sig_block_start;
 
-	/* Turn the message block into a zero terminated string */
+	// Turn the message block into a zero terminated string
 	sdo_resize_block(&sdow->b, sdow->b.cursor + 1);
 	sdow->b.block[sdow->b.cursor] = 0;
 
@@ -3746,12 +3707,12 @@ bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig)
 	hexdump("Adapted message", (char *)adapted_message,
 		adapted_message_len);
 
-	/* Release the allocated memory */
+	// Release the allocated memory
 	sdo_free(adapted_message);
 
-	/* ========================================================= */
+	// =========================================================
 
-	/*Write GID to represent public key*/
+	// Write GID to represent public key
 	sdo_write_tag(sdow, "pk");
 
 	publickey = NULL;
@@ -3761,6 +3722,7 @@ bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig)
 	sdo_write_byte_array(sdow, sigtext->bytes, sigtext->byte_sz);
 	sdow_end_object(sdow);
 	sdo_bits_free(sigtext);
+	*/
 	return true;
 }
 
@@ -3774,13 +3736,16 @@ bool sdo_begin_readHMAC(sdor_t *sdor, int *sig_block_start)
 {
 	if (!sdor)
 		return false;
-
+	// TO-DO : Added now so that argument is used.
+	if (!sig_block_start)
+		return false;
+	/*
 	if (!sdo_read_expected_tag(sdor, "oh")) {
 		LOG(LOG_ERROR, "No oh\n");
 		return false;
 	}
-	*sig_block_start = sdor->b.cursor;
-
+	// *sig_block_start = sdor->b.cursor;
+	*/
 	return true;
 }
 
@@ -3797,10 +3762,14 @@ bool sdo_end_readHMAC(sdor_t *sdor, sdo_hash_t **hmac, int sig_block_start)
 
 	if (!sdor || !hmac)
 		return false;
+	// TO-DO : Remove this variable and subsequent usages.
+	printf("Signature starting block %d\n", sig_block_start);
 
+	/*
 	if (!sdor_end_object(sdor)) {
 		return false;
 	}
+
 	int sig_block_end = sdor->b.cursor;
 	int sig_block_sz = sig_block_end - sig_block_start;
 	uint8_t *plain_text = sdor_get_block_ptr(sdor, sig_block_start);
@@ -3838,7 +3807,7 @@ bool sdo_end_readHMAC(sdor_t *sdor, sdo_hash_t **hmac, int sig_block_start)
 		sdo_hash_free(*hmac);
 		return false;
 	}
-
+*/
 	return true;
 }
 
@@ -3855,12 +3824,13 @@ bool sdo_begin_read_signature(sdor_t *sdor, sdo_sig_t *sig)
 {
 	if (!sdor || !sig)
 		return false;
-
+/*
 	if (!sdor_begin_object(sdor))
 		return false;
 	if (!sdo_read_expected_tag(sdor, "bo"))
 		return false;
 	sig->sig_block_start = sdor->b.cursor;
+	*/
 	return true;
 }
 
@@ -3891,16 +3861,18 @@ bool sdo_end_read_signature_full(sdor_t *sdor, sdo_sig_t *sig,
 				 sdo_public_key_t **getpk)
 {
 	// Save buffer at the end of the area to be checked
+	/*
 	int sig_block_end;
 	int sig_block_sz;
 	uint8_t *plain_text;
 	sdo_public_key_t *pk;
-	bool r = false;
 	int ret;
+	*/
+	bool r = false;
 
 	if (!sdor || !sig || !getpk)
 		return false;
-
+/*
 	sig_block_end = sdor->b.cursor;
 	sig_block_sz = sig_block_end - sig->sig_block_start;
 	plain_text = sdor_get_block_ptr(sdor, sig->sig_block_start);
@@ -3995,7 +3967,7 @@ result:
 		*getpk = sdo_public_key_clone(pk);
 		sdo_public_key_free(pk);
 	}
-
+*/
 	return r;
 }
 
@@ -4041,7 +4013,7 @@ bool sdo_read_pk_null(sdor_t *sdor)
 {
 	if (!sdor)
 		return false;
-
+/*
 	//"pk":[0,0,[0]]
 	if (!sdo_read_expected_tag(sdor, "pk"))
 		return false;
@@ -4060,7 +4032,7 @@ bool sdo_read_pk_null(sdor_t *sdor)
 
 	if (!sdor_end_sequence(sdor))
 		return false;
-
+*/
 	return true;
 }
 
@@ -4078,15 +4050,17 @@ bool sdoOVSignature_verification(sdor_t *sdor, sdo_sig_t *sig,
 				 sdo_public_key_t *pk)
 {
 
+	/*
 	int ret;
 	int sig_block_end;
 	int sig_block_sz;
 	uint8_t *plain_text;
 	bool signature_verify = false;
+	*/
 
 	if (!sdor || !sig || !pk)
 		return false;
-
+	/*
 	sig_block_end = sdor->b.cursor;
 	sig_block_sz = sig_block_end - sig->sig_block_start;
 	plain_text = sdor_get_block_ptr(sdor, sig->sig_block_start);
@@ -4134,7 +4108,7 @@ bool sdoOVSignature_verification(sdor_t *sdor, sdo_sig_t *sig,
 		LOG(LOG_DEBUG, "Signature verifies OK.\n");
 		return true;
 	}
-
+*/
 	LOG(LOG_ERROR, "Signature internal failure, or signature does "
 	    "not verify.\n");
 	return false;
@@ -4248,15 +4222,20 @@ void sdo_kv_free(sdo_key_value_t *kv)
 }
 
 /**
+ * TO-DO : Method Rewrite based on serviceinfo info implementation.
+ * 
  * Write the key value to the buffer
  * @param sdow - pointer to the output buffer
  * @param kv - pointer to the struct of type key value
  */
 void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv)
 {
-	sdo_write_tag_len(sdow, kv->key->bytes, kv->key->byte_sz);
-	sdo_write_string_len(sdow, kv->val->bytes, kv->val->byte_sz);
-	sdow->need_comma = true;
+	if (!sdow || !kv) {
+		// throw error here.
+		return;
+	}
+	// sdo_write_tag_len(sdow, kv->key->bytes, kv->key->byte_sz);
+	// sdo_write_string_len(sdow, kv->val->bytes, kv->val->byte_sz);
 }
 
 /**
@@ -4273,11 +4252,11 @@ bool sdo_osi_parsing(sdor_t *sdor,
 		     sdo_sdk_service_info_module_list_t *module_list,
 		     sdo_sdk_si_key_value *kv, int *cb_return_val)
 {
-	int str_len;
+	// int str_len;
 
-	if (!cb_return_val)
+	if (!sdor || module_list || !kv || !cb_return_val)
 		return false;
-
+/*
 	if (!sdor || !kv) {
 		*cb_return_val = SDO_SI_INTERNAL_ERROR;
 		return false;
@@ -4328,7 +4307,7 @@ bool sdo_osi_parsing(sdor_t *sdor,
 		sdo_free(kv->key);
 		sdo_free(kv->value);
 	}
-
+*/
 	return true;
 }
 
@@ -4538,14 +4517,16 @@ bool sdo_service_info_add_kv(sdo_service_info_t *si, sdo_key_value_t *kvs)
 
 bool sdo_combine_platform_dsis(sdow_t *sdow, sdo_service_info_t *si)
 {
+	/*
 	int num = 0;
-	bool ret = false;
 	sdo_key_value_t **kvp = NULL;
 	sdo_key_value_t *kv = NULL;
+	*/
+	bool ret = false;
 
 	if (!sdow || !si)
 		goto end;
-
+/*
 	// fetch all platfrom DSI's one-by-one
 	while (num != si->numKV) {
 		kvp = sdo_service_info_get(si, num);
@@ -4563,7 +4544,7 @@ bool sdo_combine_platform_dsis(sdow_t *sdow, sdo_service_info_t *si)
 
 		num++;
 	}
-
+*/
 	ret = true;
 end:
 	return ret;
@@ -4967,6 +4948,10 @@ bool sdo_construct_module_dsi(sdo_sv_info_dsi_info_t *dsi_info,
  */
 bool sdo_mod_kv_write(sdow_t *sdow, sdo_sdk_si_key_value *sv_kv)
 {
+	// Probably remove this check later. 
+	if (!sdow || !sv_kv)
+		return false;
+	/*
 	int strlen_kv_key = strnlen_s(sv_kv->key, SDO_MAX_STR_SIZE);
 	int strlen_kv_value = strnlen_s(sv_kv->value, SDO_MAX_STR_SIZE);
 
@@ -4979,6 +4964,7 @@ bool sdo_mod_kv_write(sdow_t *sdow, sdo_sdk_si_key_value *sv_kv)
 	sdo_write_tag_len(sdow, sv_kv->key, strlen_kv_key);
 	sdo_write_string_len(sdow, sv_kv->value, strlen_kv_value);
 	sdow->need_comma = true;
+	*/
 	return true;
 }
 
