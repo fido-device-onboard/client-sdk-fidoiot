@@ -70,6 +70,13 @@ int32_t sdo_blob_size(const char *name, sdo_sdk_blob_flags flags)
 		goto end;
 	}
 
+	// Return 0 if the file is empty.
+	if (get_file_size(name) == 0) {
+		LOG(LOG_DEBUG, "%s file is empty!\n", name);
+		retval = 0;
+		goto end;
+	}
+
 	switch (flags) {
 	case SDO_SDK_RAW_DATA:
 		/* Raw Files are stored as plain files */

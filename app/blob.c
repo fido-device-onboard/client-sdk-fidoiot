@@ -111,7 +111,14 @@ int32_t configure_normal_blob(void)
 	raw_normal_blob_size =
 	    sdo_blob_size((char *)SDO_CRED_NORMAL, SDO_SDK_RAW_DATA);
 
-	if (raw_normal_blob_size <= 0) {
+	if (raw_normal_blob_size == 0) {
+		LOG(LOG_DEBUG,
+		    "Platform Normal blob size is zero, DI not done!\n");
+		ret = 0;
+		goto err;
+	}
+
+	if (raw_normal_blob_size < 0) {
 		LOG(LOG_ERROR, "Trouble getting plain Normal blob size!\n");
 		goto err;
 	} else if (raw_normal_blob_size >

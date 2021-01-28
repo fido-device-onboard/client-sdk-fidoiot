@@ -281,7 +281,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (snprintf_s_i(temp, sizeof(temp), "/mp/%d", rest_ctx->prot_ver) <
+	if (snprintf_s_i(temp, sizeof(temp), "/fido/%d", rest_ctx->prot_ver) <
 	    0) {
 		LOG(LOG_ERROR, "Snprintf failed!\n");
 		goto err;
@@ -335,7 +335,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	}
 
 	if (snprintf_s_i(temp1, sizeof(temp1),
-			 "Content-type:application/json\r\n"
+			 "Content-type:application/cbor\r\n"
 			 "Content-length:%u\r\n_connection: keep-alive\r\n",
 			 rest_ctx->content_length) < 0) {
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -528,6 +528,12 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 				LOG(LOG_DEBUG, "X-Token: %s\n",
 				    rest->x_token_authorization);
 			}
+		} else if  (strcasecmp_s(tmp, tmplen, "message-type",
+					&result_strcmpcase) == 0 &&
+			   result_strcmpcase == 0) {
+			rest->msg_type = atoi(p1);
+			LOG(LOG_DEBUG, "Message-Type: %"PRIu32"\n",
+				rest->msg_type);
 		} else {
 			/* TODO: This looks like dead code, remove this
 			 */

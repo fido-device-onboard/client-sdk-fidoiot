@@ -25,7 +25,7 @@ void test_encode_decode(void) {
 	sdor_t *sdor = sdo_alloc(sizeof(sdor_t));
     if (!sdow_init(sdow))
         LOG(LOG_ERROR, "Failed to initialize sdow\n");
-	if (sdor_init(sdor))
+	if (!sdor_init(sdor))
         LOG(LOG_ERROR, "Failed to initialize sdor\n");
 	
 	uint64_t key1 = 1, key2 = 2;
@@ -62,7 +62,8 @@ void test_encode_decode(void) {
 	sdow->b.block_size = finalLength;
 
 	sdor->b.block_size = finalLength;
-	TEST_ASSERT_TRUE(sdor_parser_init(sdor, &sdow->b));
+	memcpy_s(sdor->b.block, CBOR_BUFFER_LENGTH, sdow->b.block, sdow->b.block_size);
+	TEST_ASSERT_TRUE(sdor_parser_init(sdor));
 	TEST_ASSERT_TRUE(sdor_start_array(sdor));
 	TEST_ASSERT_TRUE(sdor_start_array(sdor));
 	TEST_ASSERT_TRUE(sdor_start_map(sdor));

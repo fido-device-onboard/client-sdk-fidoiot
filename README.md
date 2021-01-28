@@ -3,6 +3,7 @@
 [ Introduction ](docs/introduction.md) <br>
 [  SDO Compilation Setup ](docs/setup.md)
 - [ Safestring ](docs/setup.md#safestring) <br>
+- [ TinyCBOR ](docs/setup.md#tinycbor) <br>
 - [ Service Info Modules ](docs/setup.md#si_info_modules)
 - [ Manufacturer Network Address ](docs/setup.md#manuf_addr)
 - [ ECDSA Private Key Generation ](docs/setup.md#ecdsa_priv)

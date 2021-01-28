@@ -14,23 +14,17 @@
 #include "util.h"
 
 /**
- * msg11() - DI.Set_credentials
+ * msg11() - DISetCredentials, Type 11
  * The device gets credentials from the manufacturer.
  *
- * {
- *       "oh":{# Ownership header
- *           "pv": UInt16,    # Protocol version
- *           "pe": UInt8,     # Public Key Encoding (RSA, ECDSA)
- *           "r": Rendezvous, # Whom to connect to next in customer
- *                            # premises (Rendezvous Server)
- *           "g": GUID,       # Securely generated random number
- *           "d": String,     # Device info
- *           "pk": Public_key, # Manufacturer Public Key (First owner)
- *           "hdc": Hash      # Absent if EPID
- *       },
- *       "cu": String,        # URL of manufacturer’s permanent certificate
- *       "ch": Hash           # Hash of manufacturer’s permanent certificate
- * }
+ * OVHeader = [
+ *   OVProtVer:         protver,        ;; protocol version
+ *   OVGuid:            Guid,           ;; guid
+ *   OVRVInfo:          RendezvousInfo, ;; rendezvous instructions
+ *   OVDeviceInfo:      tstr,           ;; DeviceInfo
+ *   OVPubKey:          PublicKey,      ;; mfg public key
+ *   OVDevCertChainHash:OVDevCertChainHashOrNull
+ * ]
  */
 int32_t msg11(sdo_prot_t *ps)
 {
@@ -56,7 +50,7 @@ int32_t msg11(sdo_prot_t *ps)
 	}
 
 	/* Prepare for writing device credentials */
-	if (!sdor_begin_object(&ps->sdor)) {
+	if (!sdor_start_array(&ps->sdor)) {
 		goto err;
 	}
 
@@ -86,42 +80,38 @@ int32_t msg11(sdo_prot_t *ps)
 	/* Parse the complete Ownership header and calcuate HMAC over it */
 	ov = sdo_ov_hdr_read(&ps->sdor, &ps->new_ov_hdr_hmac, false);
 	if (!ov) {
-		LOG(LOG_ERROR, "sdo_ov_hdr_read Failed\n");
+		LOG(LOG_ERROR, "Failed to read OVHeader\n");
 		goto err;
 	}
 
 	if (ov->prot_version != SDO_PROT_SPEC_VERSION) {
 		sdo_ov_free(ov);
-		LOG(LOG_ERROR, "Wrong protocol version\n");
-		goto err;
-	}
-
-	if (ov->key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_X509 &&
-	    ov->key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP) {
-		sdo_ov_free(ov);
-		LOG(LOG_ERROR, "Wrong key encoding\n");
+		LOG(LOG_ERROR, "Invalid OVProtVer\n");
 		goto err;
 	}
 
 	dev_cred->owner_blk->pv = ov->prot_version;
-	dev_cred->owner_blk->pe = ov->key_encoding;
 	dev_cred->owner_blk->rvlst = ov->rvlst2;
 	dev_cred->owner_blk->guid = ov->g2;
 	dev_cred->mfg_blk->d = ov->dev_info;
-	ps->dev_cred->owner_blk->pk = ov->mfg_pub_key;
+	dev_cred->owner_blk->pk = ov->mfg_pub_key;
+
+	ps->dev_cred = dev_cred;
 
 	if (ov->hdc) {
 		sdo_hash_free(ov->hdc);
 	}
 	sdo_free(ov);
 
-	if (!sdor_end_object(&ps->sdor)) {
+	if (!sdor_end_array(&ps->sdor)) {
 		goto err;
 	}
-	sdor_flush(&ps->sdor);
 
 	/* All good, move to msg12 */
 	ps->state = SDO_STATE_DI_SET_HMAC;
+	ps->sdor.have_block = false;
+	sdor_flush(&ps->sdor);
+	LOG(LOG_DEBUG, "DISetCredentials completed\n");
 	ret = 0;
 
 err:

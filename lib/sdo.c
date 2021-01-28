@@ -25,7 +25,8 @@
 #include "safe_lib.h"
 #include "sdodeviceinfo.h"
 
-#define HTTPS_TAG "https"
+// TO-DO: This should not be here.
+#define RVPROTHTTPS 2
 
 int TO2_done;
 typedef struct app_data_s {
@@ -294,20 +295,28 @@ static sdo_sdk_status app_initialize(void)
 	}
 #endif
 
-	if (!sdow_init(&g_sdo_data->prot.sdow)) {
+	/* 
+	* Initialize and allocate memory for the SDOW/SDOR blocks before starting the spec's 
+	* protocol execution. Reuse the allocated memory by emptying the contents.
+	*/ 
+	if (!sdow_init(&g_sdo_data->prot.sdow) ||
+		!sdo_block_alloc(&g_sdo_data->prot.sdow.b)) {
 		LOG(LOG_ERROR, "sdow_init() failed!\n");
 		return SDO_ERROR;
 	}
-	if (!sdor_init(&g_sdo_data->prot.sdor)) {
+	if (!sdor_init(&g_sdo_data->prot.sdor) ||
+		!sdo_block_alloc(&g_sdo_data->prot.sdor.b)) {
 		LOG(LOG_ERROR, "sdor_init() failed!\n");
 		return SDO_ERROR;
 	}
 
 	if ((g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READY1) ||
-	    (g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READYN)) {
+			(g_sdo_data->devcred->ST == SDO_DEVICE_STATE_READYN)) {
 		ret = load_mfg_secret();
-		if (ret)
+		if (ret == -1) {
+			LOG(LOG_ERROR, "Load HMAC Secret failed\n");
 			return SDO_ERROR;
+		}
 	}
 
 	// Read HMAC & MFG only if it is T01/T02.
@@ -554,8 +563,8 @@ sdo_sdk_status sdo_sdk_init(sdo_sdk_errorCB error_handling_callback,
 
 	/* Load credentials */
 	ret = load_credential();
-	if (ret) {
-		printf("load fail -----------------\n");
+	if (ret == -1) {
+		LOG(LOG_ERROR, "Load credential failed.\n");
 		return SDO_ERROR;
 	}
 
@@ -987,12 +996,9 @@ static bool _STATE_TO1(void)
 		}
 
 		/*if delay not specified in Rendezvous then 120s is default*/
-		int strcmp_result = -1;
 
-		if (rv->pr)
-			strcmp_s(HTTPS_TAG, sizeof(HTTPS_TAG), rv->pr->bytes,
-				 &strcmp_result);
-		if (0 == strcmp_result)
+		// This should be checked against an 
+		if (rv->pr && *rv->pr == RVPROTHTTPS)
 			tls = true;
 	}
 
