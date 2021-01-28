@@ -8,36 +8,47 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "cbor.h"
 
 #define INT2HEX(i) ((i) <= 9 ? '0' + (i) : 'A' - 10 + (i))
 
 typedef struct {
-	int cursor;
-	int block_max;
-	int block_size;
+	size_t block_size;
 	uint8_t *block;
 } sdo_block_t;
 
+typedef struct _SDOW_CBOR_ENCODER {
+	CborEncoder cbor_encoder;
+	struct _SDOW_CBOR_ENCODER *next;
+	struct _SDOW_CBOR_ENCODER *previous;
+} sdow_cbor_encoder_t;
+
+typedef struct _SDOR_CBOR_DECODER {
+	CborValue cbor_value;
+	struct _SDOR_CBOR_DECODER *next;
+	struct _SDOR_CBOR_DECODER *previous;
+} sdor_cbor_decoder_t;
+
 typedef struct _SDOR_s {
 	sdo_block_t b;
-	uint8_t need_comma;
-	bool have_block;
 	int msg_type;
-	int content_length;
-	int (*receive)(struct _SDOR_s *, int);
-	void *receive_data;
+	bool have_block;
+	CborParser cbor_parser;
+	sdor_cbor_decoder_t *current;
 } sdor_t;
 
 typedef int (*SDOReceive_fcn_ptr_t)(sdor_t *, int);
 
 typedef struct _SDOW_s {
 	sdo_block_t b;
-	uint8_t need_comma;
-	int block_length_fixup;
 	int msg_type;
 	int (*send)(struct _SDOW_s *);
 	void *send_data;
+	sdow_cbor_encoder_t *current;
 } sdow_t;
+
+
+#define CBOR_BUFFER_LENGTH 2048
 
 #define SDO_FIX_UP_STR "\"0000\""
 #define SDO_FIX_UP_TEMPL "\"%04x\""
@@ -47,67 +58,43 @@ typedef struct _SDOW_s {
 #define SDO_BLOCK_MASK ~255
 #define SDO_OK 0
 #define SDO_BLOCKLEN_SZ 8
-void sdo_block_init(sdo_block_t *sdob);
+
+// Block methods
+// void sdo_block_init(sdo_block_t *sdob);
 void sdo_block_reset(sdo_block_t *sdob);
-int sdob_peekc(sdo_block_t *sdob);
-void sdo_resize_block(sdo_block_t *sdob, int need);
-bool sdor_init(sdor_t *sdor, SDOReceive_fcn_ptr_t rcv, void *rcv_data);
-void sdor_flush(sdor_t *sdor);
-int sdor_peek(sdor_t *sdor);
-bool sdor_have_block(sdor_t *sdor);
-void sdor_set_have_block(sdor_t *sdor);
-bool sdor_next_block(sdor_t *sdor, uint32_t *typep);
-uint8_t *sdor_get_block_ptr(sdor_t *sdor, int from_cursor);
-uint8_t *sdow_get_block_ptr(sdow_t *sdow, int from_cursor);
-bool sdor_begin_sequence(sdor_t *sdor);
-bool sdor_end_sequence(sdor_t *sdor);
-bool sdor_begin_object(sdor_t *sdor);
-bool sdor_end_object(sdor_t *sdor);
-uint32_t sdo_read_uint(sdor_t *sdor);
-int sdo_read_string_sz(sdor_t *sdor);
-int sdo_read_array_sz(sdor_t *sdor);
-int sdo_read_array_no_state_change(sdor_t *sdor, uint8_t *buf);
-int sdo_read_string(sdor_t *sdor, char *bufp, int buf_sz);
-int sdo_read_tag(sdor_t *sdor, char *bufp, int buf_sz);
-bool sdo_read_tag_finisher(sdor_t *sdor);
-int sdo_read_expected_tag(sdor_t *sdor, const char *tag);
-int sdo_read_byte_array_field(sdor_t *sdor, int b64Sz, uint8_t *bufp,
-			      int buf_sz);
+bool sdo_block_alloc(sdo_block_t *sdob);
+void sdo_resize_block(sdo_block_t *sdob, size_t need);
 
+// CBOR encoder methods
 bool sdow_init(sdow_t *sdow);
-void sdow_block_reset(sdow_t *sdow);
 int sdow_next_block(sdow_t *sdow, int type);
-int sdow_create_fixup(sdow_t *sdow);
-void sdow_fix_fixup(sdow_t *sdow, int cursor_posn, int fixup);
-void sdow_begin_sequence(sdow_t *sdow);
-void sdow_end_sequence(sdow_t *sdow);
-void sdow_begin_object(sdow_t *sdow);
-void sdow_end_object(sdow_t *sdow);
-void sdo_write_tag(sdow_t *sdow, const char *tag);
-void sdo_write_tag_len(sdow_t *sdow, const char *tag, int len);
-void sdo_writeUInt(sdow_t *sdow, uint32_t i);
-void sdo_write_string(sdow_t *sdow, const char *s);
-void sdo_write_string_len(sdow_t *sdow, const char *s, int len);
-void sdo_write_big_num_field(sdow_t *sdow, uint8_t *bufp, int buf_sz);
-void sdo_write_big_num(sdow_t *sdow, uint8_t *bufp, int buf_sz);
-void sdo_write_byte_array_field(sdow_t *sdow, uint8_t *bufp, int buf_sz);
-void sdo_write_byte_array(sdow_t *sdow, uint8_t *bufp, int buf_sz);
-void sdo_write_byte_array_one_int(sdow_t *sdow, uint32_t val1, uint8_t *bufp,
-				  int buf_sz);
-void sdo_write_byte_array_one_int_first(sdow_t *sdow, uint32_t val1,
-					uint8_t *bufp, int buf_sz);
-void sdor_read_and_ignore_until(sdor_t *sdor, char expected);
-void sdor_read_and_ignore_until_end_sequence(sdor_t *sdor);
-void sdo_write_byte_array_two_int(sdow_t *sdow, uint8_t *buf_iv,
-				  uint32_t buf_iv_sz, uint8_t *bufp,
-				  uint32_t buf_sz);
+bool sdow_encoder_init(sdow_t *sdow_cbor);
+bool sdow_start_array(sdow_t *sdow_cbor, size_t array_items);
+bool sdow_start_map(sdow_t *sdow_cbor, size_t map_items);
+bool sdow_byte_string(sdow_t *sdow_cbor, uint8_t *bytes , size_t byte_sz);
+bool sdow_text_string(sdow_t *sdow_cbor, char *bytes , size_t byte_sz);
+bool sdow_signed_int(sdow_t *sdow_cbor, int value);
+bool sdow_unsigned_int(sdow_t *sdow_cbor, uint64_t value);
+bool sdow_boolean(sdow_t *sdow_cbor, bool value);
+bool sdow_end_array(sdow_t *sdow_cbor);
+bool sdow_end_map(sdow_t *sdow_cbor);
+bool sdow_encoded_length(sdow_t *sdow_cbor, size_t *length);
+void sdow_flush(sdow_t *sdow);
 
-#if 0 // Deprecated
-int hexit_to_int(int c);
-int int_to_hexit(int v);
-int sdo_read_big_num_field(sdor_t *sdor, uint8_t *bufp, int buf_sz);
-int sdo_read_big_num_asterisk_hack(sdor_t *sdor, uint8_t *bufp, int buf_sz,
-			      bool *have_asterisk);
-#endif
+// CBOR decoder methods
+bool sdor_init(sdor_t *sdor);
+bool sdor_parser_init(sdor_t *sdor_cbor, sdo_block_t *received_block);
+bool sdor_start_array(sdor_t *sdor);
+bool sdor_start_map(sdor_t *sdor);
+bool sdor_string_length(sdor_t *sdor, size_t *length);
+bool sdor_byte_string(sdor_t *sdor, uint8_t *buffer, size_t buffer_length);
+bool sdor_text_string(sdor_t *sdor, char *buffer, size_t buffer_length);
+bool sdor_signed_int(sdor_t *sdor, int *result);
+bool sdor_unsigned_int(sdor_t *sdor, uint64_t *result);
+bool sdor_boolean(sdor_t *sdor, bool *result);
+bool sdor_end_array(sdor_t *sdor);
+bool sdor_end_map(sdor_t *sdor);
+bool sdor_next(sdor_t *sdor);
+void sdor_flush(sdor_t *sdor);
 
 #endif /*__SDOBLOCKIO_H__ */

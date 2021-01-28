@@ -21,6 +21,9 @@ if (NOT(DEFINED ENV{SAFESTRING_ROOT}))
   message(FATAL_ERROR "SAFESTING_ROOT not set")
 endif()
 
+if (NOT(DEFINED ENV{TINYCBOR_ROOT}))
+  message(FATAL_ERROR "TINYCBOR_ROOT not set")
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BASE_DIR}/build)
 set(CMAKE_BUILD_FILES_DIRECTORY ${BASE_DIR}/build)
@@ -62,6 +65,7 @@ if(${TARGET_OS} MATCHES linux)
 # Safestring lib
 client_sdk_include_directories(
   $ENV{SAFESTRING_ROOT}/include
+  $ENV{TINYCBOR_ROOT}/src
   include
   )
 
@@ -97,6 +101,8 @@ if(${TARGET_OS} MATCHES linux)
   client_sdk_ld_options(
     -L$ENV{SAFESTRING_ROOT}/
     -l:libsafestring.a
+    -L$ENV{TINYCBOR_ROOT}/lib/
+    -l:libtinycbor.a
     -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
     )
 

@@ -334,11 +334,13 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		return NULL;
 
 	sdo_ownership_voucher_t *ov = sdo_ov_alloc();
+	/*
 	int gstart = -1;
 	int gend = -1;
 	int dstart = -1;
 	int dend = -1;
 	int sig_block_start = -1;
+	*/
 	int ret = -1;
 	uint8_t *hp_text = NULL;
 	uint8_t *hc_text = NULL;
@@ -348,22 +350,33 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		return NULL;
 	}
 
+	/*
 	if (!sdo_begin_readHMAC(sdor, &sig_block_start))
 		goto exit;
-
-	if (!sdor_begin_object(sdor))
+	*/
+	if (!sdor_start_array(sdor))
 		goto exit;
 
-	if (!sdo_read_expected_tag(sdor, "pv")) // Protocol Version
-		goto exit;
-	ov->prot_version = sdo_read_uint(sdor);
+	// TO-DO : Revisit use of int vs uint64_t
+	// if (!sdor_unsigned_int(sdor, &ov->prot_version)) // Protocol Version
+	//	goto exit;
 
-	if (!sdo_read_expected_tag(sdor, "pe")) // Public key encoding
+	// TO-DO : GUID Length check?
+	size_t ov_guid_length;
+	if (!sdor_string_length(sdor, &ov_guid_length)) {
+		LOG(LOG_ERROR, "%s GUID Length Error\n", __func__);
 		goto exit;
-	ov->key_encoding = sdo_read_uint(sdor);
+	}
+	ov->g2 = sdo_byte_array_alloc(ov_guid_length);
+	if (!ov->g2) {
+		LOG(LOG_ERROR, "%s GUID Error\n", __func__);
+		goto exit;
+	}
 
-	if (!sdo_read_expected_tag(sdor, "r")) // Rendezvous
+	if (!sdor_byte_string(sdor, ov->g2->bytes, ov->g2->byte_sz))
 		goto exit;
+
+	// Rendezvous
 	ov->rvlst2 = sdo_rendezvous_list_alloc();
 
 	if (!ov->rvlst2 || !sdo_rendezvous_list_read(sdor, ov->rvlst2)) {
@@ -377,53 +390,33 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		    "All rendezvous entries are invalid for the device!\n");
 		goto exit;
 	}
-
-	if (!sdo_read_expected_tag(sdor, "g"))
-		goto exit;
-	gstart = sdor->b.cursor;
-	ov->g2 = sdo_byte_array_alloc(0);
-	if (!ov->g2 || !sdo_byte_array_read_chars(sdor, ov->g2)) {
-		LOG(LOG_ERROR, "%s GUID Error\n", __func__);
-		goto exit;
-	}
-	gend = sdor->b.cursor;
+	
+	/*
+	// TO-DO : Remove?
 	uint8_t *g_text = sdor_get_block_ptr(sdor, gstart);
 
 	if (g_text == NULL)
 		goto exit;
+	*/
 
-	if (!sdo_read_expected_tag(sdor, "d")) // Device_info String
-		goto exit;
-
-	dstart = sdor->b.cursor;
+	// Device_info String
 	ov->dev_info = sdo_string_alloc();
-
-	if (!ov->dev_info || !sdo_string_read(sdor, ov->dev_info)) {
+	size_t dev_info_length;
+	if (!ov->dev_info || !sdor_string_length(sdor, &dev_info_length) ||
+			!sdor_text_string(sdor, ov->dev_info->bytes, ov->dev_info->byte_sz)) {
 		LOG(LOG_ERROR, "%s Dev_info Error\n", __func__);
 		goto exit;
 	}
+	ov->dev_info->byte_sz = dev_info_length;
 
-	dend = sdor->b.cursor;
-
-	uint8_t *d_text = sdor_get_block_ptr(sdor, dstart);
-
-	if (d_text == NULL)
-		goto exit;
-
-	if (!sdo_read_expected_tag(sdor, "pk")) // Mfg Public key
-		goto exit;
-
+	// Mfg Public key
 	if (ov->mfg_pub_key != NULL)
 		sdo_public_key_free(ov->mfg_pub_key);
 	ov->mfg_pub_key =
 	    sdo_public_key_read(sdor); // Creates a Public key and fills it in
 
 #if defined(ECDSA256_DA) || defined(ECDSA384_DA)
-	if (!sdo_read_expected_tag(sdor, "hdc")) { // device cert-chain hash
-		LOG(LOG_ERROR, "hdc tag not found!\n");
-		goto exit;
-	}
-
+	// device cert-chain hash
 	ov->hdc = sdo_hash_alloc_empty();
 	if (!ov->hdc) {
 		LOG(LOG_ERROR, "Hash alloc failed!\n");
@@ -435,12 +428,13 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		goto exit;
 	}
 #endif
-	if (!sdo_end_readHMAC(sdor, hmac, sig_block_start)) {
-		LOG(LOG_ERROR, "Error making OVHdr HMAC!\n");
-		goto exit;
-	}
+
+	sdor_end_array(sdor);
+
 
 	if (cal_hp_hc) {
+		/*
+		// TO-DO
 		int oh_end = sdor->b.cursor;
 		int oh_sz = oh_end - sig_block_start;
 		uint8_t *oh_text = sdor_get_block_ptr(sdor, sig_block_start);
@@ -540,6 +534,7 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 
 		// To verify the next entry in the ownership voucher
 		ov->ov_entries->pk = sdo_public_key_clone(ov->mfg_pub_key);
+		*/
 	}
 	ret = 0;
 exit:
@@ -576,42 +571,27 @@ sdo_hash_t *sdo_new_ov_hdr_sign(sdo_dev_cred_t *dev_cred,
 
 	// build the "oh" structure in the buffer
 	// Get the pointers ready for the signature
-	int sig_block_start = sdow->b.cursor;
-
-	sdow->need_comma = false;
-	sdow_begin_object(sdow);
-
-	sdo_write_tag(sdow, "pv");
-	sdo_writeUInt(sdow, dev_cred->owner_blk->pv);
-
-	sdo_write_tag(sdow, "pe");
-	sdo_writeUInt(sdow, dev_cred->owner_blk->pe);
-
-	sdo_write_tag(sdow, "r");
-	sdo_rendezvous_list_write(sdow, dev_cred->owner_blk->rvlst);
-
-	sdo_write_tag(sdow, "g");
-	sdo_byte_array_write_chars(sdow, dev_cred->owner_blk->guid);
-
-	sdo_write_tag(sdow, "d");
-	sdo_write_string_len(sdow, dev_cred->mfg_blk->d->bytes,
-			     dev_cred->mfg_blk->d->byte_sz);
-
-	sdo_write_tag(sdow, "pk");
-	sdo_public_key_write(sdow, new_pub_key);
 
 	if (hdc) {
-		sdo_write_tag(sdow, "hdc");
+		sdow_start_array(sdow, 6);
+	} else {
+		sdow_start_array(sdow, 5);
+	}
+	sdow_unsigned_int(sdow, dev_cred->owner_blk->pv);
+	sdow_byte_string(sdow, dev_cred->owner_blk->guid->bytes, GID_SIZE);
+	sdo_rendezvous_list_write(sdow, dev_cred->owner_blk->rvlst);
+	sdow_text_string(sdow, dev_cred->mfg_blk->d->bytes,
+			     dev_cred->mfg_blk->d->byte_sz);
+	sdo_public_key_write(sdow, new_pub_key);
+	if (hdc) {
 		sdo_hash_write(sdow, hdc);
 	}
+	sdow_end_array(sdow);
 
-	sdow_end_object(sdow);
-
-	int sig_block_end = sdow->b.cursor;
-	int sig_block_sz = sig_block_end - sig_block_start;
-	uint8_t *plain_text = sdow_get_block_ptr(sdow, sig_block_start);
-
-	if (plain_text == NULL) {
+	// TO-DO : Add check?
+	size_t encoded_length;
+	sdow_encoded_length(sdow, &encoded_length);
+	if (sdow->b.block == NULL) {
 		LOG(LOG_ERROR,
 		    "sdow_get_block_ptr() returned NULL, "
 		    "%s failed !!",
@@ -623,7 +603,7 @@ sdo_hash_t *sdo_new_ov_hdr_sign(sdo_dev_cred_t *dev_cred,
 	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
 
 	if (hmac &&
-	    (0 != sdo_device_ov_hmac(plain_text, sig_block_sz,
+	    (0 != sdo_device_ov_hmac(sdow->b.block, sdow->b.block_size,
 				     hmac->hash->bytes, hmac->hash->byte_sz))) {
 		sdo_hash_free(hmac);
 		return NULL;

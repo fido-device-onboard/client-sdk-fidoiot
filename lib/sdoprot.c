@@ -34,43 +34,50 @@
 
 typedef int (*state_func)(sdo_prot_t *ps);
 
+// TO-DO : Commenting these out for now. Will be uncommented graduallly
+// when DI/TO1/TO2 are implemented.
 /*
  * State functions for DI
  */
+/*
 static state_func di_state_fn[] = {
-    msg10, /* DI.App_start */
-    msg11, /* DI.Set_credentials */
-    msg12, /* DI.SetHMAC */
-    msg13, /* DI.Done */
+    msg10, // DI.App_start
+    msg11, // DI.Set_credentials
+    msg12, // DI.SetHMAC
+    msg13, // DI.Done
 };
-
+*/
 /*
  * State functions for TO1
  */
+/*
 static state_func to1_state_fn[] = {
-    msg30, /* TO1.HelloSDO */
-    msg31, /* TO1.HelloSDOAck */
-    msg32, /* TO1.Prove_toSDO */
-    msg33, /* TO1.sdo_redirect */
+    msg30, // TO1.HelloSDO
+    msg31, // TO1.HelloSDOAck
+    msg32, // TO1.Prove_toSDO
+    msg33, // TO1.sdo_redirect
 };
+*/
 
 /*
  * State functions for TO2
  */
+/*
 static state_func to2_state_fn[] = {
-    msg40, /* TO2.Hello_device */
-    msg41, /* TO2.ProveOPHdr */
-    msg42, /* TO2.GetOPNext_entry */
-    msg43, /* TO2.OPNext_entry */
-    msg44, /* TO2.Prove_device */
-    msg45, /* TO2.Get_next_device_service_info */
-    msg46, /* TO2.Next_device_service_info */
-    msg47, /* TO2.Setup_device */
-    msg48, /* TO2.Get_next_owner_service_info */
-    msg49, /* TO2.Owner_service_info */
-    msg50, /* TO2.Done */
-    msg51, /* TO2.Done2 */
+    msg40, // TO2.Hello_device
+    msg41, // TO2.ProveOPHdr
+    msg42, // TO2.GetOPNext_entry
+    msg43, // TO2.OPNext_entry
+    msg44, // TO2.Prove_device
+    msg45, // TO2.Get_next_device_service_info
+    msg46, // TO2.Next_device_service_info
+    msg47, // TO2.Setup_device
+    msg48, // TO2.Get_next_owner_service_info
+    msg49, // TO2.Owner_service_info
+    msg50, // TO2.Done
+    msg51, // TO2.Done2
 };
+*/
 
 /**
  * ps_free() - free all the protocol state
@@ -159,7 +166,10 @@ bool sdo_process_states(sdo_prot_t *ps)
 		prev_state = ps->state;
 
 		switch (ps->state) {
-		/* DI states */
+		/*
+		// TO-DO : Commenting this out until DI, TO1 and TO2 protcols are implemented.
+		// To be uncommented gradually.
+		// DI states
 		case SDO_STATE_DI_APP_START:
 		case SDO_STATE_DI_SET_CREDENTIALS:
 		case SDO_STATE_DI_SET_HMAC:
@@ -167,7 +177,7 @@ bool sdo_process_states(sdo_prot_t *ps)
 			state_fn = di_state_fn[DI_ID_TO_STATE_FN(ps->state)];
 			break;
 
-		/* TO1 states */
+		// TO1 states
 		case SDO_STATE_T01_SND_HELLO_SDO:
 		case SDO_STATE_TO1_RCV_HELLO_SDOACK:
 		case SDO_STATE_TO1_SND_PROVE_TO_SDO:
@@ -175,7 +185,7 @@ bool sdo_process_states(sdo_prot_t *ps)
 			state_fn = to1_state_fn[TO1_ID_TO_STATE_FN(ps->state)];
 			break;
 
-		/* TO2 states */
+		// TO2 states
 		case SDO_STATE_T02_SND_HELLO_DEVICE:
 		case SDO_STATE_TO2_RCV_PROVE_OVHDR:
 		case SDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY:
@@ -193,6 +203,7 @@ bool sdo_process_states(sdo_prot_t *ps)
 
 		case SDO_STATE_ERROR:
 		case SDO_STATE_DONE:
+		*/
 		default:
 			break;
 		}
@@ -359,41 +370,36 @@ bool sdo_check_to2_round_trips(sdo_prot_t *ps)
  */
 bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep)
 {
-	uint32_t mtype;
-
 	(void)sdow; /* Unused */
 
-	if (sdor->receive == NULL && !sdor_have_block(sdor))
-		return false;
-
-	if (!sdor_next_block(sdor, &mtype)) {
+	if (!sdor->have_block) {
 		LOG(LOG_ERROR, "expecting another block\n");
 		*statep = SDO_STATE_ERROR;
 		return false;
 	}
-	LOG(LOG_DEBUG, "%s: Received message type %" PRIu32 " : %d bytes\n",
-	    prot_name, mtype, sdor->b.block_size);
+
+	LOG(LOG_DEBUG, "%s: Received message type %" PRIu32 " : %zu bytes\n",
+	    prot_name, sdor->msg_type, sdor->b.block_size);
 
 	return true;
 }
 
 /**
+ * TO-DO : Update to pass in error message length, EMErrorTs, EMErrorUuid.
+ * 
  * Internal API
  */
 void sdo_send_error_message(sdow_t *sdow, int ecode, int msgnum,
-			    const char *errmsg)
+			    char *errmsg)
 {
 	LOG(LOG_ERROR, "Sending Error Message\n");
 
 	sdow_next_block(sdow, SDO_TYPE_ERROR);
-	sdow_begin_object(sdow);
-	sdo_write_tag(sdow, "ec");
-	sdo_writeUInt(sdow, ecode);
-	sdo_write_tag(sdow, "emsg");
-	sdo_writeUInt(sdow, msgnum);
-	sdo_write_tag(sdow, "em");
-	sdo_write_string(sdow, errmsg);
-	sdow_end_object(sdow);
+	sdow_start_array(sdow, 5);
+	sdow_unsigned_int(sdow, ecode);
+	sdow_unsigned_int(sdow, msgnum);
+	sdow_text_string(sdow, errmsg , 0);
+	sdow_end_array(sdow);
 }
 
 #if 0
