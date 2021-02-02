@@ -25,7 +25,7 @@ if(TARGET_OS MATCHES linux)
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
-       -DDEVICE_MSTRING=\"${BLOB_PATH}/data/device_mstring\"
+       -DTPM_DEVICE_CSR=\"${BLOB_PATH}/data/tpm_device_csr\"
        -DTPM_ECDSA_DEVICE_KEY=\"${BLOB_PATH}/data/tpm_ecdsa_priv_pub_blob.key\"
        -DTPM_INPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_input_data_temp_file\"
        -DTPM_OUTPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_output_data_temp_file\"

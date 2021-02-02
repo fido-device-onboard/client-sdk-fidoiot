@@ -124,7 +124,7 @@ int ps_get_m_string(sdo_prot_t *ps)
 
 	/* Get the CSR data */
 #if defined(DEVICE_TPM20_ENABLED)
-	size_t m_string_sz = get_file_size(DEVICE_MSTRING);
+	size_t m_string_sz = get_file_size(TPM_DEVICE_CSR);
 
 	csr = sdo_byte_array_alloc(m_string_sz);
 	if (!csr) {
@@ -133,9 +133,9 @@ int ps_get_m_string(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (0 != read_buffer_from_file(DEVICE_MSTRING, csr->bytes,
+	if (0 != read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes,
 				       csr->byte_sz)) {
-		LOG(LOG_ERROR, "Failed to read %s file!\n", DEVICE_MSTRING);
+		LOG(LOG_ERROR, "Failed to read %s file!\n", TPM_DEVICE_CSR);
 		goto err;
 	}
 
