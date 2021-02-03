@@ -23,22 +23,14 @@ From the root of the safestringlib, do the following:
  ```
 After this step, `libsafestring.a` library will be created.
 
-## 4. Compiling Intel TinyCBOR
-SDO client-sdk uses tinycbor for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
-From the root of the TinyCBOR (named `tinycbor`), do the following:
- ```shell
- $ make
- ```
-
-## 5. Environment Variables
+## 4. Environment Variables
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
 Provide safestringlib paths:
 ```shell
 $ export SAFESTRING_ROOT=path/to/safestringlib
-$ export TINYCBOR_ROOT=path/to/tinycbor
 ```
 
-## 6. Compiling SDO
+## 5. Compiling SDO
 
 The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. SDO assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the SDO client-sdk.
 
@@ -55,7 +47,7 @@ Refer to the section. [SDO Build configurations](build_conf.md)
 
 <a name="run_linux_sdo"></a>
 
-## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
+## 6. Running the Application <!-- Ensuring generic updates are captured where applicable -->
 The SDO Linux device is compatible with SDO Supply Chain Toolkit (SCT), PRI rendezvous, and owner servers(OC).
 
 To test the SDO Linux device against the SDO Java PRI implementation, obtain the SCT binaries along with PRI rendezvous and PRI owner binaries from their respective directories.
@@ -79,7 +71,7 @@ To run the device against the SCT for the DI protocol, do the following:
   $ ./build/linux-client
   ```
 
-## 8. Compiling and Running of Unit Tests for SDO
+## 7. Compiling and Running of Unit Tests for SDO
   Unit-test framework is located inside tests folder.
 
   Use following command to compile and running.
