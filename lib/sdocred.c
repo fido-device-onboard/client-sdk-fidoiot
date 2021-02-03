@@ -210,7 +210,7 @@ sdo_hash_t *sdo_pub_key_hash(sdo_public_key_t *pub_key)
 	sdow_next_block(sdow, SDO_TYPE_HMAC);
 	sdo_public_key_write(sdow, pub_key);
 	size_t encoded_pk_length = 0;
-	if (!sdow_encoded_length(sdow, &encoded_pk_length) || encoded_pk_length <= 0) {
+	if (!sdow_encoded_length(sdow, &encoded_pk_length) || encoded_pk_length == 0) {
 		LOG(LOG_ERROR, "Failed to get PubKey encoded length\n");
 		sdo_hash_free(hash);
 		return NULL;
@@ -336,7 +336,8 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		return NULL;
 	}
 
-	if (!sdor_array_length(sdor, &num_ov_items) || num_ov_items > 6) {
+	// OVHeader is of size 6 always.
+	if (!sdor_array_length(sdor, &num_ov_items) || num_ov_items != 6) {
 		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVHeader array length\n", __func__);
 		goto exit;
 	}
@@ -572,7 +573,8 @@ bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac,
 		goto exit;
 	if (!sdow_text_string(sdow_hmac, ov->dev_info->bytes, ov->dev_info->byte_sz))
 		goto exit;
-	sdo_public_key_write(sdow_hmac, ov->mfg_pub_key);
+	if (!sdo_public_key_write(sdow_hmac, ov->mfg_pub_key))
+		goto exit;
 #if defined(ECDSA256_DA) || defined(ECDSA384_DA)
 	sdo_hash_write(sdow_hmac, ov->hdc);
 #endif

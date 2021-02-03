@@ -272,7 +272,7 @@ sdo_public_key_t *sdo_public_key_alloc_empty(void);
 sdo_public_key_t *sdo_public_key_alloc(int pkalg, int pkenc, int pklen,
 				       uint8_t *pkey);
 void sdo_public_key_free(sdo_public_key_t *pk);
-void sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk);
+bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk);
 sdo_public_key_t *sdo_public_key_read(sdor_t *sdor);
 sdo_public_key_t *sdo_public_key_clone(sdo_public_key_t *pk);
 const char *sdo_pk_alg_to_string(int alg);
@@ -353,6 +353,38 @@ sdo_key_value_t *sdo_kv_alloc_with_array(const char *key,
 sdo_key_value_t *sdo_kv_alloc_with_str(const char *key, const char *val);
 void sdo_kv_free(sdo_key_value_t *kv);
 void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv);
+
+/*
+ * This is a lookup on all possible RVVariable
+ */
+#define BADKEY -1
+#define RVDEVONLY 0
+#define RVOWNERONLY 1
+#define RVIPADDRESS 2
+#define RVDEVPORT 3
+#define RVOWNERPORT 4
+#define RVDNS 5
+#define RVSVCERTHASH 6
+#define RVCLCERTHASH 7
+#define RVUSERINPUT 8
+#define RVWIFISSID 9
+#define RVWIFIPW 10
+#define RVMEDIUM 11
+#define RVPROTOCOL 12
+#define RVDELAYSEC 13
+#define RVBYPASS 14
+#define RVEXTRV 15
+
+/*
+ * This is a lookup on all possible RVProtocolValue (RVVariable 12)
+ */
+#define RVPROTREST 0
+#define RVPROTHTTP 1
+#define RVPROTHTTPS 2
+#define RVPROTTCP 3
+#define RVPROTTLS 4
+#define RVPROTCOAPTCP 5
+#define RVPROTCOAPUDP 6
 
 typedef struct sdo_rendezvous_s {
 	int num_params;

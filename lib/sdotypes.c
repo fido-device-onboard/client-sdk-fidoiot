@@ -1001,17 +1001,16 @@ sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 
 	sdo_string_t *s = (sdo_string_t *)sdo_alloc(sizeof(sdo_string_t));
 	
-	if (s == NULL)
+	if (!s || byte_sz == 0)
 		return NULL;
 
-	if (byte_sz > 0) {
-		s->bytes = sdo_alloc(byte_sz * sizeof(char));
-		if (s->bytes == NULL)
-			return NULL;
-		s->byte_sz = byte_sz;
-		return s;
-	} else
-		return s;
+	s->bytes = sdo_alloc(byte_sz * sizeof(char));
+	if (!s->bytes) {
+		sdo_free(s);
+		return NULL;
+	}
+	s->byte_sz = byte_sz;
+	return s;
 }
 
 /**
@@ -1572,7 +1571,7 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
  * Write the hash type
  * @param sdow - pointer to the output struct of type JSON message
  * @param hp - pointer to the struct of type hash
- * @return none
+ * @return bool true if write was successful, false otherwise
  */
 bool sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp)
 {
@@ -2098,23 +2097,45 @@ const char *sdo_pk_enc_to_string(int enc)
 }
 
 /**
- * TO-DO : Update Public key structure.
- * 
  * Write a full public key to the output buffer
- * @param sdow - output buffer to hold JSON representation
+ * @param sdow - output buffer to hold CBOR representation
  * @param pk - pointer to the sdo_public_key_t object
  * @return none
  */
-void sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
+bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
 {
 	if (!sdow)
-		return;
+		return false;
 
-	sdow_start_array(sdow, 3);
-	sdow_signed_int(sdow, pk->pkalg);
-	sdow_signed_int(sdow, pk->pkenc);
-	sdow_byte_string(sdow, pk->key1->bytes, pk->key1->byte_sz);
-	sdow_end_array(sdow);
+	/* PublicKey format as per Section 3.3.4 of FDO specification:
+	* PublicKey = [
+    *	pkType,
+    *	pkEnc,
+    *	pkBody
+	*	]
+	*/
+	if (!sdow_start_array(sdow, 3)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to start array.\n");
+		return false;
+	}
+	if (!sdow_signed_int(sdow, pk->pkalg)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkType.\n");
+		return false;
+	}
+	if (!sdow_signed_int(sdow, pk->pkenc)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkEnc.\n");
+		return false;
+	}
+	if (!sdow_byte_string(sdow, pk->key1->bytes, pk->key1->byte_sz)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkBody.\n");
+		return false;
+	}
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to end array.\n");
+		return false;
+	}
+	// Write successfull. Return true.
+	return true;
 }
 
 /**
@@ -2412,38 +2433,6 @@ void sdo_rendezvous_free(sdo_rendezvous_t *rv)
 
 	sdo_free(rv);
 }
-
-/*
- * This is a lookup on all possible RVVariable
- */
-#define BADKEY -1
-#define RVDEVONLY 0
-#define RVOWNERONLY 1
-#define RVIPADDRESS 2
-#define RVDEVPORT 3
-#define RVOWNERPORT 4
-#define RVDNS 5
-#define RVSVCERTHASH 6
-#define RVCLCERTHASH 7
-#define RVUSERINPUT 8
-#define RVWIFISSID 9
-#define RVWIFIPW 10
-#define RVMEDIUM 11
-#define RVPROTOCOL 12
-#define RVDELAYSEC 13
-#define RVBYPASS 14
-#define RVEXTRV 15
-
-/*
- * This is a lookup on all possible RVProtocolValue (RVVariable 12)
- */
-#define RVPROTREST 0
-#define RVPROTHTTP 1
-#define RVPROTHTTPS 2
-#define RVPROTTCP 3
-#define RVPROTTLS 4
-#define RVPROTCOAPTCP 5
-#define RVPROTCOAPUDP 6
 
 /** 
  * Write a rendezvous object to the output buffer

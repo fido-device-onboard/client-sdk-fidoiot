@@ -32,22 +32,21 @@ void sdo_block_reset(sdo_block_t *sdob)
 	}
 }
 
+/**
+ * Allocate memory for the underlying block with default size of 'CBOR_BUFFER_LENGTH'.
+ *
+ * NOTE: The memory should be independently freed when not in use.
+ */
 bool sdo_block_alloc(sdo_block_t *sdob)
 {
-	sdob->block = sdo_alloc(CBOR_BUFFER_LENGTH * sizeof(uint8_t));
-	sdob->block_size = CBOR_BUFFER_LENGTH;
-	if (sdob->block == NULL) {
-		LOG(LOG_ERROR, "SDOBlock alloc() failed!\n");
-		return false;
-	}
-
-	if (memset_s(sdob->block, sdob->block_size, 0) != 0) {
-		LOG(LOG_ERROR, "SDOBlock memset() failed!\n");
-		return false;
-	}
-	return true;
+	return sdo_block_alloc_with_size(sdob, CBOR_BUFFER_LENGTH);
 }
 
+/**
+ * Allocate memory for the underlying block with the given size.
+ *
+ * NOTE: The memory should be independently freed when not in use.
+ */
 bool sdo_block_alloc_with_size(sdo_block_t *sdob, size_t block_sz)
 {
 	if (!sdob || block_sz < 0)

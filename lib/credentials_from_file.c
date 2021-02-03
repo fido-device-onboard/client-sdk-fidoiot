@@ -43,12 +43,25 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 #ifndef NO_PERSISTENT_STORAGE
 
 	sdow_t *sdow = sdo_alloc(sizeof(sdow_t));
-	if (!sdow_init(sdow) || !sdo_block_alloc(&sdow->b) || !sdow_encoder_init(sdow)) {
-		LOG(LOG_ERROR, "sdow_init() failed!\n");
+	if (!sdow || !sdow_init(sdow) || !sdo_block_alloc(&sdow->b) || !sdow_encoder_init(sdow)) {
+		LOG(LOG_ERROR, "SDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
 	}
 
+	/**
+	 * Blob format: Complete DeviceCredential as per Section 3.4.1 of FDO Specification,
+	 * except the DeviceCredential.DCHmacSecret, and addition of 'State'.
+	 * DeviceCredential = [
+	 * 		State,
+     * 		DCActive,
+     *		DCProtVer,
+     * 		DCDeviceInfo,
+     * 		DCGuid,
+     * 		DCRVInfo,
+     * 		DCPubKeyHash
+	 * ]
+	 */
 	sdow_next_block(sdow, SDO_DI_SET_CREDENTIALS);
 	if (!sdow_start_array(sdow, 7)) {
 		ret = false;
@@ -87,7 +100,7 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 	size_t encoded_cred_length = 0;
-	if (!sdow_encoded_length(sdow, &encoded_cred_length) || encoded_cred_length <= 0) {
+	if (!sdow_encoded_length(sdow, &encoded_cred_length) || encoded_cred_length == 0) {
 		LOG(LOG_ERROR, "Failed to get DeviceCredential encoded length\n");
 		ret = false;
 		goto end;
@@ -131,8 +144,8 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 #ifndef NO_PERSISTENT_STORAGE
 
 	sdow_t *sdow = sdo_alloc(sizeof(sdow_t));
-	if (!sdow_init(sdow) || !sdo_block_alloc(&sdow->b) || !sdow_encoder_init(sdow)) {
-		LOG(LOG_ERROR, "sdow_init() failed!\n");
+	if (!sdow || !sdow_init(sdow) || !sdo_block_alloc(&sdow->b) || !sdow_encoder_init(sdow)) {
+		LOG(LOG_ERROR, "SDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
 	}
@@ -141,9 +154,12 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 		ret = false;
 		goto end;
 	}
+	/**
+	 * Blob format: DeviceCredential.DCHmacSecret as bstr.
+	 */
 	sdow_byte_string(sdow, (*ovkey)->bytes, INITIAL_SECRET_BYTES);
 	size_t encoded_secret_length = 0;
-	if (!sdow_encoded_length(sdow, &encoded_secret_length) || encoded_secret_length <= 0) {
+	if (!sdow_encoded_length(sdow, &encoded_secret_length) || encoded_secret_length == 0) {
 		LOG(LOG_ERROR, "Failed to get encoded DeviceCredential.DCHmacSecret length\n");
 		ret = false;
 		goto end;
@@ -206,7 +222,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRId32"\n", dev_cred_len);
 
 	sdor = sdo_alloc(sizeof(sdor_t));
-	if (!sdor_init(sdor) || !sdo_block_alloc_with_size(&sdor->b, dev_cred_len)) {
+	if (!sdor || !sdor_init(sdor) || !sdo_block_alloc_with_size(&sdor->b, dev_cred_len)) {
 		LOG(LOG_ERROR, "SDOR Initialization/Allocation failed!\n");
 		goto end;
 	}
@@ -247,7 +263,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 
 	size_t device_info_length = 0;
-	if (!sdor_string_length(sdor, &device_info_length) || device_info_length <= 0) {
+	if (!sdor_string_length(sdor, &device_info_length) || device_info_length == 0) {
 		LOG(LOG_ERROR, "DeviceCredential read: Invalid DCDeviceInfo length\n");
 		goto end;
 	}
@@ -267,7 +283,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 
 	size_t guid_length = 0;
-	if (!sdor_string_length(sdor, &guid_length) || guid_length <= 0) {
+	if (!sdor_string_length(sdor, &guid_length) || guid_length == 0) {
 		LOG(LOG_ERROR, "DeviceCredential read: Invalid DCGuid length\n");
 		goto end;
 	}
@@ -329,7 +345,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 	}
 
 	sdor_t *sdor = sdo_alloc(sizeof(sdor_t));
-	if (!sdor_init(sdor) || !sdo_block_alloc_with_size(&sdor->b, dev_cred_len)) {
+	if (!sdor || !sdor_init(sdor) || !sdo_block_alloc_with_size(&sdor->b, dev_cred_len)) {
 		LOG(LOG_ERROR, "SDOR Initialization/Allocation failed!\n");
 		goto end;
 	}
