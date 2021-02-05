@@ -994,14 +994,18 @@ sdo_string_t *sdo_string_alloc(void)
 }
 
 /**
- * Create sdo_string_t object with the given size.
+ * Create sdo_string_t object by allocating memory for the inner buffer
+ * with the given size.
+ *
  * @return an allocated sdo_string_t object
  */
 sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 
+	if (byte_sz == 0)
+		return NULL;
+
 	sdo_string_t *s = (sdo_string_t *)sdo_alloc(sizeof(sdo_string_t));
-	
-	if (!s || byte_sz == 0)
+	if (!s)
 		return NULL;
 
 	s->bytes = sdo_alloc(byte_sz * sizeof(char));
