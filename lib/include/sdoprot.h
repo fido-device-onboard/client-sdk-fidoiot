@@ -145,7 +145,7 @@
 #define MAX_TO2_ROUND_TRIPS 1000000
 
 // Current protocol version
-#define SDO_PROT_SPEC_VERSION 113
+#define SDO_PROT_SPEC_VERSION 100
 
 /*
  * Set size of buffer for generating debugging messages.

@@ -994,6 +994,30 @@ sdo_string_t *sdo_string_alloc(void)
 }
 
 /**
+ * Create sdo_string_t object by allocating memory for the inner buffer
+ * with the given size.
+ *
+ * @return an allocated sdo_string_t object
+ */
+sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
+
+	if (byte_sz == 0)
+		return NULL;
+
+	sdo_string_t *s = (sdo_string_t *)sdo_alloc(sizeof(sdo_string_t));
+	if (!s)
+		return NULL;
+
+	s->bytes = sdo_alloc(byte_sz * sizeof(char));
+	if (!s->bytes) {
+		sdo_free(s);
+		return NULL;
+	}
+	s->byte_sz = byte_sz;
+	return s;
+}
+
+/**
  * Create a sdo_string_t object from a non zero terminated string
  * @param data - a pointer to the string
  * @param byte_sz - the number of characters in the string ( size 0 or more)
@@ -1002,7 +1026,7 @@ sdo_string_t *sdo_string_alloc(void)
 sdo_string_t *sdo_string_alloc_with(const char *data, int byte_sz)
 {
 	sdo_string_t *temp_str = NULL;
-	int total_size = byte_sz + 1;
+	int total_size = byte_sz;
 
 	if (!data)
 		goto err1;
@@ -1254,8 +1278,8 @@ bool sdo_ecdsa_dummyEBRead(sdor_t *sdor)
 {
 	bool retval = false;
 	// TO-DO : Revisit signed vs unsigned int here.
-	uint64_t type = 0;
-	uint64_t exptype = 0;
+	int type = 0;
+	int exptype = 0;
 	uint8_t *buf;
 
 	/* "eB":[13,0,""] */
@@ -1270,10 +1294,10 @@ bool sdo_ecdsa_dummyEBRead(sdor_t *sdor)
 
 	exptype = SDO_PK_ALGO;
 
-	sdor_unsigned_int(sdor, &type);
+	sdor_signed_int(sdor, &type);
 	if (type != exptype) {
 		LOG(LOG_ERROR,
-		    "Invalid ECDSA pubkey type, expected %"PRIu64", got %"PRIu64"\n", exptype,
+		    "Invalid ECDSA pubkey type, expected %d got %d\n", exptype,
 		    type);
 		goto end;
 	}
@@ -1502,25 +1526,26 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
 	if (!sdor || !hp)
 		return 0;
 
+	size_t num_hash_items = 0;
+	if (!sdor_array_length(sdor, &num_hash_items) || num_hash_items != 2) {
+		LOG(LOG_ERROR, "Invalid Hash: Invalid number of items\n");
+		return 0;
+	}
 	if (!sdor_start_array(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of Array\n");
+		LOG(LOG_ERROR, "Invalid Hash: Start array not found\n");
 		return 0;
 	}
 
-	// LOG(LOG_ERROR, "Reading hash\n");
 	// Read the hash type value
-	// TO-DO : Revisit use of int vs uint64_t
-	/*
-	if (!sdor_unsigned_int(sdor, &hp->hash_type)) {
-		LOG(LOG_ERROR, "Invalid hashType\n");
+	if (!sdor_signed_int(sdor, &hp->hash_type)) {
+		LOG(LOG_ERROR, "Invalid Hash: Unable to decode hashtype\n");
 		return 0;
 	}
-	*/
 
 	// Read the bin character length
 	size_t mbin_len_reported;
 	if (!sdor_string_length(sdor, &mbin_len_reported) || mbin_len_reported <= 0) {
-		LOG(LOG_ERROR, "Empty hash found!\n");
+		LOG(LOG_ERROR, "Invalid Hash: Unable to decode length of hash!\n");
 		return 0;
 	}
 
@@ -1534,13 +1559,13 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
 	}
 
 	if (!sdor_byte_string(sdor, hp->hash->bytes, mbin_len_reported)) {
-		LOG(LOG_ERROR, "Invalid hash!\n");
+		LOG(LOG_ERROR, "Invalid Hash: Unable to decode hash!\n");
 		return 0;
 	}
 	hp->hash->byte_sz = mbin_len_reported;
 
 	if (!sdor_end_array(sdor)) {
-		LOG(LOG_ERROR, "End Array not found!\n");
+		LOG(LOG_ERROR, "Invalid Hash: End array not found\n");
 		return 0;
 	}
 	return hp->hash->byte_sz;
@@ -1550,18 +1575,24 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
  * Write the hash type
  * @param sdow - pointer to the output struct of type JSON message
  * @param hp - pointer to the struct of type hash
- * @return none
+ * @return bool true if write was successful, false otherwise
  */
-void sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp)
+bool sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp)
 {
-	/*sdo_write_byte_array_one_int(sdow, hp->hash_type, hp->hash->bytes,
-				     hp->hash->byte_sz);*/
+	bool ret = false;
 	if (!sdow || !hp)
-		return;
-	sdow_start_array(sdow, 2);
-	sdow_signed_int(sdow, hp->hash_type);
-	sdow_byte_string(sdow, hp->hash->bytes, hp->hash->byte_sz);
-	sdow_end_array(sdow);
+		ret = false;
+	if (!sdow_start_array(sdow, 2))
+		ret = false;
+	if (!sdow_signed_int(sdow, hp->hash_type))
+		ret = false;
+	if (!sdow_byte_string(sdow, hp->hash->bytes, hp->hash->byte_sz))
+		ret = false;
+	if (!sdow_end_array(sdow))
+		ret = false;
+	LOG(LOG_DEBUG, "Hash write completed\n");
+	ret = true;
+	return ret;
 }
 
 /**
@@ -2070,45 +2101,45 @@ const char *sdo_pk_enc_to_string(int enc)
 }
 
 /**
- * TO-DO : Update Public key structure.
- * 
  * Write a full public key to the output buffer
- * @param sdow - output buffer to hold JSON representation
+ * @param sdow - output buffer to hold CBOR representation
  * @param pk - pointer to the sdo_public_key_t object
  * @return none
  */
-void sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
+bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
 {
 	if (!sdow)
-		return;
+		return false;
 
-	if (pk == NULL || pk->key1->byte_sz == 0) {
-		// Write null key (pknull)
-		/*
-		sdo_writeUInt(sdow, 0);
-		sdo_writeUInt(sdow, 0);
-		sdow_begin_sequence(sdow);
-		sdo_writeUInt(sdow, 0);
-		sdow_end_sequence(sdow);
-		sdow_end_sequence(sdow);
-		*/
-		return;
-	}
-	// LOG(LOG_ERROR, "------- pk is %lu bytes long\n",
-	// pk->key1->byte_sz);
-	sdow_start_array(sdow, 3);
-	sdow_unsigned_int(sdow, pk->pkalg);
-	sdow_unsigned_int(sdow, pk->pkenc);
-	sdow_byte_string(sdow, pk->key1->bytes, pk->key1->byte_sz);
-	/*
-	if (pk->pkenc == SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP) {
-		sdow_byte_string(sdow, pk->key2->bytes, pk->key2->byte_sz);
-	}
+	/* PublicKey format as per Section 3.3.4 of FDO specification:
+	* PublicKey = [
+    *	pkType,
+    *	pkEnc,
+    *	pkBody
+	*	]
 	*/
-	sdow_end_array(sdow);
-	// LOG(LOG_ERROR, "SDOWrite_public_key_stub: pklen:%u pkalg:%u pkenc:%u
-	// \n",
-	// pk->bits.byte_sz, pk->pkalg, pk->pkenc);
+	if (!sdow_start_array(sdow, 3)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to start array.\n");
+		return false;
+	}
+	if (!sdow_signed_int(sdow, pk->pkalg)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkType.\n");
+		return false;
+	}
+	if (!sdow_signed_int(sdow, pk->pkenc)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkEnc.\n");
+		return false;
+	}
+	if (!sdow_byte_string(sdow, pk->key1->bytes, pk->key1->byte_sz)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkBody.\n");
+		return false;
+	}
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to end array.\n");
+		return false;
+	}
+	// Write successfull. Return true.
+	return true;
 }
 
 /**
@@ -2288,89 +2319,50 @@ char *sdo_public_key_to_string(sdo_public_key_t *pk, char *buf, int bufsz)
  */
 sdo_public_key_t *sdo_public_key_read(sdor_t *sdor)
 {
-	sdo_public_key_t *pk;
-	int pkalg, pkenc;
-
 	if (!sdor)
 		return NULL;
 
-	if (!sdor_start_array(sdor))
-		goto err;
-	if (!sdor_signed_int(sdor, &pkalg))
-		goto err;
-	if (!sdor_signed_int(sdor, &pkenc))
-		goto err;
-
-	if (!pkalg || !pkenc)
-		goto err;
-	/*
-	// There will now be one or two Bytearray values
-	sdo_byte_array_t *baK1 = sdo_byte_array_alloc_with_int(0);
-
-	if (!baK1 || (sdo_byte_array_read(sdor, baK1) == 0)) {
-		sdo_byte_array_free(baK1);
-		goto err;
-	}
-
-	pk = sdo_public_key_alloc_empty(); // Create a Public Key
+	size_t num_public_key_items, public_key_length = 0;
+	sdo_public_key_t *pk = sdo_public_key_alloc_empty(); // Create a Public Key
 	if (!pk) {
-		sdo_byte_array_free(baK1);
 		goto err;
 	}
 
-	pk->pkalg = pkalg;
-	pk->pkenc = pkenc;
-	pk->key1 = baK1;
-
-	LOG(LOG_DEBUG, "Public_key_read Key1 read, %zu bytes\n",
-	    pk->key1->byte_sz);
-
-	// Check to see if the second key is needed
-	// LOG(LOG_ERROR, "PK @ %d Next c '%c'\n", sdor->b.cursor,
-	// sdor_peek(sdor));
-
-	if (sdor_peek(sdor) != ']') {
-		sdor->need_comma = true;
-		sdo_byte_array_t *baK2 = sdo_byte_array_alloc_with_int(0);
-		// Read second key
-		if (!baK2 || sdo_byte_array_read(sdor, baK2) == 0) {
-			sdo_byte_array_free(baK2);
-			sdo_public_key_free(pk);
-			goto err;
-		} else
-			pk->key2 = baK2;
-
-		LOG(LOG_DEBUG, "Public_key_read Key2 read, %zu bytes\n",
-		    pk->key2->byte_sz);
+	if (!sdor_array_length(sdor, &num_public_key_items) || num_public_key_items != 3) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Array length\n", __func__);
+		goto err;
 	}
-	// LOG(LOG_ERROR, "PK @ %d Next c '%c'\n", sdor->b.cursor,
-	// sdor_peek(sdor));
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Start array not found\n", __func__);
+		goto err;
+	}
+	if (!sdor_signed_int(sdor, &pk->pkalg)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkType\n", __func__);
+		goto err;
+	}
+	if (!sdor_signed_int(sdor, &pk->pkenc)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkEnc\n", __func__);
+		goto err;
+	}
 
-	if (!sdor_end_sequence(sdor))
-		LOG(LOG_DEBUG, "Not at end of inner PK sequence\n");
-	// LOG(LOG_ERROR, "PK @ %d Next c '%c'\n", sdor->b.cursor,
-	// sdor_peek(sdor));
+	if (!sdor_string_length(sdor, &public_key_length) || public_key_length <= 0) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkBody length\n", __func__);
+	}
+	LOG(LOG_DEBUG, "PublicKey.pkBody length: %zu bytes\n", public_key_length);
+	pk->key1 = sdo_byte_array_alloc(public_key_length);
 
-	if (!sdor_end_sequence(sdor))
-		LOG(LOG_DEBUG, "Not at end of outer PK sequence\n");
-	// LOG(LOG_ERROR, "PK @ %d Next c '%c'\n", sdor->b.cursor,
-	// sdor_peek(sdor));
-
-	sdor->need_comma = true;
-
-	LOG(LOG_DEBUG,
-	    "Public_key_read pkalg: %d. pkenc: %d, key1: %zu, key2: %zu\n",
-	    pk->pkalg, pk->pkenc, pk->key1 ? pk->key1->byte_sz : 0,
-	    pk->key2 ? pk->key2->byte_sz : 0);
-	*/
+	if (!pk->key1 || !sdor_byte_string(sdor, pk->key1->bytes, public_key_length)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkBody\n", __func__);
+		sdo_byte_array_free(pk->key1);
+		goto err;
+	}
+	pk->key1->byte_sz = public_key_length;
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: End array not found\n", __func__);
+		goto err;
+	}
 	return pk;
 err:
-	/*
-	sdor_read_and_ignore_until_end_sequence(sdor);
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
-	}
-	*/
 	return NULL;
 }
 
@@ -2395,8 +2387,11 @@ void sdo_rendezvous_free(sdo_rendezvous_t *rv)
 	if (!rv)
 		return;
 
-	if (rv->only != NULL)
-		sdo_string_free(rv->only);
+	if (rv->dev_only != NULL)
+		sdo_free(rv->dev_only);
+
+	if (rv->owner_only != NULL)
+		sdo_free(rv->owner_only);
 
 	if (rv->ip != NULL)
 		sdo_free(rv->ip);
@@ -2429,20 +2424,21 @@ void sdo_rendezvous_free(sdo_rendezvous_t *rv)
 		sdo_string_free(rv->wsp);
 
 	if (rv->me != NULL)
-		sdo_string_free(rv->me);
+		sdo_free(rv->me);
 
 	if (rv->pr != NULL)
-		sdo_string_free(rv->pr);
+		sdo_free(rv->pr);
 
 	if (rv->delaysec != NULL)
 		sdo_free(rv->delaysec);
 
+	if (rv->bypass != NULL)
+		sdo_free(rv->bypass);
+
 	sdo_free(rv);
 }
 
-/**
- * TO-DO : Need to loop through RV instructions.
- * 
+/** 
  * Write a rendezvous object to the output buffer
  * @param sdow - the buffer pointer
  * @param rv - pointer to the rendezvous object to write
@@ -2453,159 +2449,102 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 	if (!sdow || !rv)
 		return false;
 	
-	sdow_start_array(sdow, 1);
-	// sdow_start_cbor_array(sdow, 1);
-/*
-	sdo_writeUInt(sdow, rv->num_params);
+	if (!sdow_start_array(sdow, rv->num_params))
+		return false;
 
-	sdow_begin_object(sdow);
+	if (rv->dev_only != NULL) {
+		if (!sdow_signed_int(sdow, RVDEVONLY))
+			return false;
+	}
 
-	if (rv->only != NULL) {
-		sdo_write_tag(sdow, "only");
-		sdo_write_string_len(sdow, rv->only->bytes, rv->only->byte_sz);
+	if (rv->owner_only != NULL) {
+		if (!sdow_signed_int(sdow, RVOWNERONLY))
+			return false;
 	}
 
 	if (rv->ip != NULL) {
-		sdo_write_tag(sdow, "ip");
-		sdo_write_ipaddress(sdow, rv->ip);
-	}
-
-	if (rv->dn != NULL) {
-		sdo_write_tag(sdow, "dn");
-		sdo_write_string_len(sdow, rv->dn->bytes, rv->dn->byte_sz);
+		if (!sdow_signed_int(sdow, RVIPADDRESS) ||
+			!sdow_byte_string(sdow, (uint8_t *) &rv->ip->addr, rv->ip->length))
+			return false;
 	}
 
 	if (rv->po != NULL) {
-		sdo_write_tag(sdow, "po");
-		sdo_writeUInt(sdow, *rv->po);
+		if (!sdow_signed_int(sdow, RVDEVPORT) ||
+			!sdow_signed_int(sdow, *rv->po))
+			return false;
 	}
 
 	if (rv->pow != NULL) {
-		sdo_write_tag(sdow, "pow");
-		sdo_writeUInt(sdow, *rv->pow);
+		if (!sdow_unsigned_int(sdow, RVOWNERPORT) ||
+			!sdow_signed_int(sdow, *rv->pow))
+			return false;
 	}
 
+	if (rv->dn != NULL) {
+		if (!sdow_signed_int(sdow, RVDNS) ||
+			!sdow_text_string(sdow, rv->dn->bytes, rv->dn->byte_sz))
+			return false;
+	}
 
 	if (rv->sch != NULL) {
-		sdo_write_tag(sdow, "sch");
-		sdo_hash_write(sdow, rv->sch);
+		if (!sdow_signed_int(sdow, RVSVCERTHASH) ||
+			!sdo_hash_write(sdow, rv->sch))
+			return false;
 	}
 
 	if (rv->cch != NULL) {
-		sdo_write_tag(sdow, "cch");
-		sdo_hash_write(sdow, rv->cch);
+		if (!sdow_signed_int(sdow, RVCLCERTHASH) ||
+			!sdo_hash_write(sdow, rv->cch))
+			return false;
 	}
 
 	if (rv->ui != NULL) {
-		sdo_write_tag(sdow, "ui");
-		sdo_writeUInt(sdow, *rv->ui);
+		if (!sdow_signed_int(sdow, RVUSERINPUT) ||
+			!sdow_boolean(sdow, rv->ui->value))
+			return false;
 	}
 
 	if (rv->ss != NULL) {
-		sdo_write_tag(sdow, "ss");
-		sdo_write_string_len(sdow, rv->ss->bytes, rv->ss->byte_sz);
+		if (!sdow_signed_int(sdow, RVWIFISSID) ||
+			!sdow_text_string(sdow, rv->ss->bytes, rv->ss->byte_sz))
+			return false;
 	}
 
 	if (rv->pw != NULL) {
-		sdo_write_tag(sdow, "pw");
-		sdo_write_string_len(sdow, rv->pw->bytes, rv->pw->byte_sz);
-	}
-
-	if (rv->wsp != NULL) {
-		sdo_write_tag(sdow, "wsp");
-		sdo_write_string_len(sdow, rv->wsp->bytes, rv->wsp->byte_sz);
+		if (!sdow_signed_int(sdow, RVWIFIPW) ||
+			!sdow_text_string(sdow, rv->pw->bytes, rv->pw->byte_sz))
+			return false;
 	}
 
 	if (rv->me != NULL) {
-		sdo_write_tag(sdow, "me");
-		sdo_write_string_len(sdow, rv->me->bytes, rv->me->byte_sz);
+		if (!sdow_signed_int(sdow, RVMEDIUM) ||
+			!sdow_unsigned_int(sdow, *rv->me))
+			return false;
 	}
 
 	if (rv->pr != NULL) {
-		sdo_write_tag(sdow, "pr");
-		sdo_write_string_len(sdow, rv->pr->bytes, rv->pr->byte_sz);
+		if (!sdow_signed_int(sdow, RVPROTOCOL) ||
+			!sdow_unsigned_int(sdow, *rv->pr))
+			return false;
 	}
 
 	if (rv->delaysec != NULL) {
-		sdo_write_tag(sdow, "delaysec");
-		sdo_writeUInt(sdow, *rv->delaysec);
+		if (!sdow_signed_int(sdow, RVDELAYSEC) ||
+			!sdow_unsigned_int(sdow, *rv->delaysec))
+			return false;
 	}
 
-	sdow_end_object(sdow);
-	sdow_end_sequence(sdow);
-*/
+	if (rv->bypass != NULL) {
+		if (!sdow_signed_int(sdow, RVBYPASS))
+			return false;
+	}
+
+	if (!sdow_end_array(sdow))
+		return false;
 	return true;
 }
 
-/*
- * This is a lookup on all possible strings
- */
-#define BADKEY -1
-#define ONLY 1
-#define IP 2
-#define PO 3
-#define POW 4
-#define DN 5
-#define SCH 6
-#define CCH 7
-#define UI 8
-#define SS 9
-#define PW 10
-#define WSP 11
-#define ME 12
-#define PR 13
-#define DELAYSEC 14
-
-typedef struct {
-	const char *key;
-	int val;
-} t_symstruct;
-
-static t_symstruct lookuptable[] = {{"only", ONLY}, {"ip", IP},
-				    {"po", PO},     {"pow", POW},
-				    {"dn", DN},     {"sch", SCH},
-				    {"cch", CCH},   {"ui", UI},
-				    {"ss", SS},     {"pw", PW},
-				    {"wsp", WSP},   {"me", ME},
-				    {"pr", PR},     {"delaysec", DELAYSEC}};
-
-#define NKEYS (sizeof(lookuptable) / sizeof(t_symstruct))
-
 /**
- * Search the lookuptable for the string passed
- * @param key - key to be searched for
- * @return key if success else error code
- */
-int keyfromstring(const char *key)
-{
-	size_t i;
-	int res = 1;
-
-	if (!key)
-		return BADKEY;
-
-	for (i = 0; i < NKEYS; i++) {
-		// t_symstruct *sym = lookuptable + i*sizeof(t_symstruct);
-		t_symstruct *sym = &lookuptable[i];
-		int symkeylen = strnlen_s(sym->key, SDO_MAX_STR_SIZE);
-
-		if (!symkeylen || symkeylen == SDO_MAX_STR_SIZE) {
-			LOG(LOG_DEBUG, "Strnlen Failed");
-			continue;
-		}
-		strcmp_s(sym->key, symkeylen, key, &res);
-		if (res == 0) {
-			return sym->val;
-		}
-	}
-	LOG(LOG_ERROR, "returns BADKEY\n");
-
-	return BADKEY;
-}
-
-/**
- * TO-DO : Re-write based on the new format.
- * 
  * Read the rendezvous from the input buffer
  * @param sdor - the input buffer object
  * @param rv - pointer to the rendezvous object to fill
@@ -2613,23 +2552,25 @@ int keyfromstring(const char *key)
  */
 bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 {
-	//    sdo_block_t *sdob = &sdor->b;
 	int ret = true;
 
 	if (!sdor || !rv)
 		return false;
 
-	if (!sdor_start_array(sdor))
-		ret = false;
-	if (!sdor_start_array(sdor))
-		ret = false;
-	if (!sdor_start_array(sdor))
-		ret = false;
+	size_t num_rv_instr_items = 0;
+	if (!sdor_array_length(sdor, &num_rv_instr_items) || num_rv_instr_items <= 0) {
+		LOG(LOG_ERROR, "RendezvousInstr is empty\n");
+		return false;
+	}
 
-	LOG(LOG_DEBUG, "%s started\n", __func__);
+	LOG(LOG_DEBUG, "%s RendezvousInstr read started\n", __func__);
 
-	/*
-	int index, result;
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "RendezvousInstr start array not found\n");
+		return false;
+	}
+	
+	// size_t index;
 	size_t key_buf_sz = 24;
 	char key_buf[key_buf_sz];
 	size_t str_buf_sz = 80;
@@ -2637,340 +2578,299 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 
 	rv->num_params = 0;
 
-	for (index = 0; index < num_rv_entries; index++) {
-		if (memset_s(key_buf, key_buf_sz, 0) != 0) {
+	if (memset_s(key_buf, key_buf_sz, 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		return false;
+	}
+
+	int key;
+	if (!sdor_signed_int(sdor, &key)) {
+		LOG(LOG_ERROR, "RendezvousInstr key read error\n");
+		ret = false;
+	}
+	// Parse the values found
+	switch (key) {
+	case RVDEVONLY:
+		rv->dev_only = sdo_alloc(sizeof(sdo_bool_t));
+		if (!rv->dev_only) {
+			LOG(LOG_ERROR, "RVDEVONLY alloc failed\n");
+			ret = false;
+			break;
+		}
+		*rv->dev_only->value = true;
+		rv->num_params = 1;
+		break;
+
+	case RVOWNERONLY:
+		rv->owner_only = sdo_alloc(sizeof(sdo_bool_t));
+		if (!rv->owner_only) {
+			LOG(LOG_ERROR, "RVOWNERONLY alloc failed\n");
+			ret = false;
+			break;
+		}
+		*rv->owner_only->value = true;
+		rv->num_params = 1;
+		break;
+
+	case RVIPADDRESS:
+		if (rv->ip) {
+			sdo_free(rv->ip);
+		}
+
+		rv->ip = sdo_ipaddress_alloc();
+		if (!rv->ip) {
+			LOG(LOG_ERROR, "RVIPADDRESS alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (sdo_read_ipaddress(sdor, rv->ip) != true) {
+			LOG(LOG_ERROR, "RVIPADDRESS read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVDEVPORT:
+
+		if (rv->po) {
+			sdo_free(rv->po);
+		}
+
+		rv->po = sdo_alloc(sizeof(int)); // Allocate an integer
+		if (!rv->po) {
+			LOG(LOG_ERROR, "RVDEVPORT alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!sdor_signed_int(sdor, rv->po)) {
+			LOG(LOG_ERROR, "RVDEVPORT read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	// valid only for OWNER. parse for validation.
+	case RVOWNERPORT:
+
+		if (rv->pow) {
+			sdo_free(rv->pow);
+		}
+
+		rv->pow = sdo_alloc(sizeof(int));
+		if (!rv->pow) {
+			LOG(LOG_ERROR, "RVOWNERPORT alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!sdor_signed_int(sdor, rv->pow)) {
+			LOG(LOG_ERROR, "RVOWNERPORT read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVDNS:
+		if (!sdor_string_length(sdor, &str_buf_sz)) {
+			LOG(LOG_ERROR, "RVDNS length read failed\n");
+			return false;
+		}
+		if (memset_s(str_buf, str_buf_sz, 0) != 0) {
 			LOG(LOG_ERROR, "Memset Failed\n");
 			return false;
 		}
 
-		int str_len = sdo_read_string(sdor, key_buf, key_buf_sz);
+		if (!sdor_text_string(sdor, str_buf, str_buf_sz)) {
+			LOG(LOG_ERROR, "RVDNS read failed\n");
+			return false;
+		}
 
-		if (str_len == 0 || str_len > (int)key_buf_sz)
+		if (rv->dn) {
+			sdo_string_free(rv->dn);
+		}
+
+		rv->dn = sdo_string_alloc_with(str_buf, str_buf_sz);
+		if (!rv->dn) {
+			LOG(LOG_ERROR, "RVDNS alloc failed\n");
 			ret = false;
+		}
+		rv->num_params = 2;
+		break;
 
-		// Parse the values found
-		switch (keyfromstring(key_buf)) {
+	case RVSVCERTHASH:
 
-		case ONLY:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			// if not for device skip it
-			int strcmp_result = 0;
-
-			strcmp_s(str_buf, str_buf_sz, "dev", &strcmp_result);
-			if (strcmp_result != 0) {
-				sdor_read_and_ignore_until_end_sequence(sdor);
-				return false;
-			}
-			if (rv->only) {
-				sdo_string_free(rv->only);
-			}
-			rv->only = sdo_string_alloc_with(str_buf, result);
-			if (!rv->only) {
-				LOG(LOG_ERROR, "Rendezvous dev alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		case IP:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->ip) {
-				sdo_free(rv->ip);
-			}
-
-			rv->ip = sdo_ipaddress_alloc();
-			if (!rv->ip) {
-				LOG(LOG_ERROR, "Rendezvous ip alloc failed\n");
-				ret = false;
-				break;
-			}
-			if (sdo_read_ipaddress(sdor, rv->ip) != true) {
-				LOG(LOG_ERROR, "Read IP Address failed\n");
-				ret = false;
-			}
-			break;
-
-		case PO:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->po) {
-				sdo_free(rv->po);
-			}
-
-			rv->po =
-			    sdo_alloc(sizeof(uint32_t)); // Allocate an integer
-			if (!rv->po) {
-				LOG(LOG_ERROR, "Rendezvous po alloc failed\n");
-				ret = false;
-				break;
-			}
-			*rv->po = sdo_read_uint(sdor);
-			break;
-
-		// valid only for OWNER
-		case POW:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->pow) {
-				sdo_free(rv->pow);
-			}
-
-			rv->pow = sdo_alloc(sizeof(uint32_t));
-			if (!rv->pow) {
-				LOG(LOG_ERROR, "Rendezvous pow alloc fail\n");
-				ret = false;
-				break;
-			}
-			*rv->pow = sdo_read_uint(sdor);
-			break;
-
-		case DN:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			if (rv->dn) {
-				sdo_string_free(rv->dn);
-			}
-
-			rv->dn = sdo_string_alloc_with(str_buf, result);
-			if (!rv->dn) {
-				LOG(LOG_ERROR, "Rendezvous dn alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		case SCH:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->sch) {
-				sdo_hash_free(rv->sch);
-			}
-			rv->sch = sdo_hash_alloc_empty();
-			if (!rv->sch) {
-				LOG(LOG_ERROR, "Rendezvous ss alloc failed\n");
-				ret = false;
-				break;
-			}
-			result = sdo_hash_read(sdor, rv->sch);
-			break;
-
-		case CCH:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->cch) {
-				sdo_hash_free(rv->cch);
-			}
-
-			rv->cch = sdo_hash_alloc_empty();
-			if (!rv->cch) {
-				LOG(LOG_ERROR, "Rendezvous cch alloc fail\n");
-				ret = false;
-				break;
-			}
-			result = sdo_hash_read(sdor, rv->cch);
-			break;
-
-		case UI:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->ui) {
-				sdo_free(rv->ui);
-			}
-
-			rv->ui =
-			    sdo_alloc(sizeof(uint32_t)); // Allocate an integer
-			if (!rv->ui) {
-				LOG(LOG_ERROR, "Rendezvous ui alloc failed\n");
-				ret = false;
-				break;
-			}
-
-			*rv->ui = sdo_read_uint(sdor);
-			break;
-
-		case SS:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			if (rv->ss) {
-				sdo_string_free(rv->ss);
-			}
-			rv->ss = sdo_string_alloc_with(str_buf, result);
-			if (!rv->ss) {
-				LOG(LOG_ERROR, "Rendezvous ss alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		case PW:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			if (rv->pw) {
-				sdo_string_free(rv->pw);
-			}
-
-			rv->pw = sdo_string_alloc_with(str_buf, result);
-			if (!rv->pw) {
-				LOG(LOG_ERROR, "Rendezvous pw alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		case WSP:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			if (rv->wsp) {
-				sdo_string_free(rv->wsp);
-			}
-
-			rv->wsp = sdo_string_alloc_with(str_buf, result);
-			if (!rv->wsp) {
-				LOG(LOG_ERROR, "Rendezvous wsp alloc fail\n");
-				ret = false;
-			}
-			break;
-
-		case ME:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			if (rv->me) {
-				sdo_string_free(rv->me);
-			}
-			rv->me = sdo_string_alloc_with(str_buf, result);
-			if (!rv->me) {
-				LOG(LOG_ERROR, "Rendezvous me alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		case PR:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-				LOG(LOG_ERROR, "Memset Failed\n");
-				return false;
-			}
-
-			result = sdo_read_string(sdor, str_buf, str_buf_sz);
-			if (result == 0 || result > (int)str_buf_sz)
-				return false;
-
-			if (rv->pr) {
-				sdo_string_free(rv->pr);
-			}
-
-			rv->pr = sdo_string_alloc_with(str_buf, result);
-			if (!rv->pr) {
-				LOG(LOG_ERROR, "Rendezvous pr alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		case DELAYSEC:
-			if (!sdo_read_tag_finisher(sdor))
-				return false;
-
-			if (rv->delaysec) {
-				sdo_free(rv->delaysec);
-			}
-
-			rv->delaysec = sdo_alloc(sizeof(uint32_t));
-			if (!rv->delaysec) {
-				LOG(LOG_ERROR, "Alloc failed\n");
-				return false;
-			}
-			*rv->delaysec = sdo_read_uint(sdor);
-			if (!rv->delaysec) {
-				LOG(LOG_ERROR, "Rendezvous ss alloc failed\n");
-				ret = false;
-			}
-			break;
-
-		default:
-			LOG(LOG_ERROR,
-			    "%s : Unknown Entry Type %s\n",
-			    __func__, key_buf);
-			ret = false; // Abort due to unexpected value for key
+		if (rv->sch) {
+			sdo_hash_free(rv->sch);
+		}
+		rv->sch = sdo_hash_alloc_empty();
+		if (!rv->sch) {
+			LOG(LOG_ERROR, "RVSVCERTHASH alloc failed\n");
+			ret = false;
 			break;
 		}
-		if (ret == false)
+		if (!sdo_hash_read(sdor, rv->sch)) {
+			LOG(LOG_ERROR, "RVSVCERTHASH read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVCLCERTHASH:
+
+		if (rv->cch) {
+			sdo_hash_free(rv->cch);
+		}
+
+		rv->cch = sdo_hash_alloc_empty();
+		if (!rv->cch) {
+			LOG(LOG_ERROR, "RVCLCERTHASH alloc failed\n");
+			ret = false;
 			break;
-		rv->num_params++;
+		}
+		if (!sdo_hash_read(sdor, rv->cch)) {
+			LOG(LOG_ERROR, "RVSVCERTHASH read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVUSERINPUT:
+
+		rv->ui = sdo_alloc(sizeof(sdo_bool_t));
+		if (!rv->ui) {
+			LOG(LOG_ERROR, "RVUSERINPUT alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!sdor_boolean(sdor, rv->ui->value)) {
+			LOG(LOG_ERROR, "RVUSERINPUT read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVWIFISSID:
+
+		if (!sdor_string_length(sdor, &str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFISSID length read failed\n");
+			ret = false;
+		}
+		if (memset_s(str_buf, str_buf_sz, 0) != 0) {
+			LOG(LOG_ERROR, "Memset Failed\n");
+			return false;
+		}
+		if (sdor_text_string(sdor, str_buf, str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFISSID length read failed\n");
+			return false;
+		}
+
+		if (rv->ss) {
+			sdo_string_free(rv->ss);
+		}
+		rv->ss = sdo_string_alloc_with(str_buf, str_buf_sz);
+		if (!rv->ss) {
+			LOG(LOG_ERROR, "RVWIFISSID alloc failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVWIFIPW:
+
+		if (!sdor_string_length(sdor, &str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFIPW length read failed\n");
+			ret = false;
+		}
+		if (memset_s(str_buf, str_buf_sz, 0) != 0) {
+			LOG(LOG_ERROR, "Memset Failed\n");
+			return false;
+		}
+		if (!sdor_text_string(sdor, str_buf, str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFIPW read failed\n");
+			ret = false;
+		}
+
+		if (rv->pw) {
+			sdo_string_free(rv->pw);
+		}
+
+		rv->pw = sdo_string_alloc_with(str_buf, str_buf_sz);
+		if (!rv->pw) {
+			LOG(LOG_ERROR, "RVWIFIPW alloc failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVMEDIUM:
+
+		rv->me = sdo_alloc(sizeof(uint64_t));
+		if (!sdor_unsigned_int(sdor, rv->me)) {
+			LOG(LOG_ERROR, "RVMEDIUM read failed\n");
+			ret = false;
+		}
+		// TO-DO : Parse all possible RVMedium values.
+		rv->num_params = 2;
+		break;
+
+	case RVPROTOCOL:
+
+		rv->pr = sdo_alloc(sizeof(uint64_t));
+		if (!sdor_unsigned_int(sdor, rv->pr)) {
+			LOG(LOG_ERROR, "RVPROTOCOL read failed\n");
+			ret = false;
+		}
+		// TO-DO : Parse all possible RVProtocol values.
+		rv->num_params = 2;
+		break;
+
+	case RVDELAYSEC:
+
+		if (rv->delaysec) {
+			sdo_free(rv->delaysec);
+		}
+
+		rv->delaysec = sdo_alloc(sizeof(uint64_t));
+		if (!rv->delaysec) {
+			LOG(LOG_ERROR, "RVDELAYSEC Alloc failed\n");
+			return false;
+		}
+		if (!sdor_unsigned_int(sdor, rv->delaysec) || !rv->delaysec) {
+			LOG(LOG_ERROR, "RVDELAYSEC read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVBYPASS:
+
+		rv->bypass = sdo_alloc(sizeof(sdo_bool_t));
+		if (!rv->bypass) {
+			LOG(LOG_ERROR, "RVBYPASS alloc failed\n");
+			ret = false;
+			break;
+		}
+		*rv->bypass->value = true;
+		rv->num_params = 1;
+		break;
+
+	case RVEXTRV:
+		// TO-DO: Parse as an array. Implementation is open for now.
+		break;
+
+	default:
+		LOG(LOG_ERROR,
+		    "%s : Invalid RendezvousInstr Entry Type %s\n",
+			    __func__, key_buf);
+		ret = false; // Abort due to unexpected value for key
+		break;
 	}
 
-	if ((ret == true) && !sdor_end_object(sdor)) {
-		LOG(LOG_ERROR, "No End Object\n");
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "RendezvousInstr end array not found\n");
 		ret = false;
 	}
+	LOG(LOG_DEBUG, "%s RendezvousInstr read ended\n", __func__);
 
-	if ((ret == true) && !sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "No End Sequence\n");
-		ret = false;
-	}
-	*/
 	return ret;
 }
 
@@ -3095,7 +2995,7 @@ sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_list_t *list, int num)
 {
 	int index;
 
-	if (list == NULL || list->num_entries == 0 || list->rv_entries == NULL)
+	if (list == NULL || list->rv_entries == NULL)
 		return NULL;
 
 	sdo_rendezvous_t *entry_ptr = list->rv_entries;
@@ -3120,36 +3020,73 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 	if (!sdor || !list)
 		return false;
 
-	/*
-	if (!sdor_begin_sequence(sdor))
+	// Find out the number of RendezvousDirective(s)
+	size_t num_rv_directives = 0;
+	if (!sdor_array_length(sdor, &num_rv_directives) || num_rv_directives <= 0) {
+		LOG(LOG_ERROR,
+		    "%s : No RendezvousDirective(s) found\n", __func__);
 		return false;
-	// Find out how many entries we should expect
-	int num_rvs = sdo_read_uint(sdor);
+	}
 
-	LOG(LOG_DEBUG, "There should be %d entries in the rvlst\n", num_rvs);
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR,
+		    "%s : RendezvousInfo start array not found\n", __func__);
+		return false;
+	}
 
-	int index;
+	LOG(LOG_DEBUG, "There are %zu RendezvousDirective(s) in the RendezvousInfo\n",
+		num_rv_directives);
+	list->num_rv_directives = num_rv_directives;
 
-	for (index = 0; index < num_rvs; index++) {
-		LOG(LOG_DEBUG, "rv_index %d\n", index);
+	size_t rv_directive_index;
 
-		// Read each rv entry and add to the rv list
-		sdo_rendezvous_t *rv_entry = sdo_rendezvous_alloc();
+	for (rv_directive_index = 0; rv_directive_index < num_rv_directives; rv_directive_index++) {
+		LOG(LOG_DEBUG, "Processing RendezvousDirective Index %zu\n", rv_directive_index);
+		// Find out the number of RendezvousInstr(s)
+		size_t num_rv_instr = 0;
+		if (!sdor_array_length(sdor, &num_rv_instr) || num_rv_instr <= 0) {
+			LOG(LOG_ERROR,
+		    	"%s : No RendezvousInstr(s) found\n", __func__);
+			return false;
+		}
 
-		LOG(LOG_DEBUG, "New rv allocated %p\n", (void *)rv_entry);
+		LOG(LOG_DEBUG, "There are %zu RendezvousInstr(s)\n",
+			num_rv_instr);
 
-		if (sdo_rendezvous_read(sdor, rv_entry))
-			sdo_rendezvous_list_add(list, rv_entry);
-		else {
-			sdo_rendezvous_free(rv_entry);
+		if (!sdor_start_array(sdor)) {
+			LOG(LOG_ERROR,
+		    "%s : RendezvousDirective start array not found\n", __func__);
+			return false;
+		}
+
+		size_t rv_instr_index;
+		for (rv_instr_index = 0; rv_instr_index < num_rv_instr; rv_instr_index++) {
+			// Read each rv entry and add to the rv list
+			LOG(LOG_DEBUG, "Processing RendezvousInstr Index %zu\n", rv_instr_index);
+
+			sdo_rendezvous_t *rv_entry = sdo_rendezvous_alloc();
+
+			LOG(LOG_DEBUG, "New rv allocated %p\n", (void *)rv_entry);
+
+			if (sdo_rendezvous_read(sdor, rv_entry))
+				sdo_rendezvous_list_add(list, rv_entry);
+			else {
+				sdo_rendezvous_free(rv_entry);
+				return false;
+			}
+		}
+		if (!sdor_end_array(sdor)) {
+			LOG(LOG_ERROR,
+		    	"%s : RendezvousDirective end array not found\n", __func__);
+		return false;
 		}
 	}
-	if (!sdor_end_sequence(sdor)) {
+	if (!sdor_end_array(sdor)) {
 		LOG(LOG_ERROR,
-		    "%s : Final sequence not found\n", __func__);
+		    "%s : RendezvousInfo end array not found\n", __func__);
 		return false;
 	}
-	*/
+
 	LOG(LOG_DEBUG, "%s read\n", __func__);
 	return true;
 }
@@ -3169,23 +3106,24 @@ bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list)
 	if (!sdow || !list)
 		return false;
 
-	/*
-	sdow_begin_sequence(sdow);
-	sdo_writeUInt(sdow, list->num_entries);
+	sdow_start_array(sdow, list->num_rv_directives);
 
-	int index;
-
-	sdow->need_comma = true;
-	for (index = 0; index < list->num_entries; index++) {
-		sdo_rendezvous_t *entry_Ptr =
-		    sdo_rendezvous_list_get(list, index);
-		if (entry_Ptr == NULL) {
-			continue;
+	int rv_directive_index;
+	for (rv_directive_index = 0; rv_directive_index < list->num_rv_directives;
+		rv_directive_index++) {
+		sdow_start_array(sdow, list->num_entries);
+		int rv_instr_index;
+		for (rv_instr_index = 0; rv_instr_index < list->num_entries; rv_instr_index++) {
+			sdo_rendezvous_t *entry_Ptr = sdo_rendezvous_list_get(list, rv_instr_index);
+			if (entry_Ptr == NULL) {
+				continue;
+			}
+			sdo_rendezvous_write(sdow, entry_Ptr);
 		}
-		sdo_rendezvous_write(sdow, entry_Ptr);
+		sdow_end_array(sdow);
 	}
-	sdow_end_sequence(sdow);
-	*/
+	sdow_end_array(sdow);
+
 	return true;
 }
 
@@ -5234,6 +5172,15 @@ bool sdo_compare_rv_lists(sdo_rendezvous_list_t *rv_list1,
 end:
 	return retval;
 }
+
+void sdo_log_block(sdo_block_t *sdob) {
+	size_t i;
+	for (i = 0; i < sdob->block_size; i++) {
+		LOG(LOG_INFO, "%02x", sdob->block[i]);
+	}
+	LOG(LOG_INFO, "\n");
+}
+
 #if 0
     /**
      * Internal API

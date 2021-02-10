@@ -63,6 +63,7 @@ typedef struct _SDOW_s {
 // void sdo_block_init(sdo_block_t *sdob);
 void sdo_block_reset(sdo_block_t *sdob);
 bool sdo_block_alloc(sdo_block_t *sdob);
+bool sdo_block_alloc_with_size(sdo_block_t *sdob, size_t block_sz);
 void sdo_resize_block(sdo_block_t *sdob, size_t need);
 
 // CBOR encoder methods
@@ -83,9 +84,10 @@ void sdow_flush(sdow_t *sdow);
 
 // CBOR decoder methods
 bool sdor_init(sdor_t *sdor);
-bool sdor_parser_init(sdor_t *sdor_cbor, sdo_block_t *received_block);
+bool sdor_parser_init(sdor_t *sdor_cbor);
 bool sdor_start_array(sdor_t *sdor);
 bool sdor_start_map(sdor_t *sdor);
+bool sdor_array_length(sdor_t *sdor, size_t *length);
 bool sdor_string_length(sdor_t *sdor, size_t *length);
 bool sdor_byte_string(sdor_t *sdor, uint8_t *buffer, size_t buffer_length);
 bool sdor_text_string(sdor_t *sdor, char *buffer, size_t buffer_length);

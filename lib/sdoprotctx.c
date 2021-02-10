@@ -193,7 +193,6 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 	int ret = 0;
 	int n, size;
 	int retries = 0;
-	sdo_block_t *sdob = NULL;
 	sdor_t *sdor = NULL;
 	sdow_t *sdow = NULL;
 
@@ -210,13 +209,19 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 
 	for (;;) {
 
+		// initialize the encoder before every write operation
+		if (!sdow_encoder_init(sdow)) {
+			LOG(LOG_ERROR, "Failed to initilize SDOW encoder\n");
+			return -1;
+		}
+
 		if (prot_ctx->protrun)
 			(*prot_ctx->protrun)(prot_ctx->protdata);
 		else {
 			ret = -1;
 			break;
 		}
-
+		
 		/* ========================================================== */
 		/*  Transmit outbound packet */
 
@@ -236,6 +241,16 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 			ret = -1;
 			break;
 		}
+
+		// update the final encoded length in the SDOW block after every successfull write.
+		if (!sdow_encoded_length(sdow, &sdow->b.block_size)) {
+			LOG(LOG_ERROR, "Failed to get encoded length in SDOW\n");
+			ret = -1;
+			break;
+		}
+		LOG(LOG_DEBUG, "%s Tx Request Body length: %zu\n", __func__, sdow->b.block_size);
+		LOG(LOG_DEBUG, "%s Tx Request Body:\n", __func__);
+		sdo_log_block(&sdow->b);
 
 		if (!sdo_prot_ctx_connect(prot_ctx)) {
 			/* Giving up, we tried enough to
@@ -279,13 +294,11 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		LOG(LOG_DEBUG, "Tx sdo_prot_ctx_run:body:%s\n\n",
-		    &sdow->b.block[0]);
+		// clear the block contents in preparation for the next SDOW write operation
+		sdo_block_reset(&sdow->b);
 
 		/* ========================================================== */
 		/*  Receive response */
-
-		sdob = &sdor->b;
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
@@ -299,24 +312,17 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		sdor_flush(sdor);
-		sdob = &sdor->b;
-		sdo_resize_block(sdob, msglen + 4);
-
-		if (memset_s(sdob->block, msglen + 4, 0) != 0) {
-			LOG(LOG_ERROR, "Memset Failed\n");
-			ret = -1;
-			break;
-		}
-
-		sdob->block_size = msglen;
+		// clear the block contents in preparation for the next SDOR read operation
+		sdo_block_reset(&sdor->b);
+		// set the received msg length in the block
+		sdor->b.block_size = msglen;
 
 		if (msglen > 0) {
 			retries = CONNECTION_RETRY;
 			n = 0;
 			do {
 				n = sdo_con_recv_msg_body(
-				    prot_ctx->sock_hdl, &sdob->block[0], msglen,
+				    prot_ctx->sock_hdl, &sdor->b.block[0], msglen,
 				    prot_ctx->ssl);
 				if (n < 0) {
 					if (sdo_con_disconnect(
@@ -355,9 +361,16 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		LOG(LOG_DEBUG, "Rx sdo_prot_ctx_run:body:%s\n\n",
-		    &sdor->b.block[0]);
-
+		LOG(LOG_DEBUG, "%s Rx Response Body: \n", __func__);
+		sdo_log_block(&sdor->b);
+		/*
+		 * Now that we have the received buffer, initialize the parser for next SDOR read
+		 * operation and set the have_block flag.
+		 */
+		if (!sdor_parser_init(sdor)) {
+			LOG(LOG_ERROR, "Failed to initilize SDOR parser\n");
+			return -1;
+		}
 		sdor->have_block = true;
 
 		/*
@@ -376,11 +389,5 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 	}
 
 	sdo_con_teardown();
-
-	if (sdob && sdob->block) {
-		sdob->block_size = 0;
-		sdo_free(sdob->block);
-		sdob->block = NULL;
-	}
 	return ret;
 }

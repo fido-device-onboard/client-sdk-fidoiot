@@ -39,14 +39,12 @@ typedef int (*state_func)(sdo_prot_t *ps);
 /*
  * State functions for DI
  */
-/*
 static state_func di_state_fn[] = {
     msg10, // DI.App_start
     msg11, // DI.Set_credentials
     msg12, // DI.SetHMAC
     msg13, // DI.Done
 };
-*/
 /*
  * State functions for TO1
  */
@@ -166,9 +164,6 @@ bool sdo_process_states(sdo_prot_t *ps)
 		prev_state = ps->state;
 
 		switch (ps->state) {
-		/*
-		// TO-DO : Commenting this out until DI, TO1 and TO2 protcols are implemented.
-		// To be uncommented gradually.
 		// DI states
 		case SDO_STATE_DI_APP_START:
 		case SDO_STATE_DI_SET_CREDENTIALS:
@@ -177,6 +172,9 @@ bool sdo_process_states(sdo_prot_t *ps)
 			state_fn = di_state_fn[DI_ID_TO_STATE_FN(ps->state)];
 			break;
 
+		// TO-DO : Commenting this out until TO1 and TO2 protcols are implemented.
+		// To be uncommented gradually.
+		/*
 		// TO1 states
 		case SDO_STATE_T01_SND_HELLO_SDO:
 		case SDO_STATE_TO1_RCV_HELLO_SDOACK:
@@ -200,10 +198,9 @@ bool sdo_process_states(sdo_prot_t *ps)
 		case SDO_STATE_TO2_RCV_DONE_2:
 			state_fn = to2_state_fn[TO2_ID_TO_STATE_FN(ps->state)];
 			break;
-
+		*/
 		case SDO_STATE_ERROR:
 		case SDO_STATE_DONE:
-		*/
 		default:
 			break;
 		}
@@ -366,15 +363,22 @@ bool sdo_check_to2_round_trips(sdo_prot_t *ps)
  * @param statep
  *        Current state of Protocol state machine.
  * @return
- *        true in case of new message received. flase if no message to read.
+ *        true in case of new message received. false if no message to read.
  */
 bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep)
 {
 	(void)sdow; /* Unused */
+	(void)statep;
 
 	if (!sdor->have_block) {
 		LOG(LOG_ERROR, "expecting another block\n");
-		*statep = SDO_STATE_ERROR;
+		/*
+		* The way this method is used to maintain the state,
+		* it's not an error scenario if there's no block to read.
+		* have_block false means that the response has not yet come since the
+		* requet has not been sent.
+		* TO-DO : Investigate for a better approach than this.
+		*/
 		return false;
 	}
 

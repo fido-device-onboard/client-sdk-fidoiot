@@ -162,6 +162,7 @@ void sdo_dev_cred_init(sdo_dev_cred_t *dev_cred)
 {
 	if (dev_cred) {
 		dev_cred->ST = 0;
+		dev_cred->dc_active = false;
 		dev_cred->mfg_blk = NULL;
 		dev_cred->owner_blk = NULL;
 	}
@@ -192,49 +193,39 @@ void sdo_dev_cred_free(sdo_dev_cred_t *dev_cred)
 /**
  * Make a hash of the passed public key
  * @param pub_key - pointer to the public key object
- * @return a hash of the JSON representation of the key
+ * @return a hash of the CBOR representation of the key
  */
 sdo_hash_t *sdo_pub_key_hash(sdo_public_key_t *pub_key)
 {
 	// Calculate the hash of the mfg_pub_key
-	sdo_hash_t *hash = NULL;
+	sdow_t *sdow = sdo_alloc(sizeof(sdow_t));
+	if (!sdow_init(sdow) || !sdo_block_alloc(&sdow->b) || !sdow_encoder_init(sdow)) {
+		LOG(LOG_ERROR, "Failed to initialize SDOW\n");
+		return NULL;
+	}
 
-	hash =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
+	sdo_hash_t *hash = sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
 	if (!hash)
 		return NULL;
-
-	sdow_t sdowriter, *sdow = &sdowriter;
-
-	// Prepare the data structure
-	if (!sdow_init(sdow)) {
-		sdo_hash_free(hash);
-		LOG(LOG_ERROR, "sdow_init() failed!\n");
-		return NULL;
-	}
 	sdow_next_block(sdow, SDO_TYPE_HMAC);
 	sdo_public_key_write(sdow, pub_key);
-
-	if (hash && (sdow->b.block_size < PUBLIC_KEY_OFFSET)) {
+	size_t encoded_pk_length = 0;
+	if (!sdow_encoded_length(sdow, &encoded_pk_length) || encoded_pk_length == 0) {
+		LOG(LOG_ERROR, "Failed to get PubKey encoded length\n");
 		sdo_hash_free(hash);
 		return NULL;
 	}
+	sdow->b.block_size = encoded_pk_length;
 
-	// buffer sdow now contains the key to sign offset 12
-
-	if (hash &&
-	    (0 != sdo_crypto_hash(&sdow->b.block[PUBLIC_KEY_OFFSET],
-				  sdow->b.block_size - PUBLIC_KEY_OFFSET,
+	if ((0 != sdo_crypto_hash(sdow->b.block,
+				  sdow->b.block_size,
 				  hash->hash->bytes, hash->hash->byte_sz))) {
-
 		sdo_hash_free(hash);
 		return NULL;
 	}
 
-	if (sdow->b.block) {
-		sdo_free(sdow->b.block);
-		sdow->b.block = NULL;
-	}
+	sdow_flush(sdow);
+	sdo_free(sdow);
 	return hash;
 }
 
@@ -283,8 +274,9 @@ sdo_ownership_voucher_t *sdo_ov_alloc(void)
 {
 	sdo_ownership_voucher_t *ov =
 	    sdo_alloc(sizeof(sdo_ownership_voucher_t));
-	if (ov) {
-		ov->key_encoding = SDO_OWNER_ATTEST_PK_ENC;
+	if (!ov) {
+		LOG(LOG_ERROR, "OwnershipVoucher allocation failed!");
+		return NULL;
 	}
 	return ov;
 }
@@ -334,13 +326,7 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		return NULL;
 
 	sdo_ownership_voucher_t *ov = sdo_ov_alloc();
-	/*
-	int gstart = -1;
-	int gend = -1;
-	int dstart = -1;
-	int dend = -1;
-	int sig_block_start = -1;
-	*/
+	size_t num_ov_items = 0;
 	int ret = -1;
 	uint8_t *hp_text = NULL;
 	uint8_t *hc_text = NULL;
@@ -350,61 +336,62 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		return NULL;
 	}
 
-	/*
-	if (!sdo_begin_readHMAC(sdor, &sig_block_start))
+	// OVHeader is of size 6 always.
+	if (!sdor_array_length(sdor, &num_ov_items) || num_ov_items != 6) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVHeader array length\n", __func__);
 		goto exit;
-	*/
+	}
+
+	LOG(LOG_DEBUG, "%s OVHeader read started!\n", __func__);
 	if (!sdor_start_array(sdor))
 		goto exit;
 
-	// TO-DO : Revisit use of int vs uint64_t
-	// if (!sdor_unsigned_int(sdor, &ov->prot_version)) // Protocol Version
-	//	goto exit;
+	if (!sdor_signed_int(sdor, &ov->prot_version) || ov->prot_version != SDO_PROT_SPEC_VERSION) {
+		// Protocol Version
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVProtVer\n", __func__);
+		goto exit;
+	}
 
-	// TO-DO : GUID Length check?
 	size_t ov_guid_length;
-	if (!sdor_string_length(sdor, &ov_guid_length)) {
-		LOG(LOG_ERROR, "%s GUID Length Error\n", __func__);
+	if (!sdor_string_length(sdor, &ov_guid_length) || ov_guid_length != SDO_GUID_BYTES) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVGuid Length\n", __func__);
 		goto exit;
 	}
 	ov->g2 = sdo_byte_array_alloc(ov_guid_length);
 	if (!ov->g2) {
-		LOG(LOG_ERROR, "%s GUID Error\n", __func__);
 		goto exit;
 	}
-
-	if (!sdor_byte_string(sdor, ov->g2->bytes, ov->g2->byte_sz))
+	ov->g2->byte_sz = ov_guid_length;
+	if (!sdor_byte_string(sdor, ov->g2->bytes, ov->g2->byte_sz)) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVGuid\n", __func__);
 		goto exit;
+	}
 
 	// Rendezvous
 	ov->rvlst2 = sdo_rendezvous_list_alloc();
 
 	if (!ov->rvlst2 || !sdo_rendezvous_list_read(sdor, ov->rvlst2)) {
-		LOG(LOG_ERROR, "%s Rendezvous Error\n", __func__);
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVRvInfo\n", __func__);
 		goto exit;
 	}
 
 	/* There must be at-least 1 valid rv entry, if not its a error-case */
 	if (ov->rvlst2->num_entries == 0) {
 		LOG(LOG_ERROR,
-		    "All rendezvous entries are invalid for the device!\n");
+		    "Invalid OVHeader: All rendezvous entries are invalid for the device!\n");
 		goto exit;
 	}
-	
-	/*
-	// TO-DO : Remove?
-	uint8_t *g_text = sdor_get_block_ptr(sdor, gstart);
-
-	if (g_text == NULL)
-		goto exit;
-	*/
 
 	// Device_info String
-	ov->dev_info = sdo_string_alloc();
 	size_t dev_info_length;
-	if (!ov->dev_info || !sdor_string_length(sdor, &dev_info_length) ||
-			!sdor_text_string(sdor, ov->dev_info->bytes, ov->dev_info->byte_sz)) {
-		LOG(LOG_ERROR, "%s Dev_info Error\n", __func__);
+	if (!sdor_string_length(sdor, &dev_info_length)) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVDeviceInfo length\n", __func__);
+		goto exit;
+	}
+	ov->dev_info = sdo_string_alloc_size(dev_info_length);
+	if (!ov->dev_info ||
+			!sdor_text_string(sdor, ov->dev_info->bytes, dev_info_length)) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVDeviceInfo\n", __func__);
 		goto exit;
 	}
 	ov->dev_info->byte_sz = dev_info_length;
@@ -414,6 +401,10 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		sdo_public_key_free(ov->mfg_pub_key);
 	ov->mfg_pub_key =
 	    sdo_public_key_read(sdor); // Creates a Public key and fills it in
+	if (ov->mfg_pub_key == NULL) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode PubKey\n", __func__);
+		goto exit;
+	}
 
 #if defined(ECDSA256_DA) || defined(ECDSA384_DA)
 	// device cert-chain hash
@@ -424,17 +415,19 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 	}
 
 	if (!sdo_hash_read(sdor, ov->hdc)) {
-		LOG(LOG_ERROR, "device cert-chain hash reading failed!\n");
+		LOG(LOG_ERROR, "Invalid OVHeader: Unable to decode OVDevCertChainHash\n");
 		goto exit;
 	}
 #endif
 
 	sdor_end_array(sdor);
+	LOG(LOG_DEBUG, "%s OVHeader read completed!\n", __func__);
 
+	sdo_ov_hdr_hmac(ov, hmac, num_ov_items);
 
+	// TO-DO : Implement during TO2.
 	if (cal_hp_hc) {
 		/*
-		// TO-DO
 		int oh_end = sdor->b.cursor;
 		int oh_sz = oh_end - sig_block_start;
 		uint8_t *oh_text = sdor_get_block_ptr(sdor, sig_block_start);
@@ -537,6 +530,7 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 		*/
 	}
 	ret = 0;
+	return ov;
 exit:
 	if (hp_text)
 		sdo_free(hp_text);
@@ -547,10 +541,75 @@ exit:
 		sdo_ov_free(ov);
 		return NULL;
 	}
-	return ov;
+	return NULL;
 }
 
 /**
+ * Given an Ownership Voucher header, CBOR encode it and generate hmac.
+ * @param ov - the received ownership voucher from the server
+ * @param hmac a place top store the resulting HMAC
+ * @param num_ov_items - number of items in ownership voucher header
+ * @return true if hmac was successfully generated, false otherwise.
+ */
+bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac,
+	size_t num_ov_items) {
+
+	bool ret = false;
+	// sdow_t to generate CBOR encode OVHeader. Used to generate HMAC.
+	sdow_t *sdow_hmac = sdo_alloc(sizeof(sdow_t));
+	if (!sdow_init(sdow_hmac) || !sdo_block_alloc(&sdow_hmac->b) ||
+		!sdow_encoder_init(sdow_hmac)) {
+		LOG(LOG_ERROR, "Failed to initialize SDOW\n");
+		goto exit;
+	}
+
+	if (!sdow_start_array(sdow_hmac, num_ov_items))
+		goto exit;
+	if (!sdow_signed_int(sdow_hmac, ov->prot_version))
+		goto exit;
+	if (!sdow_byte_string(sdow_hmac, ov->g2->bytes, ov->g2->byte_sz))
+		goto exit;
+	if (!sdo_rendezvous_list_write(sdow_hmac, ov->rvlst2))
+		goto exit;
+	if (!sdow_text_string(sdow_hmac, ov->dev_info->bytes, ov->dev_info->byte_sz))
+		goto exit;
+	if (!sdo_public_key_write(sdow_hmac, ov->mfg_pub_key))
+		goto exit;
+#if defined(ECDSA256_DA) || defined(ECDSA384_DA)
+	sdo_hash_write(sdow_hmac, ov->hdc);
+#endif
+	if (!sdow_end_array(sdow_hmac))
+		goto exit;
+	if (!sdow_encoded_length(sdow_hmac, &sdow_hmac->b.block_size))
+		goto exit;
+
+	// Create the HMAC
+	*hmac =
+	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
+	if (!*hmac) {
+		goto exit;
+	}
+
+	if (0 != sdo_device_ov_hmac(sdow_hmac->b.block, sdow_hmac->b.block_size,
+				    (*hmac)->hash->bytes,
+				    (*hmac)->hash->byte_sz)) {
+		sdo_hash_free(*hmac);
+		goto exit;
+	}
+	ret = true;
+
+exit :
+	if (sdow_hmac) {
+		sdow_flush(sdow_hmac);
+		sdo_free(sdow_hmac);
+	}
+	return ret;
+}
+
+/**
+ * TO-DO : Update during TO2 implementation.
+ * However, this might be a duplicate of the above.
+ * 
  * Take the the values in the "oh" and create a new HMAC
  * @param dev_cred - pointer to the Device_credential to source
  * @param new_pub_key - the public key to use in the signature

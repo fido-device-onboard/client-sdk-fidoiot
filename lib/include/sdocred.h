@@ -12,7 +12,6 @@ sdo_hash_t *sdo_pub_key_hash(sdo_public_key_t *pub_key);
 
 typedef struct _sdo_credowner_t {
 	int pv; // The protocol version
-	int pe; // The Key_encoding in this credential and in ownership proxies
 	sdo_byte_array_t *guid;       // Our initial GUID
 	sdo_rendezvous_list_t *rvlst; // Rendezvous information
 	sdo_hash_t *pkh;	      // Hash of the group public key, SHA-256
@@ -26,7 +25,8 @@ typedef struct _sdo_cred_mfg_block_t {
 } sdo_cred_mfg_t;
 
 typedef struct _sdo_device_credentials_t {
-	uint8_t ST;
+	int ST;
+	bool dc_active;
 	sdo_cred_mfg_t *mfg_blk;
 	sdo_cred_owner_t *owner_blk;
 } sdo_dev_cred_t;
@@ -64,7 +64,6 @@ bool sdo_ov_entry_add(sdo_ov_entry_t *root_entry, sdo_ov_entry_t *e);
 
 typedef struct _sdo_ownershipvoucher_t {
 	int prot_version;
-	int key_encoding;
 	sdo_byte_array_t *g2;
 	sdo_rendezvous_list_t *rvlst2;
 	sdo_string_t *dev_info;
@@ -80,6 +79,8 @@ void sdo_ov_free(sdo_ownership_voucher_t *ov);
 void sdo_ov_print(sdo_ownership_voucher_t *ov);
 sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 					 bool cal_hp_hc);
+bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac,
+	size_t num_ov_items);
 sdo_hash_t *sdo_new_ov_hdr_sign(sdo_dev_cred_t *dev_cred,
 				sdo_public_key_t *new_pub_key,
 				sdo_hash_t *hdc);

@@ -95,8 +95,14 @@ typedef struct {
 	char *bytes;
 } sdo_string_t;
 
+// Generic boolean wrapper
+typedef struct {
+	bool *value;
+} sdo_bool_t;
+
 void sdo_string_init(sdo_string_t *b);
 sdo_string_t *sdo_string_alloc(void);
+sdo_string_t *sdo_string_alloc_size(size_t byte_sz);
 sdo_string_t *sdo_string_alloc_with(const char *data, int byte_sz);
 sdo_string_t *sdo_string_alloc_with_str(const char *data);
 void sdo_string_free(sdo_string_t *b);
@@ -159,7 +165,7 @@ sdo_hash_t *sdo_hash_alloc_empty(void);
 sdo_hash_t *sdo_hash_alloc(int hash_type, int size);
 void sdo_hash_free(sdo_hash_t *hp);
 int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp);
-void sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp);
+bool sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp);
 void sdo_hash_null_write(sdow_t *sdow);
 char *sdo_hash_type_to_string(int hash_type);
 char *sdo_hash_to_string(sdo_hash_t *hp, char *buf, int buf_sz);
@@ -266,7 +272,7 @@ sdo_public_key_t *sdo_public_key_alloc_empty(void);
 sdo_public_key_t *sdo_public_key_alloc(int pkalg, int pkenc, int pklen,
 				       uint8_t *pkey);
 void sdo_public_key_free(sdo_public_key_t *pk);
-void sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk);
+bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk);
 sdo_public_key_t *sdo_public_key_read(sdor_t *sdor);
 sdo_public_key_t *sdo_public_key_clone(sdo_public_key_t *pk);
 const char *sdo_pk_alg_to_string(int alg);
@@ -348,23 +354,57 @@ sdo_key_value_t *sdo_kv_alloc_with_str(const char *key, const char *val);
 void sdo_kv_free(sdo_key_value_t *kv);
 void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv);
 
+/*
+ * This is a lookup on all possible RVVariable
+ */
+#define BADKEY -1
+#define RVDEVONLY 0
+#define RVOWNERONLY 1
+#define RVIPADDRESS 2
+#define RVDEVPORT 3
+#define RVOWNERPORT 4
+#define RVDNS 5
+#define RVSVCERTHASH 6
+#define RVCLCERTHASH 7
+#define RVUSERINPUT 8
+#define RVWIFISSID 9
+#define RVWIFIPW 10
+#define RVMEDIUM 11
+#define RVPROTOCOL 12
+#define RVDELAYSEC 13
+#define RVBYPASS 14
+#define RVEXTRV 15
+
+/*
+ * This is a lookup on all possible RVProtocolValue (RVVariable 12)
+ */
+#define RVPROTREST 0
+#define RVPROTHTTP 1
+#define RVPROTHTTPS 2
+#define RVPROTTCP 3
+#define RVPROTTLS 4
+#define RVPROTCOAPTCP 5
+#define RVPROTCOAPUDP 6
+
 typedef struct sdo_rendezvous_s {
 	int num_params;
 	struct sdo_rendezvous_s *next;
-	sdo_string_t *only;
+	sdo_bool_t *dev_only;
+	sdo_bool_t *owner_only;
 	sdo_ip_address_t *ip;
-	uint32_t *po;
-	uint32_t *pow;
+	int *po;
+	int *pow;
 	sdo_string_t *dn;
 	sdo_hash_t *sch;
 	sdo_hash_t *cch;
-	uint32_t *ui;
+	sdo_bool_t *ui;
 	sdo_string_t *ss;
 	sdo_string_t *pw;
 	sdo_string_t *wsp;
-	sdo_string_t *me;
-	sdo_string_t *pr;
-	uint32_t *delaysec;
+	uint64_t *me;
+	uint64_t *pr;
+	uint64_t *delaysec;
+	sdo_bool_t *bypass;
 } sdo_rendezvous_t;
 
 sdo_rendezvous_t *sdo_rendezvous_alloc(void);
@@ -378,6 +418,7 @@ char *sdo_rendezvous_to_string(sdo_rendezvous_t *rv, char *buf, int bufsz);
 
 typedef struct sdo_rendezvous_list_s {
 	uint16_t num_entries;
+	uint16_t num_rv_directives;
 	sdo_rendezvous_t *rv_entries;
 } sdo_rendezvous_list_t;
 
@@ -470,6 +511,9 @@ bool sdo_compare_byte_arrays(sdo_byte_array_t *ba1, sdo_byte_array_t *ba2);
 bool sdo_compare_rv_lists(sdo_rendezvous_list_t *rv_list1,
 			  sdo_rendezvous_list_t *rv_list2);
 bool sdo_ecdsa_dummyEBRead(sdor_t *sdor);
+
+void sdo_log_block(sdo_block_t *sdob);
+
 #define SDO_DSI_ACTIVE_LEN 6
 /*==================================================================*/
 

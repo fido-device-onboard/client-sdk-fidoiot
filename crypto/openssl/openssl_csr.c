@@ -10,7 +10,6 @@
 
 #include <openssl/ec.h>
 #include <openssl/x509.h>
-#include <openssl/pem.h>
 
 #include "sdotypes.h"
 #include "util.h"
@@ -25,7 +24,7 @@
 int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 {
 	int ret = -1;
-	char *csr_data = NULL;
+	uint8_t *csr_data = NULL;
 	size_t csr_size = 0;
 	EC_KEY *ec_key = NULL;
 
@@ -142,28 +141,29 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	}
 
 	/*
-	 * Get the data in PEM format.
+	 * Get the data in DER format.
 	 * a. Create a memory bio
-	 * b. Write the CSR in PEM into memory bio
+	 * b. Write the CSR in DER into memory bio
 	 * c. Read the memory bio into buffer
 	 */
+
 	csr_mem_bio = BIO_new(BIO_s_mem());
 	if (!csr_mem_bio) {
-		LOG(LOG_ERROR, "Failed to create a BIO for PEM CSR\n");
+		LOG(LOG_ERROR, "Failed to create a BIO for DER CSR\n");
 		ret = -1;
 		goto err;
 	}
 
-	ret = PEM_write_bio_X509_REQ(csr_mem_bio, x509_req);
+	ret = i2d_X509_REQ_bio(csr_mem_bio, x509_req);
 	if (!ret) {
-		LOG(LOG_ERROR, "Failed to write CSR in PEM format\n");
+		LOG(LOG_ERROR, "Failed to write CSR in DER format\n");
 		ret = -1;
 		goto err;
 	}
 
 	csr_size = BIO_get_mem_data(csr_mem_bio, &csr_data);
 	if (!csr_size) {
-		LOG(LOG_ERROR, "Failed to get the PEM CSR data in buffer\n");
+		LOG(LOG_ERROR, "Failed to get the DER CSR data in buffer\n");
 		ret = -1;
 		goto err;
 	}

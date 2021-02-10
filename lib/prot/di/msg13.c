@@ -12,12 +12,12 @@
 #include "util.h"
 
 /**
- * msg13() - DI.Done
+ * msg13() - DIDone, Type 13
  *
  * The device receives message once the manufacturer has storedall the relevant
  * information, and is ready with the Ownership Voucher.
  *
- * -no-body-
+ * DI.Done = [] ;; empty message
  */
 int32_t msg13(sdo_prot_t *ps)
 {
@@ -34,6 +34,17 @@ int32_t msg13(sdo_prot_t *ps)
 	/* Read from the internal buffer to see if the data is there */
 	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
 		ret = 0; /* Try again */
+		goto err;
+	}
+
+	size_t num_array_entries;
+	if (!sdor_array_length(&ps->sdor, &num_array_entries) || num_array_entries != 0) {
+		goto err;
+	}
+	if (!sdor_start_array(&ps->sdor)) {
+		goto err;
+	}
+	if (!sdor_end_array(&ps->sdor)) {
 		goto err;
 	}
 
@@ -54,8 +65,10 @@ int32_t msg13(sdo_prot_t *ps)
 	LOG(LOG_DEBUG, "Device credentials successfully written!!\n");
 
 	/* Mark as success, and DI done */
-	ret = 0;
 	ps->state = SDO_STATE_DONE;
+	ps->sdor.have_block = false;
+	LOG(LOG_DEBUG, "DIDone completed\n");
+	ret = 0;
 
 err:
 	return ret;

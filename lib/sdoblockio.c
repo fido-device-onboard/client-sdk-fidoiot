@@ -29,23 +29,37 @@ void sdo_block_reset(sdo_block_t *sdob)
 	if (sdob->block) {
 		if (sdob->block_size && memset_s(sdob->block, sdob->block_size, 0))
 			LOG(LOG_ERROR, "Failed to clear memory\n");
-		sdo_free(sdob->block);
 	}
-	sdob->block_size = 0;
 }
 
+/**
+ * Allocate memory for the underlying block with default size of 'CBOR_BUFFER_LENGTH'.
+ *
+ * NOTE: The memory should be independently freed when not in use.
+ */
 bool sdo_block_alloc(sdo_block_t *sdob)
 {
+	return sdo_block_alloc_with_size(sdob, CBOR_BUFFER_LENGTH);
+}
 
-	sdob->block = sdo_alloc(CBOR_BUFFER_LENGTH * sizeof(uint8_t));
-	sdob->block_size = CBOR_BUFFER_LENGTH;
+/**
+ * Allocate memory for the underlying block with the given size.
+ *
+ * NOTE: The memory should be independently freed when not in use.
+ */
+bool sdo_block_alloc_with_size(sdo_block_t *sdob, size_t block_sz)
+{
+	if (!sdob || block_sz < 0)
+		return false;
+	sdob->block = sdo_alloc(block_sz * sizeof(uint8_t));
+	sdob->block_size = block_sz;
 	if (sdob->block == NULL) {
 		LOG(LOG_ERROR, "SDOBlock alloc() failed!\n");
 		return false;
 	}
 
 	if (memset_s(sdob->block, sdob->block_size, 0) != 0) {
-		LOG(LOG_ERROR, "SDOW memset() failed!\n");
+		LOG(LOG_ERROR, "SDOBlock memset() failed!\n");
 		return false;
 	}
 	return true;
@@ -93,115 +107,115 @@ int sdow_next_block(sdow_t *sdow, int type)
 	return true;
 }
 
-bool sdow_encoder_init(sdow_t *sdow_cbor)
+bool sdow_encoder_init(sdow_t *sdow)
 {
-	sdow_cbor->current = sdo_alloc(sizeof(sdow_cbor_encoder_t));
-	sdow_cbor->current->next = NULL;
-	sdow_cbor->current->previous = NULL;
+	sdow->current = sdo_alloc(sizeof(sdow_cbor_encoder_t));
+	sdow->current->next = NULL;
+	sdow->current->previous = NULL;
 
-	cbor_encoder_init(&sdow_cbor->current->cbor_encoder, sdow_cbor->b.block, sdow_cbor->b.block_size, 0);
+	cbor_encoder_init(&sdow->current->cbor_encoder, sdow->b.block, sdow->b.block_size, 0);
 	return true;
 }
 
-bool sdow_start_array(sdow_t *sdow_cbor, size_t array_items)
+bool sdow_start_array(sdow_t *sdow, size_t array_items)
 {
 	// create next, create backlink and move forward.
-	sdow_cbor->current->next = sdo_alloc(sizeof(sdow_cbor_encoder_t));
-	sdow_cbor->current->next->previous = sdow_cbor->current;
-	sdow_cbor->current = sdow_cbor->current->next;
-	if (cbor_encoder_create_array(&sdow_cbor->current->previous->cbor_encoder, 
-		&sdow_cbor->current->cbor_encoder, array_items) != CborNoError) {
+	sdow->current->next = sdo_alloc(sizeof(sdow_cbor_encoder_t));
+	sdow->current->next->previous = sdow->current;
+	sdow->current = sdow->current->next;
+	if (cbor_encoder_create_array(&sdow->current->previous->cbor_encoder, 
+		&sdow->current->cbor_encoder, array_items) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to start Major Type 4 (array)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_start_map(sdow_t *sdow_cbor, size_t map_items)
+bool sdow_start_map(sdow_t *sdow, size_t map_items)
 {
 	// create next, create backlink and move forward.
-	sdow_cbor->current->next = sdo_alloc(sizeof(sdow_cbor_encoder_t));
-	sdow_cbor->current->next->previous = sdow_cbor->current;
-	sdow_cbor->current = sdow_cbor->current->next;
-	if (cbor_encoder_create_map(&sdow_cbor->current->previous->cbor_encoder, 
-		&sdow_cbor->current->cbor_encoder, map_items) != CborNoError) {
+	sdow->current->next = sdo_alloc(sizeof(sdow_cbor_encoder_t));
+	sdow->current->next->previous = sdow->current;
+	sdow->current = sdow->current->next;
+	if (cbor_encoder_create_map(&sdow->current->previous->cbor_encoder, 
+		&sdow->current->cbor_encoder, map_items) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to start Major Type 5 (map)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_byte_string(sdow_t *sdow_cbor, uint8_t *bytes , size_t byte_sz)
+bool sdow_byte_string(sdow_t *sdow, uint8_t *bytes , size_t byte_sz)
 {
-	if (cbor_encode_byte_string(&sdow_cbor->current->cbor_encoder, bytes, byte_sz) != CborNoError) {
+	if (cbor_encode_byte_string(&sdow->current->cbor_encoder, bytes, byte_sz) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 2 (bstr)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_text_string(sdow_t *sdow_cbor, char *bytes , size_t byte_sz)
+bool sdow_text_string(sdow_t *sdow, char *bytes , size_t byte_sz)
 {
-	if (cbor_encode_text_string(&sdow_cbor->current->cbor_encoder, bytes, byte_sz) != CborNoError) {
+	if (cbor_encode_text_string(&sdow->current->cbor_encoder, bytes, byte_sz) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 3 (tstr)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_signed_int(sdow_t *sdow_cbor, int value)
+bool sdow_signed_int(sdow_t *sdow, int value)
 {
-	if (cbor_encode_int(&sdow_cbor->current->cbor_encoder, value) != CborNoError) {
+	if (cbor_encode_int(&sdow->current->cbor_encoder, value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 1 (negative int)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_unsigned_int(sdow_t *sdow_cbor, uint64_t value)
+bool sdow_unsigned_int(sdow_t *sdow, uint64_t value)
 {
-	if (cbor_encode_uint(&sdow_cbor->current->cbor_encoder, value) != CborNoError) {
+	if (cbor_encode_uint(&sdow->current->cbor_encoder, value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 0 (uint)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_boolean(sdow_t *sdow_cbor, bool value)
+bool sdow_boolean(sdow_t *sdow, bool value)
 {
-	if (cbor_encode_boolean(&sdow_cbor->current->cbor_encoder, value) != CborNoError) {
+	if (cbor_encode_boolean(&sdow->current->cbor_encoder, value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 7 (bool)\n");
 		return false;
 	}
 	return true;
 }
 
-bool sdow_end_array(sdow_t *sdow_cbor)
+bool sdow_end_array(sdow_t *sdow)
 {
 	if (cbor_encoder_close_container_checked(
-		&sdow_cbor->current->previous->cbor_encoder,
-		&sdow_cbor->current->cbor_encoder) != CborNoError) {
+		&sdow->current->previous->cbor_encoder,
+		&sdow->current->cbor_encoder) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to end Major Type 4 (array)\n");
 		return false;
 	}
 	// move backwards and free previous
-	sdow_cbor_encoder_t *current = sdow_cbor->current;
-	sdow_cbor->current = sdow_cbor->current->previous;
+	sdow_cbor_encoder_t *current = sdow->current;
+	sdow->current = sdow->current->previous;
 	sdo_free(current);
 	return true;
 }
 
-bool sdow_end_map(sdow_t *sdow_cbor)
+bool sdow_end_map(sdow_t *sdow)
 {
 	if (cbor_encoder_close_container_checked(
-		&sdow_cbor->current->previous->cbor_encoder,
-		&sdow_cbor->current->cbor_encoder) != CborNoError) {
+		&sdow->current->previous->cbor_encoder,
+		&sdow->current->cbor_encoder) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to end Major Type 5 (map)\n");
 		return false;
 	}
 	// move backwards and free previous
-	sdow_cbor_encoder_t *current = sdow_cbor->current;
-	sdow_cbor->current = sdow_cbor->current->previous;
+	sdow_cbor_encoder_t *current = sdow->current;
+	sdow->current = sdow->current->previous;
 	sdo_free(current);
 	return true;
 }
@@ -215,6 +229,7 @@ void sdow_flush(sdow_t *sdow)
 {
 	sdo_block_t *sdob = &sdow->b;
 	sdo_block_reset(sdob);
+	sdo_free(sdob->block);
 }
 
 //==============================================================================
@@ -239,12 +254,10 @@ bool sdor_init(sdor_t *sdor)
 	return true;
 }
 
-bool sdor_parser_init(sdor_t *sdor, sdo_block_t *received_block) {
-	sdor->current = malloc(sizeof(sdor_cbor_decoder_t));
+bool sdor_parser_init(sdor_t *sdor) {
+	sdor->current = sdo_alloc(sizeof(sdor_cbor_decoder_t));
 	sdor->current->next = NULL;
 	sdor->current->previous = NULL;
-
-	memcpy_s(sdor->b.block, CBOR_BUFFER_LENGTH, received_block->block, received_block->block_size);
 
     if (cbor_parser_init(sdor->b.block, sdor->b.block_size, 0, &sdor->cbor_parser,
 	 	&sdor->current->cbor_value) != CborNoError) {
@@ -278,6 +291,15 @@ bool sdor_start_map(sdor_t *sdor) {
 		&sdor->current->cbor_value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to start Major Type 4 (array)\n");
 		return false;
+	}
+	return true;
+}
+
+bool sdor_array_length(sdor_t *sdor, size_t *length) {
+	if (cbor_value_get_array_length(&sdor->current->cbor_value,
+		length) != CborNoError) {
+		LOG(LOG_ERROR, "CBOR decoder: Failed to read length of Major Type 4 (array)\n");
+		return false;			
 	}
 	return true;
 }
