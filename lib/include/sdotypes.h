@@ -115,6 +115,7 @@ bool sdo_string_read(sdor_t *sdor, sdo_string_t *b);
 #define SDO_GID_BYTES (128 / 8)
 #define SDO_NONCE_BYTES (128 / 8)
 #define SDO_NONCE_FIELD_BYTES 32
+#define SDO_UEID_BYTES (128 / 8) + 1
 #define SDO_MSG_PRIFIX_LEN 48
 #define SDO_MSG_UUID_LEN 16
 #define SDO_APP_ID_BYTES 16
@@ -127,6 +128,7 @@ typedef uint8_t sdo_guid_t[SDO_GUID_BYTES];
  * nonce - 128-bit Random number, intended to be used naught but once.
  */
 typedef uint8_t sdo_nonce_t[SDO_NONCE_BYTES];
+typedef uint8_t sdo_ueid_t[SDO_UEID_BYTES];
 
 /* GUID */
 char *sdo_guid_to_string(sdo_byte_array_t *g, char *buf, int buf_sz);
@@ -142,7 +144,7 @@ typedef struct _sdo_hash_t {
 } sdo_hash_t;
 
 /*GID*/
-void sdo_gid_write(sdow_t *sdow);
+bool sdo_siginfo_write(sdow_t *sdow);
 
 /* Hash type as defined by protocol */
 #define SDO_CRYPTO_HASH_TYPE_NONE 0
@@ -224,6 +226,19 @@ void sdo_app_id_write(sdow_t *sdow);
 #define SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1 91
 #define SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0 92
 
+// COSECompatibleSignatureTypes
+#define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
+#define FDO_CRYPTO_SIG_TYPE_ECSDAp384 -35
+#define FDO_CRYPTO_SIG_TYPE_ECSDAp512 -36
+
+#define FDO_COSE_ALG_KEY 1
+
+#define FDO_EATFDO -17760707
+#define FDO_EAT_MAROE_PREFIX_KEY -17760708
+#define FDO_EAT_EUPHNONCE_KEY -17760709
+#define FDO_EATNONCE_KEY 9
+#define FDO_EATUEID_KEY 10
+
 //#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1 201
 //#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0 202
 
@@ -266,7 +281,7 @@ typedef struct {
 } sdo_sig_info_t;
 
 int32_t sdo_epid_info_eb_read(sdor_t *sdor);
-int32_t sdo_eb_read(sdor_t *sdor);
+bool sdo_eb_read(sdor_t *sdor);
 
 sdo_public_key_t *sdo_public_key_alloc_empty(void);
 sdo_public_key_t *sdo_public_key_alloc(int pkalg, int pkenc, int pklen,
@@ -340,6 +355,74 @@ bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
 			       sdo_public_key_t *pk);
 bool sdoOVSignature_verification(sdor_t *sdor, sdo_sig_t *sig,
 				 sdo_public_key_t *pk);
+
+typedef struct {
+	int ph_sig_alg;
+} fdo_eat_protected_header_t;
+
+typedef struct {
+	sdo_byte_array_t *eatmaroeprefix;
+	sdo_byte_array_t *euphnonce;
+} fdo_eat_unprotected_header_t;
+
+typedef struct {
+	fdo_eat_protected_header_t *eat_ph;
+	fdo_eat_unprotected_header_t *eat_uph;
+	sdo_byte_array_t *eat_payload;
+	sdo_byte_array_t *eat_signature;
+} fdo_eat_t;
+
+// methods to handle Entity Attestation Token (EAT).
+fdo_eat_t* fdo_eat_alloc(void);
+void fdo_eat_free(fdo_eat_t *eat);
+bool fdo_eat_write_protected_header(sdow_t *sdow, fdo_eat_protected_header_t *eat_ph);
+bool fdo_eat_write_unprotected_header(sdow_t *sdow, fdo_eat_unprotected_header_t *eat_uph);
+bool fdo_eat_write(sdow_t *sdow, fdo_eat_t *eat);
+
+typedef struct {
+	sdo_byte_array_t *eatpayloads;
+	sdo_nonce_t eatnonce;
+	sdo_ueid_t eatueid;
+	// EATOtherClaims: Unused in  implementation. Should be added depending on the requirement.
+} fdo_eat_payload_base_map_t;
+
+bool fdo_eat_write_payloadbasemap(sdow_t *sdow, fdo_eat_payload_base_map_t *eat_payload);
+
+typedef struct {
+	int ph_sig_alg;
+} fdo_cose_protected_header_t;
+
+typedef struct {
+	fdo_cose_protected_header_t *cose_ph;
+	sdo_byte_array_t *cose_payload;
+	sdo_byte_array_t *cose_signature;
+} fdo_cose_t;
+
+bool fdo_cose_free(fdo_cose_t *cose);
+bool fdo_cose_read_protected_header(sdor_t *sdor, fdo_cose_protected_header_t *cose_ph);
+bool fdo_cose_read_unprotected_header(sdor_t *sdor);
+bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose);
+bool fdo_cose_write_protected_header(sdow_t *sdow, fdo_cose_protected_header_t *cose_ph);
+bool fdo_cose_write_unprotected_header(sdor_t *sdor);
+bool fdo_cose_write(sdow_t *sdow, fdo_cose_t *cose);
+
+typedef struct fdo_rvto2addr_entry_s {
+	sdo_byte_array_t *rvip;
+	sdo_string_t *rvdns;
+	int rvport;
+	int rvprotocol;
+	struct fdo_rvto2addr_entry_s *next;
+} fdo_rvto2addr_entry_t;
+
+typedef struct {
+	int num_rvto2addr;
+	fdo_rvto2addr_entry_t *rv_to2addr_entry;
+} fdo_rvto2addr_t;
+
+void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry);
+void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr);
+bool fdo_rvto2addr_entry_read(sdor_t *sdor, fdo_rvto2addr_entry_t *rvto2addr_entry);
+bool fdo_rvto2addr_read(sdor_t *sdor, fdo_rvto2addr_t *rvto2addr);
 
 typedef struct sdo_key_value_s {
 	struct sdo_key_value_s *next;
@@ -416,17 +499,26 @@ char *sdo_rendezvous_to_string(sdo_rendezvous_t *rv, char *buf, int bufsz);
 #define SDO_RENDEZVOUS_GET_PORT(rv) (*(rv)->po)
 //#define SDORendezvous_set_port(rv,p) ((rv)->po = (p))
 
-typedef struct sdo_rendezvous_list_s {
+typedef struct sdo_rendezvous_directive_s {
 	uint16_t num_entries;
-	uint16_t num_rv_directives;
+	struct sdo_rendezvous_directive_s *next;
 	sdo_rendezvous_t *rv_entries;
+} sdo_rendezvous_directive_t;
+
+typedef struct sdo_rendezvous_list_s {
+	uint16_t num_rv_directives;
+	sdo_rendezvous_directive_t *rv_directives;
 } sdo_rendezvous_list_t;
 
+bool sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
+	sdo_rendezvous_directive_t *directive);
+sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(
+	sdo_rendezvous_list_t *list, int num);
 sdo_rendezvous_list_t *sdo_rendezvous_list_alloc(void);
 void sdo_rendezvous_list_free(sdo_rendezvous_list_t *list);
-int sdo_rendezvous_list_add(sdo_rendezvous_list_t *list, sdo_rendezvous_t *rv);
+int sdo_rendezvous_list_add(sdo_rendezvous_directive_t *list, sdo_rendezvous_t *rv);
 // int SDORendezvous_list_remove(sdo_rendezvous_list_t *list, int num);
-sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_list_t *list, int num);
+sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_directive_t *list, int num);
 int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list);
 bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list);
 

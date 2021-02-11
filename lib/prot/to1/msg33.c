@@ -13,37 +13,30 @@
 #include "sdoprot.h"
 
 /**
- * msg33() - TO1.sdo_redirect
+ * msg33() - TO1.RVRedirect, Type 33
  * This is the last message of TO1. The device receives the owner info from RV.
  *
- * --- Message Format Begins ---
- * {
- *     "bo": {
- *         "i1": IPAddress, # Owner IP address
- *         "dns1": String,  # DNS if owner is registered with DNS service
- *         "port1": UInt16, # TCP/UDP port to connect to
- *         "to0dh": Hash    # See TO0, msg22: Hash(to0d object, brace to brace)
- *     },
- *     "pk": PKNull,
- *     "sg": Signature      # Signed with “Owner key” that Device will get in
- * TO2
- * }
- * --- Message Format Begins ---
+ * TO1.RVRedirect = to1d
+ * to1d = CoseSignature
+ * [
+ * {keyalg:<value>},	// protected header
+ * {},					// unprotected header
+ * to1dBlobPayload,		// COSEPayloads
+ * signature			// signature
+ * ]
+ * where,
+ *	to1dBlobPayload = [
+ *	[+[RVIP, RVDNS, RVPort, RVProtocol]], // one or more array of inner entries (inner array)
+ *	[hashtype, hash]
+ *	]
  *
  */
 int32_t msg33(sdo_prot_t *ps)
 {
 	int ret = -1;
-	sdo_sig_t sig = {0};
-	int sig_block_sz = -1;
-	int sig_block_end = -1;
 	sdo_hash_t *ob_hash = NULL;
-	char buf[DEBUGBUFSZ] = {0};
-	uint8_t *plain_text = NULL;
-	sdo_public_key_t *temp_pk = NULL;
+	fdo_cose_t *cose = NULL;
 	char prot[] = "SDOProtTO1";
-
-	LOG(LOG_DEBUG, "\n_starting SDO_STATE_TO1_RCV_SDO_REDIRECT\n");
 
 	/* Try to read from internal buffer */
 	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
@@ -51,148 +44,82 @@ int32_t msg33(sdo_prot_t *ps)
 		goto err;
 	}
 
-	/*
-	 * Mark the beginning of "bo". The signature is calculated over
-	 * braces to braces, so, saving the offset of starting "bo"
-	 */
-	if (!sdo_begin_read_signature(&ps->sdor, &sig)) {
-		LOG(LOG_ERROR, "Could not read begin of signature\n");
+	LOG(LOG_DEBUG, "TO1.RVRedirect started\n");
+
+	// Allocate for cose object now. Allocate for its members when needed later.
+	// Free immediately once its of no use.
+	cose = sdo_alloc(sizeof(fdo_cose_t));
+	if (!cose) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc COSE\n");
 		goto err;
 	}
 
-	/* Start parsing the "bo" (body) data now */
-	if (!sdor_begin_object(&ps->sdor)) {
+	if (!fdo_cose_read(&ps->sdor, cose)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read COSE\n");
 		goto err;
 	}
 
-	/* TODO: In 0.8 these are i1 fields, check what is the
-	 * difference */
-
-	/* Read "i1" tag/value: IP address of owner */
-	if (!sdo_read_expected_tag(&ps->sdor, "i1")) {
+	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
+	sdo_block_reset(&ps->sdor.b);
+	ps->sdor.b.block_size = cose->cose_payload->byte_sz;
+	if (0 != memcpy_s(ps->sdor.b.block, ps->sdor.b.block_size,
+		cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to copy Nonce4\n");
 		goto err;
 	}
-	if (sdo_read_ipaddress(&ps->sdor, &ps->i1) != true) {
-		LOG(LOG_ERROR, "Read IP Address Failed\n");
-		goto err;
+	fdo_cose_free(cose);
+	cose = NULL;
+
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!sdor_parser_init(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initilize SDOR parser\n");
+		return -1;
 	}
 
-	/* Read "dns1" tag/value: URL of owner */
-	if (!sdo_read_expected_tag(&ps->sdor, "dns1")) {
-		goto err;
-	}
-	ps->dns1 = sdo_read_dns(&ps->sdor);
-
-	/* Read "port1" tag/value: Port of owner machine */
-	if (!sdo_read_expected_tag(&ps->sdor, "port1")) {
-		goto err;
-	}
-	ps->port1 = sdo_read_uint(&ps->sdor);
-
-	/* Read "to0dh" tag/value: Owner hash sent to RV */
-	if (!sdo_read_expected_tag(&ps->sdor, "to0dh")) {
+	size_t num_payloadbasemap_items = 0;
+	if (!sdor_array_length(&ps->sdor, &num_payloadbasemap_items) ||
+		num_payloadbasemap_items != 2) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read array length\n");
 		goto err;
 	}
 
-	/*
-	 * TODO: Check if the hash is just parsed to be discared.
-	 * Do we have an API, where we just increased the cursor
-	 * and not read the data at all?
-	 */
+	if (!sdor_start_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to start array\n");
+		goto err;
+	}
+	// allocate here, free when TO2 is done (TO-DO during TO2 implementation)
+	ps->rvto2addr = sdo_alloc(sizeof(fdo_rvto2addr_t));
+	if (!ps->rvto2addr) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc to1dRV\n");
+		goto err;
+	}
+	if (!fdo_rvto2addr_read(&ps->sdor, ps->rvto2addr)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read to1dRV\n");
+		goto err;
+	}
+
+	// read hash now.
 	ob_hash = sdo_hash_alloc_empty();
 	if (!ob_hash || !sdo_hash_read(&ps->sdor, ob_hash)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read to1dTo0dHash\n");
 		goto err;
 	}
 
-	/* Mark the end of "bo" tag */
-	if (!sdor_end_object(&ps->sdor)) {
+	if (!sdor_end_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to end array\n");
 		goto err;
 	}
-
-	/* Save the "bo" start and size. The signature is over this */
-	sig_block_end = ps->sdor.b.cursor;
-	sig_block_sz = sig_block_end - sig.sig_block_start;
-
-	/* Copy the full "bo" to ps */
-	plain_text = sdor_get_block_ptr(&ps->sdor, sig.sig_block_start);
-	if (plain_text == NULL) {
-		ps->state = SDO_STATE_DONE;
-		goto err;
-	}
-
-	ps->sdo_redirect.plain_text = sdo_byte_array_alloc(sig_block_sz);
-	if (!ps->sdo_redirect.plain_text) {
-		goto err;
-	}
-	if (memcpy_s(ps->sdo_redirect.plain_text->bytes, sig_block_sz,
-		     plain_text, sig_block_sz) != 0) {
-		LOG(LOG_ERROR, "Memcpy failed\n");
-		goto err;
-	}
-
-	ps->sdo_redirect.plain_text->byte_sz = sig_block_sz;
-
-	/* Read the public key */
-	if (!sdo_read_expected_tag(&ps->sdor, "pk")) {
-		goto err;
-	}
-
-	/*
-	 * FIXME: Reading public key and freeing it. Why are we returning
-	 * a pointer to be freed
-	 */
-	temp_pk = sdo_public_key_read(&ps->sdor);
-	if (temp_pk) {
-		sdo_public_key_free(temp_pk);
-	}
-
-	/* Read the "sg" tag/value */
-	if (!sdo_read_expected_tag(&ps->sdor, "sg")) {
-		goto err;
-	}
-
-	if (!sdor_begin_sequence(&ps->sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
-		goto err;
-	}
-
-	/* These bytes will be thrown away, some issue with zero length */
-	ps->sdo_redirect.obsig = sdo_byte_array_alloc(16);
-	if (!ps->sdo_redirect.obsig) {
-		goto err;
-	}
-
-	/* Read the signature to the signature object */
-	if (!sdo_byte_array_read(&ps->sdor, ps->sdo_redirect.obsig)) {
-		LOG(LOG_ERROR, "obsig read error\n");
-		goto err;
-	}
-
-	if (!sdor_end_sequence(&ps->sdor)) {
-		goto err;
-	}
-
-	if (!sdor_end_object(&ps->sdor)) {
-		goto err;
-	}
-
-	/* TODO: Add support for signing message defined in spec
-	 * 0.8 */
-
-	sdor_flush(&ps->sdor);
-
-	LOG(LOG_DEBUG, "Received redirect: %s\n",
-	    sdo_ipaddress_to_string(&ps->i1, buf, sizeof buf) ? buf : "");
 
 	/* Mark as success and ready for TO2 */
 	ps->state = SDO_STATE_DONE;
+	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 	ret = 0;
-	LOG(LOG_DEBUG, "Complete SDO_STATE_TO1_RCV_SDO_REDIRECT\n");
+	LOG(LOG_DEBUG, "TO1.RVRedirect completed successfully\n");
 
 err:
-	if (ps->sdo_redirect.obsig && ret) {
-		sdo_byte_array_free(ps->sdo_redirect.obsig);
-		ps->sdo_redirect.obsig = NULL;
+	if (cose) {
+		fdo_cose_free(cose);
 	}
 	if (ob_hash) {
 		sdo_hash_free(ob_hash);

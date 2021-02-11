@@ -376,7 +376,7 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
 	}
 
 	/* There must be at-least 1 valid rv entry, if not its a error-case */
-	if (ov->rvlst2->num_entries == 0) {
+	if (ov->rvlst2->num_rv_directives == 0) {
 		LOG(LOG_ERROR,
 		    "Invalid OVHeader: All rendezvous entries are invalid for the device!\n");
 		goto exit;
