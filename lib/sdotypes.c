@@ -1285,6 +1285,7 @@ bool sdo_siginfo_write(sdow_t *sdow)
 	ret = true;
 end:
 	sdo_byte_array_free(empty_byte_array);
+	empty_byte_array = NULL;
 	return ret;
 }
 
@@ -2991,18 +2992,14 @@ bool sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
 		list->num_rv_directives++;
 	} else {
 		// already has entries, find the last entry
-		sdo_rendezvous_directive_t *entry_ptr, *prev_ptr;
-
-		entry_ptr = (sdo_rendezvous_directive_t *)list->rv_directives->next;
-		prev_ptr = list->rv_directives;
+		sdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
 		// Find the last entry
-		while (entry_ptr != NULL) {
-			prev_ptr = entry_ptr;
+		while (entry_ptr->next != NULL) {
 			entry_ptr = (sdo_rendezvous_directive_t *)entry_ptr->next;
 		}
 		// Now the enty_ptr is pointing to the last entry
 		// Add the directive entry onto the end
-		prev_ptr->next = directive;
+		entry_ptr->next = directive;
 		list->num_rv_directives++;
 	}
 	LOG(LOG_DEBUG, "Added directive to rvlst, %d entries\n", list->num_rv_directives);
@@ -3028,18 +3025,14 @@ int sdo_rendezvous_list_add(sdo_rendezvous_directive_t *directives, sdo_rendezvo
 		directives->num_entries++;
 	} else {
 		// already has entries, find the last entry
-		sdo_rendezvous_t *entry_ptr, *prev_ptr;
-
-		entry_ptr = (sdo_rendezvous_t *)directives->rv_entries->next;
-		prev_ptr = directives->rv_entries;
+		sdo_rendezvous_t *entry_ptr = directives->rv_entries;
 		// Find the last entry
-		while (entry_ptr != NULL) {
-			prev_ptr = entry_ptr;
+		while (entry_ptr->next != NULL) {
 			entry_ptr = (sdo_rendezvous_t *)entry_ptr->next;
 		}
 		// Now the enty_ptr is pointing to the last entry
 		// Add the r entry onto the end
-		prev_ptr->next = rv;
+		entry_ptr->next = rv;
 		directives->num_entries++;
 	}
 	LOG(LOG_DEBUG, "Added to rvlst, %d entries\n", directives->num_entries);
@@ -3056,7 +3049,14 @@ sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(sdo_rendezvous_list_t *
 	sdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
 
 	for (index = 0; index < num; index++) {
-		entry_ptr = entry_ptr->next;
+		if (entry_ptr->next != NULL)
+			entry_ptr = entry_ptr->next;
+		else {
+			// this should ideally no happen since for 'num' times,
+			// there should be a directive present.
+			LOG(LOG_DEBUG, "RendezvousDirective not found for index %d\n", index);
+			return NULL;
+		}
 	}
 	return entry_ptr;
 }
@@ -3078,7 +3078,14 @@ sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_directive_t *directive,
 	sdo_rendezvous_t *entry_ptr = directive->rv_entries;
 
 	for (index = 0; index < num; index++) {
-		entry_ptr = entry_ptr->next;
+		if (entry_ptr->next != NULL)
+			entry_ptr = entry_ptr->next;
+		else {
+			// this should ideally no happen since for 'num' times,
+			// there should be a directive present.
+			LOG(LOG_DEBUG, "RendezvousInstr not found for index %d\n", index);
+			return NULL;
+		}
 	}
 	return entry_ptr;
 }
@@ -3660,8 +3667,9 @@ bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv)
 
 /**
  * Create an EAT object with memory allocated for Protected header,
- * Unprotected header (EATMAROEPREFIX and EATNonce) and Payload.
- * Signature is set to NULL.
+ * Unprotected header and Payload.
+ * Signature alongwith EATMAROEPREFIX and EATNonce are set to NULL initally, which
+ * should be initialized when needed.
  */
 fdo_eat_t* fdo_eat_alloc(void) {
 
@@ -3681,16 +3689,8 @@ fdo_eat_t* fdo_eat_alloc(void) {
 		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc Unprotected header\n");
 		goto err;
 	}
-	eat->eat_uph->eatmaroeprefix = sdo_byte_array_alloc(0);
-	if (!eat->eat_uph->eatmaroeprefix) {
-		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc EATMAROEPrefix\n");
-		goto err;
-	}
-	eat->eat_uph->euphnonce = sdo_byte_array_alloc(SDO_NONCE_BYTES);
-	if (!eat->eat_uph->euphnonce) {
-		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc EUPHNonce\n");
-		goto err;
-	}
+	eat->eat_uph->eatmaroeprefix = NULL;
+	eat->eat_uph->euphnonce = NULL;
 
 	eat->eat_payload = sdo_byte_array_alloc(sizeof(sdo_byte_array_t));
 	if (!eat->eat_payload) {
@@ -3706,6 +3706,9 @@ err:
 	return NULL;
 }
 
+/**
+ * Free an EAT object for which memory has been allocated previously.
+ */
 void fdo_eat_free(fdo_eat_t *eat) {
 
 	if (eat->eat_ph) {
@@ -3723,6 +3726,7 @@ void fdo_eat_free(fdo_eat_t *eat) {
 		sdo_byte_array_free(eat->eat_signature);
 	}
 	sdo_free(eat);
+	eat = NULL;
 }
 
 /**
@@ -3936,6 +3940,9 @@ bool fdo_eat_write_payloadbasemap(sdow_t *sdow, fdo_eat_payload_base_map_t *eat_
 	return true;
 }
 
+/**
+ * Free the given COSE object for which memory has been allocated previously.
+ */
 bool fdo_cose_free(fdo_cose_t *cose) {
 	if (cose->cose_ph) {
 		cose->cose_ph->ph_sig_alg = 0;
@@ -4100,6 +4107,9 @@ end:
 	return false;
 }
 
+/**
+ * Free the given RVTO2AddrEntry object for which memory has been allocated previously.
+ */
 void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry) {
 	if (rvto2addr_entry->rvip)
 		sdo_byte_array_free(rvto2addr_entry->rvip);
@@ -4108,11 +4118,16 @@ void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry) {
 	sdo_free(rvto2addr_entry);	
 }
 
+/**
+ * Free the given RVTO2Addr object for which memory has been allocated previously.
+ */
 void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr) {
 	if (rvto2addr) {
 		while (rvto2addr->rv_to2addr_entry) {
-			fdo_rvto2addr_entry_free(rvto2addr->rv_to2addr_entry);
-			rvto2addr->rv_to2addr_entry = (fdo_rvto2addr_entry_t *) rvto2addr->rv_to2addr_entry->next;
+			fdo_rvto2addr_entry_t *rv_to2addr_entry = rvto2addr->rv_to2addr_entry;
+			rvto2addr->rv_to2addr_entry =
+				(fdo_rvto2addr_entry_t *) rvto2addr->rv_to2addr_entry->next;
+			fdo_rvto2addr_entry_free(rv_to2addr_entry);
 		}
 		sdo_free(rvto2addr);
 	}
@@ -4245,7 +4260,7 @@ bool fdo_rvto2addr_read(sdor_t *sdor, fdo_rvto2addr_t *rvto2addr) {
 				LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read/Invalid array length\n");
 				goto end;
 			}
-			entry = (fdo_rvto2addr_entry_t *) entry->next;
+			entry = entry->next;
 		} else {
 			break;
 		}

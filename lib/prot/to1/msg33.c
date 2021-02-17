@@ -72,7 +72,7 @@ int32_t msg33(sdo_prot_t *ps)
 
 	// initialize the parser once the buffer contains COSE payload to be decoded.
 	if (!sdor_parser_init(&ps->sdor)) {
-		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initilize SDOR parser\n");
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initialize SDOR parser\n");
 		return -1;
 	}
 

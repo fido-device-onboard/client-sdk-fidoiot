@@ -153,6 +153,7 @@ static void sdo_protTO1Exit(app_data_t *app_data)
 		ps->n4 = NULL;
 	}
 	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 }
 
 /**
@@ -972,13 +973,21 @@ static bool _STATE_TO1(void)
 		goto end;
 	}
 
+	// Try TO1 for all available RVDirectives.
+	// Only checking for RVIP/RVDNS/RVPort/RVBypass/RVOwnerOnly flags.
+	// Depending on the requirement, check for more flags should be added here.
+	// If we encounter RVBYPASS, skip directly to TO2.
+	// TO-DO: Integrate TO2 flow into this and fix it to start from the
+	// next directive always in case of failure (ex: RVBypass)
 	int port = 0;
 	sdo_ip_address_t *ip = NULL;
 	sdo_string_t *dns = NULL;
 	bool rvbypass = false;
+	bool rvowner_only = false;
+
 	sdo_rendezvous_directive_t *rv_directive =
 			g_sdo_data->devcred->owner_blk->rvlst->rv_directives;
-	
+
 	while (!ret && rv_directive) {
 		sdo_rendezvous_t *rv = rv_directive->rv_entries;
 		// reset for next use.
@@ -986,6 +995,7 @@ static bool _STATE_TO1(void)
 		ip = NULL;
 		dns = NULL;
 		rvbypass = false;
+		rvowner_only = false;
 		while (rv) {
 
 			if (rv->bypass) {
@@ -993,6 +1003,7 @@ static bool _STATE_TO1(void)
 				break;
 			}
 			if (rv->owner_only) {
+				rvowner_only = true;
 				break;
 			}
 
@@ -1022,12 +1033,16 @@ static bool _STATE_TO1(void)
 			g_sdo_data->state_fn = &_STATE_TO2;
 			goto end;
 		}
-		if ((!ip && !dns) || port == 0) {
-			// If any of the values are missing, check for the same in the next directives.
-			continue;
-		}
+
 		// Found the  needed entries of the current directive. Prepare to move to next.
 		rv_directive = rv_directive->next;
+
+		if (rvowner_only || (!ip && !dns) || port == 0) {
+			// If any of the IP/DNS/Port values are missing, or
+			// if RVOwnerOnly is prsent in the current directive,
+			// skip the current directive and check for the same in the next directives.
+			continue;
+		}
 	
 		prot_ctx =
 	    	sdo_prot_ctx_alloc(sdo_process_states, &g_sdo_data->prot, ip,
@@ -1059,6 +1074,11 @@ static bool _STATE_TO1(void)
 			 	// clear contents for a fresh start.
 				sdo_protTO1Exit(g_sdo_data);
 			 	sdo_prot_ctx_free(prot_ctx);
+				// pre-emptively, return if no more directives as present to avoid
+				// double-free error at end tag during retries.
+				// TO-DO: Fix when flow is simplified.
+				if (!rv_directive)
+					return ret;
 				continue;
 			} else {
 				ERROR()

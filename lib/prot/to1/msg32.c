@@ -100,8 +100,6 @@ int32_t msg32(sdo_prot_t *ps)
 		goto err;		
 	}
 
-	eat->eat_uph->eatmaroeprefix = NULL;
-	eat->eat_uph->euphnonce = NULL;
 	/* Start writing the block for msg31 */
 	sdow_next_block(&ps->sdow, SDO_TO1_TYPE_PROVE_TO_SDO);
 
@@ -122,5 +120,7 @@ err:
 		fdo_eat_free(eat);
 	if (encoded_payloadbasemap)
 		sdo_byte_array_free(encoded_payloadbasemap);
+	if (ps->n4)
+		sdo_byte_array_free(ps->n4);
 	return ret;
 }

@@ -226,13 +226,14 @@ void sdo_app_id_write(sdow_t *sdow);
 #define SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1 91
 #define SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0 92
 
-// COSECompatibleSignatureTypes
+// 3.3.5 COSECompatibleSignatureTypes
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp384 -35
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp512 -36
 
 #define FDO_COSE_ALG_KEY 1
 
+// Appendix E
 #define FDO_EATFDO -17760707
 #define FDO_EAT_MAROE_PREFIX_KEY -17760708
 #define FDO_EAT_EUPHNONCE_KEY -17760709
