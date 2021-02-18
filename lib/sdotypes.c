@@ -2979,7 +2979,7 @@ void sdo_rendezvous_list_free(sdo_rendezvous_list_t *list)
  * @param rv - pointer to the RendezvousDirective to be added to the list
  * @return number of entries added if success else error code
  */
-bool sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
+int sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
 	sdo_rendezvous_directive_t *directive) {
 	if (list == NULL || directive == NULL)
 		return 0;

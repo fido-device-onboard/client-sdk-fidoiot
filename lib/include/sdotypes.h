@@ -115,7 +115,8 @@ bool sdo_string_read(sdor_t *sdor, sdo_string_t *b);
 #define SDO_GID_BYTES (128 / 8)
 #define SDO_NONCE_BYTES (128 / 8)
 #define SDO_NONCE_FIELD_BYTES 32
-#define SDO_UEID_BYTES (128 / 8) + 1
+// EAT-UEID is of length 17 (EAT-RAND(1) + EAT-GUID(16))
+#define SDO_UEID_BYTES (1 + SDO_GUID_BYTES)
 #define SDO_MSG_PRIFIX_LEN 48
 #define SDO_MSG_UUID_LEN 16
 #define SDO_APP_ID_BYTES 16
@@ -511,7 +512,7 @@ typedef struct sdo_rendezvous_list_s {
 	sdo_rendezvous_directive_t *rv_directives;
 } sdo_rendezvous_list_t;
 
-bool sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
+int sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
 	sdo_rendezvous_directive_t *directive);
 sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(
 	sdo_rendezvous_list_t *list, int num);
