@@ -48,14 +48,12 @@ static state_func di_state_fn[] = {
 /*
  * State functions for TO1
  */
-/*
 static state_func to1_state_fn[] = {
     msg30, // TO1.HelloSDO
     msg31, // TO1.HelloSDOAck
     msg32, // TO1.Prove_toSDO
     msg33, // TO1.sdo_redirect
 };
-*/
 
 /*
  * State functions for TO2
@@ -171,10 +169,7 @@ bool sdo_process_states(sdo_prot_t *ps)
 		case SDO_STATE_DI_DONE:
 			state_fn = di_state_fn[DI_ID_TO_STATE_FN(ps->state)];
 			break;
-
-		// TO-DO : Commenting this out until TO1 and TO2 protcols are implemented.
-		// To be uncommented gradually.
-		/*
+	
 		// TO1 states
 		case SDO_STATE_T01_SND_HELLO_SDO:
 		case SDO_STATE_TO1_RCV_HELLO_SDOACK:
@@ -183,6 +178,9 @@ bool sdo_process_states(sdo_prot_t *ps)
 			state_fn = to1_state_fn[TO1_ID_TO_STATE_FN(ps->state)];
 			break;
 
+		// TO-DO : Commenting this out until TO2 protcols are implemented.
+		// To be uncommented gradually.
+/*
 		// TO2 states
 		case SDO_STATE_T02_SND_HELLO_DEVICE:
 		case SDO_STATE_TO2_RCV_PROVE_OVHDR:
@@ -220,7 +218,7 @@ bool sdo_process_states(sdo_prot_t *ps)
 					   ps->state);
 			ps->state = SDO_STATE_ERROR;
 			sdo_send_error_message(&ps->sdow, MESSAGE_BODY_ERROR,
-					       ps->state, err_msg);
+					       ps->state, err_msg, sizeof(err_msg));
 			ps_free(ps);
 			break;
 		}
@@ -340,9 +338,13 @@ bool sdo_check_to2_round_trips(sdo_prot_t *ps)
 {
 	if (ps->round_trip_count > MAX_TO2_ROUND_TRIPS) {
 		LOG(LOG_ERROR, "Exceeded maximum number of TO2 rounds\n");
+		char err_msg[64];
+		(void)snprintf_s_i(err_msg, sizeof(err_msg),
+				   "Exceeded max number of rounds",
+				   ps->state);
 		sdo_send_error_message(&ps->sdow, INTERNAL_SERVER_ERROR,
 				       ps->state,
-				       "Exceeded max number of rounds");
+				       "Exceeded max number of rounds", sizeof(err_msg));
 		ps->state = SDO_STATE_ERROR;
 		return false;
 	}
@@ -371,7 +373,6 @@ bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep)
 	(void)statep;
 
 	if (!sdor->have_block) {
-		LOG(LOG_ERROR, "expecting another block\n");
 		/*
 		* The way this method is used to maintain the state,
 		* it's not an error scenario if there's no block to read.
@@ -389,21 +390,45 @@ bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep)
 }
 
 /**
- * TO-DO : Update to pass in error message length, EMErrorTs, EMErrorUuid.
+ * TO-DO : Update to pass EMErrorUuid if needed in future.
  * 
  * Internal API
  */
 void sdo_send_error_message(sdow_t *sdow, int ecode, int msgnum,
-			    char *errmsg)
+			    char *errmsg, size_t errmsg_sz)
 {
 	LOG(LOG_ERROR, "Sending Error Message\n");
 
 	sdow_next_block(sdow, SDO_TYPE_ERROR);
-	sdow_start_array(sdow, 5);
-	sdow_unsigned_int(sdow, ecode);
-	sdow_unsigned_int(sdow, msgnum);
-	sdow_text_string(sdow, errmsg , 0);
-	sdow_end_array(sdow);
+	if (!sdow_start_array(sdow, 5)) {
+		LOG(LOG_ERROR, "Error Message: Failed to write start array\n");
+		return;
+	}
+	if (!sdow_signed_int(sdow, ecode)) {
+		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorCode\n");
+		return;
+	}
+	if (!sdow_signed_int(sdow, msgnum)) {
+		LOG(LOG_ERROR, "Error Message: Failed to write EMPrevMsgID\n");
+		return;
+	}
+	if (!sdow_text_string(sdow, errmsg , errmsg_sz)) {
+		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorStr");
+		return;
+	}
+	if (!sdow_signed_int(sdow, (int) time(NULL))) {
+		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorTs\n");
+		return;
+	}
+	// writing 0 as correlationId. May be updated in future.
+	if (!sdow_signed_int(sdow, 0)) {
+		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorUuid\n");
+		return;
+	}
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "Error Message: Failed to write end array\n");
+		return;
+	}
 }
 
 #if 0

@@ -133,22 +133,20 @@ int ps_get_m_string(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (0 != read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes,
-				       csr->byte_sz)) {
+	ret = read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes,
+				       csr->byte_sz);
+	if (0 != ret) {
 		LOG(LOG_ERROR, "Failed to read %s file!\n", TPM_DEVICE_CSR);
 		goto err;
 	}
 
-	// TO-DO - Update the TPM script to:
-	// 1. Not store serial and model number in the file.
-	// 2. Store only the CSR in DER format.
-	// This does not work without the above changes.
-#endif
+#else
 	ret = sdo_get_device_csr(&csr);
 	if (0 != ret) {
 		LOG(LOG_ERROR, "Unable to get device CSR\n");
 		goto err;
 	}
+#endif
 	if (!sdow_start_array(&ps->sdow, DEVICE_MFG_STRING_ARRAY_SZ))
 		goto err;
 	if (!sdow_signed_int(&ps->sdow, key_id))

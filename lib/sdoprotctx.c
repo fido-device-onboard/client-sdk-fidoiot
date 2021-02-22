@@ -296,6 +296,7 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 
 		// clear the block contents in preparation for the next SDOW write operation
 		sdo_block_reset(&sdow->b);
+		sdow->b.block_size = CBOR_BUFFER_LENGTH;
 
 		/* ========================================================== */
 		/*  Receive response */

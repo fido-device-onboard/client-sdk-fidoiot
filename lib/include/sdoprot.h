@@ -183,6 +183,7 @@ typedef struct sdo_prot_s {
 	uint32_t port1;
 	char *dns1;
 	int key_encoding;
+	fdo_rvto2addr_t *rvto2addr;
 	sdo_public_key_t *new_pk;
 	sdo_dev_cred_t *dev_cred;
 	sdo_public_key_t *mfg_public_key; // TO2.bo.oh.pk & DI.oh.ok
@@ -258,7 +259,7 @@ bool sdo_process_states(sdo_prot_t *ps);
 bool sdo_check_to2_round_trips(sdo_prot_t *ps);
 
 void sdo_send_error_message(sdow_t *sdow, int ecode, int msgnum,
-					char *emsg);
+					char *emsg, size_t errmsg_sz);
 void sdo_receive_error_message(sdor_t *sdor, int *ecode, int *msgnum,
 			       char *emsg, int emsg_sz);
 bool sdo_prot_rcv_msg(sdor_t *sdor, sdow_t *sdow, char *prot_name, int *statep);

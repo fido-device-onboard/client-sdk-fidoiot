@@ -13,70 +13,99 @@
 #include "sdoCrypto.h"
 
 /**
- * msg32() - TO1.Prove_toSDO
+ * msg32() - TO1.ProveToRV, Type 32
  * The device responds with the data which potentially proves to RV that it is
  * the authorized device requesting the owner information
  *
- * --- Message Format Begins ---
- * {
- *      "bo": {
- *	    "ai": App_id,     # App_id of SDO
- *   	"n4": Nonce,     # Nonce which was received in msg31
- *      "g2": GUID,      # GUID sent to RV in msg30
- *      },
- *      "pk": Public_key, # EPID Public key if DA = epid, else PKNull
- *      "sg": Signature  # Signature calculated over nonce
- * }
- * --- Message Format Ends---
- *
+ * TO1.ProveToRV = EAToken
+ * EATPayloadBase //= (
+    EAT-NONCE: Nonce4
+ * )
  */
 int32_t msg32(sdo_prot_t *ps)
 {
 	int ret = -1;
-	sdo_sig_t sig = {0};
-	sdo_public_key_t *publickey;
+	fdo_eat_payload_base_map_t payloadbasemap;
+	sdo_byte_array_t *encoded_payloadbasemap = NULL;
 
-	LOG(LOG_DEBUG, "Starting SDO_STATE_TO1_SND_PROVE_TO_SDO\n");
+	LOG(LOG_DEBUG, "TO1.ProveToRV started\n");
+
+	// Allocate EAT object now. Initialize and fill the contents when needed to finally
+	// CBOR encode. Free once used in this method later.
+	fdo_eat_t *eat = fdo_eat_alloc();
+	if (!eat) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to allocate for EAT\n");
+		goto err;
+	}
+
+#if defined(ECDSA256_DA)
+	eat->eat_ph->ph_sig_alg = FDO_CRYPTO_SIG_TYPE_ECSDAp256;
+#else
+	eat->eat_ph->ph_sig_alg = FDO_CRYPTO_SIG_TYPE_ECSDAp384;
+#endif
+
+	if (!ps->n4) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Nonce4 not found\n");
+		goto err;
+	}
+
+	// copy nonce4 and GUID into the struct
+	if (0 != memcpy_s(&payloadbasemap.eatnonce, SDO_NONCE_BYTES,
+		ps->n4->bytes, ps->n4->byte_sz)) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy Nonce4\n");
+		goto err;
+	}
+	payloadbasemap.eatueid[0] = 1;
+	if (0 != memcpy_s(&payloadbasemap.eatueid[1], SDO_GUID_BYTES,
+		ps->dev_cred->owner_blk->guid->bytes, ps->dev_cred->owner_blk->guid->byte_sz)) {
+			LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy GUID\n");
+			goto err;
+	}
+	payloadbasemap.eatpayloads = NULL;
+
+	// Create the payload as CBOR map. Sign the encoded payload.
+	// Then, wrap the encoded payload a a bstr.
+	if (!fdo_eat_write_payloadbasemap(&ps->sdow, &payloadbasemap)) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to write EATPayloadBaseMap\n");
+		goto err;
+	}
+	size_t payload_length = 0;
+	if (!sdow_encoded_length(&ps->sdow, &payload_length) || payload_length == 0) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to read EATPayload length\n");
+		goto err;
+	}
+	ps->sdow.b.block_size = payload_length;
+	// Set the encoded payload into buffer
+	encoded_payloadbasemap =
+		sdo_byte_array_alloc_with_byte_array(ps->sdow.b.block, ps->sdow.b.block_size);
+	if (!encoded_payloadbasemap) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to alloc for encoded EATPayload\n");
+		goto err;
+	}
+	eat->eat_payload = encoded_payloadbasemap;
+
+	// reset the SDOW block to prepare for the next encoding.
+	sdo_block_reset(&ps->sdow.b);
+	ps->sdow.b.block_size = CBOR_BUFFER_LENGTH;
+	if (!sdow_encoder_init(&ps->sdow)) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to initilize SDOW encoder\n");
+		goto err;
+	}
+
+	// generate the signature on encoded payload
+	if (0 !=
+	    sdo_device_sign(eat->eat_payload->bytes, eat->eat_payload->byte_sz,
+			&eat->eat_signature)) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to generate signature\n");
+		goto err;		
+	}
 
 	/* Start writing the block for msg31 */
 	sdow_next_block(&ps->sdow, SDO_TO1_TYPE_PROVE_TO_SDO);
 
-	/* Start Body/Begin Object "bo" tag */
-	publickey = NULL;
-
-	if (!sdo_begin_write_signature(&ps->sdow, &sig, publickey)) {
-		LOG(LOG_ERROR, "Failed in writing the signature\n");
-		goto err;
-	}
-
-	sdow_begin_object(&ps->sdow);
-
-	/* Write the "ai" tag */
-	sdo_write_tag(&ps->sdow, "ai");
-	sdo_app_id_write(&ps->sdow);
-
-	/* Write back the same nonce which was received in msg31 */
-	sdo_write_tag(&ps->sdow, "n4");
-	if (!ps->n4) {
-		LOG(LOG_ERROR, "ps->n4 is empty MSG#32\n");
-		goto err;
-	}
-
-	/* FIXME: Move to error handling. If TO1 restarts, we will leak memory
-	 */
-	sdo_byte_array_write_chars(&ps->sdow, ps->n4);
-	sdo_byte_array_free(ps->n4);
-	ps->n4 = NULL;
-
-	/* Write the GUID received during DI */
-	sdo_write_tag(&ps->sdow, "g2");
-	sdo_byte_array_write_chars(&ps->sdow, ps->dev_cred->owner_blk->guid);
-	/* TODO: Add support for epk defined in spec 0.8 */
-	sdow_end_object(&ps->sdow);
-
-	/* Fill in the pk and sg based on Device Attestation selected */
-	if (sdo_end_write_signature(&ps->sdow, &sig) != true) {
-		LOG(LOG_ERROR, "Failed in writing the signature\n");
+	// write the EAT structure
+	if (!fdo_eat_write(&ps->sdow, eat)) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to write EAT\n");
 		goto err;
 	}
 
@@ -84,8 +113,14 @@ int32_t msg32(sdo_prot_t *ps)
 	ps->state = SDO_STATE_TO1_RCV_SDO_REDIRECT;
 	ret = 0;
 
-	LOG(LOG_DEBUG, "Complete SDO_STATE_TO1_SND_PROVE_TO_SDO\n");
+	LOG(LOG_DEBUG, "TO1.ProveToRV completed successfully\n");
 
 err:
+	if (eat)
+		fdo_eat_free(eat);
+	if (encoded_payloadbasemap)
+		sdo_byte_array_free(encoded_payloadbasemap);
+	if (ps->n4)
+		sdo_byte_array_free(ps->n4);
 	return ret;
 }

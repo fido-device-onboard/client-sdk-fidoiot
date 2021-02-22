@@ -137,7 +137,7 @@ static void sdo_protDIExit(app_data_t *app_data)
 }
 
 /**
- * Release memory allocated as a part of DI protocol.
+ * Release memory allocated as a part of TO1 protocol.
  *
  * @param app_data
  *        Pointer to the database holds all protocol state variables.
@@ -153,6 +153,7 @@ static void sdo_protTO1Exit(app_data_t *app_data)
 		ps->n4 = NULL;
 	}
 	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 }
 
 /**
@@ -334,9 +335,11 @@ static sdo_sdk_status app_initialize(void)
 		return SDO_SUCCESS;
 	}
 
-	/* Build up a test service info list */
+// TO-DO: To be uncommented during TO2 implementation.
+/*
+	// Build up a test service info list
 	char *get_modules = NULL;
-
+	// TO-DO: To be uncommented during TO2 implementation.
 	g_sdo_data->service_info = sdo_service_info_alloc();
 
 	if (!g_sdo_data->service_info) {
@@ -382,7 +385,7 @@ static sdo_sdk_status app_initialize(void)
 					    "sdodev:modules", get_modules);
 		sdo_free(get_modules);
 	}
-
+*/
 	if (sdo_null_ipaddress(&g_sdo_data->prot.i1) == false) {
 		return SDO_ERROR;
 	}
@@ -962,90 +965,138 @@ static bool _STATE_TO1(void)
 		goto end;
 	}
 
-	sdo_prot_t *ps = &g_sdo_data->prot;
-
 	// check for rendezvous list
 	if (!g_sdo_data->devcred->owner_blk->rvlst ||
-	    g_sdo_data->devcred->owner_blk->rvlst->num_entries == 0) {
+	    g_sdo_data->devcred->owner_blk->rvlst->num_rv_directives == 0) {
 		LOG(LOG_ERROR, "Stored Rendezvous_list is empty!!\n");
 		ERROR();
 		goto end;
 	}
 
-	ps->rv_index = ps->rv_index + 1;
-	if (ps->rv_index > g_sdo_data->devcred->owner_blk->rvlst->num_entries)
-		ps->rv_index =
-		    ps->rv_index %
-		    g_sdo_data->devcred->owner_blk->rvlst->num_entries;
-	sdo_rendezvous_t *rv =
-	    g_sdo_data->devcred->owner_blk->rvlst->rv_entries;
-	for (int i = 1; i < ps->rv_index; i++)
-		rv = rv->next;
+	// Try TO1 for all available RVDirectives.
+	// Only checking for RVIP/RVDNS/RVPort/RVBypass/RVOwnerOnly flags.
+	// Depending on the requirement, check for more flags should be added here.
+	// If we encounter RVBYPASS, skip directly to TO2.
+	// TO-DO: Integrate TO2 flow into this and fix it to start from the
+	// next directive always in case of failure (ex: RVBypass)
+	int port = 0;
+	sdo_ip_address_t *ip = NULL;
+	sdo_string_t *dns = NULL;
+	bool rvbypass = false;
+	bool rvowner_only = false;
 
-	if (rv == NULL) {
-		ERROR();
-		goto end;
-	} else {
-		/* use the rendevous address from credential file ... pick
-		 * first/only entry in the list
-		 */
-		if (!rv->ip && !rv->dn) {
-			/* TODO put error cb	ERROR(); */
-			ret = true;
-			goto end;
-		}
+	sdo_rendezvous_directive_t *rv_directive =
+			g_sdo_data->devcred->owner_blk->rvlst->rv_directives;
 
-		/*if delay not specified in Rendezvous then 120s is default*/
+	while (!ret && rv_directive) {
+		sdo_rendezvous_t *rv = rv_directive->rv_entries;
+		// reset for next use.
+		port = 0;
+		ip = NULL;
+		dns = NULL;
+		rvbypass = false;
+		rvowner_only = false;
+		while (rv) {
 
-		// This should be checked against an 
-		if (rv->pr && *rv->pr == RVPROTHTTPS)
-			tls = true;
-	}
-
-	prot_ctx =
-	    sdo_prot_ctx_alloc(sdo_process_states, &g_sdo_data->prot, rv->ip,
-			       rv->dn ? rv->dn->bytes : NULL, *rv->po, tls);
-	if (prot_ctx == NULL) {
-		ERROR();
-		goto end;
-	}
-
-	if (sdo_prot_ctx_run(prot_ctx) != 0) {
-		LOG(LOG_ERROR, "TO1 failed.\n");
-		if (g_sdo_data->error_recovery) {
-			LOG(LOG_INFO, "Retrying,.....\n");
-			g_sdo_data->state_fn = &_STATE_TO1;
-			if (g_sdo_data->error_callback) {
-				status = g_sdo_data->error_callback(
-				    SDO_WARNING, SDO_TO1_ERROR);
-
-				if (status == SDO_ABORT) {
-					g_sdo_data->error_recovery = false;
-					g_sdo_data->recovery_enabled = false;
-					ERROR();
-					goto end;
-				}
+			if (rv->bypass) {
+				rvbypass = true;
+				break;
 			}
-			sdo_sleep(3);
-			/* Error recovery is enabled, so, it's not the final
-			 * status
-			 */
+			if (rv->owner_only) {
+				rvowner_only = true;
+				break;
+			}
+
+			if (rv->ip) {
+				ip = rv->ip;
+				rv = rv->next;
+				continue;
+			}
+			if (rv->dn) {
+				dns = rv->dn;
+				rv = rv->next;
+				continue;
+			}
+			if (rv->po) {
+				port = *rv->po;
+				rv = rv->next;
+				continue;
+			}
+			if (rv->pr && *rv->pr == RVPROTTLS) {
+				tls = true;
+			}
+			rv = rv->next;
+		}
+		if (rvbypass) {
+			// move to TO2 directly. However, update the flow to start from the next RV directive
+			// in case of failure with TO2. TO-DO.
+			g_sdo_data->state_fn = &_STATE_TO2;
 			goto end;
+		}
+
+		// Found the  needed entries of the current directive. Prepare to move to next.
+		rv_directive = rv_directive->next;
+
+		if (rvowner_only || (!ip && !dns) || port == 0) {
+			// If any of the IP/DNS/Port values are missing, or
+			// if RVOwnerOnly is prsent in the current directive,
+			// skip the current directive and check for the same in the next directives.
+			continue;
+		}
+	
+		prot_ctx =
+	    	sdo_prot_ctx_alloc(sdo_process_states, &g_sdo_data->prot, ip,
+		       dns ? dns->bytes : NULL, port, tls);
+		if (prot_ctx == NULL) {
+			ERROR();
+			goto end;
+		}
+
+		if (sdo_prot_ctx_run(prot_ctx) != 0) {
+			LOG(LOG_ERROR, "TO1 failed.\n");
+			if (g_sdo_data->error_recovery) {
+				LOG(LOG_INFO, "Retrying,.....\n");
+				g_sdo_data->state_fn = &_STATE_TO1;
+				if (g_sdo_data->error_callback) {
+					status = g_sdo_data->error_callback(
+			    		SDO_WARNING, SDO_TO1_ERROR);
+					if (status == SDO_ABORT) {
+						g_sdo_data->error_recovery = false;
+						g_sdo_data->recovery_enabled = false;
+						ERROR();
+						goto end;
+					}
+				}
+				sdo_sleep(3);
+				/* Error recovery is enabled, so, it's not the final
+		 		* status
+		 		*/
+			 	// clear contents for a fresh start.
+				sdo_protTO1Exit(g_sdo_data);
+			 	sdo_prot_ctx_free(prot_ctx);
+				// pre-emptively, return if no more directives as present to avoid
+				// double-free error at end tag during retries.
+				// TO-DO: Fix when flow is simplified.
+				if (!rv_directive)
+					return ret;
+				continue;
+			} else {
+				ERROR()
+				sdo_sleep(g_sdo_data->delaysec + sdo_random() % 25);
+				if (g_sdo_data->error_callback)
+					status = g_sdo_data->error_callback(
+			    		SDO_ERROR, SDO_TO1_ERROR);
+				goto end;
+			}
 		} else {
-			ERROR()
-			sdo_sleep(g_sdo_data->delaysec + sdo_random() % 25);
-			if (g_sdo_data->error_callback)
-				status = g_sdo_data->error_callback(
-				    SDO_ERROR, SDO_TO1_ERROR);
+			LOG(LOG_DEBUG, "\n------------------------------------ TO1 Successful "
+		       "--------------------------------------\n");
+			ret = true;
+			g_sdo_data->state_fn = &_STATE_TO2;
 			goto end;
 		}
 	}
 
-	LOG(LOG_DEBUG, "\n------------------------------------ TO1 Successful "
-		       "--------------------------------------\n");
-
-	g_sdo_data->state_fn = &_STATE_TO2;
-	ret = true;
 end:
 	sdo_protTO1Exit(g_sdo_data);
 	sdo_prot_ctx_free(prot_ctx);

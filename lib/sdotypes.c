@@ -1246,17 +1246,47 @@ char *sdo_guid_to_string(sdo_byte_array_t *g, char *buf, int buf_sz)
 #endif
 
 /**
- * Write the GID
- * @param sdow - pointer to the struct where the GID is written in JSON format
- * @return none
+ * Write the SigInfo of the form:
+ * SigInfo = [
+ *   sgType: DeviceSgType,
+ *   Info: bstr
+ * ]
+ * @param sdow - pointer to the struct where the GID is to be written.
+ * @return true if write is successfull. false, otherwise.
  */
-void sdo_gid_write(sdow_t *sdow)
+bool sdo_siginfo_write(sdow_t *sdow)
 {
-	sdow_start_array(sdow, 2);
-	sdow_unsigned_int(sdow, SDO_PK_ALGO);
+	bool ret = false;
+	if (!sdow_start_array(sdow, 2)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
+		return ret;
+	}
+	if (!sdow_unsigned_int(sdow, SDO_PK_ALGO)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to write sgType\n");
+		return ret;
+	}
+
 	sdo_byte_array_t *empty_byte_array = sdo_byte_array_alloc(0);
-	sdow_byte_string(sdow, empty_byte_array->bytes, empty_byte_array->byte_sz);
-	sdow_end_array(sdow);
+	if (!empty_byte_array) {
+		LOG(LOG_ERROR, "SigInfo: Byte Array Alloc failed\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to write Info\n");
+		goto end;
+	}
+
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to end array\n");
+		goto end;
+	}
+	LOG(LOG_DEBUG, "eASigInfo write successfull\n");
+	ret = true;
+end:
+	sdo_byte_array_free(empty_byte_array);
+	empty_byte_array = NULL;
+	return ret;
 }
 
 /**
@@ -1269,69 +1299,60 @@ sdo_cert_chain_t *sdo_cert_chain_alloc_empty(void)
 }
 
 /**
- * Read the Dummy EB i.e. [13, 0, ""] sent when ECDSA based device-attestation
- * is used.
- * @param sdor - pointe to the read EPID information in JSON format
- * @return true when successfully read, false in case of any issues.
+ * Do a dummy read for ECDSA
+ * @param sdor - pointer to the read location in CBOR format
+ * @return true on success and false on failure
  */
-bool sdo_ecdsa_dummyEBRead(sdor_t *sdor)
+bool sdo_eb_read(sdor_t *sdor)
 {
-	bool retval = false;
-	// TO-DO : Revisit signed vs unsigned int here.
+	bool ret = false;
 	int type = 0;
 	int exptype = 0;
-	uint8_t *buf;
-
-	/* "eB":[13,0,""] */
+	uint8_t *buf = {0};
 
 	if (!sdor)
 		goto end;
 
 	if (!sdor_start_array(sdor)) {
-		LOG(LOG_ERROR, "No begin Sequence\n");
+		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
 		goto end;
 	}
 
 	exptype = SDO_PK_ALGO;
 
-	sdor_signed_int(sdor, &type);
+	if (!sdor_signed_int(sdor, &type)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to read sgType\n");
+		goto end;
+	}
+
 	if (type != exptype) {
 		LOG(LOG_ERROR,
-		    "Invalid ECDSA pubkey type, expected %d got %d\n", exptype,
+		    "SigInfo: Invalid sgType. Expected %d, Received %d\n", exptype,
 		    type);
 		goto end;
 	}
 
-	// read empty byte
-	// TO-DO : Read empty byte here.
-	buf = sdo_alloc(0);
-	if (!sdor_byte_string(sdor, buf, 0)) {
-		LOG(LOG_ERROR, "Invalid eBSigInfo!\n");
+	size_t info_length = 1;
+	if (!sdor_string_length(sdor, &info_length) || info_length != 0) {
+		LOG(LOG_ERROR,
+		    "SigInfo: Invalid Info length. Expected %d, Received %zu\n", 0,
+		    info_length);
 		goto end;
 	}
 
-	LOG(LOG_DEBUG, "Received eBSigInfo\n");
-
+	if (!sdor_byte_string(sdor, buf, info_length)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to read Info\n");
+		goto end;
+	}
 
 	if (!sdor_end_array(sdor)) {
 		LOG(LOG_ERROR, "No End Array\n");
 		goto end;
 	}
-	retval = true;
-
+	LOG(LOG_DEBUG, "eBSigInfo read successfull\n");
+	ret = true;
 end:
-	return retval;
-}
-
-
-/**
- * Do a dummy read for ECDSA
- * @param sdor - pointer to the read location in JSON format
- * @return 0 on success and -1 on failure
- */
-int32_t sdo_eb_read(sdor_t *sdor)
-{
-	int32_t ret = (false == sdo_ecdsa_dummyEBRead(sdor)) ? -1 : 0;
+	sdo_free(buf);
 	return ret;
 }
 
@@ -2930,58 +2951,114 @@ sdo_rendezvous_list_t *sdo_rendezvous_list_alloc(void)
 void sdo_rendezvous_list_free(sdo_rendezvous_list_t *list)
 {
 	sdo_rendezvous_t *entry, *next;
+	sdo_rendezvous_directive_t *directive_entry, *directive_next;
 
 	if (list == NULL) {
 		return;
 	}
 
 	/* Delete all entries. */
-	next = entry = list->rv_entries;
-	while (entry) {
-		next = entry->next;
-		sdo_rendezvous_free(entry);
-		entry = next;
-	};
-
-	list->num_entries = 0;
+	directive_entry = directive_next = list->rv_directives;
+	while (directive_entry) {
+		next = entry = directive_entry->rv_entries;
+		while (entry) {
+			next = entry->next;
+			sdo_rendezvous_free(entry);
+			entry = next;
+		};
+		directive_next = directive_entry->next;
+		directive_entry = directive_next;
+	}
+	list->num_rv_directives = 0;
 	sdo_free(list);
 }
 
 /**
- * Add the rendzvous to the rendzvous list
- * @param list - pointer to the rendzvous list
- * @param rv - pointer to the rendezvous to be added to the list
+ * Add the RendezvousDirective to the RendezvousInfo list
+ * @param list - pointer to the RendezvousInfo list
+ * @param rv - pointer to the RendezvousDirective to be added to the list
  * @return number of entries added if success else error code
  */
-int sdo_rendezvous_list_add(sdo_rendezvous_list_t *list, sdo_rendezvous_t *rv)
+int sdo_rendezvous_directive_add(sdo_rendezvous_list_t *list,
+	sdo_rendezvous_directive_t *directive) {
+	if (list == NULL || directive == NULL)
+		return 0;
+
+	LOG(LOG_DEBUG, "Adding directive to rvlst\n");
+
+	if (list->num_rv_directives == 0) {
+		// List empty, add the first entry
+		list->rv_directives = directive;
+		list->num_rv_directives++;
+	} else {
+		// already has entries, find the last entry
+		sdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
+		// Find the last entry
+		while (entry_ptr->next != NULL) {
+			entry_ptr = (sdo_rendezvous_directive_t *)entry_ptr->next;
+		}
+		// Now the enty_ptr is pointing to the last entry
+		// Add the directive entry onto the end
+		entry_ptr->next = directive;
+		list->num_rv_directives++;
+	}
+	LOG(LOG_DEBUG, "Added directive to rvlst, %d entries\n", list->num_rv_directives);
+	return list->num_rv_directives;
+}
+
+/**
+ * Add the RendezvousInstr to the RendezvousDirective struct
+ * @param list - pointer to the RendezvousDirective list
+ * @param rv - pointer to the RendezvousInstr to be added to the list
+ * @return number of entries added if success else error code
+ */
+int sdo_rendezvous_list_add(sdo_rendezvous_directive_t *directives, sdo_rendezvous_t *rv)
 {
-	if (list == NULL || rv == NULL)
+	if (directives == NULL || rv == NULL)
 		return 0;
 
 	LOG(LOG_DEBUG, "Adding to rvlst\n");
 
-	if (list->num_entries == 0) {
+	if (directives->num_entries == 0) {
 		// List empty, add the first entry
-		list->rv_entries = rv;
-		list->num_entries++;
+		directives->rv_entries = rv;
+		directives->num_entries++;
 	} else {
 		// already has entries, find the last entry
-		sdo_rendezvous_t *entry_ptr, *prev_ptr;
-
-		entry_ptr = (sdo_rendezvous_t *)list->rv_entries->next;
-		prev_ptr = list->rv_entries;
+		sdo_rendezvous_t *entry_ptr = directives->rv_entries;
 		// Find the last entry
-		while (entry_ptr != NULL) {
-			prev_ptr = entry_ptr;
+		while (entry_ptr->next != NULL) {
 			entry_ptr = (sdo_rendezvous_t *)entry_ptr->next;
 		}
 		// Now the enty_ptr is pointing to the last entry
 		// Add the r entry onto the end
-		prev_ptr->next = rv;
-		list->num_entries++;
+		entry_ptr->next = rv;
+		directives->num_entries++;
 	}
-	LOG(LOG_DEBUG, "Added to rvlst, %d entries\n", list->num_entries);
-	return list->num_entries;
+	LOG(LOG_DEBUG, "Added to rvlst, %d entries\n", directives->num_entries);
+	return directives->num_entries;
+}
+
+sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(sdo_rendezvous_list_t *list, int num)
+{
+	int index;
+
+	if (list == NULL || list->rv_directives == NULL)
+		return NULL;
+
+	sdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
+
+	for (index = 0; index < num; index++) {
+		if (entry_ptr->next != NULL)
+			entry_ptr = entry_ptr->next;
+		else {
+			// this should ideally no happen since for 'num' times,
+			// there should be a directive present.
+			LOG(LOG_DEBUG, "RendezvousDirective not found for index %d\n", index);
+			return NULL;
+		}
+	}
+	return entry_ptr;
 }
 
 /**
@@ -2991,17 +3068,24 @@ int sdo_rendezvous_list_add(sdo_rendezvous_list_t *list, sdo_rendezvous_t *rv)
  * @return sdo_rendezvous_t object.
  */
 
-sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_list_t *list, int num)
+sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_directive_t *directive, int num)
 {
 	int index;
 
-	if (list == NULL || list->rv_entries == NULL)
+	if (directive == NULL || directive->rv_entries == NULL)
 		return NULL;
 
-	sdo_rendezvous_t *entry_ptr = list->rv_entries;
+	sdo_rendezvous_t *entry_ptr = directive->rv_entries;
 
 	for (index = 0; index < num; index++) {
-		entry_ptr = entry_ptr->next;
+		if (entry_ptr->next != NULL)
+			entry_ptr = entry_ptr->next;
+		else {
+			// this should ideally no happen since for 'num' times,
+			// there should be a directive present.
+			LOG(LOG_DEBUG, "RendezvousInstr not found for index %d\n", index);
+			return NULL;
+		}
 	}
 	return entry_ptr;
 }
@@ -3036,7 +3120,6 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 
 	LOG(LOG_DEBUG, "There are %zu RendezvousDirective(s) in the RendezvousInfo\n",
 		num_rv_directives);
-	list->num_rv_directives = num_rv_directives;
 
 	size_t rv_directive_index;
 
@@ -3059,6 +3142,13 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 			return false;
 		}
 
+		sdo_rendezvous_directive_t *rv_directive =
+			sdo_alloc(sizeof(sdo_rendezvous_directive_t));
+		if (!rv_directive) {
+			LOG(LOG_ERROR,
+		    "%s : RendezvousDirective alloc failed\n", __func__);
+			return false;			
+		}
 		size_t rv_instr_index;
 		for (rv_instr_index = 0; rv_instr_index < num_rv_instr; rv_instr_index++) {
 			// Read each rv entry and add to the rv list
@@ -3069,9 +3159,10 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 			LOG(LOG_DEBUG, "New rv allocated %p\n", (void *)rv_entry);
 
 			if (sdo_rendezvous_read(sdor, rv_entry))
-				sdo_rendezvous_list_add(list, rv_entry);
+				sdo_rendezvous_list_add(rv_directive, rv_entry);
 			else {
 				sdo_rendezvous_free(rv_entry);
+				// TO-DO: free directive here?
 				return false;
 			}
 		}
@@ -3080,6 +3171,7 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 		    	"%s : RendezvousDirective end array not found\n", __func__);
 		return false;
 		}
+		sdo_rendezvous_directive_add(list, rv_directive);
 	}
 	if (!sdor_end_array(sdor)) {
 		LOG(LOG_ERROR,
@@ -3111,10 +3203,14 @@ bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list)
 	int rv_directive_index;
 	for (rv_directive_index = 0; rv_directive_index < list->num_rv_directives;
 		rv_directive_index++) {
-		sdow_start_array(sdow, list->num_entries);
+		sdo_rendezvous_directive_t *directive = sdo_rendezvous_directive_get(list, rv_directive_index);
+		if (!directive) {
+			continue;
+		}
+		sdow_start_array(sdow, directive->num_entries);
 		int rv_instr_index;
-		for (rv_instr_index = 0; rv_instr_index < list->num_entries; rv_instr_index++) {
-			sdo_rendezvous_t *entry_Ptr = sdo_rendezvous_list_get(list, rv_instr_index);
+		for (rv_instr_index = 0; rv_instr_index < directive->num_entries; rv_instr_index++) {
+			sdo_rendezvous_t *entry_Ptr = sdo_rendezvous_list_get(directive, rv_instr_index);
 			if (entry_Ptr == NULL) {
 				continue;
 			}
@@ -3568,6 +3664,617 @@ bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv)
 //------------------------------------------------------------------------------
 // Write Signature Routines
 //
+
+/**
+ * Create an EAT object with memory allocated for Protected header,
+ * Unprotected header and Payload.
+ * Signature alongwith EATMAROEPREFIX and EATNonce are set to NULL initally, which
+ * should be initialized when needed.
+ */
+fdo_eat_t* fdo_eat_alloc(void) {
+
+	fdo_eat_t *eat = sdo_alloc(sizeof(fdo_eat_t));
+	if (!eat) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc\n");
+		goto err;
+	}
+	eat->eat_ph = sdo_alloc(sizeof(fdo_eat_protected_header_t));
+	if (!eat->eat_ph) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc Protected Header\n");
+		goto err;
+	}
+
+	eat->eat_uph = sdo_alloc(sizeof(fdo_eat_unprotected_header_t));
+	if (!eat->eat_uph) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc Unprotected header\n");
+		goto err;
+	}
+	eat->eat_uph->eatmaroeprefix = NULL;
+	eat->eat_uph->euphnonce = NULL;
+
+	eat->eat_payload = sdo_byte_array_alloc(sizeof(sdo_byte_array_t));
+	if (!eat->eat_payload) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc EATPayload\n");
+		goto err;
+	}
+	// set the signature to NULL, since there's no use to allocate for it here.
+	eat->eat_signature = NULL;
+	return eat;
+err:
+	if (eat)
+		fdo_eat_free(eat);
+	return NULL;
+}
+
+/**
+ * Free an EAT object for which memory has been allocated previously.
+ */
+void fdo_eat_free(fdo_eat_t *eat) {
+
+	if (eat->eat_ph) {
+		sdo_free(eat->eat_ph);
+	}
+	if (eat->eat_uph) {
+		sdo_byte_array_free(eat->eat_uph->eatmaroeprefix);
+		sdo_byte_array_free(eat->eat_uph->euphnonce);
+		sdo_free(eat->eat_uph);
+	}
+	if (eat->eat_payload) {
+		sdo_byte_array_free(eat->eat_payload);
+	}
+	if (eat->eat_signature) {
+		sdo_byte_array_free(eat->eat_signature);
+	}
+	sdo_free(eat);
+	eat = NULL;
+}
+
+/**
+ * Write an Entity Attestation Token by CBOR encoding the contents of the given EAT object.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * signature			// bstr
+ * ]
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write(sdow_t *sdow, fdo_eat_t *eat) {
+
+	if (!sdow_start_array(sdow, 4)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_eat_write_protected_header(sdow, eat->eat_ph)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_eat_write_unprotected_header(sdow, eat->eat_uph)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, eat->eat_payload->bytes, eat->eat_payload->byte_sz)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write payload\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, eat->eat_signature->bytes, eat->eat_signature->byte_sz)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write signature\n");
+		return false;
+	}
+
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Create EAT.EATProtectedHeaders (CBOR map) as CBOR bytes using the given contents.
+ * {
+ * keyAlg:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write_protected_header(sdow_t *sdow, fdo_eat_protected_header_t *eat_ph) {
+
+	if (!sdow_start_map(sdow, 1)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!sdow_signed_int(sdow, FDO_COSE_ALG_KEY)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write CoseAlg Key\n");
+		return false;
+	}
+
+	if (!sdow_signed_int(sdow, eat_ph->ph_sig_alg)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write CoseAlg Value\n");
+		return false;
+	}
+
+	if (!sdow_end_map(sdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Create EAT.EATUnprotectedHeaders (CBOR Map) as CBOR bytes using the given contents.
+ * {
+ * EATMAROEPrefix:<maroe-prefix>,	// optional element
+ * EUPHNonce:<nonce>				// optional element
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write_unprotected_header(sdow_t *sdow, fdo_eat_unprotected_header_t *eat_uph) {
+	// calculate the size of map.
+	int num_uph_elements = 0;
+	if (eat_uph->euphnonce) {
+		num_uph_elements++;
+	}
+	if (eat_uph->eatmaroeprefix) {
+		num_uph_elements++;
+	}
+	if (!sdow_start_map(sdow, num_uph_elements)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	// Write EATMAROEPrefix only when its present.
+	if (eat_uph->eatmaroeprefix) {
+		if (!sdow_signed_int(sdow, FDO_EAT_MAROE_PREFIX_KEY)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EATMAROEPrefix Key\n");
+			return false;
+		}
+
+		if (!sdow_byte_string(sdow, eat_uph->eatmaroeprefix->bytes, eat_uph->eatmaroeprefix->byte_sz)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EATMAROEPrefix value\n");
+			return false;
+		}
+	}
+
+	// Write EUPHNonce only when its present.
+	if (eat_uph->euphnonce) {
+		if (!sdow_signed_int(sdow, FDO_EAT_EUPHNONCE_KEY)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EUPHNonce Key\n");
+			return false;
+		}
+
+		if (!sdow_byte_string(sdow, eat_uph->euphnonce->bytes, eat_uph->euphnonce->byte_sz)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EUPHNonce Value\n");
+			return false;
+		}
+	}
+
+	if (!sdow_end_map(sdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Create EAT.EATPayloadBaseMap (CBOR Map) as CBOR bytes using the given contents.
+ * Before sending it across, the resulting encoded contents need to be CBOR encoded again
+ * into a bstr CBOR type.
+ * {
+ * EAT-UEID:<ueid>,
+ * EAT-NONCE:<nonce>,
+ * EAT-FDO:<EATPayloads> // optional element
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write_payloadbasemap(sdow_t *sdow, fdo_eat_payload_base_map_t *eat_payload) {
+	size_t num_payload_elements = 2;
+	if (eat_payload->eatpayloads) {
+		LOG(LOG_DEBUG,
+			"Entity Attestation Token PayloadBaseMap: EATPayload to be written\n");
+		num_payload_elements = 3;
+	}
+	if (!sdow_start_map(sdow, num_payload_elements)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write start map\n");
+		return false;
+	}
+
+	if (!sdow_signed_int(sdow, FDO_EATUEID_KEY)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-UEID Key\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, eat_payload->eatueid, sizeof(eat_payload->eatueid))) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-UEID value\n");
+		return false;
+	}
+
+	if (!sdow_signed_int(sdow, FDO_EATNONCE_KEY)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-NONCE Key\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, eat_payload->eatnonce, sizeof(eat_payload->eatnonce))) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-NONCE value\n");
+		return false;
+	}
+
+	if (num_payload_elements == 3) {
+		if (!sdow_signed_int(sdow, FDO_EATFDO)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write EAT-FDO Key\n");
+			return false;
+		}
+
+		if (!sdow_byte_string(sdow,
+				eat_payload->eatpayloads->bytes, eat_payload->eatpayloads->byte_sz)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write EAT-FDO value\n");
+			return false;
+		}
+	}
+
+	if (!sdow_end_map(sdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given COSE object for which memory has been allocated previously.
+ */
+bool fdo_cose_free(fdo_cose_t *cose) {
+	if (cose->cose_ph) {
+		cose->cose_ph->ph_sig_alg = 0;
+		sdo_free(cose->cose_ph);
+	}
+	if (cose->cose_payload) {
+		sdo_byte_array_free(cose->cose_payload);
+	}
+	if (cose->cose_signature) {
+		sdo_byte_array_free(cose->cose_signature);
+	}
+	sdo_free(cose);
+	return true;
+}
+
+/**
+ * Read CoseSignature.COSEProtectedHeaders (CBOR map) into the given fdo_cose_protected_header_t object.
+ * {
+ * keyAlg:<key-alg>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_read_protected_header(sdor_t *sdor, fdo_cose_protected_header_t *cose_ph) {
+	if (!sdor_start_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read start map\n");
+		return false;
+	}
+
+	int cose_alg_key = 1;
+	if (!sdor_signed_int(sdor, &cose_alg_key) || cose_alg_key != 1) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read CoseAlg Key\n");
+		return false;
+	}
+
+	if (!sdor_signed_int(sdor, &cose_ph->ph_sig_alg)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read CoseAlg Value\n");
+		return false;
+	}
+
+	if (!sdor_end_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read CoseSignature.COSEUnprotectedHeaders (Empty bstr).
+ * TO-DO : Update during TO2 if needed. With TO1, its an empty bstr.
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_read_unprotected_header(sdor_t *sdor) {
+	// No protected header elemnts to parse.
+	// expcting an empty bstr as COSE.UPH
+	// TO-DO : Update when PRI is updated to handle empty map.
+	bool ret = false;
+	size_t uph_length = 1;
+	if (!sdor_string_length(sdor, &uph_length) || uph_length != 0) {
+		LOG(LOG_ERROR, "COSE: Failed to read Unprotected header length\n");
+		return false;	
+	}
+	sdo_byte_array_t *empty_uph = sdo_byte_array_alloc(0);
+	if (!empty_uph) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc Unprotected header\n");
+		goto end;
+	}
+	if (!sdor_byte_string(sdor, empty_uph->bytes, empty_uph->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to read Unprotected header\n");
+		goto end;
+	}
+	ret = true;
+end:
+	sdo_byte_array_free(empty_uph);
+	return ret;
+}
+
+/**
+ * Read the given COSE into the fdo_cose_t parameter.
+ * The fdo_cose_t parameter should have memory pre-allocated.
+ * However, the internal elements must be un-allocated.
+ * The memory allocation for the same would be done in the method.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * signature			// bstr
+ * ]
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose) {
+
+	size_t num_cose_items = 4;
+	if (!sdor_array_length(sdor, &num_cose_items) || num_cose_items != 4) {
+		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
+		return false;		
+	}
+
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "COSE: Failed to read start array\n");
+		return false;
+	}
+
+	cose->cose_ph = sdo_alloc(sizeof(fdo_cose_protected_header_t));
+	if (!cose->cose_ph) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc Protected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_read_protected_header(sdor, cose->cose_ph)) {
+		LOG(LOG_ERROR, "COSE: Failed to read protected header\n");
+		goto end;
+	}
+
+	if (!fdo_cose_read_unprotected_header(sdor)) {
+		LOG(LOG_ERROR, "COSE: Failed to read unprotected header\n");
+		goto end;
+	}
+
+	size_t var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE: Failed to read payload length\n");
+		goto end;	
+	}
+	cose->cose_payload = sdo_byte_array_alloc(var_length);
+	if (!cose->cose_payload) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc EATPayload\n");
+		goto end;
+	}
+	if (!sdor_byte_string(sdor, cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to read payload\n");
+		goto end;
+	}
+
+	var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE: Failed to read signature length\n");
+		goto end;	
+	}
+	cose->cose_signature = sdo_byte_array_alloc(var_length);
+	if (!cose->cose_signature) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc Signature\n");
+		goto end;
+	}
+	if (!sdor_byte_string(sdor, cose->cose_signature->bytes, cose->cose_signature->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to read signature\n");
+		goto end;
+	}
+
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "COSE: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_cose_free(cose);
+	return false;
+}
+
+/**
+ * Free the given RVTO2AddrEntry object for which memory has been allocated previously.
+ */
+void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry) {
+	if (rvto2addr_entry->rvip)
+		sdo_byte_array_free(rvto2addr_entry->rvip);
+	if (rvto2addr_entry->rvdns)
+		sdo_string_free(rvto2addr_entry->rvdns);
+	sdo_free(rvto2addr_entry);	
+}
+
+/**
+ * Free the given RVTO2Addr object for which memory has been allocated previously.
+ */
+void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr) {
+	if (rvto2addr) {
+		while (rvto2addr->rv_to2addr_entry) {
+			fdo_rvto2addr_entry_t *rv_to2addr_entry = rvto2addr->rv_to2addr_entry;
+			rvto2addr->rv_to2addr_entry =
+				(fdo_rvto2addr_entry_t *) rvto2addr->rv_to2addr_entry->next;
+			fdo_rvto2addr_entry_free(rv_to2addr_entry);
+		}
+		sdo_free(rvto2addr);
+	}
+}
+
+/**
+ * Read RVTO2AddrEntry into the given fdo_rvto2addr_entry_t object.
+ * Memory allocation for the internal elements of fdo_rvto2addr_entry_t object
+ * will be done in this method.
+ * However, the memory must be allocated for fdo_rvto2addr_entry_t object and
+ * given to this method.
+ * [
+ * RVIP,
+ * RVDNS,
+ * RVPort,
+ * RVProtocol
+ * ]
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_rvto2addr_entry_read(sdor_t *sdor, fdo_rvto2addr_entry_t *rvto2addr_entry) {
+	size_t num_rvto2addr_entry_items = 0;
+	if (!sdor_array_length(sdor, &num_rvto2addr_entry_items) ||
+		num_rvto2addr_entry_items != 4) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read/Invalid array length\n");
+		return false;
+	}
+
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read start array\n");
+		return false;		
+	}
+	size_t rvip_length = 0;
+	if (!sdor_string_length(sdor, &rvip_length) || rvip_length == 0) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP length\n");
+		return false;
+	}
+	rvto2addr_entry->rvip = sdo_byte_array_alloc(rvip_length);
+	if (!rvto2addr_entry->rvip) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVIP\n");
+		return false;
+	}
+	if (!sdor_byte_string(sdor, rvto2addr_entry->rvip->bytes, rvto2addr_entry->rvip->byte_sz)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP\n");
+		return false;
+	}
+
+	size_t rvdns_length = 0;
+	if (!sdor_string_length(sdor, &rvdns_length) || rvdns_length == 0) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS length\n");
+		return false;
+	}
+	rvto2addr_entry->rvdns = sdo_string_alloc_size(rvdns_length);
+	if (!rvto2addr_entry->rvdns) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVDNS\n");
+		return false;
+	}
+	
+	if (!sdor_text_string(sdor, rvto2addr_entry->rvdns->bytes, rvto2addr_entry->rvdns->byte_sz)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS\n");
+		return false;
+	}
+
+	rvto2addr_entry->rvport = -1;
+	if (!sdor_signed_int(sdor, &rvto2addr_entry->rvport) ||
+		rvto2addr_entry->rvport == -1) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVPort\n");
+		return false;
+	}
+
+	rvto2addr_entry->rvprotocol = -1;
+	if (!sdor_signed_int(sdor, &rvto2addr_entry->rvprotocol) ||
+		rvto2addr_entry->rvprotocol == -1) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVProtocol\n");
+		return false;
+	}
+
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+end:
+	fdo_rvto2addr_entry_free(rvto2addr_entry);
+	return false;
+}
+
+/**
+ * Read RVTO2Addr into the given fdo_rvto2addr_t object.
+ * Memory allocation for the internal elements of fdo_rvto2addr_t object
+ * will be done in this method.
+ * However, the memory must be allocated for fdo_rvto2addr_y_t object and
+ * given to this method.
+ * [
+ * +RVTO2AddrEntry 		// one or more RVTO2AddrEntry
+ * ]
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_rvto2addr_read(sdor_t *sdor, fdo_rvto2addr_t *rvto2addr) {
+	size_t num_rvto2addr_items = 0;
+	if (!sdor_array_length(sdor, &num_rvto2addr_items) || num_rvto2addr_items == 0) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to read/Invalid array length\n");
+		return false;
+	}
+
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to read/Invalid array length\n");
+		return false;
+	}
+
+	LOG(LOG_DEBUG, "RVTO2Addr: There are %zu RVTO2AddrEntry(s)\n", num_rvto2addr_items);
+
+	rvto2addr->num_rvto2addr = num_rvto2addr_items;
+	rvto2addr->rv_to2addr_entry = sdo_alloc(sizeof(fdo_rvto2addr_entry_t));
+	if (!rvto2addr->rv_to2addr_entry) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to alloc RVTO2AddrEntry\n");
+		return false;	
+	}
+	fdo_rvto2addr_entry_t *entry = rvto2addr->rv_to2addr_entry;
+	size_t i = 0;
+	for (;;) {
+
+		i++;
+		if (!fdo_rvto2addr_entry_read(sdor, entry)) {
+			LOG(LOG_ERROR, "RVTO2Addr: Failed to read RVTO2AddrEntry\n");
+			goto end;
+		}
+		if (i < num_rvto2addr_items) {
+			entry->next = sdo_alloc(sizeof(fdo_rvto2addr_entry_t));
+			if (!entry->next) {
+				LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read/Invalid array length\n");
+				goto end;
+			}
+			entry = entry->next;
+		} else {
+			break;
+		}
+	}
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_rvto2addr_free(rvto2addr);
+	return false;
+}
 
 /**
  * Begin the signature
