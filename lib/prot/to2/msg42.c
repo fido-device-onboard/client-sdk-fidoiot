@@ -12,27 +12,34 @@
 #include "util.h"
 
 /**
- * msg42() - TO2.GetOPNext_entry
+ * msg62() - TO2.GetOVNextEntry
  *
- * --- Message Format Begins ---
- * {
- *     "enn": UInt8 # Requests for entry with index "enn"
- * }
- * --- Message Format Ends ---
+ * TO2.GetOVNextEntry = [
+ *   OPEntryNum;	int
+ * ]
  */
-int32_t msg42(sdo_prot_t *ps)
+int32_t msg62(sdo_prot_t *ps)
 {
-	LOG(LOG_DEBUG, "SDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY: Starting\n");
+	LOG(LOG_DEBUG, "TO2.GetOVNextEntry started\n");
+
 	sdow_next_block(&ps->sdow, SDO_TO2_GET_OP_NEXT_ENTRY);
-	sdow_begin_object(&ps->sdow);
+	if (!sdow_start_array(&ps->sdow, 1)) {
+		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read start array\n");
+		return -1;
+	}
 
 	/* Write "enn" value in the block */
-	sdo_write_tag(&ps->sdow, "enn");
-	sdo_writeUInt(&ps->sdow, ps->ov_entry_num);
+	if (!sdow_signed_int(&ps->sdow, ps->ov_entry_num)) {
+		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read OPEntryNum\n");
+		return -1;
+	}
 
-	sdow_end_object(&ps->sdow);
-
+	if (!sdow_end_array(&ps->sdow)) {
+		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read end array\n");
+		return -1;
+	}
 	/* Move to msg43 */
 	ps->state = SDO_STATE_T02_RCV_OP_NEXT_ENTRY;
+	LOG(LOG_DEBUG, "TO2.GetOVNextEntry completed successfully\n");
 	return 0;
 }

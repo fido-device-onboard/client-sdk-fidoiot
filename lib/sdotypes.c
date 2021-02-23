@@ -567,6 +567,16 @@ void sdo_byte_array_empty(sdo_byte_array_t *ba)
 }
 
 /**
+ * Internal API
+ */
+bool sdo_byte_array_resize_with(sdo_byte_array_t *b, int new_byte_sz,
+				uint8_t *data)
+{
+	return sdo_bits_resize_with(b, new_byte_sz, data);
+}
+#endif
+
+/**
  * Resize the byte array
  * @param b - pointer to he struct of byte array that has to be resized
  * @param byte_sz - value to be resized with
@@ -576,16 +586,6 @@ bool sdo_byte_array_resize(sdo_byte_array_t *b, int byte_sz)
 {
 	return sdo_bits_resize(b, byte_sz);
 }
-
-/**
- * Internal API
- */
-bool sdo_byte_array_resize_with(sdo_byte_array_t *b, int new_byte_sz,
-				uint8_t *data)
-{
-	return sdo_bits_resize_with(b, new_byte_sz, data);
-}
-#endif
 
 /**
  * Clone the byte array
@@ -1399,7 +1399,7 @@ bool sdo_nonce_equal(sdo_byte_array_t *n1, sdo_byte_array_t *n2)
  */
 char *sdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz)
 {
-	int i = 0, j = 1;
+	int i = 0;
 	char *a = (char *)n;
 
 	(void)buf_sz; /* FIXME: Change the signature as its unused */
@@ -1407,15 +1407,12 @@ char *sdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz)
 	if (!n || !buf)
 		return NULL;
 
-	buf[0] = '[';
 	while (i < SDO_NONCE_BYTES) {
-		buf[j++] = INT2HEX(((*a >> 4) & 0xf));
-		buf[j++] = INT2HEX((*a & 0xf));
-		i++;
-		a++;
+		buf[i] = INT2HEX(((*a >> 4) & 0xf));
+		buf[++i] = INT2HEX((*a & 0xf));
+		++i;
+		++a;
 	}
-	buf[j++] = ']';
-	buf[j++] = 0;
 	return buf;
 }
 
@@ -1872,6 +1869,21 @@ bool sdo_read_ipaddress(sdor_t *sdor, sdo_ip_address_t *sdoip)
 	}
 
 	sdo_byte_array_free(IP);
+	return true;
+}
+
+bool sdo_convert_to_ipaddress(sdo_byte_array_t *ip_bytes, sdo_ip_address_t *sdoip)
+{
+	if (!ip_bytes || !sdoip)
+		return false;
+
+	sdoip->length = ip_bytes->byte_sz;
+	if (memcpy_s(&sdoip->addr[0], sdoip->length, ip_bytes->bytes, ip_bytes->byte_sz) !=
+	    0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		return false;
+	}
+
 	return true;
 }
 
@@ -2967,6 +2979,7 @@ void sdo_rendezvous_list_free(sdo_rendezvous_list_t *list)
 			entry = next;
 		};
 		directive_next = directive_entry->next;
+		sdo_free(directive_entry);
 		directive_entry = directive_next;
 	}
 	list->num_rv_directives = 0;
@@ -3253,9 +3266,21 @@ void sdo_encrypted_packet_free(sdo_encrypted_packet_t *pkt)
 }
 
 /**
- * TO-DO : Commenting this method's content. This will be updated during TO2 implementation.
- * 
- * Read an Encrypted Message Body object from the SDOR buffer
+ * Read an Encrypted Message Body object from the SDOR buffer.
+ * Currently, this parses EncryptedMessage of Composed Type (EncThenMacMessage),
+ * that contains an COSE_Encrypt0 (ETMInnerBlock) wrapped by COSE_Mac0 (ETMOuterBlock)
+ * ETMOuterBlock = [
+ *   protected:   { 1:ETMMacType },		// bstr
+ *   unprotected: { }					// empty map
+ *   payload:     ETMInnerBlock			// COSE_Encrypt0
+ *   hmac:   hmac						// bstr
+ * ]
+ * ETMInnerBlock = [
+ *   protected:   { 1:AESPlainType },	// bstr
+ *   unprotected: { 5:AESIV }
+ *   payload:     ProtocolMessage
+ * ]
+ * TO-DO : To be updated later to parse Simple Type.
  * @param sdor - pointer to the character buffer to parse
  * @return a newly allocated SDOEcnrypted_packet object if successful, otherwise
  * NULL
@@ -3263,118 +3288,123 @@ void sdo_encrypted_packet_free(sdo_encrypted_packet_t *pkt)
 sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor)
 {
 	sdo_encrypted_packet_t *pkt = NULL;
+	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
+	fdo_cose_mac0_t *cose_mac0 = NULL;
 
-	if (!sdor)
-		goto error;
-/*
-	if (!sdor_begin_object(sdor)) {
-		LOG(LOG_ERROR, "Object beginning not found\n");
-		goto error;
-	}
-	sdor->need_comma = false;
-
-	// Expect "ct" tag
-	if (!sdo_read_expected_tag(sdor, "ct")) {
-		// Very bad, must have the "ct" tag
-		LOG(LOG_ERROR, "%s : Not a valid "
-		    "Encrypted Packet\n", __func__);
+	if (!sdor){
+		LOG(LOG_ERROR, "Encrypted Message Read: Invalid SDOR\n");
 		goto error;
 	}
 
-	if (!sdor_begin_sequence(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
-		goto error;
-	}
-
-	// Allocate the data structures
 	pkt = sdo_encrypted_packet_alloc();
 	if (!pkt) {
-		LOG(LOG_ERROR, "Out of memory for packet\n");
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted structure\n");
 		goto error;
 	}
 
-	pkt->em_body = sdo_byte_array_alloc(0);
+	cose_mac0 = sdo_alloc(sizeof(fdo_cose_mac0_t));
+	if (!cose_mac0) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc COSE_Mac0\n");
+		goto error;
+	}
+	if (!fdo_cose_mac0_read(sdor, cose_mac0)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to read COSE_Mac0\n");
+		goto error;
+	}
+
+	// copy the COSE_Mac0 payload which will be verified against the
+	// COSE_Mac0 hmac later
+	pkt->ct_string = sdo_byte_array_alloc_with_byte_array(
+		cose_mac0->payload->bytes, cose_mac0->payload->byte_sz);
+	if (!pkt->ct_string) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy Encrypted Payload structure\n");
+		goto error;
+	}
+
+	// Verify hash/hmac type
+	// TO-DO: When implementing Simple Encrypted Message,
+	// use the key to differentiate Simple/Composed types.
+	int expected_hmac_type = SDO_CRYPTO_HMAC_TYPE_USED;
+	if (cose_mac0->protected_header->mac_type != expected_hmac_type) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected HMac Type\n");
+		goto error;	
+	}
+	pkt->hmac = sdo_hash_alloc(cose_mac0->protected_header->mac_type,
+		cose_mac0->hmac->byte_sz);	
+	if (!pkt->hmac) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted Hmac structure\n");
+		goto error;
+	}
+	if (0 != memcpy_s(pkt->hmac->hash->bytes, pkt->hmac->hash->byte_sz,
+		cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Mac0.hmac\n");
+		goto error;
+	}
+
+	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
+	sdo_block_reset(&sdor->b);
+	sdor->b.block_size = cose_mac0->payload->byte_sz;
+	if (0 != memcpy_s(sdor->b.block, sdor->b.block_size,
+		cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Mac0.payload into SDOR\n");
+		goto error;
+	}
+	fdo_cose_mac0_free(cose_mac0);
+	cose_mac0 = NULL;
+
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!sdor_parser_init(sdor)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to initialize SDOR parser\n");
+		goto error;
+	}
+
+	cose_encrypt0 = sdo_alloc(sizeof(fdo_cose_encrypt0_t));
+	if (!cose_encrypt0) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc COSE_Encrypt0\n");
+		goto error;
+	}
+	if (!fdo_cose_encrypt0_read(sdor, cose_encrypt0)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to read COSE_Encrypt0\n");
+		goto error;
+	}
+
+	// copy Encrypted payload that will be decrypted later.
+	pkt->em_body = sdo_byte_array_alloc_with_byte_array(
+		cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz);
 	if (!pkt->em_body) {
-		LOG(LOG_ERROR, "Out of memory for em_body\n");
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Payload\n");
 		goto error;
 	}
 
-	// Read the buffer and populate the required structs
-	if (!sdo_byte_array_read_with_type(sdor, pkt->em_body, &pkt->ct_string,
-					   pkt->iv)) {
-		LOG(LOG_ERROR, "Byte-array read failed!\n");
+	// copy IV that is used to decrypt the encrypted payload
+	if (0 != memcpy_s(&pkt->iv, sizeof(pkt->iv),
+		&cose_encrypt0->unprotected_header->aes_iv, sizeof(cose_encrypt0->unprotected_header->aes_iv))) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Unprotected.AESIV\n");
 		goto error;
 	}
 
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
+	// verify and copy AESPlainType value
+	int expected_aes_plain_type = AES_PLAIN_TYPE;
+	if (cose_encrypt0->protected_header->aes_plain_type != expected_aes_plain_type) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected AESPlainType\n");
 		goto error;
 	}
+	pkt->aes_plain_type = cose_encrypt0->protected_header->aes_plain_type;
 
-	sdor->need_comma = true;
-
-	pkt->hmac = sdo_hash_alloc_empty();
-	if (!pkt->hmac)
-		goto error;
-
-	// Read the HMAC
-	// Expect "hmac" tag
-	if (!sdo_read_expected_tag(sdor, "hmac")) {
-		// Very bad, must have the "hmac" tag
-		LOG(LOG_ERROR,
-		    "%s : Did not find 'hmac' tag\n", __func__);
-		goto error;
-	}
-
-	if (!sdor_begin_sequence(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
-		goto error;
-	}
-
-	// number of bytes of hmac
-	uint32_t hmac_size = sdo_read_uint(sdor);
-
-	int b64Len = bin_toB64Length(hmac_size);
-
-	if (pkt->hmac->hash == NULL) {
-		pkt->hmac->hash = sdo_byte_array_alloc(8);
-		if (!pkt->hmac->hash) {
-			LOG(LOG_ERROR, "Alloc failed\n");
-			goto error;
-		}
-	}
-
-	// Allocate 3 bytes extra for max probable decodaed output
-	// Resize the byte array buffer to required length
-	if (hmac_size &&
-	    sdo_bits_resize(pkt->hmac->hash, hmac_size + 3) == false) {
-		LOG(LOG_ERROR, "SDOBits_resize failed\n");
-		goto error;
-	}
-
-	// Convert buffer from base64 to binary
-	if (0 == sdo_read_byte_array_field(sdor, b64Len, pkt->hmac->hash->bytes,
-					   pkt->hmac->hash->byte_sz)) {
-		LOG(LOG_ERROR, "Unable to read hmac\n");
-		goto error;
-	}
-
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
-		goto error;
-	}
-
-	pkt->hmac->hash->byte_sz = 32;
-	if (!sdor_end_object(sdor)) {
-		LOG(LOG_ERROR, "Object end not found\n");
-		goto error;
-	}
-
+	fdo_cose_encrypt0_free(cose_encrypt0);
+	cose_encrypt0 = NULL;
+	LOG(LOG_DEBUG, "Encrypted Message Read: Encrypted Message parsed successfully\n");
 	return pkt;
-*/
-	return NULL;
 error:
 	sdo_encrypted_packet_free(pkt);
+	if (cose_mac0) {
+		fdo_cose_mac0_free(cose_mac0);
+		cose_mac0 = NULL;
+	}
+	if (cose_encrypt0) {
+		fdo_cose_encrypt0_free(cose_encrypt0);
+		cose_encrypt0 = NULL;
+	}
 	return NULL;
 }
 
@@ -3447,45 +3477,110 @@ bool sdo_write_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv, int len)
 }
 
 /**
- * TO-DO : Method rewrite.
+ * Write the ETMInnerBlock stucture (COSE_Encrypt0) in the SDOW buffer using the contents
+ * of sdo_encrypted_packet_t.
+ * ETMInnerBlock = [
+ *   protected:   { 1:AESPlainType },
+ *   unprotected: { 5:AESIV }
+ *   payload:     ProtocolMessage
+ *   signature:   bstr
+ *]
  * 
- * Write out an Encrypted Message Body object to the sdow buffer
- * @param sdow - Output buffer to write the JASON packet representation
- * @param pkt - the packet to be written out
- * @return none
+ * return true if write is successfull, false otherwise.
  */
-void sdo_encrypted_packet_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
+bool fdo_etminnerblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 {
 	if (!sdow || !pkt)
-		return;
-	/*
-	sdow_begin_object(sdow);
-	// Write the Encrypted Message Block data
-	if (pkt->em_body && pkt->em_body->byte_sz) {
-		sdo_write_tag(sdow, "ct");
+		return false;
 
-		sdo_write_byte_array_two_int(sdow, pkt->iv, AES_IV,
-					     pkt->em_body->bytes,
-					     pkt->em_body->byte_sz);
+	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
 
-	} else {
-		sdo_write_tag(sdow, "ct");
-		sdo_write_string(sdow, "");
+	cose_encrypt0 = fdo_cose_encrypt0_alloc();
+	if (!cose_encrypt0) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Encrypt0 (ETMInnerBlock)\n");
+		goto err;
 	}
 
-	// Write the Encrypted Message Block HMAC
-	sdo_write_tag(sdow, "hmac");
-	if (pkt->hmac != NULL) {
+	// copy the required data into COSE_Encrypt0 object
+	cose_encrypt0->protected_header->aes_plain_type = pkt->aes_plain_type;
 
-		sdo_write_byte_array(sdow, pkt->hmac->hash->bytes,
-				     pkt->hmac->hash->byte_sz);
-
-	} else {
-		// HMAC was NULL, do not crash...
-		sdo_hash_null_write(sdow);
+	if (0 != memcpy_s(&cose_encrypt0->unprotected_header->aes_iv,
+		sizeof(cose_encrypt0->unprotected_header->aes_iv),
+		&pkt->iv, sizeof(pkt->iv))) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to copy IV\n");
+		goto err;
 	}
-	sdow_end_object(sdow);
-	*/
+	cose_encrypt0->payload = pkt->em_body;
+
+	if (!fdo_cose_encrypt0_write(sdow, cose_encrypt0)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to write COSE_Encrypt0 (ETMInnerBlock)\n");
+		goto err;
+	}
+
+	// free immediately once used
+	fdo_cose_encrypt0_free(cose_encrypt0);
+	cose_encrypt0 = NULL;
+	return true;
+err:
+	if (cose_encrypt0) {
+		fdo_cose_encrypt0_free(cose_encrypt0);
+		cose_encrypt0 = NULL;
+	}
+	return false;
+}
+
+/**
+ * Write the ETMOuterBlock stucture (COSE_Mac0) in the SDOW buffer using the contents
+ * of sdo_encrypted_packet_t.
+ * ETMOuterBlock = [
+ *   protected:   bstr .cbor ETMMacType,
+ *   unprotected: {},
+ *   payload:     bstr .cbor ETMPayloadTag,
+ *   hmac:        bstr 
+ * ]
+ * ETMPayloadTag = ETMInnerBlock
+ * return true if write is successfull, false otherwise.
+ */
+bool fdo_etmouterblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
+{
+	if (!sdow || !pkt)
+		return false;
+
+	fdo_cose_mac0_t *cose_mac0 = sdo_alloc(sizeof(fdo_cose_mac0_t));
+	if (!cose_mac0) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Sign1 (ETMOuterBlock)\n");
+		goto err;
+	}
+	cose_mac0->protected_header = sdo_alloc(sizeof(fdo_cose_mac0_protected_header_t));
+	if (!cose_mac0->protected_header) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Mac0 Protected (ETMOuterBlock)\n");
+		goto err;
+	}
+	cose_mac0->protected_header->mac_type = pkt->hmac->hash_type;
+
+	// set the encoded ETMInnerBlock (COSE_Encrypt0) as payload and its HMac into COSE_Mac0
+	cose_mac0->payload = pkt->ct_string;
+	cose_mac0->hmac = pkt->hmac->hash;
+
+	if (!fdo_cose_mac0_write(sdow, cose_mac0)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to write COSE_Sign1 (ETMOuterBlock)\n");
+		goto err;
+	}
+	fdo_cose_mac0_free(cose_mac0);
+	cose_mac0 = NULL;
+	return true;
+err:
+	if (cose_mac0) {
+		fdo_cose_mac0_free(cose_mac0);
+		cose_mac0 = NULL;
+	}
+	return false;
 }
 
 #if 0
@@ -3565,7 +3660,7 @@ char *sdo_encrypted_packet_to_string(sdo_encrypted_packet_t *pkt, char *buf,
 #endif
 
 /**
- * Take in an Encrypted_packet object and end up with it represented
+ * Take in encrypted data object and end up with it represented
  * cleartext in the sdor buffer.  This will allow the data to be parsed
  * for its content.
  * @param sdor - pointer to the sdor object to fill
@@ -3576,56 +3671,67 @@ char *sdo_encrypted_packet_to_string(sdo_encrypted_packet_t *pkt, char *buf,
 bool sdo_encrypted_packet_unwind(sdor_t *sdor, sdo_encrypted_packet_t *pkt,
 				 sdo_iv_t *iv)
 {
-	bool ret = true;
-	sdo_string_t *cleartext = NULL;
+	bool ret = false;
+	sdo_byte_array_t *cleartext = NULL;
 
 	// Decrypt the Encrypted Body
 	if (!sdor || !pkt || !iv) {
-		LOG(LOG_ERROR,
-		    "%s : Invalid Input param\n", __func__);
-		ret = false;
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Invalid params\n");
 		goto err;
 	}
-	cleartext = sdo_string_alloc();
 
+	cleartext = sdo_byte_array_alloc(0);
 	if (cleartext == NULL) {
-		ret = false;
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to alloc clear data\n");
 		goto err;
 	}
 
 	/* New iv is used for each new decryption which comes from pkt*/
 	if (0 != aes_decrypt_packet(pkt, cleartext)) {
-		ret = false;
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to decrypt\n");
 		goto err;
 	}
 
-	/* Reset the pointers */
-	sdor_flush(sdor);
-	sdo_block_t *sdob = &sdor->b;
-
-	/* Adjust the buffer for the clear text */
-	sdo_resize_block(sdob, cleartext->byte_sz);
-	/* Copy the cleartext to the sdor buffer */
-	if (memcpy_s(sdob->block, cleartext->byte_sz, cleartext->bytes,
-		     cleartext->byte_sz) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		ret = false;
+	// clear the SDOR buffer and push decrypted payload into it
+	sdo_block_reset(&sdor->b);
+	sdor->b.block_size = cleartext->byte_sz;
+	if (0 != memcpy_s(sdor->b.block, cleartext->byte_sz,
+		cleartext->bytes, cleartext->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to copy\n");
 		goto err;
 	}
 
-	sdob->block_size = cleartext->byte_sz;
-	// sdor->have_block = true;
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!sdor_parser_init(sdor)) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to initialize SDOR parser\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decrytion done\n");
+	ret = true;
 err:
 	if (pkt)
 		sdo_encrypted_packet_free(pkt);
 	if (cleartext)
-		sdo_string_free(cleartext);
+		sdo_byte_array_free(cleartext);
 	return ret;
 }
 
 /**
  * Take the cleartext packet contained in the sdow buffer and convert it
- * to an Encrypted Message Body in the sdow buffer
+ * to an Encrypted Message Body of Composed Type (EncThenMacMessage) in the sdow buffer.
+ * It contains an COSE_Encrypt0 (ETMInnerBlock) wrapped by COSE_Mac0 (ETMOuterBlock)
+ * ETMOuterBlock = [
+ *   protected:   { 1:ETMMacType },		// bstr
+ *   unprotected: { }					// empty map
+ *   payload:     ETMInnerBlock			// COSE_Encrypt0
+ *   hmac:   hmac						// bstr
+ * ]
+ * ETMInnerBlock = [
+ *   protected:   { 1:AESPlainType },	// bstr
+ *   unprotected: { 5:AESIV }
+ *   payload:     ProtocolMessage
+ * ]
+ * TO-DO : To be updated later to write Simple Type.
  * @param sdow - pointer to the message buffer
  * @param type - message type
  * @param iv - Pointer to the iv to fill Encrypted Packet pkt.
@@ -3638,27 +3744,106 @@ bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv)
 
 	sdo_block_t *sdob = &sdow->b;
 
+	// find the encoded cleartext length
+	size_t payload_length = 0;
+	if (!sdow_encoded_length(sdow, &payload_length) || payload_length == 0) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to read encoded message length\n");
+		return false;
+	}
+	sdow->b.block_size = payload_length;
+
 	sdo_encrypted_packet_t *pkt = sdo_encrypted_packet_alloc();
-
 	if (!pkt) {
-		LOG(LOG_ERROR, "Not encrypted\n");
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to alloc for Encrypted message struct\n");
 		return false;
 	}
 
-	if (0 != aes_encrypt_packet(pkt, sdob->block, sdob->block_size)) {
-		sdo_encrypted_packet_free(pkt);
-		return false;
+	if (0 != aes_encrypt_packet(pkt, sdob->block, payload_length)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to encrypt\n");
+		goto exit;
 	}
 
-	// At this point we have a valid Encrypted Message Body packet
-	// Remake the output buffer, abandoning the cleartext
+#if defined AES_PLAIN_TYPE
+	pkt->aes_plain_type = AES_PLAIN_TYPE;
+#elif
+	LOG(LOG_ERROR,
+		"Encrypted Message (encrypt): AES_PLAIN_TYPE is undefined\n");
+	goto exit;
+#endif
+
+	// reset the SDOW block to write COSE_Encrypt0 (ETMInnerBlock)
+	// This clears the unencrypted (clear text) as well
+	sdo_block_reset(&sdow->b);
+	sdow->b.block_size = CBOR_BUFFER_LENGTH;
+	if (!sdow_encoder_init(sdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to initialize SDOW encoder\n");
+		goto exit;
+	}
+	// write the ETMInnerBlock containing the cipher text as payload
+	if (!fdo_etminnerblock_write(sdow, pkt)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to write COSE_Encrypt0 (ETMInnerBlock)\n");
+		goto exit;
+	}
+
+	// update the final encoded length in SDOW
+	if (!sdow_encoded_length(sdow, &sdow->b.block_size)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to read COSE_Encrypt0 ((ETMInnerBlock)) length\n");
+		goto exit;		
+	}
+
+	// initialize the cipher text array to hold the payload over which HMac will be generated.
+	pkt->ct_string = sdo_byte_array_alloc_with_byte_array(sdow->b.block, sdow->b.block_size);
+	if (!pkt->ct_string) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to alloc for Encrypted CT structure\n");
+		goto exit;
+	}
+
+	// reset the SDOW block to prepare for writing COSE_Sign1 (ETMOuterBlock)
+	sdo_block_reset(&sdow->b);
+	sdow->b.block_size = CBOR_BUFFER_LENGTH;
+	if (!sdow_encoder_init(sdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to initialize SDOW encoder\n");
+		goto exit;
+	}
+
+	// prepare to calculate the HMac over encoded ETMInnerBlock
+	pkt->hmac =
+	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
+
+	if (!pkt->hmac || !pkt->hmac->hash){
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to alloc for HMac\n");
+		goto exit;
+	}
+	if (0 != sdo_to2_hmac(pkt->ct_string->bytes, pkt->ct_string->byte_sz,
+			      pkt->hmac->hash->bytes,
+			      pkt->hmac->hash->byte_sz)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to generate HMac\n");
+		goto exit;
+	}
+
+	// write the final ETMOuetrBlock and the message type
+	// This is the message that goes over the network/channel
 	sdow_next_block(sdow, type);
-	sdo_encrypted_packet_write(sdow, pkt);
-
+	if (!fdo_etmouterblock_write(sdow, pkt)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to write COSE_Sign1 (ETMOuterBlock)\n");
+		goto exit;
+	}
+	return true;
+exit:
 	if (pkt)
 		sdo_encrypted_packet_free(pkt);
-
-	return true;
+	return false;
 }
 
 //------------------------------------------------------------------------------
@@ -3782,30 +3967,70 @@ bool fdo_eat_write(sdow_t *sdow, fdo_eat_t *eat) {
  */
 bool fdo_eat_write_protected_header(sdow_t *sdow, fdo_eat_protected_header_t *eat_ph) {
 
-	if (!sdow_start_map(sdow, 1)) {
+	bool ret = false;
+	sdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary SDOW, use it to create Protected header map and then clear it.
+	sdow_t temp_sdow;
+	if (!sdow_init(&temp_sdow) || !sdo_block_alloc(&temp_sdow.b) ||
+		!sdow_encoder_init(&temp_sdow)) {
 		LOG(LOG_ERROR,
-			"Entity Attestation Token Unprotected header: Failed to write start map\n");
-		return false;
+			"Entity Attestation Token Protected header: SDOW Initialization/Allocation failed!\n");
+		goto end;
 	}
 
-	if (!sdow_signed_int(sdow, FDO_COSE_ALG_KEY)) {
+	if (!sdow_start_map(&temp_sdow, 1)) {
 		LOG(LOG_ERROR,
-			"Entity Attestation Token Unprotected header: Failed to write CoseAlg Key\n");
-		return false;
+			"Entity Attestation Token Protected header: Failed to write start map\n");
+		goto end;
 	}
 
-	if (!sdow_signed_int(sdow, eat_ph->ph_sig_alg)) {
+	if (!sdow_signed_int(&temp_sdow, FDO_COSE_ALG_KEY)) {
 		LOG(LOG_ERROR,
-			"Entity Attestation Token Unprotected header: Failed to write CoseAlg Value\n");
-		return false;
+			"Entity Attestation Token Protected header: Failed to write CoseAlg Key\n");
+		goto end;
 	}
 
-	if (!sdow_end_map(sdow)) {
+	if (!sdow_signed_int(&temp_sdow, eat_ph->ph_sig_alg)) {
 		LOG(LOG_ERROR,
-			"Entity Attestation Token Unprotected header: Failed to write end map\n");
-		return false;
+			"Entity Attestation Token Protected header: Failed to write CoseAlg Value\n");
+		goto end;
 	}
-	return true;
+
+	if (!sdow_end_map(&temp_sdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!sdow_encoded_length(&temp_sdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "Entity Attestation Token Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_sdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		sdo_byte_array_alloc_with_byte_array(temp_sdow.b.block, temp_sdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!sdow_byte_string(sdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	sdow_flush(&temp_sdow);
+	sdo_free(temp_sdow.b.block);
+	if (enc_ph)
+		sdo_byte_array_free(enc_ph);
+	return ret;
 }
 
 /**
@@ -3924,10 +4149,21 @@ bool fdo_eat_write_payloadbasemap(sdow_t *sdow, fdo_eat_payload_base_map_t *eat_
 			return false;
 		}
 
+		// EATPayloads is an array of size 1 as per the usage in the FDO specification.
+		if (!sdow_start_array(sdow, 1)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write start array\n");
+			return false;
+		}
 		if (!sdow_byte_string(sdow,
 				eat_payload->eatpayloads->bytes, eat_payload->eatpayloads->byte_sz)) {
 			LOG(LOG_ERROR,
 				"Entity Attestation Token PayloadBaseMap: Failed to write EAT-FDO value\n");
+			return false;
+		}
+		if (!sdow_end_array(sdow)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write end array\n");
 			return false;
 		}
 	}
@@ -3941,12 +4177,16 @@ bool fdo_eat_write_payloadbasemap(sdow_t *sdow, fdo_eat_payload_base_map_t *eat_
 }
 
 /**
- * Free the given COSE object for which memory has been allocated previously.
+ * Free the given COSE_Sign1 object for which memory has been allocated previously.
  */
 bool fdo_cose_free(fdo_cose_t *cose) {
 	if (cose->cose_ph) {
 		cose->cose_ph->ph_sig_alg = 0;
 		sdo_free(cose->cose_ph);
+	}
+	if (cose->cose_uph) {
+		sdo_public_key_free(cose->cose_uph->cuphowner_public_key);
+		sdo_free(cose->cose_uph);
 	}
 	if (cose->cose_payload) {
 		sdo_byte_array_free(cose->cose_payload);
@@ -3966,61 +4206,128 @@ bool fdo_cose_free(fdo_cose_t *cose) {
  * Return true, if read was a success. False otherwise.
  */
 bool fdo_cose_read_protected_header(sdor_t *sdor, fdo_cose_protected_header_t *cose_ph) {
-	if (!sdor_start_map(sdor)) {
+
+	sdor_t temp_sdor;
+
+	size_t var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE Protected header: Failed to read payload length\n");
+		return false;	
+	}
+	sdo_byte_array_t *ph_as_bstr = sdo_byte_array_alloc(var_length);
+	if (!ph_as_bstr) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to alloc for COSE Protected Header as bstr\n");
+		return false;
+	}
+	if (!sdor_byte_string(sdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read COSE Protected Header as bstr\n");
+		goto end;
+	}
+
+	// create a temporary SDOR to read (unwrap) the header contents as map
+	if (!sdor_init(&temp_sdor) ||
+		!sdo_block_alloc_with_size(&temp_sdor.b, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to setup temporary SDOR\n");
+		goto end;
+	}
+
+	if (0 != memcpy_s(temp_sdor.b.block, temp_sdor.b.block_size,
+		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to copy temporary unwrapped Header content\n");
+		goto end;
+	}
+
+	if (!sdor_parser_init(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to init temporary SDOR parser\n");
+		goto end;
+	}
+
+	if (!sdor_start_map(&temp_sdor)) {
 		LOG(LOG_ERROR,
 			"COSE Protected header: Failed to read start map\n");
-		return false;
+		goto end;
 	}
 
 	int cose_alg_key = 1;
-	if (!sdor_signed_int(sdor, &cose_alg_key) || cose_alg_key != 1) {
+	if (!sdor_signed_int(&temp_sdor, &cose_alg_key) || cose_alg_key != 1) {
 		LOG(LOG_ERROR,
 			"COSE Protected header: Failed to read CoseAlg Key\n");
-		return false;
+		goto end;
 	}
 
-	if (!sdor_signed_int(sdor, &cose_ph->ph_sig_alg)) {
+	if (!sdor_signed_int(&temp_sdor, &cose_ph->ph_sig_alg)) {
 		LOG(LOG_ERROR,
 			"COSE Protected header: Failed to read CoseAlg Value\n");
-		return false;
+		goto end;
 	}
 
-	if (!sdor_end_map(sdor)) {
+	if (!sdor_end_map(&temp_sdor)) {
 		LOG(LOG_ERROR,
 			"COSE Protected header: Failed to read end map\n");
-		return false;
+		goto end;
 	}
+end:
+	sdor_flush(&temp_sdor);
+	sdo_free(temp_sdor.b.block);
+	if (ph_as_bstr)
+		sdo_byte_array_free(ph_as_bstr);
 	return true;
 }
 
 /**
- * Read CoseSignature.COSEUnprotectedHeaders (Empty bstr).
- * TO-DO : Update during TO2 if needed. With TO1, its an empty bstr.
+ * Read CoseSignature.COSEUnprotectedHeaders.
+ * Reads an empty map if cose_uph is NULL.
+ * Reads and pushes the fields CUPHOWNER and CUPHNONCE otherwise.
  * Return true, if read was a success. False otherwise.
+ * 
+ * TO-DO : Update when Simple Encrypted Message is implemented to parse COSEUnProtFields
  */
-bool fdo_cose_read_unprotected_header(sdor_t *sdor) {
-	// No protected header elemnts to parse.
-	// expcting an empty bstr as COSE.UPH
-	// TO-DO : Update when PRI is updated to handle empty map.
-	bool ret = false;
-	size_t uph_length = 1;
-	if (!sdor_string_length(sdor, &uph_length) || uph_length != 0) {
-		LOG(LOG_ERROR, "COSE: Failed to read Unprotected header length\n");
-		return false;	
+bool fdo_cose_read_unprotected_header(sdor_t *sdor, fdo_cose_unprotected_header_t *cose_uph) {
+
+	if (!sdor_start_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to read start map\n");
+		return false;
 	}
-	sdo_byte_array_t *empty_uph = sdo_byte_array_alloc(0);
-	if (!empty_uph) {
-		LOG(LOG_ERROR, "COSE: Failed to alloc Unprotected header\n");
-		goto end;
+
+	if (cose_uph) {
+		int result = 0;
+		if (!sdor_signed_int(sdor, &result) || result != FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY) {
+			LOG(LOG_ERROR,
+				"COSE Unprotected header: Failed to read CUPHOWNERPUBKEY key\n");
+			return false;
+		}
+		cose_uph->cuphowner_public_key = sdo_public_key_read(sdor);
+		if (!cose_uph->cuphowner_public_key) {
+			LOG(LOG_ERROR, "COSE: Failed to read CUPHOWNERPUBKEY value\n");
+			return false;
+		}
+
+		result = 0;
+		if (!sdor_signed_int(sdor, &result) || result != FDO_COSE_SIGN1_CUPHNONCE_KEY) {
+			LOG(LOG_ERROR,
+				"COSE Unprotected header: Failed to read CUPHNONCE key\n");
+			return false;
+		}
+		if (!sdor_byte_string(sdor, cose_uph->cuphnonce, sizeof(cose_uph->cuphnonce))) {
+			LOG(LOG_ERROR,
+				"COSE Unprotected header: Failed to read CUPHNONCE value\n");
+			return false;			
+		}
 	}
-	if (!sdor_byte_string(sdor, empty_uph->bytes, empty_uph->byte_sz)) {
-		LOG(LOG_ERROR, "COSE: Failed to read Unprotected header\n");
-		goto end;
+
+	if (!sdor_end_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to read end map\n");
+		return false;
 	}
-	ret = true;
-end:
-	sdo_byte_array_free(empty_uph);
-	return ret;
+	return true;
 }
 
 /**
@@ -4036,7 +4343,7 @@ end:
  * ]
  * Return true, if read was a success. False otherwise.
  */
-bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose) {
+bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose, bool empty_uph) {
 
 	size_t num_cose_items = 4;
 	if (!sdor_array_length(sdor, &num_cose_items) || num_cose_items != 4) {
@@ -4059,7 +4366,16 @@ bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose) {
 		goto end;
 	}
 
-	if (!fdo_cose_read_unprotected_header(sdor)) {
+	// this is a special case used only for message received from Type 61,
+	// since it contains CUPHNONCE and CUPHOWNERPUBKEY
+	if (!empty_uph) {
+		cose->cose_uph = sdo_alloc(sizeof(fdo_cose_unprotected_header_t));
+		if (!cose->cose_uph) {
+			LOG(LOG_ERROR, "COSE: Failed to alloc unprotected Header\n");
+			goto end;
+		}
+	}
+	if (!fdo_cose_read_unprotected_header(sdor, cose->cose_uph)) {
 		LOG(LOG_ERROR, "COSE: Failed to read unprotected header\n");
 		goto end;
 	}
@@ -4105,6 +4421,900 @@ bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose) {
 end:
 	fdo_cose_free(cose);
 	return false;
+}
+
+/**
+ * Create COSESignature.COSEProtectedHeaders (CBOR map) as CBOR bytes using the given contents.
+ * This is wrapped in bstr.
+ * {
+ * keyAlg:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_write_protected_header(sdow_t *sdow, fdo_cose_protected_header_t *cose_ph) {
+
+	bool ret = false;
+	sdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary SDOW, use it to create Protected header map and then clear it.
+	sdow_t temp_sdow;
+	if (!sdow_init(&temp_sdow) || !sdo_block_alloc(&temp_sdow.b) ||
+		!sdow_encoder_init(&temp_sdow)) {
+		LOG(LOG_ERROR, "COSE Protected header: SDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!sdow_start_map(&temp_sdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!sdow_signed_int(&temp_sdow, FDO_COSE_ALG_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write CoseAlg Key\n");
+		goto end;
+	}
+
+	if (!sdow_signed_int(&temp_sdow, cose_ph->ph_sig_alg)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write CoseAlg Value\n");
+		goto end;
+	}
+
+	if (!sdow_end_map(&temp_sdow)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!sdow_encoded_length(&temp_sdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "COSE Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_sdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		sdo_byte_array_alloc_with_byte_array(temp_sdow.b.block, temp_sdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR, "COSE Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!sdow_byte_string(sdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	sdow_flush(&temp_sdow);
+	sdo_free(temp_sdow.b.block);
+	if (enc_ph)
+		sdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Create COSESignature.COSEUnprotectedHeaders (CBOR empty Map)
+ * as CBOR bytes using the given contents.
+ *
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_write_unprotected_header(sdow_t *sdow) {
+	// empty map for now
+	if (!sdow_start_map(sdow, 0)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!sdow_end_map(sdow)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Write a COSESignature (COSE_Sign1) object by CBOR encoding the contents of the given cose object.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * signature			// bstr
+ * ]
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_write(sdow_t *sdow, fdo_cose_t *cose) {
+	if (!sdow_start_array(sdow, 4)) {
+		LOG(LOG_ERROR, "COSE: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_cose_write_protected_header(sdow, cose->cose_ph)) {
+		LOG(LOG_ERROR, "COSE: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_cose_write_unprotected_header(sdow)) {
+		LOG(LOG_ERROR, "COSE: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to write payload\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, cose->cose_signature->bytes, cose->cose_signature->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to write signature\n");
+		return false;
+	}
+
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "COSE: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given COSE_Mac0 object for which memory has been allocated previously.
+ */
+bool fdo_cose_mac0_free(fdo_cose_mac0_t *cose_mac0) {
+	if (cose_mac0->protected_header) {
+		cose_mac0->protected_header->mac_type = 0;
+		sdo_free(cose_mac0->protected_header);
+	}
+	if (cose_mac0->payload) {
+		sdo_byte_array_free(cose_mac0->payload);
+	}
+	if (cose_mac0->hmac) {
+		sdo_byte_array_free(cose_mac0->hmac);
+	}
+	sdo_free(cose_mac0);
+	return true;
+}
+
+/**
+ * Read Cose_Mac0.protected (CBOR map) into the given fdo_cose_mac0_protected_header_t object.
+ * This is wrapped in a bstr.
+ * {
+ * mac_type:<key-alg>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_mac0_read_protected_header(sdor_t *sdor,
+	fdo_cose_mac0_protected_header_t *protected_header) {
+
+	sdor_t temp_sdor;
+
+	size_t var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Failed to read payload length\n");
+		return false;	
+	}
+	sdo_byte_array_t *ph_as_bstr = sdo_byte_array_alloc(var_length);
+	if (!ph_as_bstr) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to alloc for COSE_Mac0 Protected Header as bstr\n");
+		return false;
+	}
+	if (!sdor_byte_string(sdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read COSE_Mac0 Protected Header as bstr\n");
+		goto end;
+	}
+
+	// create a temporary SDOR to read (unwrap) the header contents as map
+	if (!sdor_init(&temp_sdor) ||
+		!sdo_block_alloc_with_size(&temp_sdor.b, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to setup temporary SDOR\n");
+		goto end;
+	}
+
+	if (0 != memcpy_s(temp_sdor.b.block, temp_sdor.b.block_size,
+		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to copy temporary unwrapped Header content\n");
+		goto end;
+	}
+
+	if (!sdor_parser_init(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to init temporary SDOR parser\n");
+		goto end;
+	}
+
+	if (!sdor_start_map(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read start map\n");
+		goto end;
+	}
+
+	int mac_type_key = 1;
+	if (!sdor_signed_int(&temp_sdor, &mac_type_key) || mac_type_key != 1) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read ETMMacType Key\n");
+		goto end;
+	}
+
+	if (!sdor_signed_int(&temp_sdor, &protected_header->mac_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read ETMMacType Value\n");
+		goto end;
+	}
+
+	if (!sdor_end_map(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read end map\n");
+		goto end;
+	}
+end:
+	sdor_flush(&temp_sdor);
+	sdo_free(temp_sdor.b.block);
+	if (ph_as_bstr)
+		sdo_byte_array_free(ph_as_bstr);
+	return true;
+}
+
+/**
+ * Read Cose_Mac0.unprotected that is an empty map.
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_mac0_read_unprotected_header(sdor_t *sdor) {
+
+	if (!sdor_start_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to read start map\n");
+		return false;
+	}
+
+	if (!sdor_end_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to read end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read the given COSE_Mac0 into the fdo_cose_mac0_t parameter.
+ * The fdo_cose_mac0_t parameter should have memory pre-allocated.
+ * However, the internal elements must be un-allocated.
+ * The memory allocation for the same would be done in the method.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * hmac					// bstr
+ * ]
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_mac0_read(sdor_t *sdor, fdo_cose_mac0_t *cose_mac0) {
+
+	size_t num_items = 4;
+	if (!sdor_array_length(sdor, &num_items) || num_items != 4) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read/Invalid array length\n");
+		return false;		
+	}
+
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read start array\n");
+		return false;
+	}
+
+	cose_mac0->protected_header = sdo_alloc(sizeof(fdo_cose_mac0_protected_header_t));
+	if (!cose_mac0->protected_header) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc Protected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_mac0_read_protected_header(sdor, cose_mac0->protected_header)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read protected header\n");
+		goto end;
+	}
+
+	if (!fdo_cose_mac0_read_unprotected_header(sdor)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read unprotected header\n");
+		goto end;
+	}
+
+	size_t var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read payload length\n");
+		goto end;	
+	}
+	cose_mac0->payload = sdo_byte_array_alloc(var_length);
+	if (!cose_mac0->payload) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc ETMPayloadTag\n");
+		goto end;
+	}
+	if (!sdor_byte_string(sdor, cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read payload\n");
+		goto end;
+	}
+
+	var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read hmac bstr length\n");
+		goto end;	
+	}
+	cose_mac0->hmac = sdo_byte_array_alloc(var_length);
+	if (!cose_mac0->hmac) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc hmac\n");
+		goto end;
+	}
+	if (!sdor_byte_string(sdor, cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read signature\n");
+		goto end;
+	}
+
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_cose_mac0_free(cose_mac0);
+	return false;
+}
+
+/**
+ * Write Cose_Mac0.protected (CBOR map) as given in the fdo_cose_mac0_protected_header_t object.
+ * This is wrapped in a bstr.
+ * {
+ * mac_type:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_mac0_write_protected_header(sdow_t *sdow,
+	fdo_cose_mac0_protected_header_t *protected_header) {
+
+	bool ret = false;
+	sdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary SDOW, use it to create Protected header map and then clear it.
+	sdow_t temp_sdow;
+	if (!sdow_init(&temp_sdow) || !sdo_block_alloc(&temp_sdow.b) ||
+		!sdow_encoder_init(&temp_sdow)) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: SDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!sdow_start_map(&temp_sdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!sdow_signed_int(&temp_sdow, FDO_COSE_ALG_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write CoseAlg Key\n");
+		goto end;
+	}
+
+	if (!sdow_signed_int(&temp_sdow, protected_header->mac_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write ETMMacType Value\n");
+		goto end;
+	}
+
+	if (!sdow_end_map(&temp_sdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!sdow_encoded_length(&temp_sdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_sdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		sdo_byte_array_alloc_with_byte_array(temp_sdow.b.block, temp_sdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!sdow_byte_string(sdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	sdow_flush(&temp_sdow);
+	sdo_free(temp_sdow.b.block);
+	if (enc_ph)
+		sdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Write Cose_Mac0.unprotected that is an empty map.
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_mac0_write_unprotected_header(sdow_t *sdow) {
+	// empty map
+	if (!sdow_start_map(sdow, 0)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!sdow_end_map(sdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Write the given fdo_cose_mac0_t parameter into COSE_Mac0 structure
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * hmac					// bstr
+ * ]
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_mac0_write(sdow_t *sdow, fdo_cose_mac0_t *cose_mac0) {
+	if (!sdow_start_array(sdow, 4)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_cose_mac0_write_protected_header(sdow, cose_mac0->protected_header)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_cose_mac0_write_unprotected_header(sdow)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write payload\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write hmac\n");
+		return false;
+	}
+
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "COSE: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given COSE_Encrypt0 object for which memory has been allocated previously.
+ */
+bool fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0) {
+	if (cose_encrypt0->protected_header) {
+		cose_encrypt0->protected_header->aes_plain_type = 0;
+		sdo_free(cose_encrypt0->protected_header);
+	}
+	if (cose_encrypt0->unprotected_header) {
+		// do memset to 0 here.
+		sdo_free(cose_encrypt0->unprotected_header);
+	}
+	if (cose_encrypt0->payload) {
+		sdo_byte_array_free(cose_encrypt0->payload);
+	}
+
+	sdo_free(cose_encrypt0);
+	cose_encrypt0 = NULL;
+	return true;
+}
+
+/**
+ * Allocate memory and return an object of fdo_cose_encrypt0_t type.
+ * Memory is only allocated for protected and unprotected headers.
+ * Payload is set to NULL, and should be allocated when needed.
+ * 
+ * return allocated fdo_cose_encrypt0_t object.
+ */
+fdo_cose_encrypt0_t* fdo_cose_encrypt0_alloc(void) {
+	fdo_cose_encrypt0_t *cose_encrypt0 = sdo_alloc(sizeof(fdo_cose_encrypt0_t));
+	if (!cose_encrypt0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc\n");
+		goto err;
+	}
+	cose_encrypt0->protected_header = sdo_alloc(sizeof(fdo_cose_encrypt0_protected_header_t));
+	if (!cose_encrypt0->protected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Protected Header\n");
+		goto err;
+	}
+
+	cose_encrypt0->unprotected_header = sdo_alloc(sizeof(fdo_cose_encrypt0_unprotected_header_t));
+	if (!cose_encrypt0->unprotected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Unprotected header\n");
+		goto err;
+	}
+
+	// set the payload to NULL because of the way we use it.
+	cose_encrypt0->payload = NULL;
+
+	return cose_encrypt0;
+err:
+	if (cose_encrypt0)
+		fdo_cose_encrypt0_free(cose_encrypt0);
+	return NULL;
+}
+
+/**
+ * Read Cose_Encrypt0.protected (CBOR map) into the given
+ * fdo_cose_encrypt0_protected_header_t object. This is wrapped in a bstr.
+ * {
+ * aes_plain_type:<key-alg>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_read_protected_header(sdor_t *sdor,
+	fdo_cose_encrypt0_protected_header_t *protected_header) {
+
+	bool ret = false;
+	sdor_t temp_sdor;
+
+	size_t var_length = 0;
+	if (!sdor_string_length(sdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0 Protected header: Failed to read length\n");
+		return false;	
+	}
+	sdo_byte_array_t *ph_as_bstr = sdo_byte_array_alloc(var_length);
+	if (!ph_as_bstr) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to alloc for bstr\n");
+		return false;
+	}
+	if (!sdor_byte_string(sdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read as bstr\n");
+		goto end;
+	}
+
+	// create a temporary SDOR to read (unwrap) the header contents as map
+	if (!sdor_init(&temp_sdor) ||
+		!sdo_block_alloc_with_size(&temp_sdor.b, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to setup temporary SDOR\n");
+		goto end;
+	}
+
+	if (0 != memcpy_s(temp_sdor.b.block, temp_sdor.b.block_size,
+		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to copy temporary unwrapped Header content\n");
+		goto end;
+	}
+
+	if (!sdor_parser_init(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to init temporary SDOR parser\n");
+		goto end;
+	}
+
+	if (!sdor_start_map(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read start map\n");
+		goto end;
+	}
+
+	int cose_aesplaintype_key = 0;
+	if (!sdor_signed_int(&temp_sdor, &cose_aesplaintype_key) ||
+		cose_aesplaintype_key != FDO_COSE_ENCRYPT0_AESPLAINTYPE_KEY) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read AESPlainType Key\n");
+		goto end;
+	}
+
+	if (!sdor_signed_int(&temp_sdor, &protected_header->aes_plain_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read AESPlainType Value\n");
+		goto end;
+	}
+
+	if (!sdor_end_map(&temp_sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read end map\n");
+		goto end;
+	}
+	ret = true;
+end:
+	sdor_flush(&temp_sdor);
+	sdo_free(temp_sdor.b.block);
+	if (ph_as_bstr)
+		sdo_byte_array_free(ph_as_bstr);
+	return ret;
+}
+
+/**
+ * Read Cose_Encrypt0.unprotected (CBOR map) into the given
+ * fdo_cose_encrypt0_unprotected_header_t object.
+ * {
+ * aes_iv:<IV-16-bytes>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_read_unprotected_header(sdor_t *sdor,
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header) {
+	if (!sdor_start_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read start map\n");
+		return false;
+	}
+
+	int cose_aesiv_key = 0;
+	if (!sdor_signed_int(sdor, &cose_aesiv_key) ||
+		cose_aesiv_key != FDO_COSE_ENCRYPT0_AESIV_KEY) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read AESIV Key\n");
+		return false;
+	}
+
+	size_t cose_aesiv_value_length = 0;
+	if (!sdor_string_length(sdor, &cose_aesiv_value_length) ||
+		cose_aesiv_value_length != sizeof(unprotected_header->aes_iv)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read AESIV Value\n");
+		return false;
+	}
+	if (!sdor_byte_string(sdor, unprotected_header->aes_iv,
+		sizeof(unprotected_header->aes_iv))) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read AESIV Value\n");
+		return false;
+	}
+
+	if (!sdor_end_map(sdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read the given COSE_Encrypt0 into the fdo_cose_encrypt0_t parameter.
+ * The fdo_cose_encrypt0_t parameter should have memory pre-allocated.
+ * However, the internal elements must be un-allocated.
+ * The memory allocation for the same would be done in the method.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * ]
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_read(sdor_t *sdor, fdo_cose_encrypt0_t *cose_encrypt0) {
+	size_t num_cose_items = 3;
+	if (!sdor_array_length(sdor, &num_cose_items) || num_cose_items != 3) {
+		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
+		return false;		
+	}
+
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read start array\n");
+		return false;
+	}
+
+	cose_encrypt0->protected_header = sdo_alloc(sizeof(fdo_cose_encrypt0_protected_header_t));
+	if (!cose_encrypt0->protected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Protected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_encrypt0_read_protected_header(sdor, cose_encrypt0->protected_header)) {
+		LOG(LOG_ERROR, "COSE: Failed to read protected header\n");
+		goto end;
+	}
+
+	cose_encrypt0->unprotected_header = sdo_alloc(sizeof(fdo_cose_encrypt0_unprotected_header_t));
+	if (!cose_encrypt0->unprotected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Unprotected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_encrypt0_read_unprotected_header(sdor, cose_encrypt0->unprotected_header)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read Unprotected header\n");
+		goto end;
+	}
+
+	size_t payload_length = 0;
+	if (!sdor_string_length(sdor, &payload_length) ||
+		payload_length == 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read EATpayload length\n");
+		goto end;	
+	}
+	cose_encrypt0->payload = sdo_byte_array_alloc(payload_length);
+	if (!cose_encrypt0->payload) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc EATPayload\n");
+		goto end;
+	}
+	if (!sdor_byte_string(sdor, cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read EATpayload\n");
+		goto end;
+	}
+
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_cose_encrypt0_free(cose_encrypt0);
+	return false;
+}
+
+/**
+ * Write the given fdo_cose_encrypt0_protected_header_t object into CBOR encoded
+ * Cose_Encrypt0.protected (CBOR map), wrapped in a bstr.
+ * {
+ * aes_plain_type:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_write_protected_header(sdow_t *sdow,
+	fdo_cose_encrypt0_protected_header_t *protected_header) {
+
+	bool ret = false;
+	sdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary SDOW, use it to create Protected header map and then clear it.
+	sdow_t temp_sdow;
+	if (!sdow_init(&temp_sdow) || !sdo_block_alloc(&temp_sdow.b) ||
+		!sdow_encoder_init(&temp_sdow)) {
+		LOG(LOG_ERROR, "COSE Protected header: SDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!sdow_start_map(&temp_sdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!sdow_signed_int(&temp_sdow, FDO_COSE_ENCRYPT0_AESPLAINTYPE_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write AESPlainType Key\n");
+		goto end;
+	}
+
+	if (!sdow_signed_int(&temp_sdow, protected_header->aes_plain_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write AESPlainType Value\n");
+		goto end;
+	}
+
+	if (!sdow_end_map(&temp_sdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!sdow_encoded_length(&temp_sdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0 Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_sdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		sdo_byte_array_alloc_with_byte_array(temp_sdow.b.block, temp_sdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!sdow_byte_string(sdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	sdow_flush(&temp_sdow);
+	sdo_free(temp_sdow.b.block);
+	if (enc_ph)
+		sdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Write the given fdo_cose_encrypt0_unprotected_header_t object into
+ * CBOR encoded Cose_Encrypt0.unprotected (CBOR map).
+ * {
+ * aes_iv:<IV-16-bytes>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_write_unprotected_header(sdow_t *sdow,
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header) {
+	if (!sdow_start_map(sdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!sdow_signed_int(sdow, FDO_COSE_ENCRYPT0_AESIV_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write AESIV Key\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, unprotected_header->aes_iv,
+		sizeof(unprotected_header->aes_iv))) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write AESIV Value\n");
+		return false;
+	}
+
+	if (!sdow_end_map(sdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Write the given fdo_cose_encrypt0_t parameter into CBOR encoded COSE_Encrypt0.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * ]
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_write(sdow_t *sdow, fdo_cose_encrypt0_t *cose_encrypt0) {
+	if (!sdow_start_array(sdow, 3)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_cose_encrypt0_write_protected_header(sdow, cose_encrypt0->protected_header)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_cose_encrypt0_write_unprotected_header(sdow, cose_encrypt0->unprotected_header)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!sdow_byte_string(sdow, cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write payload\n");
+		return false;
+	}
+
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write end array\n");
+		return false;
+	}
+	return true;
 }
 
 /**
@@ -4959,6 +6169,118 @@ bool sdo_osi_parsing(sdor_t *sdor,
 //----------------------------------------------------------------------
 // Service_info handling
 //
+
+/**
+ * Read the CBOR encoded ServiceInfo struct.
+ * ServiceInfo = [
+ *   *ServiceInfoKeyVal		// one or more ServiceInfoKeyVal
+ * ]
+ * ServiceInfoKeyVal = [
+ *   *ServiceInfoKV			// one or more ServiceInfoKV
+ * ]
+ * ServiceInfoKV = [
+ *   ServiceInfoKey: tstr,
+ *   ServiceInfoVal: cborSimpleType
+ * ]
+ * 
+ * return true if read was a success, false otherwise
+ */
+bool fdo_serviceinfo_read(sdor_t *sdor) {
+
+	sdo_string_t *serviceinfokey = NULL;
+	sdo_byte_array_t *serviceinfoval = NULL;
+
+	size_t num_serviceinfo = 0;
+	if (!sdor_array_length(sdor, &num_serviceinfo)) {
+		LOG(LOG_ERROR, "ServiceInfo read: Failed to find number of items\n");
+		goto exit;
+	}
+	if (!sdor_start_array(sdor)) {
+		LOG(LOG_ERROR, "ServiceInfo read: Failed to start array\n");
+		goto exit;
+	}
+	size_t i;
+	for (i = 0; i < num_serviceinfo; i++) {
+		size_t num_serviceinfokeyval = 0;
+		if (!sdor_array_length(sdor, &num_serviceinfokeyval)) {
+				LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to find number of items\n");
+				goto exit;
+		}
+		if (!sdor_start_array(sdor)) {
+			LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to start array\n");
+			return false;
+		}
+		size_t j;
+		for (j = 0; j < num_serviceinfokeyval; j++) {
+			size_t num_serviceinfokv = 0;
+			if (!sdor_array_length(sdor, &num_serviceinfokv) &&
+				num_serviceinfokv != 2) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to find number of items\n");
+				goto exit;
+			}
+			if (!sdor_start_array(sdor)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to start array\n");
+				goto exit;
+			}
+
+			size_t serviceinfokey_length = 0;
+			if (!sdor_string_length(sdor, &serviceinfokey_length)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKey length\n");
+				goto exit;
+			}
+			serviceinfokey = sdo_string_alloc_size(serviceinfokey_length);
+			if (!serviceinfokey) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc ServiceInfoKey\n");
+				goto exit;
+			}
+			if (!sdor_text_string(sdor, serviceinfokey->bytes, serviceinfokey->byte_sz)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKV\n");
+				goto exit;
+			}
+
+			size_t serviceinfoval_length = 0;
+			if (!sdor_string_length(sdor, &serviceinfoval_length)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoVal length\n");
+				goto exit;
+			}
+			// TO-DO: This would move to serviceinfo handling and may not be bstr
+			serviceinfoval = sdo_byte_array_alloc(serviceinfoval_length);
+			if (!serviceinfoval) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc ServiceInfoVal\n");
+				goto exit;
+			}
+			if (!sdor_byte_string(sdor, serviceinfoval->bytes, serviceinfoval->byte_sz)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoVal\n");
+				goto exit;
+			}
+
+			if (!sdor_end_array(sdor)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to end array\n");
+				goto exit;
+			}
+			// free the entries for reuse
+			sdo_string_free(serviceinfokey);
+			sdo_byte_array_free(serviceinfoval);
+		}
+		if (!sdor_end_array(sdor)) {
+			LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to end array\n");
+			goto exit;
+		}
+	}
+	if (!sdor_end_array(sdor)) {
+		LOG(LOG_ERROR, "ServiceInfo read: Failed to end array\n");
+		goto exit;
+	}
+	return true;
+exit:
+	if (serviceinfokey) {
+		sdo_string_free(serviceinfokey);
+	}
+	if (serviceinfoval) {
+		sdo_byte_array_free(serviceinfoval);
+	}
+	return true;
+}
 
 /**
  * Allocate an empty sdo_service_info_t object.

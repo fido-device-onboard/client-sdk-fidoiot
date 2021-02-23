@@ -13,24 +13,21 @@
 #include "sdokeyexchange.h"
 
 /**
- * msg51() - TO2.Done2
+ * msg71() - TO2.Done2
  * This message provides an opportunity for a final ACK after the Owner
  * has invoked the System Info block to establish agent-to-server
  * communications between the Device and its final Owner.
- * --- Message Format Begins ---
- * {
- *     "n6:": Nonce
- * }
- * --- Message Format Ends ---
+ * TO2.Done2 = [
+ *   Nonce7
+ * ]
  */
-int32_t msg51(sdo_prot_t *ps)
+int32_t msg71(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtTO2";
-	char buf[DEBUGBUFSZ] = {0};
 	sdo_encrypted_packet_t *pkt = NULL;
 
-	LOG(LOG_DEBUG, "SDO_STATE_TO2_RCV_DONE_2: Starting\n");
+	LOG(LOG_DEBUG, "TO2.Done2 started\n");
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -43,52 +40,54 @@ int32_t msg51(sdo_prot_t *ps)
 
 	pkt = sdo_encrypted_packet_read(&ps->sdor);
 	if (pkt == NULL) {
-		LOG(LOG_ERROR, "Trouble reading encrypted packet\n");
+		LOG(LOG_ERROR, "TO2.Done2: Failed to parse encrypted packet\n");
 		goto err;
 	}
 
 	if (!sdo_encrypted_packet_unwind(&ps->sdor, pkt, ps->iv)) {
-		LOG(LOG_ERROR, "Failed to decrypt packet!\n");
+		LOG(LOG_ERROR, "TO2.Done2: Failed to decrypt packet!\n");
 		goto err;
 	}
 
-	if (!sdor_begin_object(&ps->sdor)) {
-		goto err;
-	}
-
-	if (!sdo_read_expected_tag(&ps->sdor, "n7")) {
+	if (!sdor_start_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.Done2: Failed to read start array\n");
 		goto err;
 	}
 
 	/* already allocated  n7r*/
-	if (!ps->n7r || !sdo_byte_array_read_chars(&ps->sdor, ps->n7r)) {
+	if (!ps->n7r || !sdor_byte_string(&ps->sdor, ps->n7r->bytes, ps->n7r->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.Done2: Failed to alloc/read Nonce7 array\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "Receiving n7: %s\n",
-	    sdo_nonce_to_string(ps->n7r->bytes, buf, sizeof buf) ? buf : "");
 
-	if (!sdor_end_object(&ps->sdor)) {
+	if (!sdor_end_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.Done2: Failed to read end array\n");
 		goto err;
 	}
 
 	/* verify the nonce received is correct. */
 	if (!sdo_nonce_equal(ps->n7r, ps->n7)) {
-		LOG(LOG_ERROR, "Invalid Nonce send by owner\n");
+		LOG(LOG_ERROR, "TO2.Done2: Received Nonce7 does not match with the stored Nonce7\n");
 		goto err;
 	}
 
 	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 	ps->state = SDO_STATE_DONE;
 	ps->success = true;
 
 	/* Execute Sv_info type=END, before TO2 exits */
+	// TO-DO : Update during serviceinfo implementation
 	if (!sdo_mod_exec_sv_infotype(ps->sv_info_mod_list_head, SDO_SI_END)) {
-		LOG(LOG_DEBUG, "Sv_info: One or more Module did "
+		LOG(LOG_DEBUG, "TO2.Done2: (Sv_info) One or more Module did "
 			       "not finish well\n");
 	}
 
+	LOG(LOG_DEBUG, "TO2.Done2 completed successfully\n");
 	ret = 0; /* Mark as success */
 
 err:
+	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 	return ret;
 }

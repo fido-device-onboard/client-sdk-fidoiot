@@ -74,6 +74,16 @@
 #define SDO_PK_ENC SDO_CRYPTO_PUB_KEY_ENCODING_X509
 #endif
 
+#if defined(AES_MODE_CTR_ENABLED) && AES_BITS == 128
+#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES128CTR
+#elif defined(AES_MODE_CTR_ENABLED) && AES_BITS == 256
+#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES256CTR
+#elif !defined(AES_MODE_CTR_ENABLED) && AES_BITS == 128
+#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES256CBC
+#elif !defined(AES_MODE_CTR_ENABLED) && AES_BITS == 256
+#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES256CBC
+#endif
+
 /* Function declarations */
 int32_t sdo_crypto_init(void);
 int32_t sdo_crypto_close(void);

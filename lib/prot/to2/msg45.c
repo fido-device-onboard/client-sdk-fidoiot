@@ -11,26 +11,31 @@
 #include "sdoprot.h"
 #include "sdokeyexchange.h"
 #include "util.h"
+#include "safe_lib.h"
 
 /**
- * msg45() - TO2.Get_next_device_service_info
+ * msg65() - TO2.SetupDevice
  * So, the owner has verified that it is talking to right device and
- * sending in the service info data
- * --- Message Format Begins ---
- * {
- *   "nn": UInt8,  #Index of device service info message expected
- *   "psi": String # extra for this version of protocol only
- * }
- * --- Message Format Ends ---
+ * is receiving the next Owner's credentials.
+ * 
+ * TO2.SetupDevice = CoseSignature
+ * TO2SetupDevicePayload = [
+ *   RendezvousInfo, ;; RendezvousInfo replacement
+ *   Guid,           ;; GUID replacement
+ *   Nonce7,         ;; proves freshness of signature
+ *   Owner2Key       ;; Replacement for Owner key
+ * ]
+ * $COSEPayloads /= (
+ *   TO2SetupDevicePayload
+ * )
  */
 
-int32_t msg45(sdo_prot_t *ps)
+int32_t msg65(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtTO2";
-	sdo_string_t *psi = NULL;
-	uint32_t mtype = 0;
 	sdo_encrypted_packet_t *pkt = NULL;
+	// fdo_cose_t *cose = NULL;
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -41,105 +46,148 @@ int32_t msg45(sdo_prot_t *ps)
 		goto err;
 	}
 
+	LOG(LOG_DEBUG, "TO2.SetupDevice started\n");
+
 	/* If the packet is encrypted, decrypt it */
 	pkt = sdo_encrypted_packet_read(&ps->sdor);
 	if (pkt == NULL) {
-		LOG(LOG_ERROR, "Trouble reading encrypted packet\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to parse encrypted packet\n");
 		goto err;
 	}
 
 	if (!sdo_encrypted_packet_unwind(&ps->sdor, pkt, ps->iv)) {
-		LOG(LOG_ERROR, "Failed to decrypt packet!\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to decrypt packet!\n");
 		goto err;
 	}
 
-	/* Get past any header */
-	if (!sdor_next_block(&ps->sdor, &mtype)) {
-		LOG(LOG_DEBUG, "SDOR doesn't seems to have next block !!\n");
+/*	TO-DO : This should ideally be a COSESignature object. To be updated after PRI update.
+	// Allocate for cose object now. Allocate for its members when needed later.
+	// Free immediately once its of no use.
+	cose = sdo_alloc(sizeof(fdo_cose_t));
+	if (!cose) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc COSE\n");
 		goto err;
 	}
 
-	if (!sdor_begin_object(&ps->sdor)) {
+	if (!fdo_cose_read(&ps->sdor, cose, false)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read COSE\n");
 		goto err;
 	}
 
-	/* The device needs to send the Service Info corresponding to "nn" */
-	if (!sdo_read_expected_tag(&ps->sdor, "nn")) {
-		goto err;
-	}
-	ps->serv_req_info_num = sdo_read_uint(&ps->sdor);
-
-	/*
-	 * It is optional and can only contain value if "nn" = 0. For non-NULL
-	 * "psi", it is indicating to device, to prepare itself for Service
-	 * Info. (PSI: Pre Service Info
-	 */
-	if (!sdo_read_expected_tag(&ps->sdor, "psi")) {
+	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
+	sdo_block_reset(&ps->sdor.b);
+	ps->sdor.b.block_size = cose->cose_payload->byte_sz;
+	if (0 != memcpy_s(ps->sdor.b.block, ps->sdor.b.block_size,
+		cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to copy COSE payload\n");
 		goto err;
 	}
 
-	psi = sdo_string_alloc();
-	if (psi == NULL) {
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!sdor_parser_init(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to initilize SDOR parser\n");
 		goto err;
 	}
-	if (!sdo_string_read(&ps->sdor, psi)) {
-		LOG(LOG_ERROR, "Parsing psi String\n");
+*/
+
+	if (!sdor_start_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read start array\n");
 		goto err;
 	}
-
-	/*
-	 * TODO:Support for preference module message, it is not needed for now
-	 * as we have defined modules, but may be require at later point of
-	 * time when  modules are completely dynamic.
-	 */
-	LOG(LOG_DEBUG, "psi string: %s, nn = %d\n\n", psi->bytes,
-	    ps->serv_req_info_num);
-
-	/* For "nn" == 0 */
-	if (ps->serv_req_info_num == 0) {
-		/* Parse PSI only when psi->bytes is not an empty string */
-		if (psi->byte_sz > EMPTY_STRING_LEN) {
-			int mod_ret_val = 0;
-			if (!sdo_psi_parsing(ps->sv_info_mod_list_head,
-					     psi->bytes, psi->byte_sz,
-					     &mod_ret_val)) {
-				LOG(LOG_ERROR, "Sv_info: PSI did not "
-					       "finished gracefully!\n");
-
-				/*
-				 * TODO: See if there's benefit to handle
-				 * multiple SI errors.
-				 */
-				goto err;
-			}
-		} else {
-			LOG(LOG_INFO, "Sv_info: Empty PSI string for nn=0\n");
-		}
-	} else if (ps->serv_req_info_num > 0 &&
-		   (ps->serv_req_info_num < ps->total_dsi_rounds)) {
-		if (psi->byte_sz != EMPTY_STRING_LEN) {
-			LOG(LOG_ERROR, "Sv_info: For non-zero nn, "
-				       "psi string must be empty!\n");
-			goto err;
-		}
-	} else {
-		LOG(LOG_ERROR, "Sv_info: nn value is out of range!");
+	/* Create the destination of this final data */
+	ps->osc = sdo_owner_supplied_credentials_alloc();
+	if (ps->osc == NULL) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for new set of credentials\n");
 		goto err;
 	}
 
-	if (!sdor_end_object(&ps->sdor)) {
+	// update the replacement RendezvousInfo 
+	ps->osc->rvlst = sdo_rendezvous_list_alloc();
+	if (!ps->osc->rvlst) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for replacement RendezvousInfo\n");
 		goto err;
 	}
 
-	sdor_flush(&ps->sdor);
+	if (!sdo_rendezvous_list_read(&ps->sdor, ps->osc->rvlst)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement RendezvousInfo\n");
+		goto err;
+	}
+
+	// update the replacement Guid
+	size_t guid_length = 0;
+	if (!sdor_string_length(&ps->sdor, &guid_length) ||
+		guid_length != SDO_GUID_BYTES) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement GUID length\n");
+		goto err;
+	}
+	ps->osc->guid = sdo_byte_array_alloc(guid_length);
+	if (!ps->osc->guid) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for replacement GUID\n");
+		goto err;
+	}
+	if (!sdor_byte_string(&ps->sdor, ps->osc->guid->bytes, ps->osc->guid->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement GUID\n");
+		goto err;
+	}
+
+	size_t nonce7_length = 0;
+	if (!sdor_string_length(&ps->sdor, &nonce7_length) ||
+		nonce7_length != SDO_NONCE_BYTES) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read Nonce7 length\n");
+		goto err;
+	}
+
+	ps->n7r = sdo_byte_array_alloc(SDO_NONCE_BYTES);
+	if (!ps->n7r) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc Nonce7\n");
+		goto err;
+	}
+	if (!sdor_byte_string(&ps->sdor, ps->n7r->bytes, SDO_NONCE_BYTES)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read rNonce7\n");
+		goto err;
+	}
+
+	if (!sdo_nonce_equal(ps->n7r, ps->n7)) {
+		LOG(LOG_ERROR,
+			"TO2.SetupDevice: Received Nonce7 does not match with existing Nonce7\n");
+		goto err;
+	}
+
+	// update the replacement Owner key (Owner2Key)
+	ps->osc->pubkey = sdo_public_key_read(&ps->sdor);
+	if (!ps->osc->pubkey) {
+		LOG(LOG_ERROR,
+			"TO2.SetupDevice: Failed to read replacement Owner key (Owner2Key)\n");
+		goto err;
+	}
+
+	if (!sdor_end_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read end array\n");
+		goto err;
+	}
+
+/*	Same as above comment. TBD later
+	// verify the received COSE signature
+	if (!sdo_signature_verification(cose->cose_payload,
+					cose->cose_signature,
+					ps->osc->pubkey)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to verify OVEntry signature\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "TO2.SetupDevice: OVEntry Signature verification successful\n");
+*/
 	ps->state = SDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO;
-	LOG(LOG_DEBUG, "SDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO "
-		       ": 45 Completed\n");
+	LOG(LOG_DEBUG, "TO2.SetupDevice completed successfully\n");
 	ret = 0; /* Marks as success */
 
 err:
-	if (psi) {
-		sdo_string_free(psi);
+	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
+/*
+	if (cose) {
+		fdo_cose_free(cose);
+		cose = NULL;
 	}
+*/
 	return ret;
 }

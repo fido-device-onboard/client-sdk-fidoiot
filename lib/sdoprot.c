@@ -34,14 +34,12 @@
 
 typedef int (*state_func)(sdo_prot_t *ps);
 
-// TO-DO : Commenting these out for now. Will be uncommented graduallly
-// when DI/TO1/TO2 are implemented.
 /*
  * State functions for DI
  */
 static state_func di_state_fn[] = {
-    msg10, // DI.App_start
-    msg11, // DI.Set_credentials
+    msg10, // DI.AppStart
+    msg11, // DI.SetCredentials
     msg12, // DI.SetHMAC
     msg13, // DI.Done
 };
@@ -49,31 +47,29 @@ static state_func di_state_fn[] = {
  * State functions for TO1
  */
 static state_func to1_state_fn[] = {
-    msg30, // TO1.HelloSDO
-    msg31, // TO1.HelloSDOAck
-    msg32, // TO1.Prove_toSDO
-    msg33, // TO1.sdo_redirect
+    msg30, // TO1.HelloRV
+    msg31, // TO1.HelloRVAck
+    msg32, // TO1.ProveToRV
+    msg33, // TO1.RVRedirect
 };
 
 /*
  * State functions for TO2
  */
-/*
 static state_func to2_state_fn[] = {
-    msg40, // TO2.Hello_device
-    msg41, // TO2.ProveOPHdr
-    msg42, // TO2.GetOPNext_entry
-    msg43, // TO2.OPNext_entry
-    msg44, // TO2.Prove_device
-    msg45, // TO2.Get_next_device_service_info
-    msg46, // TO2.Next_device_service_info
-    msg47, // TO2.Setup_device
-    msg48, // TO2.Get_next_owner_service_info
-    msg49, // TO2.Owner_service_info
-    msg50, // TO2.Done
-    msg51, // TO2.Done2
+    msg60, // TO2.Hello_device
+    msg61, // TO2.ProveOVHdr
+    msg62, // TO2.GetOVNextEntry
+    msg63, // TO2.OVNextEntry
+    msg64, // TO2.Provedevice
+    msg65, // TO2.SetupDevice
+    msg66, // TO2.DeviceServiceInfoReady
+    msg67, // TO2.OwnerServiceInfoReady
+    msg68, // TO2.DeviceServiceInfo
+    msg69, // TO2.OwnerServiceInfo
+    msg70, // TO2.Done
+    msg71, // TO2.Done2
 };
-*/
 
 /**
  * ps_free() - free all the protocol state
@@ -178,9 +174,6 @@ bool sdo_process_states(sdo_prot_t *ps)
 			state_fn = to1_state_fn[TO1_ID_TO_STATE_FN(ps->state)];
 			break;
 
-		// TO-DO : Commenting this out until TO2 protcols are implemented.
-		// To be uncommented gradually.
-/*
 		// TO2 states
 		case SDO_STATE_T02_SND_HELLO_DEVICE:
 		case SDO_STATE_TO2_RCV_PROVE_OVHDR:
@@ -196,7 +189,7 @@ bool sdo_process_states(sdo_prot_t *ps)
 		case SDO_STATE_TO2_RCV_DONE_2:
 			state_fn = to2_state_fn[TO2_ID_TO_STATE_FN(ps->state)];
 			break;
-		*/
+
 		case SDO_STATE_ERROR:
 		case SDO_STATE_DONE:
 		default:
@@ -217,6 +210,12 @@ bool sdo_process_states(sdo_prot_t *ps)
 					   "msg%d: message parse error",
 					   ps->state);
 			ps->state = SDO_STATE_ERROR;
+			// clear the block contents to write error message
+			sdo_block_reset(&ps->sdow.b);
+			if (!sdow_encoder_init(&ps->sdow)) {
+				LOG(LOG_ERROR, "Failed to initilize SDOW encoder\n");
+				break;
+			}
 			sdo_send_error_message(&ps->sdow, MESSAGE_BODY_ERROR,
 					       ps->state, err_msg, sizeof(err_msg));
 			ps_free(ps);

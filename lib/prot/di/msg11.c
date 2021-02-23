@@ -78,7 +78,7 @@ int32_t msg11(sdo_prot_t *ps)
 	}
 
 	/* Parse the complete Ownership header and calcuate HMAC over it */
-	ov = sdo_ov_hdr_read(&ps->sdor, &ps->new_ov_hdr_hmac, false);
+	ov = sdo_ov_hdr_read(&ps->sdor, &ps->new_ov_hdr_hmac);
 	if (!ov) {
 		LOG(LOG_ERROR, "Failed to read OVHeader\n");
 		goto err;

@@ -281,7 +281,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (snprintf_s_i(temp, sizeof(temp), "/fido/%d", rest_ctx->prot_ver) <
+	if (snprintf_s_i(temp, sizeof(temp), "/fdo/%d", rest_ctx->prot_ver) <
 	    0) {
 		LOG(LOG_ERROR, "Snprintf failed!\n");
 		goto err;

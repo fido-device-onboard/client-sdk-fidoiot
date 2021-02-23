@@ -76,9 +76,9 @@ int32_t sdo_kex_init(void)
 	}
 
 	/* Fill out the labels */
-	kex_ctx->kdf_label = "MarshalPointKDF";
-	kex_ctx->sek_label = "AutomaticProvisioning-cipher";
-	kex_ctx->svk_label = "AutomaticProvisioning-hmac";
+	kex_ctx->kdf_label = "FIDO-KDF";
+	kex_ctx->sek_label = "AutomaticOnboard-cipher";
+	kex_ctx->svk_label = "AutomaticOnboard-hmac";
 
 	ret = 0; /* Mark as success */
 
@@ -487,6 +487,7 @@ static int32_t kex_kdf(void)
 		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
 		goto err;
 	}
+	
 
 /*
  * If the kex selected is ecdh384, then calculate hmac over

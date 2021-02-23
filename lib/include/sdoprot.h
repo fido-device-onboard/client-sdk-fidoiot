@@ -34,9 +34,9 @@
 #define SDO_PORT_MAX_VALUE 65535
 
 // States
-#define SDO_STATE_RCV_ERROR 60
-#define SDO_STATE_ERROR 61
-#define SDO_STATE_DONE 62
+#define SDO_STATE_RCV_ERROR 80
+#define SDO_STATE_ERROR 81
+#define SDO_STATE_DONE 82
 
 // Operational States for the device
 #define SDO_OP_STATE_APPLICATION 2 // SDO Complete, running customer application
@@ -61,18 +61,18 @@
 #define SDO_TO1_TYPE_SDO_REDIRECT 33
 
 // TO2
-#define SDO_TO2_HELLO_DEVICE 40
-#define SDO_TO2_PROVE_OVHDR 41
-#define SDO_TO2_GET_OP_NEXT_ENTRY 42
-#define SDO_TO2_OP_NEXT_ENTRY 43
-#define SDO_TO2_PROVE_DEVICE 44
-#define SDO_TO2_GET_NEXT_DEVICE_SERVICE_INFO 45
-#define SDO_TO2_NEXT_DEVICE_SERVICE_INFO 46
-#define SDO_TO2_SETUP_DEVICE 47
-#define SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO 48
-#define SDO_TO2_OWNER_SERVICE_INFO 49
-#define SDO_TO2_DONE 50
-#define SDO_TO2_DONE2 51
+#define SDO_TO2_HELLO_DEVICE 60
+#define SDO_TO2_PROVE_OVHDR 61
+#define SDO_TO2_GET_OP_NEXT_ENTRY 62
+#define SDO_TO2_OP_NEXT_ENTRY 63
+#define SDO_TO2_PROVE_DEVICE 64
+#define SDO_TO2_GET_NEXT_DEVICE_SERVICE_INFO 65
+#define SDO_TO2_NEXT_DEVICE_SERVICE_INFO 66
+#define SDO_TO2_SETUP_DEVICE 67
+#define SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO 68
+#define SDO_TO2_OWNER_SERVICE_INFO 69
+#define SDO_TO2_DONE 70
+#define SDO_TO2_DONE2 71
 
 #define SDO_STATE_DI_INIT SDO_DI_APP_START
 #define SDO_STATE_DI_APP_START SDO_DI_APP_START
@@ -157,6 +157,10 @@
  */
 #define DEBUGBUFSZ 1024
 
+// TO-DO : Update with flags during serviceinfo implementation
+#define MAXOWNERSERVICEINFOSZ 1300
+#define MAXDEVICESERVICEINFOSZ 1300
+
 #if defined(REUSE_SUPPORTED)
 static const bool reuse_supported = true;
 #else
@@ -194,12 +198,13 @@ typedef struct sdo_prot_s {
 	sdo_service_info_t *service_info;
 	sdo_public_key_t *tls_key;
 	sdo_public_key_t *local_key_pair;
-	uint16_t ov_entry_num;
+	int ov_entry_num;
 	sdo_ownership_voucher_t *ovoucher;
 	sdo_hash_t *new_ov_hdr_hmac;
 	sdo_rendezvous_t *rv;
 	uint16_t serv_req_info_num;
-	int owner_supplied_service_info_count;
+	int maxOwnerServiceInfoSz;
+	int maxDeviceServiceInfoSz;
 	int owner_supplied_service_info_num;
 	int owner_supplied_service_info_rcv;
 	sdo_owner_supplied_credentials_t *osc;
@@ -233,18 +238,18 @@ int32_t msg32(sdo_prot_t *ps);
 int32_t msg33(sdo_prot_t *ps);
 
 /* TO2 function declarations */
-int32_t msg40(sdo_prot_t *ps);
-int32_t msg41(sdo_prot_t *ps);
-int32_t msg42(sdo_prot_t *ps);
-int32_t msg43(sdo_prot_t *ps);
-int32_t msg44(sdo_prot_t *ps);
-int32_t msg45(sdo_prot_t *ps);
-int32_t msg46(sdo_prot_t *ps);
-int32_t msg47(sdo_prot_t *ps);
-int32_t msg48(sdo_prot_t *ps);
-int32_t msg49(sdo_prot_t *ps);
-int32_t msg50(sdo_prot_t *ps);
-int32_t msg51(sdo_prot_t *ps);
+int32_t msg60(sdo_prot_t *ps);
+int32_t msg61(sdo_prot_t *ps);
+int32_t msg62(sdo_prot_t *ps);
+int32_t msg63(sdo_prot_t *ps);
+int32_t msg64(sdo_prot_t *ps);
+int32_t msg65(sdo_prot_t *ps);
+int32_t msg66(sdo_prot_t *ps);
+int32_t msg67(sdo_prot_t *ps);
+int32_t msg68(sdo_prot_t *ps);
+int32_t msg69(sdo_prot_t *ps);
+int32_t msg70(sdo_prot_t *ps);
+int32_t msg71(sdo_prot_t *ps);
 
 /* Init functions of particular protocol (DI, TO1, TO2) */
 void sdo_prot_di_init(sdo_prot_t *ps, sdo_dev_cred_t *dev_cred);

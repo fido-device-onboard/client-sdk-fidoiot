@@ -13,20 +13,33 @@
 #include "util.h"
 
 /**
- * msg49() - TO2.Owner_service_info
- * --- Message Format Begins ---
- * {
- *    "nn": UInt8, # index of this message, from zero upwards
- *    "sv": Service_info
- * }
- * --- Message Format Ends ---
+ * msg49() - TO2.OwnerServiceInfo
+ * Device receives the Owner ServiceInfo.
+ *
+ * TO2.OwnerServiceInfo = [
+ *   IsMoreServiceInfo,		// bool
+ *   IsDone,				// bool
+ *   ServiceInfo
+ * ]
+ * where,
+ * ServiceInfo = [
+ *   *ServiceInfoKeyVal
+ * ]
+ * ServiceInfoKeyVal = [
+ *   *ServiceInfoKV
+ * ]
+ * ServiceInfoKV = [
+ *   ServiceInfoKey: tstr,
+ *   ServiceInfoVal: cborSimpleType
+ * ]
  */
-int32_t msg49(sdo_prot_t *ps)
+int32_t msg69(sdo_prot_t *ps)
 {
 	int ret = -1;
 	char prot[] = "SDOProtTO2";
-	uint32_t mtype = 0;
 	sdo_encrypted_packet_t *pkt = NULL;
+	bool IsMoreServiceInfo;
+	bool isDone;
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -37,58 +50,71 @@ int32_t msg49(sdo_prot_t *ps)
 		goto err;
 	}
 
+	LOG(LOG_DEBUG, "TO2.OwnerServiceInfo started\n");
+
 	/* If the packet is encrypted, decrypt it */
 	pkt = sdo_encrypted_packet_read(&ps->sdor);
 	if (pkt == NULL) {
-		LOG(LOG_ERROR, "Trouble reading "
-			       "encrypted packet\n");
+		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to parse encrypted packet\n");
 		goto err;
 	}
 	if (!sdo_encrypted_packet_unwind(&ps->sdor, pkt, ps->iv)) {
-		goto err;
-	}
-	/* Get past any header */
-	if (!sdor_next_block(&ps->sdor, &mtype)) {
-		LOG(LOG_DEBUG, "SDOR doesn't seems to "
-			       "have "
-			       "next block !!\n");
+		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to decrypt packet!\n");
 		goto err;
 	}
 
-#if LOG_LEVEL == LOG_MAX_LEVEL
-	/* Print the service information received from the owner
-	 * in plain text. */
-	LOG(LOG_DEBUG, "Owner service info: ");
-	print_buffer(LOG_DEBUG, ps->sdor.b.block, ps->sdor.b.block_size);
-#endif
+	sdo_log_block(&ps->sdor.b);
 
-	if (!sdor_begin_object(&ps->sdor)) {
+	if (!sdor_start_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start array\n");
 		goto err;
 	}
 
-	/* Read the index of the Owner service info */
-	if (!sdo_read_expected_tag(&ps->sdor, "nn")) {
+	if (!sdor_boolean(&ps->sdor, &IsMoreServiceInfo)) {
+		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read IsMoreServiceInfo\n");
 		goto err;
 	}
-	ps->owner_supplied_service_info_rcv = sdo_read_uint(&ps->sdor);
 
-	if (ps->owner_supplied_service_info_num ==
-	    ps->owner_supplied_service_info_rcv) {
-		int mod_ret_val = 0;
+	if (!sdor_boolean(&ps->sdor, &isDone)) {
+		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read IsDone\n");
+		goto err;
+	}
 
-		if (!sdo_read_expected_tag(&ps->sdor, "sv")) {
+	if (!IsMoreServiceInfo && isDone) {
+		// Expecting ServiceInfo to be an empty array [].
+		// However, PRI currently sends [[]], so parsing as such.
+		// TO-DO : Update when PRI is updated.
+		if (!sdor_start_array(&ps->sdor)) {
+			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start empty ServiceInfo array\n");
 			goto err;
 		}
-
-		if (!sdor_begin_object(&ps->sdor)) {
+		if (!sdor_start_array(&ps->sdor)) {
+			LOG(LOG_ERROR,
+				"TO2.OwnerServiceInfo: Failed to start empty ServiceInfo.ServiceInfoKeyVal array\n");
 			goto err;
 		}
+		if (!sdor_end_array(&ps->sdor)) {
+			LOG(LOG_ERROR,
+				"TO2.OwnerServiceInfo: Failed to end empty ServiceInfo.ServiceInfoKeyVal array\n");
+			goto err;
+		}
+		if (!sdor_end_array(&ps->sdor)) {
+			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to end empty ServiceInfo array\n");
+			goto err;
+		}
+	} else {
+		// Expecting ServiceInfo. TO-DO : Test ater
+		if (!fdo_serviceinfo_read(&ps->sdor)) {
+			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
+			goto err;
+		}
+	}
 
-		/*
-		 * ===============OSI=================
-		 * 1. Fill OSI KV data structure
-		 * 2. Make appropriate module callback's
-		 */
+	if (!sdor_end_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to end array\n");
+		goto err;
+	}
+/*
 		sdo_sdk_si_key_value osiKV;
 
 		if (!sdo_osi_parsing(&ps->sdor, ps->sv_info_mod_list_head,
@@ -98,30 +124,19 @@ int32_t msg49(sdo_prot_t *ps)
 				       "gracefully!\n");
 			goto err;
 		}
-		/*===============OSI=================*/
+*/	
 
-		if (!sdor_end_object(&ps->sdor)) {
-			goto err;
-		}
-	}
-
-	if (!sdor_end_object(&ps->sdor)) {
-		goto err;
-	}
-
-	sdor_flush(&ps->sdor);
-
-	/* Loop until all have been requested */
-	ps->owner_supplied_service_info_num++;
-	if (ps->owner_supplied_service_info_num >=
-	    ps->owner_supplied_service_info_count) {
+	if (isDone) {
 		ps->state = SDO_STATE_TO2_SND_DONE;
 	} else {
 		ps->state = SDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
 	}
 
+	LOG(LOG_DEBUG, "TO2.OwnerServiceInfo completed successfully\n");
 	ret = 0; /*Mark as success */
 
 err:
+	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 	return ret;
 }

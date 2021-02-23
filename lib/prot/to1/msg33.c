@@ -54,7 +54,7 @@ int32_t msg33(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_cose_read(&ps->sdor, cose)) {
+	if (!fdo_cose_read(&ps->sdor, cose, true)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read COSE\n");
 		goto err;
 	}
@@ -120,9 +120,11 @@ int32_t msg33(sdo_prot_t *ps)
 err:
 	if (cose) {
 		fdo_cose_free(cose);
+		cose = NULL;
 	}
 	if (ob_hash) {
 		sdo_hash_free(ob_hash);
+		ob_hash = NULL;
 	}
 	return ret;
 }

@@ -364,15 +364,6 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 
 		LOG(LOG_DEBUG, "%s Rx Response Body: \n", __func__);
 		sdo_log_block(&sdor->b);
-		/*
-		 * Now that we have the received buffer, initialize the parser for next SDOR read
-		 * operation and set the have_block flag.
-		 */
-		if (!sdor_parser_init(sdor)) {
-			LOG(LOG_ERROR, "Failed to initilize SDOR parser\n");
-			return -1;
-		}
-		sdor->have_block = true;
 
 		/*
 		 * When a REST error message(type 255) is sent over network,
@@ -387,6 +378,16 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 			ret = -1;
 			break;
 		}
+
+		/*
+		 * Now that we have the received buffer, initialize the parser for next SDOR read
+		 * operation and set the have_block flag.
+		 */
+		if (!sdor_parser_init(sdor)) {
+			LOG(LOG_ERROR, "Failed to initilize SDOR parser\n");
+			return -1;
+		}
+		sdor->have_block = true;
 	}
 
 	sdo_con_teardown();
