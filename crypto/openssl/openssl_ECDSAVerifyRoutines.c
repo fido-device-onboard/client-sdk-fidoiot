@@ -12,6 +12,7 @@
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
 #include <openssl/ossl_typ.h>
+#include <openssl/ec.h>
 #include "sdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
@@ -47,13 +48,16 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	uint8_t hash[SHA512_DIGEST_LENGTH] = {0};
 	size_t hash_length = 0;
 	const unsigned char *pub_key = (const unsigned char *)key_param1;
+	unsigned char *pub_key_affinex = NULL, *pub_key_affiney = NULL;
+	BIGNUM *x = NULL, *y = NULL;
 
 	/* Unused parameter */
 	(void)key_param2;
 	(void)key_param2Length;
 
 	/* Check validity of key type. */
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
+	// TO-DO : Add back support for X509 if needed.
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 ||
 	    (key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
 	     key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
@@ -94,8 +98,22 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 		goto end;
 	}
 
-	/* decode EC_KEY struct from DER encoded EC public key */
-	if (d2i_EC_PUBKEY(&eckey, &pub_key, (long)key_param1Length) == NULL) {
+	pub_key_affinex = sdo_alloc(key_param1Length/2);
+	if (0 != memcpy_s(pub_key_affinex, key_param1Length/2,
+		pub_key, key_param1Length/2)) {
+		LOG(LOG_ERROR, "Copy of affine-x failed!\n");
+		goto end;
+	}
+	pub_key_affiney = sdo_alloc(key_param1Length/2);
+	if (0 != memcpy_s(pub_key_affiney, key_param1Length/2,
+		pub_key + key_param1Length/2, key_param1Length/2)) {
+		LOG(LOG_ERROR, "Copy of affine-y failed!\n");
+		goto end;
+	}
+	/* decode EC_KEY struct using Affine X and Y co-ordinates */
+	x = BN_bin2bn((const unsigned char*) pub_key_affinex, key_param1Length/2, NULL);
+	y = BN_bin2bn((const unsigned char*) pub_key_affiney, key_param1Length/2, NULL);
+	if (EC_KEY_set_public_key_affine_coordinates(eckey, x, y) == 0) {
 		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
 		goto end;
 	}
@@ -111,6 +129,13 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 end:
 	if (eckey)
 		EC_KEY_free(eckey);
-
+	if (x)
+		BN_free(x);
+	if (y)
+		BN_free(y);
+	if (pub_key_affinex)
+		sdo_free(pub_key_affinex);
+	if (pub_key_affiney)
+		sdo_free(pub_key_affiney);
 	return ret;
 }

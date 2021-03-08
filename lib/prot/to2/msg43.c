@@ -15,40 +15,39 @@
 #include "sdoCrypto.h"
 
 /**
- * msg43() - TO2.OPNext_entry
+ * msg63() - TO2.OVNextEntry
  *
- * --- Message Format Begins ---
- * {
- *     "enn":UInt8,            # It must match the value sent in msg42
- *     "eni":{
- *         bo:{
- *             "hp": Hash,     # Hash of previous Ownership entry
- *             "hc": Hash,     # Hash of GUID and device info
- *             "pk": Public_key # pk signed in previous entry
- *         },
- *     "pk": PKNull,           #
- *     "sg": Signature         # Signature by above 'pk'
- *     }
- * }
- * --- Message Format Ends ---
+ * TO2.OVNextEntry = [
+ *   OVEntryNum
+ *   OVEntry
+ * ]
+ * where,
+ * OVEntry = CoseSignature
+ * $COSEProtectedHeaders //= (
+ *   1: OVSignType
+ * )
+ * $COSEPayloads /= (
+ *   OVEntryPayload
+ * )
+ * OVEntryPayload = [
+ *   OVEHashPrevEntry: Hash,
+ *   OVEHashHdrInfo:   Hash,  ;; hash[GUID||DeviceInfo] in header
+ *   OVEPubKey:        PublicKey
+ * ]
  */
-int32_t msg43(sdo_prot_t *ps)
+int32_t msg63(sdo_prot_t *ps)
 {
 	char prot[] = "SDOProtTO2";
 	int ret = -1;
-	int hp_start = 0;
-	int hp_end = 0;
 	int result_memcmp = 0;
-	uint8_t *hp_text = NULL;
 	sdo_ov_entry_t *temp_entry = NULL;
 	sdo_hash_t *current_hp_hash = NULL;
 	sdo_hash_t *temp_hash_hp;
 	sdo_hash_t *temp_hash_hc;
 	sdo_public_key_t *temp_pk;
-	sdo_sig_t sig = {0};
-	uint16_t entry_num;
-
-	LOG(LOG_DEBUG, "SDO_STATE_T02_RCV_OP_NEXT_ENTRY: Starting\n");
+	int entry_num;
+	fdo_cose_t *cose = NULL;
+	sdo_byte_array_t *cose_encoded = NULL;
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -59,204 +58,238 @@ int32_t msg43(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!sdor_begin_object(&ps->sdor)) {
+	LOG(LOG_DEBUG, "TO2.OVNextEntry started\n");
+
+	if (!sdor_start_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read start array\n");
 		goto err;
 	}
 
-	/* Start with the first tag "enn" */
-	if (!sdo_read_expected_tag(&ps->sdor, "enn")) {
+	if (!sdor_signed_int(&ps->sdor, &entry_num)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read OVEntryNum\n");
 		goto err;
 	}
-	entry_num = sdo_read_uint(&ps->sdor);
 
-	/* "enn" value must match with the requested Ownership Voucher index */
+	// OVEntryNum value must match with the requested Ownership Voucher index
 	if (entry_num != ps->ov_entry_num) {
 		LOG(LOG_ERROR,
-		    "Invalid OP entry number, "
+		    "TO2.OVNextEntry: Invalid OVEntryNum, "
 		    "expected %d, got %d\n",
 		    ps->ov_entry_num, entry_num);
 		goto err;
 	}
 
-	/* Process the next tag: "eni" */
-	if (!sdo_read_expected_tag(&ps->sdor, "eni")) {
+	// Allocate for cose object now. Allocate for its members when needed later.
+	// Free immediately once its of no use.
+	cose = sdo_alloc(sizeof(fdo_cose_t));
+	if (!cose) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to alloc COSE\n");
 		goto err;
 	}
 
-	/*
-	 * The sign is brace to brace of "eni", so, store the pointer
-	 * to the beginning of the this block
-	 */
-	if (!sdo_begin_read_signature(&ps->sdor, &sig)) {
-		LOG(LOG_ERROR, "Could not begin signature\n");
+	if (!fdo_cose_read(&ps->sdor, cose, true)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read COSE\n");
 		goto err;
 	}
 
-	/* TODO: better to increment the pointer by reading "bo" tag */
-	ps->sdor.need_comma = false;
-	hp_start = ps->sdor.b.cursor;
-	if (!sdor_begin_object(&ps->sdor)) {
+	if (!sdor_end_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read end array\n");
 		goto err;
 	}
 
-	/* Add a new entry to the Owner Proxy */
-	temp_entry = sdo_ov_entry_alloc_empty();
-	if (!temp_entry) {
-		LOG(LOG_ERROR, "Ownership Voucher "
-			       "allocation failed!\n");
+	// verify the received COSE signature
+	if (!sdo_signature_verification(cose->cose_payload,
+					cose->cose_signature,
+					ps->ovoucher->ov_entries->pk)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to verify OVEntry signature\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "TO2.ProveOVHdr: OVEntry Signature verification successful\n");
+
+	// Generate COSE as CBOR bytes again that is used to calculate OVEHashPrevEntry.
+	if (!fdo_cose_write(&ps->sdow, cose)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to write COSE for OVEHashPrevEntry\n");
+		goto err;
+	}
+	// Get encoded COSE and copy
+	size_t cose_encoded_length = 0;
+	if (!sdow_encoded_length(&ps->sdow, &cose_encoded_length)) {
+		LOG(LOG_ERROR,
+			"TO2.OVNextEntry: Failed to get encoded COSE length for OVEHashPrevEntry\n");
+		goto err;		
+	}
+	cose_encoded = sdo_byte_array_alloc(cose_encoded_length);
+	if (!cose_encoded) {
+		LOG(LOG_ERROR,
+			"TO2.OVNextEntry: Failed to alloc encoded COSE for OVEHashPrevEntry\n");
+		goto err;		
+	}
+	if (0 != memcpy_s(cose_encoded->bytes, cose_encoded->byte_sz,
+		ps->sdow.b.block, cose_encoded_length)) {
+		LOG(LOG_ERROR,
+			"TO2.OVNextEntry: Failed to copy encoded COSE for OVEHashPrevEntry\n");
 		goto err;
 	}
 
-	/* Save off the entry number */
-	temp_entry->enn = entry_num;
-
-	/*
-	 * Read the "hp" value. It must be equal to:
-	 *     SHA [TO2.ProveOPHdr.bo.oh||TO2.Prove_op_hdr.bo.hmac])
-	 * NOTE: TO2.ProveOPHdr is msg41.
-	 */
-	if (!sdo_read_expected_tag(&ps->sdor, "hp")) {
+	// clear the SDOR buffer and copy COSE payload into it,
+	// in preparation to parse OVEntryPayload
+	sdo_block_reset(&ps->sdor.b);
+	ps->sdor.b.block_size = cose->cose_payload->byte_sz;
+	if (0 != memcpy_s(ps->sdor.b.block, ps->sdor.b.block_size,
+		cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR,
+			"TO2.OVNextEntry: Failed to copy encoded COSEPayload for OVEHashPrevEntry\n");
 		goto err;
 	}
 
-	temp_hash_hp = sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED,
-				      SDO_CRYPTO_HASH_TYPE_NONE);
-	if (temp_hash_hp && sdo_hash_read(&ps->sdor, temp_hash_hp) > 0) {
-		temp_entry->hp_hash = temp_hash_hp;
-	} else {
+	// free the COSE object now
+	fdo_cose_free(cose);
+	cose = NULL;
+
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!sdor_parser_init(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to initilize SDOR parser\n");
+		goto err;
+	}
+
+	// start parsing OVEntryPayload
+	size_t num_payloadbasemap_items = 0;
+	if (!sdor_array_length(&ps->sdor, &num_payloadbasemap_items) ||
+		num_payloadbasemap_items != 3) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read array length\n");
+		goto err;
+	}
+
+	if (!sdor_start_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to start OVEntryPayload array\n");
+		goto err;
+	}
+
+	// Read OVEntryPayload.OVEHashPrevEntry
+	temp_hash_hp = sdo_hash_alloc_empty();
+	if (!temp_hash_hp || sdo_hash_read(&ps->sdor, temp_hash_hp) <= 0) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read OVEntryPayload.OVEHashPrevEntry\n");
 		sdo_hash_free(temp_hash_hp);
 		goto err;
 	}
 
-	/*
-	 * Read "hc" value. It must be equal to:
-	 *     SHA[TO2.ProveOPHdr.bo.oh.g||TO2.ProveOPHdr.bo.oh.d]
-	 * NOTE: TO2.ProveOPHdr is msg41.
-	 */
-	if (!sdo_read_expected_tag(&ps->sdor, "hc")) {
+	if (temp_hash_hp->hash_type != SDO_CRYPTO_HASH_TYPE_USED) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Invalid Hash Type at OVEntryPayload.OVEHashPrevEntry\n");
+		sdo_hash_free(temp_hash_hp);
 		goto err;
 	}
-	temp_hash_hc = sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED,
-				      SDO_CRYPTO_HASH_TYPE_NONE);
-	if (temp_hash_hc && sdo_hash_read(&ps->sdor, temp_hash_hc) > 0) {
-		temp_entry->hc_hash = temp_hash_hc;
-	} else {
+
+	// Read OVEntryPayload.OVEHashHdrInfo
+	temp_hash_hc = sdo_hash_alloc_empty();
+	if (!temp_hash_hc || sdo_hash_read(&ps->sdor, temp_hash_hc) <= 0) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read OVEntryPayload.OVEHashHdrInfo\n");
 		sdo_hash_free(temp_hash_hc);
 		goto err;
 	}
 
-	/* Read "pk". It must be equal to: TO2.ProveOPHdr.pk */
-	if (!sdo_read_expected_tag(&ps->sdor, "pk")) {
+	if (temp_hash_hc->hash_type != SDO_CRYPTO_HASH_TYPE_USED) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Invalid Hash Type at OVEntryPayload.OVEHashHdrInfo\n");
+		sdo_hash_free(temp_hash_hp);
 		goto err;
 	}
 
+	// Read OVEntryPayload.OVEPubKey
 	temp_pk = sdo_public_key_read(&ps->sdor);
+	if (!temp_pk) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read OVEntryPayload.OVEPubKey\n");
+		goto err;
+	}
+
+	if (!sdor_end_array(&ps->sdor)) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to end OVEntryPayload array\n");
+		goto err;
+	}
+
+	// Add a new entry to the OwnershipVoucher struct
+	temp_entry = sdo_ov_entry_alloc_empty();
+	if (!temp_entry) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: OVEntry allocation failed!\n");
+		goto err;
+	}
+	temp_entry->enn = entry_num;
+	temp_entry->hp_hash = temp_hash_hp;
+	temp_entry->hc_hash = temp_hash_hc;
 	temp_entry->pk = temp_pk;
 
-	/* TO2.OPNext_entry.enn.eni.bo ends here */
-	if (!sdor_end_object(&ps->sdor)) {
+	// Compare OVEHashPrevEntry (msg61 data) with the OVEHashPrevEntry from this message
+	if (memcmp_s(ps->ovoucher->ov_entries->hp_hash->hash->bytes,
+		     ps->ovoucher->ov_entries->hp_hash->hash->byte_sz,
+		     temp_entry->hp_hash->hash->bytes,
+		     temp_entry->hp_hash->hash->byte_sz,
+		     &result_memcmp) ||
+	    result_memcmp) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to match OVEHashPrevEntry %d\n",
+		    ps->ov_entry_num);
 		goto err;
 	}
 
-	/* Get the buffer start/end over TO2.OPNext_entry.enn.eni.bo */
-	hp_end = ps->sdor.b.cursor;
-	hp_text = sdor_get_block_ptr(&ps->sdor, hp_start);
-	if (hp_text == NULL) {
+	// Compare OVEHashHdrInfo (msg61 data) with the OVEHashHdrInfo from this message
+	if (memcmp_s(ps->ovoucher->ov_entries->hc_hash->hash->bytes,
+		     ps->ovoucher->ov_entries->hc_hash->hash->byte_sz,
+		     temp_entry->hc_hash->hash->bytes,
+		     temp_entry->hc_hash->hash->byte_sz,
+		     &result_memcmp) ||
+	    result_memcmp) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to match OVEHashHdrInfo %d\n",
+		    ps->ov_entry_num);
 		goto err;
 	}
 
-	/* Calculate hash over received body ("bo") */
+	// OVEHashPrevEntry needs to be updated with current OVEntry's hash
 	current_hp_hash =
 	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
 	if (!current_hp_hash) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to generate current OVEntry hash!\n");
 		goto err;
 	}
 
-	if (0 != sdo_crypto_hash(hp_text, (hp_end - hp_start),
+	if (0 != sdo_crypto_hash(cose_encoded->bytes, cose_encoded->byte_sz,
 				 current_hp_hash->hash->bytes,
 				 current_hp_hash->hash->byte_sz)) {
 		goto err;
 	}
-
-	/* Verify the signature over body */
-	if (!sdoOVSignature_verification(&ps->sdor, &sig,
-					 ps->ovoucher->ov_entries->pk)) {
-		LOG(LOG_ERROR, "OVEntry Signature "
-			       "verification fails\n");
-		goto err;
-	}
-	LOG(LOG_DEBUG, "OVEntry Signature "
-		       "verification "
-		       "successful\n");
-	sdor_flush(&ps->sdor);
-
-	/* Free the signature */
-	sdo_byte_array_free(sig.sg);
-
-	/* Compare hp hash (msg41 data) with the hp hash in this message */
-	if (memcmp_s(ps->ovoucher->ov_entries->hp_hash->hash->bytes,
-		     ps->ovoucher->ov_entries->hp_hash->hash->byte_sz,
-		     temp_entry->hp_hash->hash->bytes,
-		     ps->ovoucher->ov_entries->hp_hash->hash->byte_sz,
-		     &result_memcmp) ||
-	    result_memcmp) {
-		LOG(LOG_ERROR, "Failed to match HP Hash at entry %d\n",
-		    ps->ov_entry_num);
-		goto err;
-	}
-
-	/* Compare hc hash (msg41 data) with the hc hash in this message */
-	if (memcmp_s(ps->ovoucher->ov_entries->hc_hash->hash->bytes,
-		     ps->ovoucher->ov_entries->hc_hash->hash->byte_sz,
-		     temp_entry->hc_hash->hash->bytes,
-		     ps->ovoucher->ov_entries->hc_hash->hash->byte_sz,
-		     &result_memcmp) ||
-	    result_memcmp) {
-		LOG(LOG_ERROR, "Failed to match HC Hash at entry %d\n",
-		    ps->ov_entry_num);
-		goto err;
-	}
-
-	/* hp hash needs to be updated with current message ("bo") hash */
+	// free the previous hash and push the new one.
 	sdo_hash_free(ps->ovoucher->ov_entries->hp_hash);
 	ps->ovoucher->ov_entries->hp_hash = current_hp_hash;
 
-	/* Update the pk with the "pk" from this msg data */
+	// replace the previous OVEPubKey with the OVEPubKey from this msg data
 	sdo_public_key_free(ps->ovoucher->ov_entries->pk);
 	ps->ovoucher->ov_entries->pk = temp_entry->pk;
 
-	LOG(LOG_DEBUG, "Verified OP entry: %d\n", ps->ov_entry_num);
+	LOG(LOG_DEBUG, "TO2.OVNextEntry: Verified OVEntry: %d\n", ps->ov_entry_num);
 
 	/*
-	 * if (TO2.ProveOPHdr.bo.sz - 1 == enn)
-	 *     goto TO2.Prove_device (msg44)
+	 * if (TO2.ProveOVHdr.NumOVEntries - 1 == OVEntryNum)
+	 *     goto TO2.ProveDevice (msg64)
 	 * else
-	 *     goto TO2.GetOPNext_entry (msg42)
+	 *     goto TO2.GetOVNextEntry (msg62)
 	 */
 	ps->ov_entry_num++;
 	if (ps->ov_entry_num < ps->ovoucher->num_ov_entries) {
 		ps->state = SDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY;
 	} else {
 		LOG(LOG_DEBUG,
-		    "All %d OP entries have been "
+		    "TO2.OVNextEntry: All %d OVEntry(s) have been "
 		    "verified successfully!\n",
 		    ps->ovoucher->num_ov_entries);
-		/*
-		 * If eni == TO2.Prove_op_hdr.bo.sz-1; then
-		 *     TO2.ProveOVHdr.pk == TO2.Op_next_entry.eni.bo.pk
-		 */
+
 		if (!sdo_compare_public_keys(ps->owner_public_key,
 					     temp_entry->pk)) {
-			LOG(LOG_ERROR, "Failed to match Power "
-				       "on Owner's pk to OVHdr "
-				       "pk!\n");
+			LOG(LOG_ERROR,
+				"TO2.OVNextEntry: Failed to match Owner's pk to OVHdr pk!\n");
 			goto err;
 		}
 		ps->state = SDO_STATE_TO2_SND_PROVE_DEVICE;
 	}
-
 	ret = 0; /* Mark as success */
 err:
+	sdor_flush(&ps->sdor);
+	ps->sdor.have_block = false;
 	if (temp_entry) {
 		if (temp_entry->hp_hash) {
 			sdo_hash_free(temp_entry->hp_hash);
@@ -265,6 +298,9 @@ err:
 			sdo_hash_free(temp_entry->hc_hash);
 		}
 		sdo_free(temp_entry);
+	}
+	if (cose_encoded) {
+		sdo_byte_array_free(cose_encoded);
 	}
 	if (ret) {
 		if (current_hp_hash) {

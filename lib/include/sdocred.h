@@ -62,6 +62,16 @@ bool sdo_ov_entry_add(sdo_ov_entry_t *root_entry, sdo_ov_entry_t *e);
 
 #define SDO_DEV_INFO_SZ 512 // max size of dev info we handle
 
+typedef struct SDOOwner_supplied_credentials_s {
+	sdo_rendezvous_list_t *rvlst;
+	sdo_byte_array_t *guid;
+	sdo_public_key_t *pubkey;
+	sdo_service_info_t *si;
+} sdo_owner_supplied_credentials_t;
+
+sdo_owner_supplied_credentials_t *sdo_owner_supplied_credentials_alloc(void);
+void sdo_owner_supplied_credentials_free(sdo_owner_supplied_credentials_t *ocs);
+
 typedef struct _sdo_ownershipvoucher_t {
 	int prot_version;
 	sdo_byte_array_t *g2;
@@ -77,22 +87,17 @@ typedef struct _sdo_ownershipvoucher_t {
 sdo_ownership_voucher_t *sdo_ov_alloc(void);
 void sdo_ov_free(sdo_ownership_voucher_t *ov);
 void sdo_ov_print(sdo_ownership_voucher_t *ov);
-sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac,
-					 bool cal_hp_hc);
-bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac,
-	size_t num_ov_items);
+sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac);
+bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac);
 sdo_hash_t *sdo_new_ov_hdr_sign(sdo_dev_cred_t *dev_cred,
-				sdo_public_key_t *new_pub_key,
-				sdo_hash_t *hdc);
+			sdo_owner_supplied_credentials_t *osc, sdo_hash_t *hdc);
+bool fdo_ove_hash_prev_entry_save(sdow_t *sdow, sdo_ownership_voucher_t *ov,
+	sdo_hash_t *hmac);
+bool fdo_ove_hash_hdr_info_save(sdo_ownership_voucher_t *ov);
+bool fdo_ovheader_write(sdow_t *sdow, int protver, sdo_byte_array_t *guid,
+	sdo_rendezvous_list_t *rvlst, sdo_string_t *dev_info,
+	sdo_public_key_t *pubkey, sdo_hash_t *hdc);
 
-typedef struct SDOOwner_supplied_credentials_s {
-	sdo_rendezvous_list_t *rvlst;
-	sdo_byte_array_t *guid;
-	sdo_service_info_t *si;
-} sdo_owner_supplied_credentials_t;
-
-sdo_owner_supplied_credentials_t *sdo_owner_supplied_credentials_alloc(void);
-void sdo_owner_supplied_credentials_free(sdo_owner_supplied_credentials_t *ocs);
 void sdo_iv_free(sdo_iv_t *iv);
 
 #endif /* __SDOCRED_H__ */

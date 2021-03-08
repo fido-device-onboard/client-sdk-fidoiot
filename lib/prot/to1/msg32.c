@@ -116,11 +116,9 @@ int32_t msg32(sdo_prot_t *ps)
 	LOG(LOG_DEBUG, "TO1.ProveToRV completed successfully\n");
 
 err:
-	if (eat)
+	if (eat) {
 		fdo_eat_free(eat);
-	if (encoded_payloadbasemap)
-		sdo_byte_array_free(encoded_payloadbasemap);
-	if (ps->n4)
-		sdo_byte_array_free(ps->n4);
+		eat = NULL;
+	}
 	return ret;
 }

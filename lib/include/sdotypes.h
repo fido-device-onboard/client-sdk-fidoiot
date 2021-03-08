@@ -148,14 +148,16 @@ typedef struct _sdo_hash_t {
 bool sdo_siginfo_write(sdow_t *sdow);
 
 /* Hash type as defined by protocol */
-#define SDO_CRYPTO_HASH_TYPE_NONE 0
-#define SDO_CRYPTO_HASH_TYPE_SHA_1 3
 #define SDO_CRYPTO_HASH_TYPE_SHA_256 8
 #define SDO_CRYPTO_HASH_TYPE_SHA_384 14
-#define SDO_CRYPTO_HASH_TYPE_SHA_512 10
-#define SDO_CRYPTO_HMAC_TYPE_SHA_256 108
-#define SDO_CRYPTO_HMAC_TYPE_SHA_384 114
+#define SDO_CRYPTO_HMAC_TYPE_SHA_256 5
+#define SDO_CRYPTO_HMAC_TYPE_SHA_384 6
+
+// TO-DO : legacy.. remove?
+#define SDO_CRYPTO_HASH_TYPE_NONE 0
+#define SDO_CRYPTO_HASH_TYPE_SHA_1 3
 #define SDO_CRYPTO_HMAC_TYPE_SHA_512 110
+#define SDO_CRYPTO_HASH_TYPE_SHA_512 10
 
 #if !defined(KEX_ECDH384_ENABLED) /* TODO: do more generic */
 #define SDO_CRYPTO_HASH_TYPE_USED SDO_CRYPTO_HASH_TYPE_SHA_256
@@ -190,6 +192,7 @@ void sdo_init_ipv4_address(sdo_ip_address_t *sdoip, uint8_t *ipv4);
 void sdo_init_ipv6_address(sdo_ip_address_t *sdoip, uint8_t *ipv6);
 #endif
 bool sdo_read_ipaddress(sdor_t *sdor, sdo_ip_address_t *sdoip);
+bool sdo_convert_to_ipaddress(sdo_byte_array_t * ip_bytes, sdo_ip_address_t *sdoip);
 void sdo_write_ipaddress(sdow_t *sdow, sdo_ip_address_t *sdoip);
 char *sdo_ipaddress_to_string(sdo_ip_address_t *sdoip, char *buf, int buf_sz);
 #if 0
@@ -234,19 +237,38 @@ void sdo_app_id_write(sdow_t *sdow);
 
 #define FDO_COSE_ALG_KEY 1
 
-// Appendix E
-#define FDO_EATFDO -17760707
+#define FDO_COSE_ENCRYPT0_AESPLAINTYPE_KEY 1
+#define FDO_COSE_ENCRYPT0_AESIV_KEY 5
+
+// Appendix E : BIG TO-DO
+// #define FDO_EATFDO -17760707
+#define FDO_EATFDO -19260421
 #define FDO_EAT_MAROE_PREFIX_KEY -17760708
-#define FDO_EAT_EUPHNONCE_KEY -17760709
+// #define FDO_EAT_EUPHNONCE_KEY -17760709
+#define FDO_EAT_EUPHNONCE_KEY -17760701
 #define FDO_EATNONCE_KEY 9
 #define FDO_EATUEID_KEY 10
+
+#define FDO_COSE_SIGN1_CUPHNONCE_KEY -17760701
+#define FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY -17760702
 
 //#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1 201
 //#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0 202
 
+// Appendix E. AESPlainType values. TO-DO : Update later
+#define FDO_CRYPTO_COSEAES128CBC 20
+#define FDO_CRYPTO_COSEAES128CTR 30
+#define FDO_CRYPTO_COSEAES256CBC 25
+#define FDO_CRYPTO_COSEAES256CTR 35
+//#define FDO_CRYPTO_COSEAES128CBC -17760703
+//#define FDO_CRYPTO_COSEAES128CTR -17760704
+//#define FDO_CRYPTO_COSEAES256CBC -17760705
+//#define FDO_CRYPTO_COSEAES256CTR -17760706
+
 // 4.2.3 Public key encodings
 #define SDO_CRYPTO_PUB_KEY_ENCODING_NONE 0
 #define SDO_CRYPTO_PUB_KEY_ENCODING_X509 1
+#define FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 2
 #define SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP 3
 #define SDO_CRYPTO_PUB_KEY_ENCODING_EPID 4
 #define SDO_EPID20 92 // should be 3
@@ -308,7 +330,7 @@ typedef struct {
 	sdo_hash_t *hmac;	  // HMAC of ct body
 	uint8_t iv[AES_IV];	// iv of ctr/cbc.
 	uint32_t offset;
-
+	int aes_plain_type;
 } sdo_encrypted_packet_t;
 
 typedef struct {
@@ -323,7 +345,8 @@ typedef struct {
 sdo_encrypted_packet_t *sdo_encrypted_packet_alloc(void);
 void sdo_encrypted_packet_free(sdo_encrypted_packet_t *pkt);
 sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor);
-void sdo_encrypted_packet_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt);
+bool fdo_etminnerblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt);
+bool fdo_etmouterblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt);
 #if 0
 char *sdo_encrypted_packet_to_string(sdo_encrypted_packet_t *pkt, char *buf, int bufsz);
 #endif
@@ -357,6 +380,53 @@ bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
 			       sdo_public_key_t *pk);
 bool sdoOVSignature_verification(sdor_t *sdor, sdo_sig_t *sig,
 				 sdo_public_key_t *pk);
+
+typedef struct {
+	int aes_plain_type;
+} fdo_cose_encrypt0_protected_header_t;
+
+typedef struct {
+	uint8_t aes_iv[AES_IV];
+} fdo_cose_encrypt0_unprotected_header_t;
+
+typedef struct {
+	fdo_cose_encrypt0_protected_header_t *protected_header;
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header;
+	sdo_byte_array_t *payload;
+} fdo_cose_encrypt0_t;
+
+bool fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0);
+fdo_cose_encrypt0_t* fdo_cose_encrypt0_alloc(void);
+bool fdo_cose_encrypt0_read_protected_header(sdor_t *sdor,
+	fdo_cose_encrypt0_protected_header_t *protected_header);
+bool fdo_cose_encrypt0_read_unprotected_header(sdor_t *sdor,
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header);
+bool fdo_cose_encrypt0_read(sdor_t *sdor, fdo_cose_encrypt0_t *cose_encrypt0);
+bool fdo_cose_encrypt0_write_protected_header(sdow_t *sdow,
+	fdo_cose_encrypt0_protected_header_t *protected_header);
+bool fdo_cose_encrypt0_write_unprotected_header(sdow_t *sdow,
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header);
+bool fdo_cose_encrypt0_write(sdow_t *sdow, fdo_cose_encrypt0_t *cose_encrypt0);
+
+typedef struct {
+	int mac_type;
+} fdo_cose_mac0_protected_header_t;
+
+typedef struct {
+	fdo_cose_mac0_protected_header_t *protected_header;
+	sdo_byte_array_t *payload;
+	sdo_byte_array_t *hmac;
+} fdo_cose_mac0_t;
+
+bool fdo_cose_mac0_free(fdo_cose_mac0_t *cose);
+bool fdo_cose_mac0_read_protected_header(sdor_t *sdor,
+	fdo_cose_mac0_protected_header_t *protected_header);
+bool fdo_cose_mac0_read_unprotected_header(sdor_t *sdor);
+bool fdo_cose_mac0_read(sdor_t *sdor, fdo_cose_mac0_t *cose);
+bool fdo_cose_mac0_write_protected_header(sdow_t *sdow,
+	fdo_cose_mac0_protected_header_t *protected_header);
+bool fdo_cose_mac0_write_unprotected_header(sdow_t *sdow);
+bool fdo_cose_mac0_write(sdow_t *sdow, fdo_cose_mac0_t *cose);
 
 typedef struct {
 	int ph_sig_alg;
@@ -395,17 +465,23 @@ typedef struct {
 } fdo_cose_protected_header_t;
 
 typedef struct {
+	sdo_nonce_t cuphnonce;
+	sdo_public_key_t *cuphowner_public_key;
+} fdo_cose_unprotected_header_t;
+
+typedef struct {
 	fdo_cose_protected_header_t *cose_ph;
+	fdo_cose_unprotected_header_t *cose_uph;
 	sdo_byte_array_t *cose_payload;
 	sdo_byte_array_t *cose_signature;
 } fdo_cose_t;
 
 bool fdo_cose_free(fdo_cose_t *cose);
 bool fdo_cose_read_protected_header(sdor_t *sdor, fdo_cose_protected_header_t *cose_ph);
-bool fdo_cose_read_unprotected_header(sdor_t *sdor);
-bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose);
+bool fdo_cose_read_unprotected_header(sdor_t *sdor, fdo_cose_unprotected_header_t *cose_uph);
+bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose, bool empty_uph);
 bool fdo_cose_write_protected_header(sdow_t *sdow, fdo_cose_protected_header_t *cose_ph);
-bool fdo_cose_write_unprotected_header(sdor_t *sdor);
+bool fdo_cose_write_unprotected_header(sdow_t *sdow);
 bool fdo_cose_write(sdow_t *sdow, fdo_cose_t *cose);
 
 typedef struct fdo_rvto2addr_entry_s {
@@ -529,6 +605,7 @@ typedef struct sdo_service_info_s {
 	sdo_key_value_t *kv;
 } sdo_service_info_t;
 
+bool fdo_serviceinfo_read(sdor_t *sdor);
 sdo_service_info_t *sdo_service_info_alloc(void);
 sdo_service_info_t *sdo_service_info_alloc_with(char *key, char *val);
 void sdo_service_info_free(sdo_service_info_t *si);

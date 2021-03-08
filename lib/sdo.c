@@ -25,9 +25,6 @@
 #include "safe_lib.h"
 #include "sdodeviceinfo.h"
 
-// TO-DO: This should not be here.
-#define RVPROTHTTPS 2
-
 int TO2_done;
 typedef struct app_data_s {
 	bool error_recovery;
@@ -46,12 +43,23 @@ typedef struct app_data_s {
 	sdo_sdk_errorCB error_callback;
 	/* Global Sv_info Module_list head pointer */
 	sdo_sdk_service_info_module_list_t *module_list;
+	sdo_rendezvous_directive_t *current_rvdirective;
+	fdo_rvto2addr_entry_t *current_rvto2addrentry;
 } app_data_t;
 
 /* Globals */
 static app_data_t *g_sdo_data;
 extern int g_argc;
 extern char **g_argv;
+
+#ifdef RETRY_FALSE
+#define ERROR_RETRY_COUNT 1
+#else
+#define ERROR_RETRY_COUNT 5
+#endif
+
+static unsigned int error_count;
+static bool rvbypass;
 
 static bool _STATE_DI(void);
 static bool _STATE_TO1(void);
@@ -110,6 +118,13 @@ sdo_sdk_status sdo_sdk_run(void)
 			ret = SDO_SUCCESS;
 		} else {
 			ret = SDO_ERROR;
+			++error_count;
+			if (error_count == ERROR_RETRY_COUNT) {
+				LOG(LOG_INFO, "*********Retry(s) done*********\n");
+				g_sdo_data->state_fn = &_STATE_Shutdown_Error;
+			} else {
+				LOG(LOG_INFO, "*********Retry count : %u*********\n", error_count);
+			}
 		}
 	}
 
@@ -189,6 +204,7 @@ static void sdo_protTO2Exit(app_data_t *app_data)
 			sdo_service_info_free(ps->osc->si);
 			ps->osc->si = NULL;
 		}
+		// Rest of the ps->osc contents are mapped to devcred. they are freed along with them.
 		sdo_free(ps->osc);
 		ps->osc = NULL;
 	}
@@ -203,6 +219,10 @@ static void sdo_protTO2Exit(app_data_t *app_data)
 	if (ps->dns1 != NULL) {
 		sdo_free(ps->dns1);
 		ps->dns1 = NULL;
+	}
+	if (ps->n6 != NULL) {
+		sdo_byte_array_free(ps->n6);
+		ps->n7 = NULL;
 	}
 	if (ps->n7 != NULL) {
 		sdo_byte_array_free(ps->n7);
@@ -220,7 +240,6 @@ static void sdo_protTO2Exit(app_data_t *app_data)
 	}
 	sdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
 	ps->total_dsi_rounds = 0;
-	sdor_flush(&ps->sdor);
 }
 /**
  * Allocate memory to hold device credentials which includes owner credentials
@@ -722,7 +741,6 @@ static bool _STATE_DI(void)
 {
 	bool ret = false;
 	sdo_prot_ctx_t *prot_ctx = NULL;
-	sdo_sdk_status status = SDO_SUCCESS;
 	uint16_t di_port = g_DI_PORT;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
@@ -892,28 +910,13 @@ static bool _STATE_DI(void)
 	if (sdo_prot_ctx_run(prot_ctx) != 0) {
 		LOG(LOG_ERROR, "DI failed.\n");
 		if (g_sdo_data->error_recovery) {
-			LOG(LOG_INFO, "Retrying,.....\n");
+			LOG(LOG_INFO, "Retrying.....\n");
 			g_sdo_data->state_fn = &_STATE_DI;
-			if (g_sdo_data->error_callback) {
-				status = g_sdo_data->error_callback(
-				    SDO_WARNING, SDO_DI_ERROR);
-
-				if (status == SDO_ABORT) {
-					g_sdo_data->error_recovery = false;
-					g_sdo_data->recovery_enabled = false;
-					ERROR();
-					/* Aborting the state machine */
-					goto end;
-				}
-			}
-			sdo_sleep(3); /* Sleep and retry */
+			sdo_sleep(3);
 			goto end;
 		} else {
 			ERROR()
 			sdo_sleep(g_sdo_data->delaysec + sdo_random() % 25);
-			if (g_sdo_data->error_callback)
-				status = g_sdo_data->error_callback(
-				    SDO_ERROR, SDO_DI_ERROR);
 			goto end;
 		}
 	}
@@ -948,7 +951,6 @@ static bool _STATE_TO1(void)
 	bool ret = false;
 	bool tls = false;
 	sdo_prot_ctx_t *prot_ctx = NULL;
-	sdo_sdk_status status = SDO_SUCCESS;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -982,14 +984,17 @@ static bool _STATE_TO1(void)
 	int port = 0;
 	sdo_ip_address_t *ip = NULL;
 	sdo_string_t *dns = NULL;
-	bool rvbypass = false;
 	bool rvowner_only = false;
 
-	sdo_rendezvous_directive_t *rv_directive =
-			g_sdo_data->devcred->owner_blk->rvlst->rv_directives;
+	if (g_sdo_data->current_rvdirective == NULL) {
+		// keep track of current directive in use with the help of stored RendezvousInfo from DI.
+		// it is NULL at 2 ponts: during 1st TO1 run, and,
+		// when all RVDirectives have been used and we're re-trying
+		g_sdo_data->current_rvdirective = g_sdo_data->devcred->owner_blk->rvlst->rv_directives;
+	}
 
-	while (!ret && rv_directive) {
-		sdo_rendezvous_t *rv = rv_directive->rv_entries;
+	while (!ret && g_sdo_data->current_rvdirective) {
+		sdo_rendezvous_t *rv = g_sdo_data->current_rvdirective->rv_entries;
 		// reset for next use.
 		port = 0;
 		ip = NULL;
@@ -1022,20 +1027,19 @@ static bool _STATE_TO1(void)
 				rv = rv->next;
 				continue;
 			}
-			if (rv->pr && *rv->pr == RVPROTTLS) {
+			if (rv->pr && *rv->pr == RVPROTHTTPS) {
 				tls = true;
 			}
 			rv = rv->next;
 		}
+
 		if (rvbypass) {
-			// move to TO2 directly. However, update the flow to start from the next RV directive
-			// in case of failure with TO2. TO-DO.
 			g_sdo_data->state_fn = &_STATE_TO2;
 			goto end;
 		}
 
 		// Found the  needed entries of the current directive. Prepare to move to next.
-		rv_directive = rv_directive->next;
+		g_sdo_data->current_rvdirective = g_sdo_data->current_rvdirective->next;
 
 		if (rvowner_only || (!ip && !dns) || port == 0) {
 			// If any of the IP/DNS/Port values are missing, or
@@ -1054,39 +1058,22 @@ static bool _STATE_TO1(void)
 
 		if (sdo_prot_ctx_run(prot_ctx) != 0) {
 			LOG(LOG_ERROR, "TO1 failed.\n");
-			if (g_sdo_data->error_recovery) {
-				LOG(LOG_INFO, "Retrying,.....\n");
-				g_sdo_data->state_fn = &_STATE_TO1;
-				if (g_sdo_data->error_callback) {
-					status = g_sdo_data->error_callback(
-			    		SDO_WARNING, SDO_TO1_ERROR);
-					if (status == SDO_ABORT) {
-						g_sdo_data->error_recovery = false;
-						g_sdo_data->recovery_enabled = false;
-						ERROR();
-						goto end;
-					}
-				}
-				sdo_sleep(3);
-				/* Error recovery is enabled, so, it's not the final
-		 		* status
-		 		*/
-			 	// clear contents for a fresh start.
-				sdo_protTO1Exit(g_sdo_data);
-			 	sdo_prot_ctx_free(prot_ctx);
-				// pre-emptively, return if no more directives as present to avoid
-				// double-free error at end tag during retries.
-				// TO-DO: Fix when flow is simplified.
-				if (!rv_directive)
-					return ret;
+
+			// clear contents for a fresh start.
+			sdo_protTO1Exit(g_sdo_data);
+			sdo_prot_ctx_free(prot_ctx);
+			sdo_sleep(3);
+
+			// check if there is another RV location to try. if yes, try it
+			if (g_sdo_data->current_rvdirective) {
 				continue;
-			} else {
-				ERROR()
-				sdo_sleep(g_sdo_data->delaysec + sdo_random() % 25);
-				if (g_sdo_data->error_callback)
-					status = g_sdo_data->error_callback(
-			    		SDO_ERROR, SDO_TO1_ERROR);
-				goto end;
+			}
+			// there are no more RV locations left, so check if retry is enabled.
+			// if yes, proceed with retrying all the RV locations
+			if (g_sdo_data->error_recovery) {
+				LOG(LOG_INFO, "Retrying.....\n");
+				g_sdo_data->state_fn = &_STATE_TO1;
+				return ret;
 			}
 		} else {
 			LOG(LOG_DEBUG, "\n------------------------------------ TO1 Successful "
@@ -1113,9 +1100,7 @@ end:
 static bool _STATE_TO2(void)
 {
 	sdo_prot_ctx_t *prot_ctx = NULL;
-	sdo_block_t *sdob;
 	bool ret = false;
-	sdo_sdk_status status = SDO_SUCCESS;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -1134,96 +1119,155 @@ static bool _STATE_TO2(void)
 		return SDO_ERROR;
 	}
 
+	// This should be sent during serviceinfo: g_sdo_data->module_list
+	// For now, let it be NULL. TO-DO
 	if (!sdo_prot_to2_init(&g_sdo_data->prot, g_sdo_data->service_info,
-
-			       g_sdo_data->devcred, g_sdo_data->module_list)) {
+			       g_sdo_data->devcred, NULL)) {
 		LOG(LOG_ERROR, "TO2_Init() failed!\n");
-		goto err;
+		return SDO_ERROR;
 	}
 
-	prot_ctx = sdo_prot_ctx_alloc(
-	    sdo_process_states, &g_sdo_data->prot, &g_sdo_data->prot.i1,
-	    g_sdo_data->prot.dns1, (uint16_t)g_sdo_data->prot.port1, false);
-	if (prot_ctx == NULL) {
-		ERROR();
-		goto err;
+	if (!rvbypass) {
+		// preset RVTO2Addr if we're going to run TO2 using it.
+		fdo_rvto2addr_t *rvto2addr = g_sdo_data->prot.rvto2addr;
+		if (!rvto2addr) {
+			LOG(LOG_ERROR, "RVTO2Addr list is empty!\n");
+			return SDO_ERROR;
+		}
+		g_sdo_data->current_rvto2addrentry = rvto2addr->rv_to2addr_entry;
 	}
 
-	if (sdo_prot_ctx_run(prot_ctx) != 0) {
-		ERROR();
-		goto err;
-	}
+	int port = 0;
+	sdo_ip_address_t *ip = NULL;
+	sdo_string_t *dns = NULL;
+	bool tls = false;
 
-	if (g_sdo_data->prot.success == false) {
-		ERROR();
-		LOG(LOG_ERROR, "TO2 failed.\n");
+	// if thers is RVBYPASS enabled, we enter the loop and set 'rvbypass' flag to false
+	// otherwise, there'll be RVTO2AddrEntry(s), and we iterate through it.
+	// Only one of the conditions will satisfy, which is ensured by resetting of the 'rvbypass' flag,
+	// and, eventual Nulling of the 'g_sdo_data->current_rvto2addrentry'
+	// because we keep on moving to next.
+	// Run the TO2 protocol regardless.
+	while (rvbypass || g_sdo_data->current_rvto2addrentry) {
 
-		/* Execute Sv_info type=FAILURE */
-		if (!sdo_mod_exec_sv_infotype(
-			g_sdo_data->prot.sv_info_mod_list_head,
-			SDO_SI_FAILURE)) {
-			LOG(LOG_ERROR, "Sv_info: One or more module's FAILURE "
-				       "CB failed\n");
+		// if rvbypass is set by TO1, then pick the Owner's address from RendezvousInfo.
+		// otherwise, pick the address from RVTO2AddrEntry.
+		if (rvbypass) {
+			sdo_rendezvous_t *rv = g_sdo_data->current_rvdirective->rv_entries;
+			if (rv->ip) {
+				ip = rv->ip;
+				rv = rv->next;
+			}
+			if (rv->dn) {
+				dns = rv->dn;
+				rv = rv->next;
+			}
+			if (rv->po) {
+				port = *rv->po;
+				rv = rv->next;
+			}
+			if (rv->pr && *rv->pr == RVPROTHTTPS) {
+				tls = true;
+			}
+
+			// Found the  needed entries of the current directive.
+			// Prepare to move to next in case of failure
+			g_sdo_data->current_rvdirective = g_sdo_data->current_rvdirective->next;
+
+		} else {
+
+			ip = sdo_ipaddress_alloc();
+			if (!sdo_convert_to_ipaddress(g_sdo_data->current_rvto2addrentry->rvip, ip)) {
+				LOG(LOG_ERROR, "Failed to convert IP from RVTO2Addr into IPAddress!\n");
+			}
+			dns = g_sdo_data->current_rvto2addrentry->rvdns;
+			port = g_sdo_data->current_rvto2addrentry->rvport;
+			if (g_sdo_data->current_rvto2addrentry->rvprotocol == RVPROTHTTPS)
+				tls = true;
+			// prepare for next iteration beforehand
+			g_sdo_data->current_rvto2addrentry = g_sdo_data->current_rvto2addrentry->next;
 		}
 
-		goto err;
-	}
+		prot_ctx = sdo_prot_ctx_alloc(
+			sdo_process_states, &g_sdo_data->prot, ip, dns->bytes, port, tls);
+		if (prot_ctx == NULL) {
+			ERROR();
+			sdo_prot_ctx_free(prot_ctx);
+			return SDO_ABORT;
+		}
 
-	g_sdo_data->state_fn = &_STATE_Shutdown;
-
-	sdo_protTO2Exit(g_sdo_data);
-
-	LOG(LOG_DEBUG, "\n------------------------------------ TO2 Successful "
-		       "--------------------------------------\n\n");
-	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-	LOG(LOG_INFO, "@Secure Device Onboarding Complete@\n");
-	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-	TO2_done = 1;
-
-	sdor_t *sdor = &prot_ctx->protdata->sdor;
-	sdow_t *sdow = &prot_ctx->protdata->sdow;
-
-	sdob = &sdor->b;
-	if (sdob->block) {
-		sdo_free(sdob->block);
-		sdob->block = NULL;
-	}
-
-	sdob = &sdow->b;
-	if (sdob->block) {
-		sdo_free(sdob->block);
-		sdob->block = NULL;
-	}
-
-	ret = true;
-err:
-	sdo_prot_ctx_free(prot_ctx);
-	if (g_sdo_data->prot.success == false) {
-		if (g_sdo_data->error_recovery) {
-			LOG(LOG_INFO, "Retrying TO2,.....\n");
-			g_sdo_data->recovery_enabled = true;
-			g_sdo_data->state_fn = &_STATE_TO1;
+		if (sdo_prot_ctx_run(prot_ctx) != 0 || g_sdo_data->prot.success == false) {
+			LOG(LOG_ERROR, "TO2 failed.\n");
+			/* Execute Sv_info type=FAILURE */
+			if (!sdo_mod_exec_sv_infotype(
+				g_sdo_data->prot.sv_info_mod_list_head,
+				SDO_SI_FAILURE)) {
+				LOG(LOG_ERROR, "Sv_info: One or more module's FAILURE "
+						"CB failed\n");
+			}
 			sdo_protTO2Exit(g_sdo_data);
-			if (g_sdo_data->error_callback)
-				status = g_sdo_data->error_callback(
-				    SDO_WARNING, SDO_TO2_ERROR);
+			sdo_prot_ctx_free(prot_ctx);
 
 			sdo_sleep(3);
-		} else {
-			if (g_sdo_data->error_callback)
-				status = g_sdo_data->error_callback(
-				    SDO_ERROR, SDO_TO2_ERROR);
+
+			if (!rvbypass) {
+				// free only when rvbypass is false, since the allocation was done then.
+				sdo_free(ip);
+				ip = NULL;
+			} else {
+				// set the global rvbypass flag to false so that we don't continue the loop
+				// because of rvbypass
+				rvbypass = false;
+				return ret;
+			}
+			
+			// if there is another Owner location present, try it
+			// the execution reaches here only if rvbypass was never set
+			if (g_sdo_data->current_rvto2addrentry) {
+				LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
+				continue;
+			}
+			// there's no more owner locations left to try,
+			// so start retrying with TO1, if retry is enabled.
+			if (g_sdo_data->error_recovery) {
+				g_sdo_data->state_fn = &_STATE_TO1;
+				LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
+					"Retrying TO1 using the next RendezvousDirective\n");
+				// free the existing RVTO2Addr
+				fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
+				return ret;
+			}
 		}
 
-		if (status == SDO_ABORT) {
-			g_sdo_data->error_recovery = false;
-			g_sdo_data->recovery_enabled = false;
-			ERROR();
-			ret = false;
+		// if we reach here no failures occurred and TO2 has completed.
+		// So proceed for shutdown and break.
+		g_sdo_data->state_fn = &_STATE_Shutdown;
+		sdo_protTO2Exit(g_sdo_data);
+		sdo_prot_ctx_free(prot_ctx);
+		fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
+		if (!rvbypass) {
+			// free only when rvbypass is false, since the allocation was done then.
+			sdo_free(ip);
+			ip = NULL;
+		} else {
+			// set the global rvbypass flag to false so that we don't continue the loop
+			// because of rvbypass
+			rvbypass = false;
+			return ret;
 		}
+
+		LOG(LOG_DEBUG, "\n------------------------------------ TO2 Successful "
+				"--------------------------------------\n\n");
+		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+		LOG(LOG_INFO, "@Secure Device Onboarding Complete@\n");
+		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+		TO2_done = 1;
+		ret = true;
+		break;
 	}
 	return ret;
 }
+
 /**
  * Sets state varilable to error and notifies the same to user.
  *

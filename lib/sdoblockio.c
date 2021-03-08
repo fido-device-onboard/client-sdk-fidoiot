@@ -190,6 +190,15 @@ bool sdow_boolean(sdow_t *sdow, bool value)
 	return true;
 }
 
+bool sdow_null(sdow_t *sdow)
+{
+	if (cbor_encode_null(&sdow->current->cbor_encoder) != CborNoError) {
+		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 7 (NULL)\n");
+		return false;
+	}
+	return true;
+}
+
 bool sdow_end_array(sdow_t *sdow)
 {
 	if (cbor_encoder_close_container_checked(
@@ -230,6 +239,7 @@ void sdow_flush(sdow_t *sdow)
 	sdo_block_t *sdob = &sdow->b;
 	sdo_block_reset(sdob);
 	sdo_free(sdob->block);
+	sdo_free(sdow->current);
 }
 
 //==============================================================================
@@ -338,6 +348,14 @@ bool sdor_text_string(sdor_t *sdor, char *buffer, size_t buffer_length) {
 	return true;
 }
 
+bool sdor_is_value_null(sdor_t *sdor) {
+	return cbor_value_is_null(&sdor->current->cbor_value);
+}
+
+bool sdor_is_value_signed_int(sdor_t *sdor) {
+	return cbor_value_is_integer(&sdor->current->cbor_value);
+}
+
 bool sdor_signed_int(sdor_t *sdor, int *result) {
 	if (!cbor_value_is_integer(&sdor->current->cbor_value) ||
 		cbor_value_get_int(&sdor->current->cbor_value, result)
@@ -414,5 +432,5 @@ void sdor_flush(sdor_t *sdor)
 {
 	sdo_block_t *sdob = &sdor->b;
 	sdo_block_reset(sdob);
-	free(sdor->current);
+	sdo_free(sdor->current);
 }
