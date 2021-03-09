@@ -505,13 +505,17 @@ bool fdo_rvto2addr_read(sdor_t *sdor, fdo_rvto2addr_t *rvto2addr);
 typedef struct sdo_key_value_s {
 	struct sdo_key_value_s *next;
 	sdo_string_t *key;
-	sdo_string_t *val;
+	sdo_string_t *str_val;
+	sdo_byte_array_t *bin_val;
+	int *int_val;
+	bool *bool_val;
 } sdo_key_value_t;
 
 sdo_key_value_t *sdo_kv_alloc(void);
 sdo_key_value_t *sdo_kv_alloc_with_array(const char *key,
 					 sdo_byte_array_t *val);
 sdo_key_value_t *sdo_kv_alloc_with_str(const char *key, const char *val);
+sdo_key_value_t *sdo_kv_alloc_key_only(const char *key);
 void sdo_kv_free(sdo_key_value_t *kv);
 void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv);
 
@@ -605,7 +609,6 @@ typedef struct sdo_service_info_s {
 	sdo_key_value_t *kv;
 } sdo_service_info_t;
 
-bool fdo_serviceinfo_read(sdor_t *sdor);
 sdo_service_info_t *sdo_service_info_alloc(void);
 sdo_service_info_t *sdo_service_info_alloc_with(char *key, char *val);
 void sdo_service_info_free(sdo_service_info_t *si);
@@ -614,6 +617,12 @@ sdo_key_value_t **sdo_service_info_fetch(sdo_service_info_t *si,
 sdo_key_value_t **sdo_service_info_get(sdo_service_info_t *si, int key_num);
 bool sdo_service_info_add_kv_str(sdo_service_info_t *si, const char *key,
 				 const char *val);
+bool sdo_service_info_add_kv_bin(sdo_service_info_t *si, const char *key,
+				 const sdo_byte_array_t *val);
+bool sdo_service_info_add_kv_bool(sdo_service_info_t *si, const char *key,
+				 bool val);
+bool sdo_service_info_add_kv_int(sdo_service_info_t *si, const char *key,
+				 int val);
 bool sdo_service_info_add_kv(sdo_service_info_t *si, sdo_key_value_t *kv);
 bool sdo_signature_verification(sdo_byte_array_t *plain_text,
 				sdo_byte_array_t *sg, sdo_public_key_t *pk);
@@ -676,6 +685,11 @@ void sdo_sv_info_clear_module_psi_osi_index(
     sdo_sdk_service_info_module_list_t *module_list);
 bool sdo_construct_module_list(sdo_sdk_service_info_module_list_t *module_list,
 			       char **mod_name);
+
+bool fdo_serviceinfo_read(sdor_t *sdor, sdo_sdk_service_info_module_list_t *module_list,
+	int *cb_return_val);
+bool fdo_supply_serviceinfoval(sdor_t *sdor, char *module_name, char *module_message,
+	sdo_sdk_service_info_module_list_t *module_list, int *cb_return_val);
 
 bool sdo_compare_hashes(sdo_hash_t *hash1, sdo_hash_t *hash2);
 bool sdo_compare_byte_arrays(sdo_byte_array_t *ba1, sdo_byte_array_t *ba2);

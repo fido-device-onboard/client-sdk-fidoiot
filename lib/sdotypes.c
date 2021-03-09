@@ -5982,42 +5982,6 @@ sdo_key_value_t *sdo_kv_alloc(void)
 }
 
 /**
- * Allocate the key value and initialize with the value provided
- * @param key - pointer to the key
- * @param val - pointer to the struct of type byte array
- * @return pointer to the allocated struct of type key value
- */
-sdo_key_value_t *sdo_kv_alloc_with_array(const char *key, sdo_byte_array_t *val)
-{
-	if (!key || !val)
-		return NULL;
-
-	sdo_key_value_t *kv = sdo_kv_alloc();
-
-	if (kv != NULL) {
-		int key_len = strnlen_s(key, SDO_MAX_STR_SIZE);
-
-		if (!key_len || key_len == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR,
-			    "%s(): key is either "
-			    "'NULL' or 'isn't "
-			    "NULL terminated'\n", __func__);
-			sdo_kv_free(kv);
-			return NULL;
-		}
-
-		kv->key = sdo_string_alloc_with(key, key_len);
-		kv->val = (sdo_string_t *)sdo_byte_array_alloc_with_byte_array(
-		    val->bytes, val->byte_sz);
-		if (kv->key == NULL || kv->val == NULL) {
-			sdo_kv_free(kv);
-			kv = NULL;
-		}
-	}
-	return kv;
-}
-
-/**
  * Allocate the key vlaue and initialize with the value provided
  * @param key - pointer to the key
  * @param val - pointer to the input value
@@ -6054,8 +6018,40 @@ sdo_key_value_t *sdo_kv_alloc_with_str(const char *key, const char *val)
 			return NULL;
 		}
 
-		kv->val = sdo_string_alloc_with(val, val_len);
-		if (kv->key == NULL || kv->val == NULL) {
+		kv->str_val = sdo_string_alloc_with(val, val_len);
+		if (kv->key == NULL || kv->str_val == NULL) {
+			sdo_kv_free(kv);
+			kv = NULL;
+		}
+	}
+	return kv;
+}
+
+/**
+ * Allocate and initialize the key
+ * @param key - pointer to the key
+ * @return pointer to the allocated key if success else NULL.
+ */
+sdo_key_value_t *sdo_kv_alloc_key_only(const char *key)
+{
+	if (!key)
+		return NULL;
+
+	sdo_key_value_t *kv = sdo_kv_alloc();
+
+	if (kv != NULL) {
+		int key_len = strnlen_s(key, SDO_MAX_STR_SIZE);
+
+		if (!key_len || key_len == SDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR, "%s(): key is either "
+			    "'NULL' or 'isn't "
+			    "NULL terminated'\n", __func__);
+			sdo_kv_free(kv);
+			return NULL;
+		}
+
+		kv->key = sdo_string_alloc_with(key, key_len);
+		if (kv->key == NULL) {
 			sdo_kv_free(kv);
 			kv = NULL;
 		}
@@ -6071,8 +6067,8 @@ void sdo_kv_free(sdo_key_value_t *kv)
 {
 	if (kv->key != NULL)
 		sdo_string_free(kv->key);
-	if (kv->val != NULL)
-		sdo_string_free(kv->val);
+	if (kv->str_val != NULL)
+		sdo_string_free(kv->str_val);
 	sdo_free(kv);
 }
 
@@ -6090,7 +6086,7 @@ void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv)
 		return;
 	}
 	// sdo_write_tag_len(sdow, kv->key->bytes, kv->key->byte_sz);
-	// sdo_write_string_len(sdow, kv->val->bytes, kv->val->byte_sz);
+	// sdo_write_string_len(sdow, kv->str_val->bytes, kv->str_val->byte_sz);
 }
 
 /**
@@ -6182,13 +6178,15 @@ bool sdo_osi_parsing(sdor_t *sdor,
  *   ServiceInfoKey: tstr,
  *   ServiceInfoVal: cborSimpleType
  * ]
- * 
+ * ServiceInfoKey = moduleName:messageName
  * return true if read was a success, false otherwise
  */
-bool fdo_serviceinfo_read(sdor_t *sdor) {
+bool fdo_serviceinfo_read(sdor_t *sdor, sdo_sdk_service_info_module_list_t *module_list,
+		int *cb_return_val) {
 
-	sdo_string_t *serviceinfokey = NULL;
-	sdo_byte_array_t *serviceinfoval = NULL;
+	char *serviceinfokey = NULL;
+	char module_name[SDO_MODULE_NAME_LEN];
+	char module_message[SDO_MODULE_MSG_LEN];
 
 	size_t num_serviceinfo = 0;
 	if (!sdor_array_length(sdor, &num_serviceinfo)) {
@@ -6228,28 +6226,47 @@ bool fdo_serviceinfo_read(sdor_t *sdor) {
 				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKey length\n");
 				goto exit;
 			}
-			serviceinfokey = sdo_string_alloc_size(serviceinfokey_length);
+			serviceinfokey = sdo_alloc(sizeof(char) * serviceinfokey_length);
 			if (!serviceinfokey) {
 				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc ServiceInfoKey\n");
 				goto exit;
 			}
-			if (!sdor_text_string(sdor, serviceinfokey->bytes, serviceinfokey->byte_sz)) {
+			if (!sdor_text_string(sdor, serviceinfokey, serviceinfokey_length)) {
 				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKV\n");
 				goto exit;
 			}
 
-			size_t serviceinfoval_length = 0;
-			if (!sdor_string_length(sdor, &serviceinfoval_length)) {
-				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoVal length\n");
+			if (0 != memset_s(&module_name, sizeof(module_name), 0)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to clear modulename\n");
 				goto exit;
 			}
-			// TO-DO: This would move to serviceinfo handling and may not be bstr
-			serviceinfoval = sdo_byte_array_alloc(serviceinfoval_length);
-			if (!serviceinfoval) {
-				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc ServiceInfoVal\n");
+			if (0 != memset_s(&module_message, sizeof(module_message), 0)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to clear modulename\n");
 				goto exit;
 			}
-			if (!sdor_byte_string(sdor, serviceinfoval->bytes, serviceinfoval->byte_sz)) {
+
+			// find the index of separator ':' in ServiceInfoKey format of 'moduleName:messageName'
+			// copy moduleName:messageName and moduleName:messageName
+			size_t index = 0;
+			while (':' != serviceinfokey[index]) {
+				if (index >= serviceinfokey_length) {
+					*cb_return_val = MESSAGE_BODY_ERROR;
+					goto exit;
+				}
+
+				module_name[index] = serviceinfokey[index];
+				++index;
+			}
+			++index;
+			size_t module_name_index = 0;
+			while (index < serviceinfokey_length) {
+				module_message[module_name_index] = serviceinfokey[index];
+				++module_name_index;
+				++index;
+			}
+
+			if (!fdo_supply_serviceinfoval(sdor, &module_name[0], &module_message[0],
+					module_list, cb_return_val)) {
 				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoVal\n");
 				goto exit;
 			}
@@ -6259,8 +6276,7 @@ bool fdo_serviceinfo_read(sdor_t *sdor) {
 				goto exit;
 			}
 			// free the entries for reuse
-			sdo_string_free(serviceinfokey);
-			sdo_byte_array_free(serviceinfoval);
+			sdo_free(serviceinfokey);
 		}
 		if (!sdor_end_array(sdor)) {
 			LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to end array\n");
@@ -6274,12 +6290,115 @@ bool fdo_serviceinfo_read(sdor_t *sdor) {
 	return true;
 exit:
 	if (serviceinfokey) {
-		sdo_string_free(serviceinfokey);
+		sdo_free(serviceinfokey);
 	}
-	if (serviceinfoval) {
-		sdo_byte_array_free(serviceinfoval);
+	return false;
+}
+
+/**
+ * Traverse the Module list to check if the module name is supported and active.
+ * If yes, call the registered callback method that processes the ServiceInfoVal
+ * within SDOR and return true/false depending on callback's execution.
+ * If the module name is not supported, or is not active, skip the ServiceInfoVal
+ * and return true.
+ */
+bool fdo_supply_serviceinfoval(sdor_t *sdor, char *module_name, char *module_message,
+	sdo_sdk_service_info_module_list_t *module_list, int *cb_return_val)
+{
+	int strcmp_result = 1;
+	bool retval = false;
+	bool module_name_found = false;
+	sdo_sdk_service_info_module_list_t *traverse_list = module_list;
+
+	if (!cb_return_val)
+		return retval;
+
+	if (!sdor || !module_name || !module_message) {
+		*cb_return_val = SDO_SI_INTERNAL_ERROR;
+		return retval;
 	}
-	return true;
+
+	while (module_list) {
+		strcmp_s(module_list->module.module_name, SDO_MODULE_NAME_LEN,
+			 module_name, &strcmp_result);
+		if (strcmp_result == 0) {
+			// found the module, now check if the message is 'active'
+			// if yes, read the value and activate/deactivate the module and return.
+			module_name_found = true;
+			strcmp_s(module_message, SDO_MODULE_MSG_LEN,
+				FDO_MODULE_MESSAGE_ACTIVE, &strcmp_result);
+			if (strcmp_result == 0) {
+				// TO-DO : PRI sends bool wraped in bstr. Update when PRI is updated.
+				size_t active_val_length = 0;
+				if (!sdor_string_length(sdor, &active_val_length)) {
+					LOG(LOG_ERROR, "ServiceInfoKey: Failed to read module message active length %s\n",
+				    	module_list->module.module_name);
+					return retval;					
+				}
+				// to hold 'true' or 'false' as char, hence +1
+				uint8_t active_val[active_val_length + 1];
+				if (!sdor_byte_string(sdor, &active_val[0], active_val_length)) {
+					LOG(LOG_ERROR, "ServiceInfoKey: Failed to read module message active for %s\n",
+				    	module_list->module.module_name);
+					return retval;
+				}
+				// null delimeter at last
+				active_val[active_val_length] = '\0';
+				strcmp_s((char *) &active_val, active_val_length,
+			 		"true", &strcmp_result);
+				if (strcmp_result == 0) {
+					// traverse the list to deactivate every module
+					while (traverse_list) {
+						traverse_list->module.active = false;
+						traverse_list = traverse_list->next;
+					}
+					// now activate the current module
+					module_list->module.active = true;
+					LOG(LOG_ERROR, "ServiceInfo: Activated module %s\n",
+						module_list->module.module_name);
+				}
+
+				retval = true;
+				break;
+			}
+			// if the module is activated by the Owner, only then proceed with processing
+			// ServiceInfoVal via callback method
+			if (module_list->module.active) {
+				// check if module callback is successful
+				*cb_return_val = module_list->module.service_info_callback(
+					SDO_SI_SET_OSI, sdor, module_message);
+
+				if (*cb_return_val != SDO_SI_SUCCESS) {
+					LOG(LOG_ERROR,
+						"ServiceInfo: %s's CB Failed for type:%d\n",
+						module_list->module.module_name,
+						SDO_SI_SET_OSI);
+					break;
+				}
+				retval = true;
+			} else {
+				LOG(LOG_ERROR, "ServiceInfo: Received ServiceInfo for an inactive module %s\n",
+				    module_list->module.module_name);
+				// module is present, but is not the active module. skip this ServiceInfoVal
+				// TO-DO : Should we throw an error instead?
+				sdor_next(sdor);
+				retval = true;
+			}
+			break;
+		}
+		module_list = module_list->next;
+	}
+	if (!module_name_found) {
+			// module is not present. skip this ServiceInfoVal
+			// TO-DO : Should we throw an error instead?
+			LOG(LOG_ERROR,
+				"ServiceInfo: Received ServiceInfo for an unsupported module %s\n",
+			    module_name);
+			sdor_next(sdor);
+			retval = true;
+	}
+
+	return retval;
 }
 
 /**
@@ -6388,10 +6507,11 @@ sdo_key_value_t **sdo_service_info_get(sdo_service_info_t *si, int key_num)
 	}
 	return kvp;
 }
+
 /**
  * si & key are input to the function, it looks for the matching
  * (key, value):
- * if found, update the corresponding si member with val, if memory
+ * if found, update the corresponding si member with string val, if memory
  * is not allocated, allocate it.
  * if no matching entry is found, it will add a new entry at the end.
  * @param si  - Pointer to the sdo_service_info_t,
@@ -6399,7 +6519,6 @@ sdo_key_value_t **sdo_service_info_get(sdo_service_info_t *si, int key_num)
  * @param val - Pointer to the char buffer val, to be updated,
  * @return true if updated correctly else false.
  */
-
 bool sdo_service_info_add_kv_str(sdo_service_info_t *si, const char *key,
 				 const char *val)
 {
@@ -6421,9 +6540,9 @@ bool sdo_service_info_add_kv_str(sdo_service_info_t *si, const char *key,
 	}
 
 	 /* Found, update value */
-	if (kv->val == NULL) {
+	if (kv->str_val == NULL) {
 		 /* No allocated string present for value, make a new one */
-		kv->val = sdo_string_alloc_with_str(val);
+		kv->str_val = sdo_string_alloc_with_str(val);
 	} else {
 		int val_len = strnlen_s(val, SDO_MAX_STR_SIZE);
 
@@ -6432,16 +6551,180 @@ bool sdo_service_info_add_kv_str(sdo_service_info_t *si, const char *key,
 			    "%s(): val "
 			    "is either 'NULL' or"
 			    "'isn't 'NULL-terminating'\n", __func__);
-			sdo_string_free(kv->val);
+			sdo_string_free(kv->str_val);
 			return false;
 		}
 
 		 /* Update the string */
-		sdo_string_resize_with(kv->val, val_len, val);
+		sdo_string_resize_with(kv->str_val, val_len, val);
 	}
+	// free other values of other type
+	if (kv->bin_val)
+		sdo_byte_array_free(kv->bin_val);
+	if (kv->int_val)
+		sdo_free(kv->int_val);
+	if (kv->bool_val)
+		sdo_free(kv->bool_val);
+
 
 	return true;
 }
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with byte array val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the sdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the byte array val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool sdo_service_info_add_kv_bin(sdo_service_info_t *si, const char *key,
+				 const sdo_byte_array_t *val)
+{
+	sdo_key_value_t **kvp, *kv;
+
+	if (!si || !key || !val)
+		return false;
+
+	kvp = sdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = sdo_kv_alloc_key_only(key);
+		if (kv == NULL)
+			return false;
+		kv->bin_val = sdo_byte_array_alloc_with_byte_array(val->bytes, val->byte_sz);
+
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+
+	 /* Found, free the current and update value */
+	if (kv->bin_val) {
+		sdo_byte_array_free(kv->bin_val);
+	}
+	kv->bin_val = sdo_byte_array_alloc_with_byte_array(val->bytes, val->byte_sz);
+
+	// free other values of other type
+	if (kv->str_val)
+		sdo_string_free(kv->str_val);
+	if (kv->int_val)
+		sdo_free(kv->int_val);
+	if (kv->bool_val)
+		sdo_free(kv->bool_val);
+
+	return true;
+}
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with boolean val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the sdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the boolean val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool sdo_service_info_add_kv_bool(sdo_service_info_t *si, const char *key,
+				 bool val)
+{
+	sdo_key_value_t **kvp, *kv;
+
+	if (!si || !key)
+		return false;
+
+	kvp = sdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = sdo_kv_alloc_key_only(key);
+		if (kv == NULL)
+			return false;
+		kv->bool_val = sdo_alloc(sizeof(bool));
+		if (!kv->bool_val) {
+
+		}
+		*kv->bool_val = val;
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+	
+	kv->bool_val = sdo_alloc(sizeof(bool));
+	if (!kv->bool_val) {
+
+	}
+	*kv->bool_val = val;
+
+	// free any other type of value, if present
+	if (kv->str_val)
+		sdo_string_free(kv->str_val);
+	if (kv->bin_val)
+		sdo_byte_array_free(kv->bin_val);
+	if (kv->int_val)
+		sdo_free(kv->int_val);
+
+	return true;
+}
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with integer val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the sdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the integer val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool sdo_service_info_add_kv_int(sdo_service_info_t *si, const char *key,
+				 int val)
+{
+	sdo_key_value_t **kvp, *kv;
+
+	if (!si || !key)
+		return false;
+
+	kvp = sdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = sdo_kv_alloc_key_only(key);
+		if (kv == NULL)
+			return false;
+		kv->int_val = sdo_alloc(sizeof(int));
+		if (!kv->int_val) {
+
+		}
+		*kv->int_val = val;
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+
+	kv->int_val = sdo_alloc(sizeof(int));
+	if (!kv->int_val) {
+	}
+	*kv->int_val = val;
+
+	// free any other type of value, if present
+	if (kv->str_val)
+		sdo_string_free(kv->str_val);
+	if (kv->bin_val)
+		sdo_byte_array_free(kv->bin_val);
+	if (kv->bool_val)
+		sdo_free(kv->bool_val);
+
+	return true;
+}
+
 /**
  * Add kvs object of type sdo_key_value_t to the end of the list(si) if
  * not empty else add it to the head.
@@ -6484,34 +6767,86 @@ bool sdo_service_info_add_kv(sdo_service_info_t *si, sdo_key_value_t *kvs)
 
 bool sdo_combine_platform_dsis(sdow_t *sdow, sdo_service_info_t *si)
 {
-	/*
 	int num = 0;
 	sdo_key_value_t **kvp = NULL;
 	sdo_key_value_t *kv = NULL;
-	*/
+
 	bool ret = false;
 
 	if (!sdow || !si)
 		goto end;
-/*
+
+	if (!sdow_start_array(sdow, 1)) {
+		LOG(LOG_ERROR, "Plaform Device ServiceInfo: Failed to write start array\n");
+		goto end;
+	}
+
+	if (!sdow_start_array(sdow, si->numKV)) {
+		LOG(LOG_ERROR, "Plaform Device ServiceInfoKeyVal: Failed to write start array\n");
+		goto end;
+	}
 	// fetch all platfrom DSI's one-by-one
 	while (num != si->numKV) {
 		kvp = sdo_service_info_get(si, num);
 
 		kv = *kvp;
-		if (!kv || !kv->key || !kv->val) {
-			LOG(LOG_ERROR, "Plaform DSI: key-value not found!\n");
+		if (!kv || !kv->key) {
+			LOG(LOG_ERROR, "Plaform Device ServiceInfo: Key/Value not found\n");
 			goto end;
 		}
 
+		if (!sdow_start_array(sdow, 2)) {
+			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write start array\n");
+			goto end;
+		}
 		// Write KV pair
-		sdo_write_tag_len(sdow, kv->key->bytes, kv->key->byte_sz);
-		sdo_write_string_len(sdow, kv->val->bytes, kv->val->byte_sz);
-		sdow->need_comma = true;
+		if (!sdow_text_string(sdow, kv->key->bytes, kv->key->byte_sz)) {
+			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
+			goto end;
+		}
+		if (kv->str_val) {
+			if (!sdow_text_string(sdow, kv->str_val->bytes, kv->str_val->byte_sz)) {
+				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Text ServiceInfoVal\n");
+				goto end;
+			}
+		}
+		else if (kv->bin_val) {
+			if (!sdow_byte_string(sdow, kv->bin_val->bytes, kv->bin_val->byte_sz)) {
+				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Binary ServiceInfoVal\n");
+				goto end;
+			}
+		}
+		else if (kv->bool_val) {
+			if (!sdow_boolean(sdow, *kv->bool_val)) {
+				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Bool ServiceInfoVal\n");
+				goto end;
+			}
+		}
+		else if (kv->int_val) {
+			if (!sdow_signed_int(sdow, *kv->int_val)) {
+				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Int ServiceInfoVal\n");
+				goto end;
+			}
+		} else {
+			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: No ServiceInfoVal found\n");
+			goto end;	
+		}
 
+		if (!sdow_end_array(sdow)) {
+			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write end array\n");
+			goto end;
+		}
 		num++;
 	}
-*/
+	
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "Plaform Device ServiceInfoKeyVal: Failed to write end array\n");
+		goto end;
+	}
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "Plaform Device ServiceInfo: Failed to write end array\n");
+		goto end;
+	}
 	ret = true;
 end:
 	return ret;
@@ -6536,249 +6871,6 @@ bool sdo_mod_exec_sv_infotype(sdo_sdk_service_info_module_list_t *module_list,
 		}
 		module_list = module_list->next;
 	}
-	return true;
-}
-
-/**
- * Calculation of DSI count for round-trip of modules
- * @param module_list - Global Module List Head Pointer.
- * @param mod_mes_count - Pointer of type int which will be filled with count to
- * be added.
- * @param cb_return_val - Pointer of type int which will be filled with CB
- * return value.
- * @return success if true else false
- */
-
-bool sdo_get_dsi_count(sdo_sdk_service_info_module_list_t *module_list,
-		       int *mod_mes_count, int *cb_return_val)
-{
-	int count;
-
-	if (!cb_return_val)
-		return false;
-
-	if (!module_list) {
-		*cb_return_val = SDO_SI_SUCCESS;
-		return true;
-	}
-
-	if (module_list && !mod_mes_count) {
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return false;
-	}
-
-	/*Calculation of DSI count for round-trip of modules*/
-	while (module_list) {
-		count = 0;
-		// check if module CB is successful
-		*cb_return_val = module_list->module.service_info_callback(
-		    SDO_SI_GET_DSI_COUNT, &count, NULL);
-		if (*cb_return_val != SDO_SI_SUCCESS) {
-			LOG(LOG_ERROR, "Sv_info: %s's DSI COUNT CB Failed!\n",
-			    module_list->module.module_name);
-			return false;
-		}
-		/* populate individual count to the list */
-		module_list->module_dsi_count = count;
-
-		*mod_mes_count += count;
-		module_list = module_list->next;
-	}
-	// module CB was successful
-	*cb_return_val = SDO_SI_SUCCESS;
-	return true;
-}
-
-/**
- * Traverse the list for OSI, comparing list with name & calling the appropriate
- * CB.
- * @param module_list - Global Module List Head Pointer.
- * @param mod_name - Pointer to the mod_name, to be compared with list's modname
- * @param sv_kv - Pointer of type sdo_sdk_si_key_value, holds Module message &
- * value.
- * @param cb_return_val - Pointer of type int which will be filled with CB
- * return value.
- * @return true if success (module found in list + CB succeed) else false.
- */
-
-bool sdo_supply_moduleOSI(sdo_sdk_service_info_module_list_t *module_list,
-			  char *mod_name, sdo_sdk_si_key_value *sv_kv,
-			  int *cb_return_val)
-{
-	int strcmp_result = 1;
-	bool retval = false;
-
-	if (!cb_return_val)
-		return retval;
-
-	if (!sv_kv || !mod_name) {
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return retval;
-	}
-
-	retval = true;
-	while (module_list) {
-		strcmp_s(module_list->module.module_name, SDO_MODULE_NAME_LEN,
-			 mod_name, &strcmp_result);
-		if (strcmp_result == 0) {
-			// check if module CB is successful
-			*cb_return_val =
-			    module_list->module.service_info_callback(
-				SDO_SI_SET_OSI,
-				&(module_list->module_osi_index), sv_kv);
-
-			if (*cb_return_val != SDO_SI_SUCCESS) {
-				LOG(LOG_ERROR,
-				    "Sv_info: %s's CB Failed for type:%d\n",
-				    module_list->module.module_name,
-				    SDO_SI_SET_OSI);
-				retval = false;
-			}
-			// Inc OSI index per module
-			module_list->module_osi_index++;
-			break;
-		}
-		module_list = module_list->next;
-	}
-
-	return retval;
-}
-
-/**
- * Traverse the list for PSI, comparing list with name & calling the appropriate
- * CB.
- * @param module_list - Global Module List Head Pointer.
- * @param mod_name - Pointer to the mod_name, to be compared with list's modname
- * @param sv_kv - Pointer of type sdo_sdk_si_key_value, holds Module message &
- * value.
- * @param cb_return_val - Pointer of type int which will be filled with CB
- * return value.
- * @return true if success else false.
- */
-
-bool sdo_supply_modulePSI(sdo_sdk_service_info_module_list_t *module_list,
-			  char *mod_name, sdo_sdk_si_key_value *sv_kv,
-			  int *cb_return_val)
-{
-	int strcmp_result = 1;
-	bool retval = false;
-
-	if (!cb_return_val)
-		return retval;
-
-	if (!sv_kv || !mod_name) {
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return retval;
-	}
-
-	retval = true;
-	while (module_list) {
-		strcmp_s(module_list->module.module_name, SDO_MODULE_NAME_LEN,
-			 mod_name, &strcmp_result);
-		if (strcmp_result == 0) {
-			// check if module CB is successful
-			*cb_return_val =
-			    module_list->module.service_info_callback(
-				SDO_SI_SET_PSI,
-				&(module_list->module_psi_index), sv_kv);
-
-			if (*cb_return_val != SDO_SI_SUCCESS) {
-				LOG(LOG_ERROR,
-				    "Sv_info: %s's CB Failed for type:%d\n",
-				    module_list->module.module_name,
-				    SDO_SI_SET_PSI);
-				retval = false;
-			}
-			// Inc PSI index per module
-			module_list->module_psi_index++;
-			break;
-		}
-		module_list = module_list->next;
-	}
-
-	return retval;
-}
-
-/**
- * Parsing the psi & differentiate string on different delimeters and call the
- * appropriate API's.
- * @param module_list - Global Module List Head Pointer.
- * @param psi - Pointer to null termincated psi string
- * @param psi_len - length of psi buffer
- * @param cb_return_val - Pointer of type int which will be filled with CB
- * return value.
- * @return true if success else false.
- */
-
-bool sdo_psi_parsing(sdo_sdk_service_info_module_list_t *module_list, char *psi,
-		     int psi_len, int *cb_return_val)
-{
-	if (!cb_return_val)
-		return false;
-
-	if (!module_list) {
-		// No modules.
-		*cb_return_val = SDO_SI_SUCCESS;
-		return true;
-	}
-
-	char mod_name[SDO_MODULE_NAME_LEN] = {0};
-	char mod_message[SDO_MODULE_MSG_LEN] = {0};
-	char mod_value[SDO_MODULE_VALUE_LEN] = {0};
-
-	// single PSI tuple
-	char *psi_tuple = NULL;
-	int psi_tuple_len = 0;
-	char *notused = NULL;
-	// delimiter= ','
-	const char *del = ",";
-
-	// strtok_s accepts size_t for string length
-	size_t len = psi_len - 1; // Buffer size contains ending '\0' char
-
-	// split based on Delimiter
-	psi_tuple = strtok_s(psi, &len, del, &notused);
-
-	while (psi_tuple) {
-#if LOG_LEVEL == LOG_MAX_LEVEL
-		static int i;
-
-		LOG(LOG_DEBUG, "PSI Entry#%d: |%s|\n", i++, psi_tuple);
-#endif
-
-		psi_tuple_len = strnlen_s(psi_tuple, SDO_MAX_STR_SIZE);
-
-		if (!psi_tuple_len || psi_tuple_len == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR, "Strlen() failed!\n");
-			*cb_return_val = SDO_SI_INTERNAL_ERROR;
-			return false;
-		}
-
-		// Get Module name, message and value
-		if (!sdo_get_module_name_msg_value(psi_tuple, psi_tuple_len,
-						   mod_name, mod_message,
-						   mod_value, cb_return_val)) {
-			LOG(LOG_ERROR, "Bad PSI entry: |%s|\n", psi_tuple);
-			return false;
-		}
-
-		// Fill SI data structure
-		sdo_sdk_si_key_value sv_kv;
-
-		sv_kv.key = mod_message;
-		sv_kv.value = mod_value;
-
-		// call CB's for PSI
-		if (!sdo_supply_modulePSI(module_list, mod_name, &sv_kv,
-					  cb_return_val))
-			return false;
-
-		// check for next PSI tuple
-		psi_tuple = strtok_s(NULL, &len, del, &notused);
-	}
-
-	// module CB's were successful
-	*cb_return_val = SDO_SI_SUCCESS;
 	return true;
 }
 
@@ -6859,9 +6951,9 @@ bool sdo_mod_data_kv(char *mod_name, sdo_sdk_si_key_value *sv_kv)
 }
 
 /**
+ * TO-DO : To be updated when external DeviceServiceInfo support is added.
  * Internal API
  */
-
 bool sdo_construct_module_dsi(sdo_sv_info_dsi_info_t *dsi_info,
 			      sdo_sdk_si_key_value *sv_kv, int *cb_return_val)
 {
@@ -6882,7 +6974,7 @@ bool sdo_construct_module_dsi(sdo_sv_info_dsi_info_t *dsi_info,
 		// check if module CB is successful
 		*cb_return_val =
 		    dsi_info->list_dsi->module.service_info_callback(
-			SDO_SI_GET_DSI, &(dsi_info->module_dsi_index), sv_kv);
+			SDO_SI_GET_DSI, NULL, NULL);
 		if (*cb_return_val != SDO_SI_SUCCESS) {
 			LOG(LOG_ERROR, "Sv_info: %s's DSI CB Failed!\n",
 			    dsi_info->list_dsi->module.module_name);
@@ -6950,79 +7042,6 @@ void sdo_sv_key_value_free(sdo_sdk_si_key_value *sv_kv)
 	if (sv_kv->value != NULL)
 		sdo_free(sv_kv->value);
 	sdo_free(sv_kv);
-}
-
-/**
- * Read a Sv_info (OSI) Key/Value pair from the input buffer
- * The Key and value both  MUST be a null terminated string.
- * @param module_list - Global Module List Head Pointer.
- * @param sv - pointer to the Sv_info key/value pair
- * @param cb_return_val - Pointer of type int which will be filled with CB
- * return value.
- * @return true if read succeeded, false otherwise
- */
-bool sdo_osi_handling(sdo_sdk_service_info_module_list_t *module_list,
-		      sdo_sdk_si_key_value *sv, int *cb_return_val)
-{
-	char mod_name[SDO_MODULE_NAME_LEN + 1];
-	char mod_msg[SDO_MODULE_MSG_LEN + 1];
-
-	if (!cb_return_val)
-		return false;
-
-	if (!sv || !sv->key) {
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return false;
-	}
-
-	int osi_key_len = strnlen_s(sv->key, SDO_MODULE_NAME_LEN);
-
-	if (!osi_key_len || osi_key_len > SDO_MODULE_NAME_LEN) {
-		LOG(LOG_ERROR,
-		    "OSI key is either NULL or isin't NULL terminated!\n");
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return false;
-	}
-
-	// get module name and message name from sv->key
-	// modulename and message name are separated using :
-	char *osi_key = sv->key;
-	int i = 0;
-
-	while (':' != osi_key[i]) {
-		if (i >= osi_key_len) {
-			*cb_return_val = MESSAGE_BODY_ERROR;
-			return false;
-		}
-
-		mod_name[i] = osi_key[i];
-		++i;
-	}
-
-	mod_name[i] = 0;
-
-	// consume one char for ':'
-	++i;
-
-	int j = 0;
-
-	while (i <= osi_key_len) {
-		mod_msg[j++] = osi_key[i++];
-	}
-	mod_msg[j] = 0;
-
-	if (strcpy_s(sv->key, strnlen_s(mod_msg, SDO_MODULE_MSG_LEN) + 1,
-		     mod_msg) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed!\n");
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return false;
-	}
-
-	if (!sdo_supply_moduleOSI(module_list, mod_name, sv, cb_return_val))
-		return false;
-
-	*cb_return_val = SDO_SI_SUCCESS;
-	return true;
 }
 
 /**
@@ -7225,7 +7244,7 @@ void sdo_service_info_print(sdo_service_info_t *si)
 	for (kv = si->kv; kv; kv = kv->next) {
 		LOG(LOG_DEBUG, "    \"%s\":\"%s\"%s\n",
 		    sdo_string_to_string(kv->key, kbuf, KVBUF_SIZE),
-		    sdo_string_to_string(kv->val, vbuf, KVBUF_SIZE),
+		    sdo_string_to_string(kv->str_val, vbuf, KVBUF_SIZE),
 		    kv->next ? "," : "");
 	}
 	LOG(LOG_DEBUG, "}\n");
