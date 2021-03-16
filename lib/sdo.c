@@ -354,11 +354,7 @@ static sdo_sdk_status app_initialize(void)
 		return SDO_SUCCESS;
 	}
 
-// TO-DO: To be uncommented during TO2 implementation.
-/*
-	// Build up a test service info list
-	char *get_modules = NULL;
-	// TO-DO: To be uncommented during TO2 implementation.
+	// Build up default 'devmod' ServiceInfo list
 	g_sdo_data->service_info = sdo_service_info_alloc();
 
 	if (!g_sdo_data->service_info) {
@@ -366,45 +362,44 @@ static sdo_sdk_status app_initialize(void)
 		return SDO_ERROR;
 	}
 
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:os",
+	sdo_service_info_add_kv_bool(g_sdo_data->service_info, "devmod:active",
+				    true);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:os",
 				    OS_NAME);
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:arch",
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:arch",
 				    ARCH);
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:version",
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:version",
 				    OS_VERSION);
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:device",
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:device",
 				    (char *)get_device_model());
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:sn",
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:sn",
 				    (char *)get_device_serial_number());
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:sep",
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:pathsep",
+				    PATH_SEPARATOR);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:sep",
 				    SEPARATOR);
-	sdo_service_info_add_kv_str(g_sdo_data->service_info, "sdodev:bin",
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:nl",
+				    NEWLINE);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:tmp",
+				    "");
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:dir",
+				    "");
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:progenv",
+				    PROGENV);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:bin",
 				    BIN_TYPE);
-	if (g_sdo_data->devcred->mfg_blk && g_sdo_data->devcred->mfg_blk->cu &&
-	    g_sdo_data->devcred->mfg_blk->cu->byte_sz)
-		sdo_service_info_add_kv_str(
-		    g_sdo_data->service_info, "sdodev:cu",
-		    g_sdo_data->devcred->mfg_blk->cu->bytes);
-	else
-		sdo_service_info_add_kv_str(g_sdo_data->service_info,
-					    "sdodev:cu", "");
+	sdo_service_info_add_kv_str(g_sdo_data->service_info, "devmod:mudurl",
+				    "");
 
-	if (g_sdo_data->devcred->mfg_blk && g_sdo_data->devcred->mfg_blk->ch &&
-	    g_sdo_data->devcred->mfg_blk->ch->hash->byte_sz)
-		sdo_service_info_add_kv(
-		    g_sdo_data->service_info,
-		    sdo_kv_alloc_with_array(
-			"sdodev:ch", g_sdo_data->devcred->mfg_blk->ch->hash));
-	else
-		sdo_service_info_add_kv_str(g_sdo_data->service_info,
-					    "sdodev:ch", "");
+	// should ideally contain supported ServiceInfo module list and its count.
+	// for now, set this to 1, since we've only 1 module 'sdo_sys'
+	// TO-DO : Move this to sdotypes later when multiple Device ServiceInfo module
+	// support is added.
+	sdo_service_info_add_kv_int(g_sdo_data->service_info, "devmod:nummodules",
+		    		1);
+	sdo_service_info_add_kv_str(g_sdo_data->service_info,
+				    "devmod:modules", "sdo_sys");
 
-	if (sdo_construct_module_list(g_sdo_data->module_list, &get_modules)) {
-		sdo_service_info_add_kv_str(g_sdo_data->service_info,
-					    "sdodev:modules", get_modules);
-		sdo_free(get_modules);
-	}
-*/
 	if (sdo_null_ipaddress(&g_sdo_data->prot.i1) == false) {
 		return SDO_ERROR;
 	}
@@ -598,9 +593,10 @@ sdo_sdk_status sdo_sdk_init(sdo_sdk_errorCB error_handling_callback,
 
 	/* register service-info modules */
 	for (uint32_t i = 0; i < num_modules; i++) {
-		if (module_information != NULL)
+		if (module_information != NULL) {
 			sdo_sdk_service_info_register_module(
 			    &module_information[i]);
+		}
 	}
 #else
 	(void)num_modules;
@@ -1119,10 +1115,8 @@ static bool _STATE_TO2(void)
 		return SDO_ERROR;
 	}
 
-	// This should be sent during serviceinfo: g_sdo_data->module_list
-	// For now, let it be NULL. TO-DO
 	if (!sdo_prot_to2_init(&g_sdo_data->prot, g_sdo_data->service_info,
-			       g_sdo_data->devcred, NULL)) {
+			       g_sdo_data->devcred, g_sdo_data->module_list)) {
 		LOG(LOG_ERROR, "TO2_Init() failed!\n");
 		return SDO_ERROR;
 	}

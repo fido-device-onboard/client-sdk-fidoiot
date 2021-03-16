@@ -46,21 +46,48 @@ int32_t msg68(sdo_prot_t *ps)
 		return false;
 	}
 
-	// To be updated when serviceinfo is hooked.
-	// For now, send [false, []]
-	if (!sdow_boolean(&ps->sdow, false)) {
-		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
-		return false;
-	}
+	// DeviceServiceInfo's that need to be sent:
+	// 1. 'devmod' module (1st iteration)
+	// 2. External module(s) (remaining iterations) TO-DO later
+	// when multiple modules support will be added
+	// The current implementation only sends the 'devmod' module
 
-	if (!sdow_start_array(&ps->sdow, 0)) {
-		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write ServiceInfo start array\n");
-		return false;
-	}
+	// 1 for 'devmod' Device ServiceInfo
+	// however, it should contain total number of Device ServiceInfo rounds
+	ps->total_dsi_rounds = 1;
 
-	if (!sdow_end_array(&ps->sdow)) {
-		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write ServiceInfo end array\n");
-		return false;
+	if (ps->service_info && ps->serv_req_info_num == 0) {
+
+		if (!sdow_boolean(&ps->sdow, true)) {
+			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
+			return false;
+		}
+
+		// Construct and write platform DSI's into a single msg
+		if (!sdo_combine_platform_dsis(&ps->sdow, ps->service_info)) {
+			LOG(LOG_ERROR, "Error in combining platform DSI's!\n");
+			goto err;
+		}
+		// increment the internal counter that keeps track for Device ServiceInfo round-trips
+		// currently, only a single round-trip is done
+		ps->serv_req_info_num++;
+
+	} else {
+
+		// Empty ServiceInfo. send [false, []]
+		if (!sdow_boolean(&ps->sdow, false)) {
+			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
+			return false;
+		}
+
+		if (!sdow_start_array(&ps->sdow, 0)) {
+			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to start empty ServiceInfo array\n");
+			return false;
+		}
+		if (!sdow_end_array(&ps->sdow)) {
+			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to end empty ServiceInfo array\n");
+			return false;
+		}
 	}
 
 	if (!sdow_end_array(&ps->sdow)) {

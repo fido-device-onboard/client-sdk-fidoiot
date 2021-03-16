@@ -40,6 +40,7 @@ int32_t msg69(sdo_prot_t *ps)
 	sdo_encrypted_packet_t *pkt = NULL;
 	bool IsMoreServiceInfo;
 	bool isDone;
+	int module_ret_val = -1;
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -62,8 +63,6 @@ int32_t msg69(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to decrypt packet!\n");
 		goto err;
 	}
-
-	sdo_log_block(&ps->sdor.b);
 
 	if (!sdor_start_array(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start array\n");
@@ -103,8 +102,8 @@ int32_t msg69(sdo_prot_t *ps)
 			goto err;
 		}
 	} else {
-		// Expecting ServiceInfo. TO-DO : Test ater
-		if (!fdo_serviceinfo_read(&ps->sdor)) {
+		// process the received ServiceInfo
+		if (!fdo_serviceinfo_read(&ps->sdor, ps->sv_info_mod_list_head, &module_ret_val)) {
 			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
 			goto err;
 		}
@@ -114,17 +113,6 @@ int32_t msg69(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to end array\n");
 		goto err;
 	}
-/*
-		sdo_sdk_si_key_value osiKV;
-
-		if (!sdo_osi_parsing(&ps->sdor, ps->sv_info_mod_list_head,
-				     &osiKV, &mod_ret_val)) {
-			LOG(LOG_ERROR, "Sv_info: OSI did not "
-				       "finished "
-				       "gracefully!\n");
-			goto err;
-		}
-*/	
 
 	if (isDone) {
 		ps->state = SDO_STATE_TO2_SND_DONE;

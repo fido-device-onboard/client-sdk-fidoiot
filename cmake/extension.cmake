@@ -258,6 +258,9 @@ endif()
 
 if(${MODULES} STREQUAL true)
   client_sdk_compile_definitions(-DMODULES_ENABLED)
+  if (${BUILD} STREQUAL debug)
+    client_sdk_compile_definitions(-DDEBUG_LOGS)
+  endif()
 endif()
 
 if(${HTTPPROXY} STREQUAL true)

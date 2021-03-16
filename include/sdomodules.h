@@ -6,6 +6,8 @@
 #ifndef __SDOMODULES_H__
 #define __SDOMODULES_H__
 
+#include "sdoblockio.h"
+
 /*
  * SDO module specific #defs (Sv_info)
  */
@@ -19,14 +21,14 @@
 #define SDO_MAX_MODULES 1
 #endif
 
+#define FDO_MODULE_MESSAGE_ACTIVE "active"
+
 /*==================================================================*/
 /* Service Info module registration functionality */
 
 // enum for Service_info Types
 typedef enum {
 	SDO_SI_START,
-	SDO_SI_GET_DSI_COUNT,
-	SDO_SI_SET_PSI,
 	SDO_SI_GET_DSI,
 	SDO_SI_SET_OSI,
 	SDO_SI_END,
@@ -42,20 +44,24 @@ typedef struct sdo_sdk_si_key_value {
 } sdo_sdk_si_key_value;
 
 // callback to module
-typedef int (*sdo_sdk_service_infoCB)(sdo_sdk_si_type type, int *count,
-				      sdo_sdk_si_key_value *si);
+typedef int (*sdo_sdk_device_service_infoCB)(sdo_sdk_si_type type, sdow_t *sdow);
+typedef int (*sdo_sdk_owner_service_infoCB)(sdo_sdk_si_type type,
+	sdor_t *sdor, char *module_message);
 
 /* module struct for modules */
 typedef struct {
+	bool active;
 	char module_name[SDO_MODULE_NAME_LEN];
-	sdo_sdk_service_infoCB service_info_callback;
+	sdo_sdk_owner_service_infoCB service_info_callback;
 } sdo_sdk_service_info_module;
 
+extern int sdo_sys(sdo_sdk_si_type type, sdor_t *sdor, char *module_message);
+
 // Modules CB
+// TO-DO at a later time
 extern int devconfig(sdo_sdk_si_type type, int *count,
 		     sdo_sdk_si_key_value *si);
 extern int keypair(sdo_sdk_si_type type, int *count, sdo_sdk_si_key_value *si);
-extern int sdo_sys(sdo_sdk_si_type type, int *count, sdo_sdk_si_key_value *si);
 extern int pelionconfig(sdo_sdk_si_type type, int *count,
 			sdo_sdk_si_key_value *si);
 
