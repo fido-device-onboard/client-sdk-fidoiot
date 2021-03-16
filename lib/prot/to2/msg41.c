@@ -98,6 +98,19 @@ int32_t msg61(sdo_prot_t *ps)
 	}
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: COSE signature verification successful\n");
 
+	// verify the to1d that was received during TO1.RVRedirect, Type 33
+	// TO-DO : needs to happen only when TO2 was started without RVBypass flow.
+	// Add one more condition check for bypass when it is fixed up.
+	if (ps->to1d_cose) {
+		if (!sdo_signature_verification(ps->to1d_cose->cose_payload,
+					ps->to1d_cose->cose_signature,
+					ps->owner_public_key)) {
+			LOG(LOG_ERROR, "TO2.ProveOVHdr: COSE signature verification failed\n");
+			goto err;
+		}
+		LOG(LOG_DEBUG, "TO2.ProveOVHdr: to1d signature verification successful\n");
+	}
+
 	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
 	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.b.block_size = cose->cose_payload->byte_sz;

@@ -35,7 +35,7 @@ int32_t msg65(sdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "SDOProtTO2";
 	sdo_encrypted_packet_t *pkt = NULL;
-	// fdo_cose_t *cose = NULL;
+	fdo_cose_t *cose = NULL;
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -60,7 +60,6 @@ int32_t msg65(sdo_prot_t *ps)
 		goto err;
 	}
 
-/*	TO-DO : This should ideally be a COSESignature object. To be updated after PRI update.
 	// Allocate for cose object now. Allocate for its members when needed later.
 	// Free immediately once its of no use.
 	cose = sdo_alloc(sizeof(fdo_cose_t));
@@ -69,7 +68,7 @@ int32_t msg65(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_cose_read(&ps->sdor, cose, false)) {
+	if (!fdo_cose_read(&ps->sdor, cose, true)) {
 		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read COSE\n");
 		goto err;
 	}
@@ -88,7 +87,6 @@ int32_t msg65(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to initilize SDOR parser\n");
 		goto err;
 	}
-*/
 
 	if (!sdor_start_array(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read start array\n");
@@ -166,7 +164,6 @@ int32_t msg65(sdo_prot_t *ps)
 		goto err;
 	}
 
-/*	Same as above comment. TBD later
 	// verify the received COSE signature
 	if (!sdo_signature_verification(cose->cose_payload,
 					cose->cose_signature,
@@ -175,7 +172,7 @@ int32_t msg65(sdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.SetupDevice: OVEntry Signature verification successful\n");
-*/
+
 	ps->state = SDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.SetupDevice completed successfully\n");
 	ret = 0; /* Marks as success */
@@ -183,11 +180,11 @@ int32_t msg65(sdo_prot_t *ps)
 err:
 	sdor_flush(&ps->sdor);
 	ps->sdor.have_block = false;
-/*
+
 	if (cose) {
 		fdo_cose_free(cose);
 		cose = NULL;
 	}
-*/
+
 	return ret;
 }

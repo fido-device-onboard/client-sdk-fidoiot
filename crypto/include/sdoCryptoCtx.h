@@ -37,8 +37,7 @@ typedef struct sdo_kex_ctx {
 	sdo_byte_array_t *xB;
 	sdo_byte_array_t *initial_secret;
 	const char *kdf_label;
-	const char *sek_label;
-	const char *svk_label;
+	const char *context_label;
 	void *context;
 } sdo_kex_ctx_t;
 

@@ -1180,6 +1180,7 @@ static bool _STATE_TO2(void)
 				tls = true;
 			// prepare for next iteration beforehand
 			g_sdo_data->current_rvto2addrentry = g_sdo_data->current_rvto2addrentry->next;
+
 		}
 
 		prot_ctx = sdo_prot_ctx_alloc(
@@ -1227,8 +1228,9 @@ static bool _STATE_TO2(void)
 				g_sdo_data->state_fn = &_STATE_TO1;
 				LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
 					"Retrying TO1 using the next RendezvousDirective\n");
-				// free the existing RVTO2Addr
+				// free the existing RVTO2Addr and to1d
 				fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
+				fdo_cose_free(g_sdo_data->prot.to1d_cose);
 				return ret;
 			}
 		}
@@ -1238,11 +1240,13 @@ static bool _STATE_TO2(void)
 		g_sdo_data->state_fn = &_STATE_Shutdown;
 		sdo_protTO2Exit(g_sdo_data);
 		sdo_prot_ctx_free(prot_ctx);
-		fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
+
 		if (!rvbypass) {
 			// free only when rvbypass is false, since the allocation was done then.
 			sdo_free(ip);
 			ip = NULL;
+			fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
+			fdo_cose_free(g_sdo_data->prot.to1d_cose);
 		} else {
 			// set the global rvbypass flag to false so that we don't continue the loop
 			// because of rvbypass

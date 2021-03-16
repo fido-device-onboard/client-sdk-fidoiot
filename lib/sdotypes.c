@@ -5389,16 +5389,19 @@ bool fdo_rvto2addr_entry_read(sdor_t *sdor, fdo_rvto2addr_entry_t *rvto2addr_ent
 		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS length\n");
 		return false;
 	}
-	rvto2addr_entry->rvdns = sdo_string_alloc_size(rvdns_length);
+	// +1 for final \0 terminator.
+	rvto2addr_entry->rvdns = sdo_string_alloc_size(rvdns_length + 1);
 	if (!rvto2addr_entry->rvdns) {
 		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVDNS\n");
 		return false;
 	}
 	
-	if (!sdor_text_string(sdor, rvto2addr_entry->rvdns->bytes, rvto2addr_entry->rvdns->byte_sz)) {
+	if (!sdor_text_string(sdor, rvto2addr_entry->rvdns->bytes, rvdns_length)) {
 		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS\n");
 		return false;
 	}
+	rvto2addr_entry->rvdns->bytes[rvdns_length] = '\0';
+	rvto2addr_entry->rvdns->byte_sz = rvdns_length;
 
 	rvto2addr_entry->rvport = -1;
 	if (!sdor_signed_int(sdor, &rvto2addr_entry->rvport) ||

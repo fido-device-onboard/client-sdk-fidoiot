@@ -81,22 +81,11 @@ int32_t msg69(sdo_prot_t *ps)
 
 	if (!IsMoreServiceInfo && isDone) {
 		// Expecting ServiceInfo to be an empty array [].
-		// However, PRI currently sends [[]], so parsing as such.
-		// TO-DO : Update when PRI is updated.
 		if (!sdor_start_array(&ps->sdor)) {
 			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start empty ServiceInfo array\n");
 			goto err;
 		}
-		if (!sdor_start_array(&ps->sdor)) {
-			LOG(LOG_ERROR,
-				"TO2.OwnerServiceInfo: Failed to start empty ServiceInfo.ServiceInfoKeyVal array\n");
-			goto err;
-		}
-		if (!sdor_end_array(&ps->sdor)) {
-			LOG(LOG_ERROR,
-				"TO2.OwnerServiceInfo: Failed to end empty ServiceInfo.ServiceInfoKeyVal array\n");
-			goto err;
-		}
+
 		if (!sdor_end_array(&ps->sdor)) {
 			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to end empty ServiceInfo array\n");
 			goto err;
