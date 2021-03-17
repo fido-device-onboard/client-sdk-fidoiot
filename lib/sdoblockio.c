@@ -49,8 +49,12 @@ bool sdo_block_alloc(sdo_block_t *sdob)
  */
 bool sdo_block_alloc_with_size(sdo_block_t *sdob, size_t block_sz)
 {
-	if (!sdob || block_sz < 0)
+	if (!sdob)
 		return false;
+	// if block exists, free it first, then alloc
+	if (sdob->block != NULL)
+		sdo_free(sdob->block);
+
 	sdob->block = sdo_alloc(block_sz * sizeof(uint8_t));
 	sdob->block_size = block_sz;
 	if (sdob->block == NULL) {
@@ -109,6 +113,10 @@ int sdow_next_block(sdow_t *sdow, int type)
 
 bool sdow_encoder_init(sdow_t *sdow)
 {
+	// if there's a current block, free and then alloc
+	if (sdow->current) {
+		sdo_free(sdow->current);
+	}
 	sdow->current = sdo_alloc(sizeof(sdow_cbor_encoder_t));
 	sdow->current->next = NULL;
 	sdow->current->previous = NULL;
@@ -207,10 +215,9 @@ bool sdow_end_array(sdow_t *sdow)
 		LOG(LOG_ERROR, "CBOR encoder: Failed to end Major Type 4 (array)\n");
 		return false;
 	}
-	// move backwards and free previous
-	sdow_cbor_encoder_t *current = sdow->current;
+	// move backwards and free next
 	sdow->current = sdow->current->previous;
-	sdo_free(current);
+	sdo_free(sdow->current->next);
 	return true;
 }
 
@@ -222,10 +229,9 @@ bool sdow_end_map(sdow_t *sdow)
 		LOG(LOG_ERROR, "CBOR encoder: Failed to end Major Type 5 (map)\n");
 		return false;
 	}
-	// move backwards and free previous
-	sdow_cbor_encoder_t *current = sdow->current;
+	// move backwards and free next
 	sdow->current = sdow->current->previous;
-	sdo_free(current);
+	sdo_free(sdow->current->next);
 	return true;
 }
 
@@ -265,6 +271,10 @@ bool sdor_init(sdor_t *sdor)
 }
 
 bool sdor_parser_init(sdor_t *sdor) {
+	// if there's a current block, free and then alloc
+	if (sdor->current){
+		sdo_free(sdor->current);
+	}
 	sdor->current = sdo_alloc(sizeof(sdor_cbor_decoder_t));
 	sdor->current->next = NULL;
 	sdor->current->previous = NULL;
@@ -399,10 +409,9 @@ bool sdor_end_array(sdor_t *sdor) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to end Major Type 4 (array)\n");
 		return false;
 	}
-	// move backwards and free previous
-	sdor_cbor_decoder_t *current = sdor->current;
+	// move backwards and free next
 	sdor->current = sdor->current->previous;
-	sdo_free(current);
+	sdo_free(sdor->current->next);
 	return true;
 }
 
@@ -413,10 +422,9 @@ bool sdor_end_map(sdor_t *sdor) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to end Major Type 4 (array)\n");
 		return false;
 	}
-	// move backwards and free previous
-	sdor_cbor_decoder_t *current = sdor->current;
+	// move backwards and free next
 	sdor->current = sdor->current->previous;
-	sdo_free(current);
+	sdo_free(sdor->current->next);
 	return true;
 }
 
@@ -432,5 +440,6 @@ void sdor_flush(sdor_t *sdor)
 {
 	sdo_block_t *sdob = &sdor->b;
 	sdo_block_reset(sdob);
+	sdo_free(sdob->block);
 	sdo_free(sdor->current);
 }

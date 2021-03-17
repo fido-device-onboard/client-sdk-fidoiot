@@ -121,7 +121,7 @@ sdo_sdk_status sdo_sdk_run(void)
 			++error_count;
 			if (error_count == ERROR_RETRY_COUNT) {
 				LOG(LOG_INFO, "*********Retry(s) done*********\n");
-				g_sdo_data->state_fn = &_STATE_Shutdown_Error;
+				g_sdo_data->state_fn = &_STATE_Shutdown;
 			} else {
 				LOG(LOG_INFO, "*********Retry count : %u*********\n", error_count);
 			}
@@ -167,7 +167,7 @@ static void sdo_protTO1Exit(app_data_t *app_data)
 		sdo_byte_array_free(ps->n4);
 		ps->n4 = NULL;
 	}
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 }
 
@@ -204,13 +204,27 @@ static void sdo_protTO2Exit(app_data_t *app_data)
 			sdo_service_info_free(ps->osc->si);
 			ps->osc->si = NULL;
 		}
-		// Rest of the ps->osc contents are mapped to devcred. they are freed along with them.
+		if (ps->osc->guid) {
+			sdo_byte_array_free(ps->osc->guid);
+			ps->osc->guid = NULL;
+		}
+		if (ps->osc->rvlst) {
+			sdo_rendezvous_list_free(ps->osc->rvlst);
+			ps->osc->rvlst = NULL;
+		}
+		if (ps->osc->pubkey) {
+			sdo_public_key_free(ps->osc->pubkey);
+			ps->osc->pubkey = NULL;
+		}
 		sdo_free(ps->osc);
 		ps->osc = NULL;
 	}
 	if (ps->iv != NULL) {
 		sdo_iv_free(ps->iv);
 		ps->iv = NULL;
+	}
+	if (ps->owner_public_key) {
+		sdo_public_key_free(ps->owner_public_key);
 	}
 	if (ps->new_pk != NULL) {
 		sdo_public_key_free(ps->new_pk);
@@ -240,6 +254,7 @@ static void sdo_protTO2Exit(app_data_t *app_data)
 	}
 	sdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
 	ps->total_dsi_rounds = 0;
+	sdo_kex_close();
 }
 /**
  * Allocate memory to hold device credentials which includes owner credentials
@@ -396,7 +411,7 @@ static sdo_sdk_status app_initialize(void)
 	// TO-DO : Move this to sdotypes later when multiple Device ServiceInfo module
 	// support is added.
 	sdo_service_info_add_kv_int(g_sdo_data->service_info, "devmod:nummodules",
-		    		1);
+			    	1);
 	sdo_service_info_add_kv_str(g_sdo_data->service_info,
 				    "devmod:modules", "sdo_sys");
 
@@ -695,8 +710,6 @@ static void app_close(void)
 	if (!g_sdo_data)
 		return;
 
-	sdo_kex_close();
-
 	if (g_sdo_data->service_info) {
 		sdo_service_info_free(g_sdo_data->service_info);
 		g_sdo_data->service_info = NULL;
@@ -709,12 +722,14 @@ static void app_close(void)
 		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
+	sdor_flush(&g_sdo_data->prot.sdor);
 
 	sdob = &g_sdo_data->prot.sdow.b;
 	if (sdob->block) {
 		sdo_free(sdob->block);
 		sdob->block = NULL;
 	}
+	sdow_flush(&g_sdo_data->prot.sdow);
 
 	if (g_sdo_data->devcred) {
 		sdo_dev_cred_free(g_sdo_data->devcred);
@@ -1228,9 +1243,6 @@ static bool _STATE_TO2(void)
 				g_sdo_data->state_fn = &_STATE_TO1;
 				LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
 					"Retrying TO1 using the next RendezvousDirective\n");
-				// free the existing RVTO2Addr and to1d
-				fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
-				fdo_cose_free(g_sdo_data->prot.to1d_cose);
 				return ret;
 			}
 		}
@@ -1245,8 +1257,6 @@ static bool _STATE_TO2(void)
 			// free only when rvbypass is false, since the allocation was done then.
 			sdo_free(ip);
 			ip = NULL;
-			fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
-			fdo_cose_free(g_sdo_data->prot.to1d_cose);
 		} else {
 			// set the global rvbypass flag to false so that we don't continue the loop
 			// because of rvbypass
@@ -1300,6 +1310,15 @@ static bool _STATE_Shutdown(void)
 	}
 
 	g_sdo_data->state_fn = NULL;
+
+	if (g_sdo_data->prot.rvto2addr) {
+		fdo_rvto2addr_free(g_sdo_data->prot.rvto2addr);
+		g_sdo_data->prot.rvto2addr = NULL;
+	}
+	if (g_sdo_data->prot.to1d_cose) {
+		fdo_cose_free(g_sdo_data->prot.to1d_cose);
+		g_sdo_data->prot.to1d_cose = NULL;
+	}
 
 	/* Closing all crypto related functions.*/
 	(void)sdo_crypto_close();

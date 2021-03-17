@@ -391,7 +391,7 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac)
 		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVDeviceInfo\n", __func__);
 		goto exit;
 	}
-	ov->dev_info->byte_sz = dev_info_length;
+	ov->dev_info->bytes[dev_info_length] = '\0';
 
 	// Mfg Public key
 	if (ov->mfg_pub_key != NULL)

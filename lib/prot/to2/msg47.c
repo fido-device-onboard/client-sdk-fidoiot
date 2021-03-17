@@ -93,7 +93,7 @@ int32_t msg67(sdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	return ret;
 }

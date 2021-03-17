@@ -178,7 +178,7 @@ int32_t msg65(sdo_prot_t *ps)
 	ret = 0; /* Marks as success */
 
 err:
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 
 	if (cose) {

@@ -46,6 +46,9 @@ int32_t msg33(sdo_prot_t *ps)
 	LOG(LOG_DEBUG, "TO1.RVRedirect started\n");
 
 	// allocate memory for to1d here, free when TO2 is done
+	if (ps->to1d_cose) {
+		fdo_cose_free(ps->to1d_cose);
+	}
 	ps->to1d_cose = sdo_alloc(sizeof(fdo_cose_t));
 	if (!ps->to1d_cose) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc COSE\n");
@@ -69,7 +72,7 @@ int32_t msg33(sdo_prot_t *ps)
 	// initialize the parser once the buffer contains COSE payload to be decoded.
 	if (!sdor_parser_init(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initialize SDOR parser\n");
-		return -1;
+		goto err;
 	}
 
 	size_t num_payloadbasemap_items = 0;
@@ -84,6 +87,9 @@ int32_t msg33(sdo_prot_t *ps)
 		goto err;
 	}
 	// allocate here, free when TO2 is done
+	if (ps->rvto2addr) {
+		fdo_rvto2addr_free(ps->rvto2addr);
+	}
 	ps->rvto2addr = sdo_alloc(sizeof(fdo_rvto2addr_t));
 	if (!ps->rvto2addr) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc to1dRV\n");
@@ -108,7 +114,7 @@ int32_t msg33(sdo_prot_t *ps)
 
 	/* Mark as success and ready for TO2 */
 	ps->state = SDO_STATE_DONE;
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	ret = 0;
 	LOG(LOG_DEBUG, "TO1.RVRedirect completed successfully\n");

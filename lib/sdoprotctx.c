@@ -350,7 +350,7 @@ int sdo_prot_ctx_run(sdo_prot_ctx_t *prot_ctx)
 			if (n <= 0) {
 				LOG(LOG_ERROR, "Socket read not successful "
 					       "after retries!\n");
-				sdor_flush(sdor);
+				sdo_block_reset(&sdor->b);
 				ret = -1;
 				break;
 			}

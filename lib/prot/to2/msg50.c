@@ -44,9 +44,8 @@ int32_t msg70(sdo_prot_t *ps)
 	sdo_rendezvous_list_free(ps->dev_cred->owner_blk->rvlst);
 	ps->dev_cred->owner_blk->rvlst = ps->osc->rvlst;
 
-	// TO-DO: Is this really needed?
-	sdo_public_key_free(ps->owner_public_key);
-	ps->owner_public_key = ps->osc->pubkey;
+	sdo_public_key_free(ps->dev_cred->owner_blk->pk);
+	ps->dev_cred->owner_blk->pk = ps->osc->pubkey;
 
 	if (ps->reuse_enabled && reuse_supported) {
 		// Reuse scenario, moving to post DI state
@@ -56,8 +55,6 @@ int32_t msg70(sdo_prot_t *ps)
 		// As of now moving to done state for resale
 		ps->dev_cred->ST = SDO_DEVICE_STATE_IDLE;
 	}
-	sdo_public_key_free(ps->osc->pubkey);
-	ps->osc->pubkey = NULL;
 
 	/* Rotate Data Protection Key */
 	if (0 != sdo_generate_storage_hmac_key()) {
@@ -71,6 +68,12 @@ int32_t msg70(sdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.Done: Updated device with new credentials\n");
+
+	// Do not point to ps->osc contents anymore.
+	// This keeps it clean for freeing memory at TO2 exit at all times.
+	ps->dev_cred->owner_blk->guid = NULL;
+	ps->dev_cred->owner_blk->rvlst = NULL;
+	ps->dev_cred->owner_blk->pk = NULL;
 
 	sdow_next_block(&ps->sdow, SDO_TO2_DONE);
 

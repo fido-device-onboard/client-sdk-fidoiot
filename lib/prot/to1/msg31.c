@@ -58,7 +58,7 @@ int32_t msg31(sdo_prot_t *ps)
 
 	/* Updated state to move to msg32 */
 	ps->state = SDO_STATE_TO1_SND_PROVE_TO_SDO;
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	ret = 0;
 	LOG(LOG_DEBUG, "TO1.HelloRVAck completed successfully\n");

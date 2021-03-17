@@ -346,27 +346,17 @@ static int32_t kex_kdf(void)
 	sdo_aes_keyset_t *keyset = get_keyset();
 	uint8_t *keymat = NULL;
 	size_t keymat_size = 0;
-	uint8_t *key_bytes = NULL;
-	size_t key_bytes_sz = 0;
-	int key_bytes_index = 0;
+	// number of key bytes to derive = SEK + SVK size for AES-CTR and AES-CBC modes
+	// TO-DO : update when AES-GCM and AES-CCM are added
+	size_t key_bytes_sz = SEK_KEY_SIZE + SVK_KEY_SIZE;
+	uint8_t key_bytes[key_bytes_sz];
+	size_t key_bytes_index = 0;
+	size_t num_key_bytes_to_copy = 0;
 	uint8_t *hmac = NULL;
 	int num_rounds = 0, num_rounds_index = 0;
 
 	if (!shse) {
 		LOG(LOG_ERROR, "Failed to get the shared secret\n");
-		goto err;
-	}
-
-	// number of key bytes to derive = SEK + SVK size for AES-CTR and AES-CBC modes
-	// TO-DO : When AES-GCM and AES-CCM are added, put a check inside for AES mode
-	key_bytes_sz = SEK_KEY_SIZE + SVK_KEY_SIZE;
-	key_bytes = sdo_alloc(key_bytes_sz);
-	if (!key_bytes) {
-		LOG(LOG_ERROR, "Out of memory generated key buffer 1\n");
-		goto err;
-	}
-	if (0 != memset_s(key_bytes, key_bytes_sz, 0)) {
-		LOG(LOG_ERROR, "Failed to clear generated key buffer\n");
 		goto err;
 	}
 
@@ -419,9 +409,14 @@ static int32_t kex_kdf(void)
 			goto err;
 		}
 
+		if (key_bytes_index + SDO_SHA_DIGEST_SIZE_USED < key_bytes_sz)
+			num_key_bytes_to_copy = SDO_SHA_DIGEST_SIZE_USED;
+		else
+			num_key_bytes_to_copy = key_bytes_sz - key_bytes_index;
+
 		// copy the generated hmac (key/a part of the key) into generated key buffer
-		if (memcpy_s(key_bytes + key_bytes_index, key_bytes_sz, hmac,
-		    SDO_SHA_DIGEST_SIZE_USED)) {
+		if (memcpy_s(&key_bytes[key_bytes_index], key_bytes_sz, hmac,
+		    num_key_bytes_to_copy)) {
 			LOG(LOG_ERROR, "Failed to copy generated key bytes\n");
 			goto err;
 		}
@@ -429,14 +424,14 @@ static int32_t kex_kdf(void)
 	}
 
 	// Get the sek
-	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, key_bytes,
+	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, &key_bytes[0],
 		      keyset->sek->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy sek key\n");
 		goto err;
 	}
 
 	// Get the svk
-	if (memcpy_s(keyset->svk->bytes, keyset->svk->byte_sz, key_bytes + keyset->sek->byte_sz,
+	if (memcpy_s(keyset->svk->bytes, keyset->svk->byte_sz, &key_bytes[keyset->sek->byte_sz],
 		     keyset->svk->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy svk key\n");
 		goto err;
@@ -450,9 +445,6 @@ err:
 	}
 	if (keymat) {
 		sdo_free(keymat);
-	}
-	if (key_bytes) {
-		sdo_free(key_bytes);
 	}
 	sdo_byte_array_free(shse);
 

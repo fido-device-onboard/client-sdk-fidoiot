@@ -104,7 +104,7 @@ int32_t msg63(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to verify OVEntry signature\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "TO2.ProveOVHdr: OVEntry Signature verification successful\n");
+	LOG(LOG_DEBUG, "TO2.OVNextEntry: OVEntry Signature verification successful\n");
 
 	// Generate COSE as CBOR bytes again that is used to calculate OVEHashPrevEntry.
 	if (!fdo_cose_write(&ps->sdow, cose)) {
@@ -112,20 +112,19 @@ int32_t msg63(sdo_prot_t *ps)
 		goto err;
 	}
 	// Get encoded COSE and copy
-	size_t cose_encoded_length = 0;
-	if (!sdow_encoded_length(&ps->sdow, &cose_encoded_length)) {
+	if (!sdow_encoded_length(&ps->sdow, &ps->sdow.b.block_size)) {
 		LOG(LOG_ERROR,
 			"TO2.OVNextEntry: Failed to get encoded COSE length for OVEHashPrevEntry\n");
 		goto err;		
 	}
-	cose_encoded = sdo_byte_array_alloc(cose_encoded_length);
+	cose_encoded = sdo_byte_array_alloc(ps->sdow.b.block_size);
 	if (!cose_encoded) {
 		LOG(LOG_ERROR,
 			"TO2.OVNextEntry: Failed to alloc encoded COSE for OVEHashPrevEntry\n");
 		goto err;		
 	}
 	if (0 != memcpy_s(cose_encoded->bytes, cose_encoded->byte_sz,
-		ps->sdow.b.block, cose_encoded_length)) {
+		ps->sdow.b.block, ps->sdow.b.block_size)) {
 		LOG(LOG_ERROR,
 			"TO2.OVNextEntry: Failed to copy encoded COSE for OVEHashPrevEntry\n");
 		goto err;
@@ -244,13 +243,15 @@ int32_t msg63(sdo_prot_t *ps)
 	current_hp_hash =
 	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
 	if (!current_hp_hash) {
-		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to generate current OVEntry hash!\n");
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to alloc current OVEntry hash!\n");
 		goto err;
 	}
 
 	if (0 != sdo_crypto_hash(cose_encoded->bytes, cose_encoded->byte_sz,
 				 current_hp_hash->hash->bytes,
 				 current_hp_hash->hash->byte_sz)) {
+		sdo_hash_free(current_hp_hash);
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to generate current OVEntry hash!\n");
 		goto err;
 	}
 	// free the previous hash and push the new one.
@@ -288,7 +289,7 @@ int32_t msg63(sdo_prot_t *ps)
 	}
 	ret = 0; /* Mark as success */
 err:
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	if (temp_entry) {
 		if (temp_entry->hp_hash) {
@@ -301,11 +302,6 @@ err:
 	}
 	if (cose_encoded) {
 		sdo_byte_array_free(cose_encoded);
-	}
-	if (ret) {
-		if (current_hp_hash) {
-			sdo_hash_free(current_hp_hash);
-		}
 	}
 
 	return ret;

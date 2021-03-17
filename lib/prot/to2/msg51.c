@@ -71,8 +71,6 @@ int32_t msg71(sdo_prot_t *ps)
 		goto err;
 	}
 
-	sdor_flush(&ps->sdor);
-	ps->sdor.have_block = false;
 	ps->state = SDO_STATE_DONE;
 	ps->success = true;
 
@@ -87,7 +85,7 @@ int32_t msg71(sdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	return ret;
 }
