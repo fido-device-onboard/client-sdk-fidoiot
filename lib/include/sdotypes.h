@@ -95,11 +95,6 @@ typedef struct {
 	char *bytes;
 } sdo_string_t;
 
-// Generic boolean wrapper
-typedef struct {
-	bool *value;
-} sdo_bool_t;
-
 void sdo_string_init(sdo_string_t *b);
 sdo_string_t *sdo_string_alloc(void);
 sdo_string_t *sdo_string_alloc_size(size_t byte_sz);
@@ -548,22 +543,22 @@ void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv);
 typedef struct sdo_rendezvous_s {
 	int num_params;
 	struct sdo_rendezvous_s *next;
-	sdo_bool_t *dev_only;
-	sdo_bool_t *owner_only;
+	bool *dev_only;
+	bool *owner_only;
 	sdo_ip_address_t *ip;
 	int *po;
 	int *pow;
 	sdo_string_t *dn;
 	sdo_hash_t *sch;
 	sdo_hash_t *cch;
-	sdo_bool_t *ui;
+	bool *ui;
 	sdo_string_t *ss;
 	sdo_string_t *pw;
 	sdo_string_t *wsp;
 	uint64_t *me;
 	uint64_t *pr;
 	uint64_t *delaysec;
-	sdo_bool_t *bypass;
+	bool *bypass;
 } sdo_rendezvous_t;
 
 sdo_rendezvous_t *sdo_rendezvous_alloc(void);

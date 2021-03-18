@@ -999,7 +999,7 @@ static bool _STATE_TO1(void)
 
 	if (g_sdo_data->current_rvdirective == NULL) {
 		// keep track of current directive in use with the help of stored RendezvousInfo from DI.
-		// it is NULL at 2 ponts: during 1st TO1 run, and,
+		// it is NULL at 2 points: during 1st TO1 run, and,
 		// when all RVDirectives have been used and we're re-trying
 		g_sdo_data->current_rvdirective = g_sdo_data->devcred->owner_blk->rvlst->rv_directives;
 	}
@@ -1014,11 +1014,11 @@ static bool _STATE_TO1(void)
 		rvowner_only = false;
 		while (rv) {
 
-			if (rv->bypass) {
+			if (rv->bypass && *rv->bypass == true) {
 				rvbypass = true;
 				break;
 			}
-			if (rv->owner_only) {
+			if (rv->owner_only && *rv->owner_only == true) {
 				rvowner_only = true;
 				break;
 			}
@@ -1045,6 +1045,8 @@ static bool _STATE_TO1(void)
 		}
 
 		if (rvbypass) {
+			ret = true;
+			LOG(LOG_ERROR, "Found RVBYPASS in the RendezvousDirective. Skipping TO1...\n");
 			g_sdo_data->state_fn = &_STATE_TO2;
 			goto end;
 		}
@@ -1183,6 +1185,14 @@ static bool _STATE_TO2(void)
 			// Prepare to move to next in case of failure
 			g_sdo_data->current_rvdirective = g_sdo_data->current_rvdirective->next;
 
+			// clear to1d, if present.
+			// if this is null at 'TO2.ProveOVHdr, Type 61',then to1d COSE Signature
+			// verification is avoided.
+			// Else, COSE Signature verification is done.
+			if (g_sdo_data->prot.to1d_cose != NULL) {
+				fdo_cose_free(g_sdo_data->prot.to1d_cose);
+			}
+
 		} else {
 
 			ip = sdo_ipaddress_alloc();
@@ -1228,6 +1238,7 @@ static bool _STATE_TO2(void)
 				// set the global rvbypass flag to false so that we don't continue the loop
 				// because of rvbypass
 				rvbypass = false;
+				g_sdo_data->state_fn = &_STATE_TO1;
 				return ret;
 			}
 			
@@ -1261,7 +1272,6 @@ static bool _STATE_TO2(void)
 			// set the global rvbypass flag to false so that we don't continue the loop
 			// because of rvbypass
 			rvbypass = false;
-			return ret;
 		}
 
 		LOG(LOG_DEBUG, "\n------------------------------------ TO2 Successful "
