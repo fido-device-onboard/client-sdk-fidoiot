@@ -39,7 +39,6 @@
 int32_t msg61(sdo_prot_t *ps)
 {
 	char prot[] = "SDOProtTO2";
-	char buf[DEBUGBUFSZ] = {0};
 	int ret = -1;
 	int result_memcmp = 0;
 	sdo_byte_array_t *xA = NULL;
@@ -97,6 +96,19 @@ int32_t msg61(sdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: COSE signature verification successful\n");
+
+	// verify the to1d that was received during TO1.RVRedirect, Type 33
+	// TO-DO : needs to happen only when TO2 was started without RVBypass flow.
+	// Add one more condition check for bypass when it is fixed up.
+	if (ps->to1d_cose) {
+		if (!sdo_signature_verification(ps->to1d_cose->cose_payload,
+					ps->to1d_cose->cose_signature,
+					ps->owner_public_key)) {
+			LOG(LOG_ERROR, "TO2.ProveOVHdr: COSE signature verification failed\n");
+			goto err;
+		}
+		LOG(LOG_DEBUG, "TO2.ProveOVHdr: to1d signature verification successful\n");
+	}
 
 	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
 	sdo_block_reset(&ps->sdor.b);
@@ -190,8 +202,6 @@ int32_t msg61(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read Nonce5\n");
 		goto err;		
 	}
-	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Received Nonce5: %s\n",
-	    sdo_nonce_to_string(ps->n5r->bytes, buf, sizeof buf) ? buf : "");
 
 	/* The nonces "n5" (msg40) and "n6" here must match */
 	if (!sdo_nonce_equal(ps->n5r, ps->n5)) {
@@ -228,7 +238,7 @@ int32_t msg61(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read xAKeyExchange\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Key Exchange xA is %zu bytes\n", xA->byte_sz);
+
 	// Save TO2.ProveOPHdr.pk for Asymmetric Key Exchange algorithm
 	if (sdo_set_kex_paramA(xA, ps->owner_public_key)) {
 		goto err;
@@ -280,7 +290,7 @@ int32_t msg61(sdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	if (xA) {
 		sdo_byte_array_free(xA);

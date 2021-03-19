@@ -49,7 +49,7 @@ int32_t msg13(sdo_prot_t *ps)
 	}
 
 	/* Generate hash of the public key received in msg11 */
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	dev_cred->owner_blk->pkh = sdo_pub_key_hash(dev_cred->owner_blk->pk);
 	if (!dev_cred->owner_blk->pkh) {
 		LOG(LOG_ERROR, "Hash creation of manufacturer pk failed\n");

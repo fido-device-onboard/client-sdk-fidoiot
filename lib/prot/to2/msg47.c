@@ -25,7 +25,6 @@ int32_t msg67(sdo_prot_t *ps)
 	char prot[] = "SDOProtTO2";
 	sdo_encrypted_packet_t *pkt = NULL;
 	int rec_maxDeviceServiceInfoSz = 0;
-	sdo_byte_array_t *null_bytes = NULL;
 
 	if (!sdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -49,8 +48,6 @@ int32_t msg67(sdo_prot_t *ps)
 		goto err;
 	}
 
-	sdo_log_block(&ps->sdor.b);
-
 	if (!sdor_start_array(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfoReady: Failed to start array\n");
 		goto err;
@@ -71,25 +68,10 @@ int32_t msg67(sdo_prot_t *ps)
 			goto err;
 		}
 	} else {
-		// buffer to store CBOR NULL wrapped in bstr, as sent by PRI.
-		// To be removed once PRI is updated to send CBOR NULL directly.
-		null_bytes = sdo_byte_array_alloc(1);
-		if (!null_bytes) {
-			LOG(LOG_ERROR,
-				"TO2.OwnerServiceInfoReady: Failed to read maxDeviceServiceInfoSz as null\n");
-			goto err;
-		}
-		if (!sdor_byte_string(&ps->sdor, null_bytes->bytes, null_bytes->byte_sz)) {
-			LOG(LOG_ERROR,
-				"TO2.OwnerServiceInfoReady: Failed to read maxDeviceServiceInfoSz as null\n");
-			goto err;
-		}
-
-	/*	Throw an error if not int/NULL. This is the way. TO-DO
+		// Throw an error if not int/NULL.
 		LOG(LOG_ERROR,
 			"TO2.OwnerServiceInfoReady: Invalid value type for maxDeviceServiceInfoSz\n");
 		goto err;
-	*/
 	}
 
 	if (rec_maxDeviceServiceInfoSz > 0 &&
@@ -111,10 +93,7 @@ int32_t msg67(sdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
-	if (null_bytes) {
-		sdo_byte_array_free(null_bytes);
-	}
 	return ret;
 }

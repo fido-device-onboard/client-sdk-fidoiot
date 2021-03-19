@@ -110,7 +110,7 @@ int32_t msg11(sdo_prot_t *ps)
 	/* All good, move to msg12 */
 	ps->state = SDO_STATE_DI_SET_HMAC;
 	ps->sdor.have_block = false;
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	LOG(LOG_DEBUG, "DISetCredentials completed\n");
 	ret = 0;
 

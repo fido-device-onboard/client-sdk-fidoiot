@@ -1004,15 +1004,18 @@ sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 	if (byte_sz == 0)
 		return NULL;
 
+	// +1 for '\0'
+	int total_size = byte_sz + 1;
 	sdo_string_t *s = (sdo_string_t *)sdo_alloc(sizeof(sdo_string_t));
 	if (!s)
 		return NULL;
 
-	s->bytes = sdo_alloc(byte_sz * sizeof(char));
+	s->bytes = sdo_alloc(total_size * sizeof(char));
 	if (!s->bytes) {
 		sdo_free(s);
 		return NULL;
 	}
+	// byte_sz contains the number of characters
 	s->byte_sz = byte_sz;
 	return s;
 }
@@ -1026,7 +1029,8 @@ sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 sdo_string_t *sdo_string_alloc_with(const char *data, int byte_sz)
 {
 	sdo_string_t *temp_str = NULL;
-	int total_size = byte_sz;
+	// Buffer would store NULL terminated string, adding +1 for '\0'
+	int total_size = byte_sz + 1;
 
 	if (!data)
 		goto err1;
@@ -1039,14 +1043,15 @@ sdo_string_t *sdo_string_alloc_with(const char *data, int byte_sz)
 	if (temp_str->bytes == NULL)
 		goto err2;
 
-	temp_str->byte_sz = total_size;
+	// byte_sz contains the number of characters
+	temp_str->byte_sz = byte_sz;
 	if (byte_sz) {
 		if (memcpy_s(temp_str->bytes, total_size, data, byte_sz) != 0) {
 			LOG(LOG_ERROR, "Memcpy Failed here\n");
 			goto err2;
 		}
 	}
-	temp_str->bytes[byte_sz] = 0;
+	temp_str->bytes[byte_sz] = '\0';
 
 	return temp_str;
 
@@ -2615,7 +2620,10 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 		LOG(LOG_ERROR, "Memset Failed\n");
 		return false;
 	}
-
+	if (memset_s(str_buf, str_buf_sz, 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		return false;
+	}
 	int key;
 	if (!sdor_signed_int(sdor, &key)) {
 		LOG(LOG_ERROR, "RendezvousInstr key read error\n");
@@ -2703,12 +2711,9 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 		break;
 
 	case RVDNS:
+
 		if (!sdor_string_length(sdor, &str_buf_sz)) {
 			LOG(LOG_ERROR, "RVDNS length read failed\n");
-			return false;
-		}
-		if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-			LOG(LOG_ERROR, "Memset Failed\n");
 			return false;
 		}
 
@@ -2787,10 +2792,7 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 			LOG(LOG_ERROR, "RVWIFISSID length read failed\n");
 			ret = false;
 		}
-		if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-			LOG(LOG_ERROR, "Memset Failed\n");
-			return false;
-		}
+
 		if (sdor_text_string(sdor, str_buf, str_buf_sz)) {
 			LOG(LOG_ERROR, "RVWIFISSID length read failed\n");
 			return false;
@@ -2813,10 +2815,7 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 			LOG(LOG_ERROR, "RVWIFIPW length read failed\n");
 			ret = false;
 		}
-		if (memset_s(str_buf, str_buf_sz, 0) != 0) {
-			LOG(LOG_ERROR, "Memset Failed\n");
-			return false;
-		}
+
 		if (!sdor_text_string(sdor, str_buf, str_buf_sz)) {
 			LOG(LOG_ERROR, "RVWIFIPW read failed\n");
 			ret = false;
@@ -3259,9 +3258,12 @@ void sdo_encrypted_packet_free(sdo_encrypted_packet_t *pkt)
 	if (pkt == NULL) {
 		return;
 	}
-	sdo_byte_array_free(pkt->em_body);
-	sdo_hash_free(pkt->hmac);
-	sdo_byte_array_free(pkt->ct_string);
+	if (pkt->em_body)
+		sdo_byte_array_free(pkt->em_body);
+	if (pkt->hmac)
+		sdo_hash_free(pkt->hmac);
+	if (pkt->ct_string)
+		sdo_byte_array_free(pkt->ct_string);
 	sdo_free(pkt);
 }
 
@@ -3512,7 +3514,8 @@ bool fdo_etminnerblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 			"Encrypted Message write: Failed to copy IV\n");
 		goto err;
 	}
-	cose_encrypt0->payload = pkt->em_body;
+	cose_encrypt0->payload = sdo_byte_array_alloc_with_byte_array(
+		pkt->em_body->bytes, pkt->em_body->byte_sz);
 
 	if (!fdo_cose_encrypt0_write(sdow, cose_encrypt0)) {
 		LOG(LOG_ERROR,
@@ -3564,8 +3567,10 @@ bool fdo_etmouterblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 	cose_mac0->protected_header->mac_type = pkt->hmac->hash_type;
 
 	// set the encoded ETMInnerBlock (COSE_Encrypt0) as payload and its HMac into COSE_Mac0
-	cose_mac0->payload = pkt->ct_string;
-	cose_mac0->hmac = pkt->hmac->hash;
+	cose_mac0->payload = sdo_byte_array_alloc_with_byte_array(
+		pkt->ct_string->bytes, pkt->ct_string->byte_sz);
+	cose_mac0->hmac = sdo_byte_array_alloc_with_byte_array(
+		pkt->hmac->hash->bytes, pkt->hmac->hash->byte_sz);
 
 	if (!fdo_cose_mac0_write(sdow, cose_mac0)) {
 		LOG(LOG_ERROR,
@@ -3743,13 +3748,14 @@ bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv)
 		return false;
 
 	sdo_block_t *sdob = &sdow->b;
+	bool ret = false;
 
 	// find the encoded cleartext length
 	size_t payload_length = 0;
 	if (!sdow_encoded_length(sdow, &payload_length) || payload_length == 0) {
 		LOG(LOG_ERROR,
 			"Encrypted Message (encrypt): Failed to read encoded message length\n");
-		return false;
+		return ret;
 	}
 	sdow->b.block_size = payload_length;
 
@@ -3757,7 +3763,7 @@ bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv)
 	if (!pkt) {
 		LOG(LOG_ERROR,
 			"Encrypted Message (encrypt): Failed to alloc for Encrypted message struct\n");
-		return false;
+		return ret;
 	}
 
 	if (0 != aes_encrypt_packet(pkt, sdob->block, payload_length)) {
@@ -3839,11 +3845,11 @@ bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv)
 			"Encrypted Message (encrypt): Failed to write COSE_Sign1 (ETMOuterBlock)\n");
 		goto exit;
 	}
-	return true;
+	ret = true;
 exit:
 	if (pkt)
 		sdo_encrypted_packet_free(pkt);
-	return false;
+	return ret;
 }
 
 //------------------------------------------------------------------------------
@@ -3877,12 +3883,8 @@ fdo_eat_t* fdo_eat_alloc(void) {
 	eat->eat_uph->eatmaroeprefix = NULL;
 	eat->eat_uph->euphnonce = NULL;
 
-	eat->eat_payload = sdo_byte_array_alloc(sizeof(sdo_byte_array_t));
-	if (!eat->eat_payload) {
-		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc EATPayload\n");
-		goto err;
-	}
-	// set the signature to NULL, since there's no use to allocate for it here.
+	// set the payload and signature to NULL, since there's no use to allocate for them here.
+	eat->eat_payload = NULL;
 	eat->eat_signature = NULL;
 	return eat;
 err:
@@ -3900,8 +3902,10 @@ void fdo_eat_free(fdo_eat_t *eat) {
 		sdo_free(eat->eat_ph);
 	}
 	if (eat->eat_uph) {
-		sdo_byte_array_free(eat->eat_uph->eatmaroeprefix);
-		sdo_byte_array_free(eat->eat_uph->euphnonce);
+		if (eat->eat_uph->eatmaroeprefix)
+			sdo_byte_array_free(eat->eat_uph->eatmaroeprefix);
+		if (eat->eat_uph->euphnonce)
+			sdo_byte_array_free(eat->eat_uph->euphnonce);
 		sdo_free(eat->eat_uph);
 	}
 	if (eat->eat_payload) {
@@ -5395,10 +5399,11 @@ bool fdo_rvto2addr_entry_read(sdor_t *sdor, fdo_rvto2addr_entry_t *rvto2addr_ent
 		return false;
 	}
 	
-	if (!sdor_text_string(sdor, rvto2addr_entry->rvdns->bytes, rvto2addr_entry->rvdns->byte_sz)) {
+	if (!sdor_text_string(sdor, rvto2addr_entry->rvdns->bytes, rvdns_length)) {
 		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS\n");
 		return false;
 	}
+	rvto2addr_entry->rvdns->bytes[rvdns_length] = '\0';
 
 	rvto2addr_entry->rvport = -1;
 	if (!sdor_signed_int(sdor, &rvto2addr_entry->rvport) ||
@@ -6069,6 +6074,12 @@ void sdo_kv_free(sdo_key_value_t *kv)
 		sdo_string_free(kv->key);
 	if (kv->str_val != NULL)
 		sdo_string_free(kv->str_val);
+	if (kv->bin_val != NULL)
+		sdo_byte_array_free(kv->bin_val);
+	if (kv->bool_val != NULL)
+		sdo_free(kv->bool_val);
+	if (kv->int_val != NULL)
+		sdo_free(kv->int_val);
 	sdo_free(kv);
 }
 
@@ -6648,17 +6659,19 @@ bool sdo_service_info_add_kv_bool(sdo_service_info_t *si, const char *key,
 			return false;
 		kv->bool_val = sdo_alloc(sizeof(bool));
 		if (!kv->bool_val) {
-
+			LOG(LOG_ERROR, "Failed to alloc bool Device ServiceInfoVal");
+			return false;
 		}
 		*kv->bool_val = val;
 		*kvp = kv;  /* Use this pointer to update the next value */
 		si->numKV++;
 		return true;
 	}
-	
+
 	kv->bool_val = sdo_alloc(sizeof(bool));
 	if (!kv->bool_val) {
-
+		LOG(LOG_ERROR, "Failed to alloc bool Device ServiceInfoVal");
+		return false;
 	}
 	*kv->bool_val = val;
 
@@ -6701,7 +6714,8 @@ bool sdo_service_info_add_kv_int(sdo_service_info_t *si, const char *key,
 			return false;
 		kv->int_val = sdo_alloc(sizeof(int));
 		if (!kv->int_val) {
-
+			LOG(LOG_ERROR, "Failed to alloc int Device ServiceInfoVal");
+			return false;
 		}
 		*kv->int_val = val;
 		*kvp = kv;  /* Use this pointer to update the next value */
@@ -6711,6 +6725,8 @@ bool sdo_service_info_add_kv_int(sdo_service_info_t *si, const char *key,
 
 	kv->int_val = sdo_alloc(sizeof(int));
 	if (!kv->int_val) {
+		LOG(LOG_ERROR, "Failed to alloc int Device ServiceInfoVal");
+		return false;
 	}
 	*kv->int_val = val;
 

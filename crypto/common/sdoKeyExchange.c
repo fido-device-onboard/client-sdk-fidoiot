@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
+#include <math.h>
 #include "sdokeyexchange.h"
 #include "sdoCryptoHal.h"
 #include "util.h"
@@ -77,8 +78,7 @@ int32_t sdo_kex_init(void)
 
 	/* Fill out the labels */
 	kex_ctx->kdf_label = "FIDO-KDF";
-	kex_ctx->sek_label = "AutomaticOnboard-cipher";
-	kex_ctx->svk_label = "AutomaticOnboard-hmac";
+	kex_ctx->context_label = "AutomaticOnboardTunnel";
 
 	ret = 0; /* Mark as success */
 
@@ -227,57 +227,52 @@ static int32_t remove_java_compatible_byte_array(sdo_byte_array_t *BArray)
 }
 
 /**
- * Internal API
+ * Write the KeyMaterial of size keymat_size into keymat buffer.
+ * KeyMaterial = (byte)i||"FIDO-KDF"||(byte)0||"AutomaticOnboardTunnel"||Lstr
+ *
+ * index is used to determine the 1st byte 'i', and cannot be more than 2.
+ * bytes_length is the total number of key-bytes to generate, and is used to calculate Lstr.
  */
-
-static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size,
-			   sdo_byte_array_t *shse, bool svk, bool svk384)
+static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size, const int index,
+	const int bytes_length)
 {
 	int ret = -1;
 	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
-	const char *label = kex_ctx->sek_label;
 	size_t ofs = 0;
-	uint8_t idx0_val = 0x1; /* for keymat1 */
+	uint8_t idx0_val;
 
-	/* Decide what to fill in idx = 0 of key material */
-	if (svk) {
-		if (svk384 == 0) {
-			idx0_val = 0x2;
-		} else {
-			idx0_val = 0x3;
-		}
-		label = kex_ctx->svk_label;
+	if (index == 1) {
+		idx0_val = 0x01;
 	}
-	keymat[ofs] = idx0_val;
-	ofs += 1;
+	else if (index == 2) {
+		idx0_val = 0x02;
+	}
+	else {
+		// for now, we cannot go beyond 2
+		LOG(LOG_ERROR, "Invalid i\n");
+		goto err;
+	}
 
-	/* Fill in the kdflabel */
+	keymat[ofs++] = idx0_val;
+	// Fill in the kdflabel
 	if (strncpy_s((char *)&keymat[ofs], keymat_size - ofs,
-		      kex_ctx->kdf_label,
-		      strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE))) {
-		LOG(LOG_ERROR, "Failed to fill kdf label in key Material 1\n");
+		kex_ctx->kdf_label,
+		strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR, "Failed to fill kdf label in key Material\n");
 		goto err;
 	}
 	ofs += strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE);
-
-	/* Follow the kdf_label by 0 */
-	keymat[ofs] = 0x00;
-	ofs += 1;
-
-	/* Fill in the sek/svk label */
-	if (strncpy_s((char *)&keymat[ofs], keymat_size - ofs, label,
-		      strnlen_s(label, SDO_MAX_STR_SIZE))) {
+	keymat[ofs++] = 0x00;
+	// Fill in the context
+	if (strncpy_s((char *)&keymat[ofs], keymat_size - ofs,
+		kex_ctx->context_label,
+		strnlen_s(kex_ctx->context_label, SDO_MAX_STR_SIZE))) {
 		LOG(LOG_ERROR, "Failed to fill svk label\n");
 		goto err;
 	}
-	ofs += strnlen_s(label, SDO_MAX_STR_SIZE);
-
-	/* Fill in the shared secret */
-	if (memcpy_s(&keymat[ofs], keymat_size - ofs, shse->bytes,
-		     shse->byte_sz)) {
-		LOG(LOG_ERROR, "Failed to copy shared secret\n");
-		goto err;
-	}
+	ofs += strnlen_s(kex_ctx->context_label, SDO_MAX_STR_SIZE);
+	keymat[ofs++] = (bytes_length >> 8) & 0xff;
+	keymat[ofs++] = bytes_length & 0xff;
 
 	ret = 0;
 
@@ -343,6 +338,7 @@ err:
 /**
  * Derive encryption and hashing key using the input shared secret for
  * DH key exchange mode.
+ * NOTE: Currently, only works for AES-CTR and AES-CBC
  *
  * @return ret
  *        return true on success. false on failure.
@@ -350,184 +346,122 @@ err:
 static int32_t kex_kdf(void)
 {
 	int ret = -1;
-	size_t keymat1_size = 0;
-	size_t keymat2_size = 0;
 	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
 	sdo_byte_array_t *shse = get_secret();
 	sdo_aes_keyset_t *keyset = get_keyset();
-	uint8_t *keymat1 = NULL;
-	uint8_t *keymat2a = NULL;
-	uint8_t *keymat2b = NULL;
-	uint8_t *hmac_buf = NULL;
-	uint8_t hmac_key[SHA256_DIGEST_SIZE] = {0};
-
-	/*
-	 * kdf_label = "Marshal_pointKDF"
-	 * sek_label = "Automatic_provisioning-cipher"
-	 * svk_label = "Automatic_provisioning-hmac"
-	 *
-	 * For DH/ECDH/ASYM
-	 * ----------------
-	 * key_material1 = HMAC-SHA-256[0,
-	 * (byte)1||kdf_label||(byte)0||sek_label||Sh_se] key_material2 =
-	 * HMAC-SHA-256[0, (byte)2||kdf_label||(byte)0||svk_label||Sh_se]
-	 *
-	 * sek = Key_material1[0..15] (128 bits, to feed AES128)
-	 * svk = Key_material2[0..31] (256 bits, to feed SHA256)
-	 *
-	 * For ECDH384
-	 * -----------
-	 * key_material1  = HMAC-SHA-384[0,
-	 * (byte)1||kdf_label||(byte)0||sek_label||Sh_se] key_material2a =
-	 * HMAC-SHA-384[0, (byte)2||kdf_label||(byte)0||svk_label||Sh_se]
-	 * key_material2b = HMAC-SHA-384[0,
-	 * (byte)3||kdf_label||(byte)0||svk_label||Sh_se]
-	 *
-	 * sek = Key_material1[0..31]
-	 * svk = Key_material2a[0..47] || Key_material2b[0..15]
-	 *
-	 */
+	uint8_t *keymat = NULL;
+	size_t keymat_size = 0;
+	// number of key bytes to derive = SEK + SVK size for AES-CTR and AES-CBC modes
+	// TO-DO : update when AES-GCM and AES-CCM are added
+	size_t key_bytes_sz = SEK_KEY_SIZE + SVK_KEY_SIZE;
+	uint8_t key_bytes[key_bytes_sz];
+	size_t key_bytes_index = 0;
+	size_t num_key_bytes_to_copy = 0;
+	uint8_t *hmac = NULL;
+	int num_rounds = 0, num_rounds_index = 0;
 
 	if (!shse) {
 		LOG(LOG_ERROR, "Failed to get the shared secret\n");
 		goto err;
 	}
 
-	keymat1_size = 1 + strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE) + 1 +
-		       strnlen_s(kex_ctx->sek_label, SDO_MAX_STR_SIZE) +
-		       shse->byte_sz;
-	keymat2_size = 1 + strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE) + 1 +
-		       strnlen_s(kex_ctx->svk_label, SDO_MAX_STR_SIZE) +
-		       shse->byte_sz;
+	// total number of rounds to iterate for generating the total number of key bytes
+	num_rounds = ceil((double)key_bytes_sz / SDO_SHA_DIGEST_SIZE_USED);
 
-	/* Allocate memory for key materials */
-	keymat1 = sdo_alloc(keymat1_size);
-	if (!keymat1) {
+	// KeyMaterial = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where
+	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL, and
+	// Lstr = (byte)L1||(byte)L2, depending on L=key-bytes to generate
+	// Therefore, KeyMaterial size = 1 for byte (i) + length of Label + 1 for byte (0) +
+	// length of Context + 2 bytes for Lstr
+	keymat_size = 1 + strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE) + 1 +
+		    strnlen_s(kex_ctx->context_label, SDO_MAX_STR_SIZE) + 1 + 1;
+	// Allocate memory for KeyMaterial
+	keymat = sdo_alloc(keymat_size);
+	if (!keymat) {
 		LOG(LOG_ERROR, "Out of memory for key material 1\n");
 		goto err;
 	}
 
-	keymat2a = sdo_alloc(keymat2_size);
-	if (!keymat2a) {
-		LOG(LOG_ERROR, "Out of memory for key material 2a\n");
-		goto err;
-	}
-
-#ifdef KEX_ECDH384_ENABLED
-	keymat2b = sdo_alloc(keymat2_size);
-	if (!keymat2b) {
-		LOG(LOG_ERROR, "Out of memory for key material 2b\n");
-		goto err;
-	}
-#endif
-
-	/*
-	 * Prepare keymaterial for key derivation
-	 *  -----------------------------------------------------
-	 * | param1 (svk)| param2 (svk384) | Comments            |
-	 * | false       | Don't care      | Derive sek          |
-	 * | true        | false           | Derive svk          |
-	 * | true        | true            | Derive svk (ecdh384)|
-	 *  -----------------------------------------------------
-	 */
-	ret = prep_keymat(keymat1, keymat1_size, shse, false, false);
-	if (ret) {
-		LOG(LOG_ERROR, "Failed to prepare keymat1\n");
-		goto err;
-	}
-
-	ret = prep_keymat(keymat2a, keymat2_size, shse, true, false);
-	if (ret) {
-		LOG(LOG_ERROR, "Failed to prepare keymat2a\n");
-		goto err;
-	}
-
-#ifdef KEX_ECDH384_ENABLED
-	ret = prep_keymat(keymat2b, keymat2_size, shse, true, true);
-	if (ret) {
-		LOG(LOG_ERROR, "Failed to prepare keymat2b\n");
-		goto err;
-	}
-#endif
-
-	/* Generate the final key materials. Keys will be subpart of it */
-
-	/*
-	 * Allocate a transient buffer to store hmac.
-	 * AES key is either 128 bit or 256 bit, so, in any case it
-	 * cannot be directly used to hold the HMAC output
-	 */
-	hmac_buf = sdo_alloc(SDO_SHA_DIGEST_SIZE_USED);
-	if (!hmac_buf) {
+	// Allocate memory to store hmac
+	hmac = sdo_alloc(SDO_SHA_DIGEST_SIZE_USED);
+	if (!hmac) {
 		LOG(LOG_ERROR, "Failed to allocate hmac buffer\n");
 		goto err;
 	}
 
-	if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat1, keymat1_size,
-			    hmac_buf, SDO_SHA_DIGEST_SIZE_USED, hmac_key,
-			    sizeof(hmac_key))) {
-		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
+	// iterate for the calculated number of rounds to generate key
+	// once the iterations are done, key_bytes contains the generated key bytes
+	for (num_rounds_index = 1; num_rounds_index <= num_rounds; num_rounds_index++) {
+
+		// clear for new round usage
+		if (0 != memset_s(keymat, keymat_size, 0)) {
+			LOG(LOG_ERROR, "Failed to clear keymat\n");
+			goto err;
+		}
+		// generate KeyMaterial
+		ret = prep_keymat(keymat, keymat_size, num_rounds_index, key_bytes_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to prepare keymat\n");
+			goto err;
+		}
+
+		// clear for new round usage
+		if (0 != memset_s(hmac, SDO_SHA_DIGEST_SIZE_USED, 0)) {
+			LOG(LOG_ERROR, "Failed to clear hmac buffer\n");
+			goto err;
+		}
+		// generate hmac that gives us the key (or a part of it)
+		if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat, keymat_size,
+					hmac, SDO_SHA_DIGEST_SIZE_USED, shse->bytes,
+					shse->byte_sz)) {
+			LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
+			goto err;
+		}
+
+		if (key_bytes_index + SDO_SHA_DIGEST_SIZE_USED <= key_bytes_sz) {
+			num_key_bytes_to_copy = SDO_SHA_DIGEST_SIZE_USED;
+		}
+		else {
+			num_key_bytes_to_copy = key_bytes_sz - key_bytes_index;
+		}
+
+		// copy the generated hmac (key/a part of the key) into generated key buffer
+		if (memcpy_s(&key_bytes[key_bytes_index], key_bytes_sz, hmac,
+		    num_key_bytes_to_copy)) {
+			LOG(LOG_ERROR, "Failed to copy generated key bytes\n");
+			goto err;
+		}
+		key_bytes_index += num_key_bytes_to_copy;
+	}
+
+	if (key_bytes_index != key_bytes_sz) {
+		LOG(LOG_ERROR, "Mismatch is generated key bytes length\n");
 		goto err;
 	}
 
-	/* Get the sek. (keyset->sek->byte_sz <= SDO_SHA_DIGEST_SIZE_USED) */
-	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, hmac_buf,
-		     keyset->sek->byte_sz)) {
+	// Get the sek
+	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, &key_bytes[0],
+		      keyset->sek->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy sek key\n");
 		goto err;
 	}
 
-	/*
-	 * Get the svk key. It can directly hold the hmac output as it
-	 * is either 256 bits (32 bytes) or 512 bits (64 bytes)
-	 */
-	if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat2a, keymat2_size,
-			    keyset->svk->bytes, keyset->svk->byte_sz, hmac_key,
-			    sizeof(hmac_key))) {
-		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
+	// Get the svk
+	if (memcpy_s(keyset->svk->bytes, keyset->svk->byte_sz, &key_bytes[keyset->sek->byte_sz],
+		     keyset->svk->byte_sz)) {
+		LOG(LOG_ERROR, "Failed to copy svk key\n");
 		goto err;
 	}
-	
-
-/*
- * If the kex selected is ecdh384, then calculate hmac over
- * keymat2b. In this case, hmac buffer will not be able to
- * directly hold next 48 bytes more, so, using the above
- * allocated transient buffer
- */
-#ifdef KEX_ECDH384_ENABLED
-	if (crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_USED, keymat2b, keymat2_size,
-			    hmac_buf, SDO_SHA_DIGEST_SIZE_USED, hmac_key,
-			    sizeof(hmac_key))) {
-		LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
-		goto err;
-	}
-
-	/* Copy 16 bytes more to complete 64 bytes of svk */
-	if (memcpy_s(keyset->svk->bytes + SDO_SHA_DIGEST_SIZE_USED,
-		     keyset->svk->byte_sz - SDO_SHA_DIGEST_SIZE_USED, hmac_buf,
-		     16)) {
-		LOG(LOG_ERROR, "Failed to fill svk\n");
-		goto err;
-	}
-#endif
 
 	ret = 0;
 
 err:
-	if (hmac_buf) {
-		sdo_free(hmac_buf);
+	if (hmac) {
+		sdo_free(hmac);
 	}
-	if (keymat1) {
-		sdo_free(keymat1);
+	if (keymat) {
+		sdo_free(keymat);
 	}
-	if (keymat2a) {
-		sdo_free(keymat2a);
-	}
-	if (keymat2b) {
-		sdo_free(keymat2b);
-	}
-
 	sdo_byte_array_free(shse);
 
 	return ret;

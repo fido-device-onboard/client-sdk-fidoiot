@@ -28,7 +28,6 @@
 int32_t msg60(sdo_prot_t *ps)
 {
 	int ret = -1;
-	char buf[SDO_NONCE_BYTES] = {0};
 	sdo_string_t *kx = sdo_get_device_kex_method();
 	sdo_string_t *cs = sdo_get_device_crypto_suite();
 
@@ -59,9 +58,6 @@ int32_t msg60(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write Nonce5\n");
 		return false;
 	}
-
-	LOG(LOG_DEBUG, "TO2.HelloDevice: Sending Nonce5: %s\n",
-	    sdo_nonce_to_string(ps->n5->bytes, buf, sizeof buf) ? buf : "");
 
 	/* Fill in the key exchange */
 	if (!sdow_text_string(&ps->sdow, kx->bytes, kx->byte_sz)) {

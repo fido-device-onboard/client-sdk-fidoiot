@@ -79,6 +79,7 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 		ret = false;
 		goto end;
 	}
+
 	if (!sdow_text_string(sdow, ocred->mfg_blk->d->bytes, ocred->mfg_blk->d->byte_sz)) {
 		ret = false;
 		goto end;
@@ -281,6 +282,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		LOG(LOG_ERROR, "DeviceCredential read: DCDeviceInfo not found\n");
 		goto end;
 	}
+	our_dev_cred->mfg_blk->d->bytes[device_info_length] = '\0';
 
 	size_t guid_length = 0;
 	if (!sdor_string_length(sdor, &guid_length) || guid_length == 0) {

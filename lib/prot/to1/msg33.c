@@ -35,7 +35,6 @@ int32_t msg33(sdo_prot_t *ps)
 {
 	int ret = -1;
 	sdo_hash_t *ob_hash = NULL;
-	fdo_cose_t *cose = NULL;
 	char prot[] = "SDOProtTO1";
 
 	/* Try to read from internal buffer */
@@ -46,34 +45,34 @@ int32_t msg33(sdo_prot_t *ps)
 
 	LOG(LOG_DEBUG, "TO1.RVRedirect started\n");
 
-	// Allocate for cose object now. Allocate for its members when needed later.
-	// Free immediately once its of no use.
-	cose = sdo_alloc(sizeof(fdo_cose_t));
-	if (!cose) {
+	// allocate memory for to1d here, free when TO2 is done
+	if (ps->to1d_cose) {
+		fdo_cose_free(ps->to1d_cose);
+	}
+	ps->to1d_cose = sdo_alloc(sizeof(fdo_cose_t));
+	if (!ps->to1d_cose) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc COSE\n");
 		goto err;
 	}
 
-	if (!fdo_cose_read(&ps->sdor, cose, true)) {
+	if (!fdo_cose_read(&ps->sdor, ps->to1d_cose, true)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read COSE\n");
 		goto err;
 	}
 
 	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
 	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.b.block_size = cose->cose_payload->byte_sz;
+	ps->sdor.b.block_size = ps->to1d_cose->cose_payload->byte_sz;
 	if (0 != memcpy_s(ps->sdor.b.block, ps->sdor.b.block_size,
-		cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		ps->to1d_cose->cose_payload->bytes, ps->to1d_cose->cose_payload->byte_sz)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to copy Nonce4\n");
 		goto err;
 	}
-	fdo_cose_free(cose);
-	cose = NULL;
 
 	// initialize the parser once the buffer contains COSE payload to be decoded.
 	if (!sdor_parser_init(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initialize SDOR parser\n");
-		return -1;
+		goto err;
 	}
 
 	size_t num_payloadbasemap_items = 0;
@@ -87,7 +86,10 @@ int32_t msg33(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to start array\n");
 		goto err;
 	}
-	// allocate here, free when TO2 is done (TO-DO during TO2 implementation)
+	// allocate here, free when TO2 is done
+	if (ps->rvto2addr) {
+		fdo_rvto2addr_free(ps->rvto2addr);
+	}
 	ps->rvto2addr = sdo_alloc(sizeof(fdo_rvto2addr_t));
 	if (!ps->rvto2addr) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc to1dRV\n");
@@ -112,16 +114,12 @@ int32_t msg33(sdo_prot_t *ps)
 
 	/* Mark as success and ready for TO2 */
 	ps->state = SDO_STATE_DONE;
-	sdor_flush(&ps->sdor);
+	sdo_block_reset(&ps->sdor.b);
 	ps->sdor.have_block = false;
 	ret = 0;
 	LOG(LOG_DEBUG, "TO1.RVRedirect completed successfully\n");
 
 err:
-	if (cose) {
-		fdo_cose_free(cose);
-		cose = NULL;
-	}
 	if (ob_hash) {
 		sdo_hash_free(ob_hash);
 		ob_hash = NULL;
