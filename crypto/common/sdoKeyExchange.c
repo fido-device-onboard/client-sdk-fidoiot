@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
+#include <math.h>
 #include "sdokeyexchange.h"
 #include "sdoCryptoHal.h"
 #include "util.h"
@@ -11,7 +12,6 @@
 #include "stdlib.h"
 #include "sdoCryptoCtx.h"
 #include "sdoCrypto.h"
-#include <math.h>
 
 /* Static functions */
 static int32_t remove_java_compatible_byte_array(sdo_byte_array_t *BArray);
@@ -227,9 +227,12 @@ static int32_t remove_java_compatible_byte_array(sdo_byte_array_t *BArray)
 }
 
 /**
- * Internal API
+ * Write the KeyMaterial of size keymat_size into keymat buffer.
+ * KeyMaterial = (byte)i||"FIDO-KDF"||(byte)0||"AutomaticOnboardTunnel"||Lstr
+ *
+ * index is used to determine the 1st byte 'i', and cannot be more than 2.
+ * bytes_length is the total number of key-bytes to generate, and is used to calculate Lstr.
  */
-
 static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size, const int index,
 	const int bytes_length)
 {
@@ -238,10 +241,12 @@ static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size, const int index,
 	size_t ofs = 0;
 	uint8_t idx0_val;
 
-	if (index == 1)
+	if (index == 1) {
 		idx0_val = 0x01;
-	else if (index == 2)
+	}
+	else if (index == 2) {
 		idx0_val = 0x02;
+	}
 	else {
 		// for now, we cannot go beyond 2
 		LOG(LOG_ERROR, "Invalid i\n");
@@ -363,7 +368,11 @@ static int32_t kex_kdf(void)
 	// total number of rounds to iterate for generating the total number of key bytes
 	num_rounds = ceil((double)key_bytes_sz / SDO_SHA_DIGEST_SIZE_USED);
 
-	// KeyMaterial size
+	// KeyMaterial = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where
+	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL, and
+	// Lstr = (byte)L1||(byte)L2, depending on L=key-bytes to generate
+	// Therefore, KeyMaterial size = 1 for byte (i) + length of Label + 1 for byte (0) +
+	// length of Context + 2 bytes for Lstr
 	keymat_size = 1 + strnlen_s(kex_ctx->kdf_label, SDO_MAX_STR_SIZE) + 1 +
 		    strnlen_s(kex_ctx->context_label, SDO_MAX_STR_SIZE) + 1 + 1;
 	// Allocate memory for KeyMaterial
@@ -409,10 +418,12 @@ static int32_t kex_kdf(void)
 			goto err;
 		}
 
-		if (key_bytes_index + SDO_SHA_DIGEST_SIZE_USED < key_bytes_sz)
+		if (key_bytes_index + SDO_SHA_DIGEST_SIZE_USED <= key_bytes_sz) {
 			num_key_bytes_to_copy = SDO_SHA_DIGEST_SIZE_USED;
-		else
+		}
+		else {
 			num_key_bytes_to_copy = key_bytes_sz - key_bytes_index;
+		}
 
 		// copy the generated hmac (key/a part of the key) into generated key buffer
 		if (memcpy_s(&key_bytes[key_bytes_index], key_bytes_sz, hmac,
@@ -420,7 +431,12 @@ static int32_t kex_kdf(void)
 			LOG(LOG_ERROR, "Failed to copy generated key bytes\n");
 			goto err;
 		}
-		key_bytes_index += SDO_SHA_DIGEST_SIZE_USED;
+		key_bytes_index += num_key_bytes_to_copy;
+	}
+
+	if (key_bytes_index != key_bytes_sz) {
+		LOG(LOG_ERROR, "Mismatch is generated key bytes length\n");
+		goto err;
 	}
 
 	// Get the sek

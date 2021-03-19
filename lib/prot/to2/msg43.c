@@ -101,7 +101,7 @@ int32_t msg63(sdo_prot_t *ps)
 	if (!sdo_signature_verification(cose->cose_payload,
 					cose->cose_signature,
 					ps->ovoucher->ov_entries->pk)) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to verify OVEntry signature\n");
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to verify OVEntry signature\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.OVNextEntry: OVEntry Signature verification successful\n");
