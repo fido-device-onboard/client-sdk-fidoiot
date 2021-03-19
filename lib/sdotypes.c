@@ -1029,6 +1029,7 @@ sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 sdo_string_t *sdo_string_alloc_with(const char *data, int byte_sz)
 {
 	sdo_string_t *temp_str = NULL;
+	// Buffer would store NULL terminated string, adding +1 for '\0'
 	int total_size = byte_sz + 1;
 
 	if (!data)
