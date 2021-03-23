@@ -46,7 +46,7 @@ int32_t msg31(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!sdo_eb_read(&ps->sdor)) {
+	if (!sdo_siginfo_read(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to read eBSigInfo\n");
 		goto err;
 	}

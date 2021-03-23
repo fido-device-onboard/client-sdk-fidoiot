@@ -215,7 +215,7 @@ int32_t msg61(sdo_prot_t *ps)
 	sdo_byte_array_free(ps->n5r);
 	ps->n5r = NULL;	
 
-	if (!sdo_eb_read(&ps->sdor)) {
+	if (!sdo_siginfo_read(&ps->sdor)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read eBSigInfo\n");
 		goto err;
 	}

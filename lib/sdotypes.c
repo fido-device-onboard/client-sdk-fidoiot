@@ -242,202 +242,6 @@ int sdo_bits_randomize(sdo_bits_t *b)
 }
 #endif
 
-/**
- * Convert bytes to string
- * @param b - pointer to the struct bits
- * @param typename - string to be appended
- * @param buf - converted string
- * @param buf_sz - size of the converted string
- * return pointer to the string if success
- */
-char *sdo_bits_to_string(sdo_bits_t *b, const char *typename, char *buf,
-			 int buf_sz)
-{
-	size_t i;
-	int n;
-	char *buf0 = buf;
-	char hbuf[5];
-
-	if (!b || !typename || !buf)
-		return NULL;
-
-	n = snprintf_s_si(buf, buf_sz, "[%s[%d]:", (char *)typename,
-			  (int)b->byte_sz);
-
-	if (n < 0) {
-		LOG(LOG_ERROR, "snprintf() failed!\n");
-		return NULL;
-	}
-
-	buf += n;
-	buf_sz -= n;
-	i = 0;
-	while (i < b->byte_sz && buf_sz > 1) {
-		// Do it this way to fill up the string completely
-		// else the truncated public key will be terminated below.
-
-		if (snprintf_s_i(hbuf, sizeof(hbuf), "%02X", b->bytes[i++]) <
-		    0) {
-			LOG(LOG_ERROR, "snprintf() failed!\n");
-			return NULL;
-		}
-
-		if (strncpy_s(buf, buf_sz, hbuf, buf_sz) != 0) {
-			LOG(LOG_ERROR, "strcpy() failed!\n");
-			return NULL;
-		}
-		n = strnlen_s(buf, buf_sz);
-
-		if (!n || n == buf_sz) {
-			LOG(LOG_ERROR, "strlen() failed!\n");
-			return NULL;
-		}
-
-		buf += n;
-		buf_sz -= n;
-	}
-	if (buf_sz > 1) {
-		*buf++ = ']';
-		*buf++ = 0;
-	}
-	return buf0;
-}
-
-/**
- * Parse single PSI-tuple to get module name, message and value
- * @param psi_tuple - pointer to a single PSI tuple
- * @param psi_len - length of single PSI tuple
- * @param mod_name - name of module retured after parsing PSI tuple
- * @param mod_msg -  module message retured after parsing PSI tuple
- * @param mod_val - module value retured after parsing PSI tuple
- * @param cb_return_val - Pointer of type int which will be filled with error
- * value.
- * return true if valid PSI-tuple, false otherwise.
- */
-bool sdo_get_module_name_msg_value(char *psi_tuple, int psi_len, char *mod_name,
-				   char *mod_msg, char *mod_val,
-				   int *cb_return_val)
-{
-	if (!psi_tuple || !psi_len || !mod_name || !mod_msg || !mod_val ||
-	    !cb_return_val) {
-		LOG(LOG_ERROR, "Invalid input!\n");
-		goto err;
-	}
-
-	char *rem = NULL;
-	int rem_len = 0;
-	int name_len, msg_len, val_len;
-
-	name_len = msg_len = val_len = 0;
-
-	rem = strchr(psi_tuple, ':');
-
-	if (!rem) {
-		LOG(LOG_ERROR, "module name not found!\n");
-		*cb_return_val = MESSAGE_BODY_ERROR;
-		goto err;
-	} else {
-		rem_len = strnlen_s(rem, SDO_MAX_STR_SIZE);
-
-		if (!rem_len || rem_len == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR, "Strlen() failed!\n");
-			*cb_return_val = SDO_SI_INTERNAL_ERROR;
-			goto err;
-		}
-
-		name_len = psi_len - rem_len;
-
-		if (name_len == 0) {
-			LOG(LOG_ERROR, "Module name is empty!\n");
-			*cb_return_val = MESSAGE_BODY_ERROR;
-			goto err;
-		}
-
-		if (name_len > SDO_MODULE_NAME_LEN) {
-			LOG(LOG_ERROR, "Module max-name-len limit exceeded!\n");
-			*cb_return_val = SDO_SI_CONTENT_ERROR;
-			goto err;
-		}
-
-		if (strncpy_s(mod_name, name_len + 1, psi_tuple, name_len) !=
-		    0) {
-			*cb_return_val = SDO_SI_INTERNAL_ERROR;
-			LOG(LOG_ERROR, "Strcpy() failed!\n");
-			goto err;
-		}
-		psi_tuple += name_len;
-		psi_len -= name_len;
-	}
-
-	// consuming ':'
-	++psi_tuple;
-	--psi_len;
-
-	rem = strchr(psi_tuple, '~');
-
-	if (!rem) {
-		LOG(LOG_ERROR, "Module message not found!\n");
-		*cb_return_val = MESSAGE_BODY_ERROR;
-		goto err;
-	} else {
-		rem_len = strnlen_s(rem, SDO_MAX_STR_SIZE);
-
-		if (!rem_len || rem_len == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR, "Strlen() failed!\n");
-			*cb_return_val = SDO_SI_INTERNAL_ERROR;
-			goto err;
-		}
-
-		msg_len = psi_len - rem_len;
-
-		if (msg_len == 0) {
-			// module msg is not available, copy empty string
-			*mod_msg = '\0';
-		} else if (msg_len <= SDO_MODULE_MSG_LEN) {
-			if (strncpy_s(mod_msg, msg_len + 1, psi_tuple,
-				      msg_len) != 0) {
-				*cb_return_val = SDO_SI_INTERNAL_ERROR;
-				LOG(LOG_ERROR, "Strcpy() failed!\n");
-				goto err;
-			}
-
-		} else {
-			LOG(LOG_ERROR, "Module max-msg-len limit exceeded!\n");
-			*cb_return_val = SDO_SI_CONTENT_ERROR;
-			goto err;
-		}
-		psi_tuple += msg_len;
-		psi_len -= msg_len;
-	}
-
-	// consuming '~'
-	++rem;
-	--rem_len;
-
-	if (rem_len > 0) {
-		if (rem_len > SDO_MODULE_VALUE_LEN) {
-			LOG(LOG_ERROR, "Module max-val-len limit exceeded!\n");
-			*cb_return_val = SDO_SI_CONTENT_ERROR;
-			goto err;
-		}
-
-		// module value is available and 'rem' shall contain whole of it
-		if (strncpy_s(mod_val, rem_len + 1, rem, rem_len) != 0) {
-			*cb_return_val = SDO_SI_INTERNAL_ERROR;
-			LOG(LOG_ERROR, "Strcpy() failed!\n");
-			goto err;
-		}
-	} else {
-		// module value is not available, copy empty string
-		*mod_val = '\0';
-	}
-
-	return true;
-
-err:
-	return false;
-}
-
 #if 0
 /**
  * Convert string to hexadecimal
@@ -648,271 +452,6 @@ sdo_byte_array_t *sdo_byte_array_append(sdo_byte_array_t *baA,
 	return baAB;
 }
 
-/**
- * Byte array is represented as {len,"byte array in base64"}
- * @param g - pointer to the byte array struct
- * @param buf - pointer to the output buffer
- * @param buf_sz - size of the buffer
- * @return pointer to the buffer
- */
-char *sdo_byte_array_to_string(sdo_byte_array_t *g, char *buf, int buf_sz)
-{
-	int obuf_sz = buf_sz;
-	char *buf0 = buf;
-
-	if (memset_s(buf, buf_sz, 0) != 0) {
-		LOG(LOG_ERROR, "Memset Failed\n");
-		return NULL;
-	}
-
-	int char_count = 0;
-
-	if (g->byte_sz && g->bytes != NULL) {
-		int b64Len = bin_toB64Length(g->byte_sz);
-
-		/* First put out the length followed by a comma. */
-		int len = snprintf_s_i(buf, buf_sz, "%d,", b64Len);
-
-		buf += len;
-		buf_sz -= len;
-
-		/* Check to see if we have enough buffer for the conversion. */
-		if ((bin_toB64Length(g->byte_sz) + 1) < buf_sz) {
-			*buf++ = '"';
-			buf_sz--;
-			/* Then the buffer of the base64 representation. */
-			char_count = bin_toB64(g->byte_sz, g->bytes, 0, buf_sz,
-					       (uint8_t *)buf, 0);
-			buf += char_count;
-			buf_sz -= char_count;
-			*buf++ = '"';
-			buf_sz--;
-		}
-		if ((char_count + len) > obuf_sz - 1) {
-			char_count = obuf_sz - 1;
-		}
-		*buf = 0;
-	}
-	return buf0;
-}
-
-/**
- * Read a base64 byte array, "byte array in base64"
- * @param sdor - data to be read in the form of JSON
- * @param ba - byte array where the data read hase to be written
- * @return the length of the data read and written if success else zero
- */
-int sdo_byte_array_read_chars(sdor_t *sdor, sdo_byte_array_t *ba)
-{
-	if (!sdor || !ba)
-		return 0;
-
-	if (ba->bytes) {
-		sdo_free(ba->bytes);
-		ba->bytes = NULL;
-	}
-
-	// Determine the needed length
-	size_t bin_len;
-
-	// DEBUG - added for correct buff allocation
-	if (sdor_string_length(sdor, &bin_len)) {
-		LOG(LOG_DEBUG, "Byte Array len %zu\n", bin_len);
-
-		// Allocate a BPBits for the array
-		ba->bytes = sdo_alloc(bin_len * sizeof(uint8_t));
-		if (!ba->bytes)
-			return 0;
-		// Now read the byte array
-		// TO-DO : Evaluate if its duplicate. This should have contained char* instead of uint8_t*
-		// as per the method name.
-		bool result =
-		    sdor_byte_string(sdor, ba->bytes, bin_len);
-		if (result)
-			ba->byte_sz = bin_len;
-		return bin_len;
-	}
-	return 0;
-}
-
-/**
- * Read a base64 byte array, len,"byte array in base64"
- * @param sdor - data to be read in the form of JSON
- * @param ba - pointer the struct byte array which holds the read data
- * @return size of data read is success else zero
- */
-int sdo_byte_array_read(sdor_t *sdor, sdo_byte_array_t *ba)
-{
-	if (!sdor || !ba)
-		return 0;
-
-	/*FIXME: if unnecessary remove it */
-	if (ba->bytes) {
-		sdo_free(ba->bytes);
-		ba->bytes = NULL;
-		ba->byte_sz = 0;
-	}
-
-	// Determine the needed length
-	size_t bin_len;
-
-	if (sdor_string_length(sdor, &bin_len)) {
-
-		// LOG(LOG_ERROR, "B64 Array len %d\n", bin_len_reported);
-
-		ba->bytes = sdo_alloc((bin_len) * sizeof(uint8_t));
-		if (!ba->bytes)
-			return 0;
-		// Now read the byte array
-		bool result = sdor_byte_string(sdor, ba->bytes, bin_len);
-		if (result)
-			ba->byte_sz = bin_len;
-		return bin_len;
-	} else {
-		return 0;
-	}
-}
-
-/**
- * TO-DO : Used by Encrypted message. Method needs to be re-written.
- * Update during TO2 implementation.
- * 
- * Read a base64 byte array,
- * Format: [[ size of ivdata ,ivdata], size of cipher text, "base64 cipher
- * text"]
- * @param sdor - data to be read in the form of JSON
- * @param ba - byte array where the data read hase to be written
- * @param ct_string - byte array where data read for no state change
- * @param iv_data - byte array fir iv data
- * @return the size of the data read if seccess else zero
- */
-/*
-int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
-				  sdo_byte_array_t **ct_string,
-				  uint8_t *iv_data)
-{
-	int ret = 0;
-	int bin_len_reported = 0, b64Len_reported = 0, b64Len_expected = 0;
-	int iv_data_size;
-	uint32_t iv_size_reported = 0;
-	int iv_size_64 = -1;
-
-	if (!sdor || !ba || !iv_data || !ct_string) {
-		goto err;
-	}
-
-	// read sequence:
-	// 1. [size of iv, iv_data]
-	// 2. size of cipher text
-	// 3. cipher text
-	uint32_t ct_size = sdo_read_array_sz(sdor) + 1;
-
-	if ((*ct_string != NULL) || (0 == ct_size)) {
-		LOG(LOG_ERROR, "Incorrect arguments passed!\n");
-		goto err;
-	}
-	*ct_string = sdo_byte_array_alloc(ct_size);
-
-	if (NULL == *ct_string) {
-		LOG(LOG_ERROR, "Failed to alloc buffer!\n");
-		goto err;
-	}
-
-	if ((uint32_t)sdo_read_array_no_state_change(
-		sdor, (*ct_string)->bytes) >= ct_size) {
-		LOG(LOG_ERROR, "Issue with string read\n");
-		goto err;
-	}
-
-	// The json object for IV
-	sdor_begin_sequence(sdor);
-	// Get binary length reported
-	iv_size_reported = sdo_read_uint(sdor);
-
-	if (iv_size_reported <= 0 && iv_size_reported > 16) {
-		LOG(LOG_ERROR, "Invalid IV reported!\n");
-		goto err;
-	}
-
-	iv_size_64 = bin_toB64Length(iv_size_reported);
-
-	// Read from the array i.e " "
-	iv_data_size = sdo_read_byte_array_field(sdor, iv_size_64,
-						  iv_data, AES_IV);
-	if (0 == iv_data_size) {
-		LOG(LOG_ERROR, "Failed to read the counter value %d %d\n",
-		    iv_data_size, iv_size_reported);
-		goto err;
-	}
-
-	sdor_end_sequence(sdor); // e.g.: [16,"8Qy3c_bxI7NQ+Ef0XAAAAAA=="]
-
-	// Get cipher text binary length reported
-	bin_len_reported = sdo_read_uint(sdor);
-
-	if (bin_len_reported <= 0) {
-		LOG(LOG_ERROR, "Invalid binary length reported!\n");
-		goto err;
-	}
-
-	// Get incoming B64 string length (it must be a multiple of 4)
-	b64Len_reported = sdo_read_string_sz(sdor);
-
-	if ((b64Len_reported <= 0) || (b64Len_reported % 4 != 0)) {
-		LOG(LOG_ERROR, "Invalid input B64 string!\n");
-		goto err;
-	}
-
-	// Calculated expected B64 length using binary length reported
-	b64Len_expected = bin_toB64Length(bin_len_reported);
-
-	if (b64Len_reported != b64Len_expected) {
-		LOG(LOG_ERROR, "Incoming B64 string length is not proportional "
-			       "to binary length reported!\n");
-		goto err;
-	}
-
-	//Allocate required array
-	if (ba->bytes)
-		goto err;
-
-	ba->bytes = sdo_alloc(bin_len_reported * sizeof(uint8_t));
-
-	if (!ba->bytes)
-		goto err;
-
-	// Now read the byte array
-	ret = sdo_read_byte_array_field(sdor, b64Len_reported, ba->bytes,
-					bin_len_reported);
-	ba->byte_sz = ret;
-err:
-	return ret;
-}
-*/
-
-/**
- * TO-DO : Probably need to pass correct length, and evaluate if its a duplicate of sdo_byte_array_write().
- * 
- * Byte array is represented as "byte array in base64"
- * @param sdow - pointer to the written data
- * @param ba - pointer to the byte array that holds data to be read from
- */
-void sdo_byte_array_write_chars(sdow_t *sdow, sdo_byte_array_t *ba)
-{
-	sdow_byte_string(sdow, ba->bytes, ba->byte_sz);
-}
-
-/**
- * TO-DO : Probably need to pass size.
- * Byte array is represented as {len,"byte array in base64"}
- * @param sdow - pointer to the written data
- * @param ba - pointer to the byte array that holds data to be read from
- */
-void sdo_byte_array_write(sdow_t *sdow, sdo_byte_array_t *ba)
-{
-	sdow_byte_string(sdow, ba->bytes, ba->byte_sz);
-}
-
 //------------------------------------------------------------------------------
 // Bignum Routines
 //
@@ -943,15 +482,6 @@ void sdo_big_num_free(sdo_bignum_t *bn)
 	sdo_free(bn);
 }
 #endif
-
-/**
- * Internal API
- */
-// void sdo_big_num_free(sdo_bignum_t *bn)
-//{
-//   sdo_bits_free(bn->value);
-//   sdo_free(bn);
-//}
 
 #if 0
 /**
@@ -1004,7 +534,7 @@ sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 	if (byte_sz == 0)
 		return NULL;
 
-	// +1 for '\0'
+	// Buffer would store NULL terminated string, adding +1 for '\0'
 	int total_size = byte_sz + 1;
 	sdo_string_t *s = (sdo_string_t *)sdo_alloc(sizeof(sdo_string_t));
 	if (!s)
@@ -1021,7 +551,7 @@ sdo_string_t *sdo_string_alloc_size(size_t byte_sz) {
 }
 
 /**
- * Create a sdo_string_t object from a non zero terminated string
+ * Create a sdo_string_t object from a non zero terminated string.
  * @param data - a pointer to the string
  * @param byte_sz - the number of characters in the string ( size 0 or more)
  * @return an allocated sdo_string_t object containing the string
@@ -1162,94 +692,6 @@ bool sdo_string_resize_with(sdo_string_t *b, int new_byte_sz, const char *data)
 		return false;
 }
 
-#if LOG_LEVEL == LOG_MAX_LEVEL
-/**
- *  Returns a zero terminated string value from the sdo_string_t device
- *  @param b - the source SDOString device
- *  @param buf - pointer to a buffer to fill
- *  @param buf_sz - the size of the buffer provided at buf
- *  @return pointer to the beginning of the zero terminated string
- */
-char *sdo_string_to_string(sdo_string_t *b, char *buf, int buf_sz)
-{
-	if (buf_sz >= b->byte_sz + 1) {
-		if (memcpy_s(buf, b->byte_sz, b->bytes, b->byte_sz)) {
-			LOG(LOG_ERROR, "Memcpy Failed\n");
-			return NULL;
-		}
-		buf[b->byte_sz + 1] = 0;
-	}
-	return buf;
-}
-#endif
-
-/**
- * Read a string from the input buffer
- * The string format is "a string", not zero terminated
- * @param sdor - pointer to the input buffer to parse
- * @param b - the SDOString object to fill
- * @return true oif completed successfully, false otherwise
- */
-bool sdo_string_read(sdor_t *sdor, sdo_string_t *b)
-{
-	if (!sdor || !b)
-		return false;
-
-	// Clear the passed sdo_string_t object's buffer
-	sdo_string_init(b);
-
-	size_t _len;
-
-	if (!sdor_string_length(sdor, &_len) || !sdo_string_resize(b, (_len + 1))) {
-		LOG(LOG_ERROR, "String Resize failed!, requested str_len %zu\n",
-		    (_len + 1));
-		return false;
-	}
-
-	// TO-DO : Is +1 really needed?
-	b->byte_sz = _len + 1;
-	sdor_text_string(sdor, b->bytes, b->byte_sz);
-	return true;
-}
-
-#if LOG_LEVEL == LOG_MAX_LEVEL
-/* -----------------------------------------------------------------------------
- * GUID routines
- */
-/**
- * convert to GUID to string
- * @param g - pointer to the byte array that holds the GUID
- * @param buf - pointer to the converted string
- * @param buf_sz - size of the converted string
- * @return pointer to the converted string
- */
-char *sdo_guid_to_string(sdo_byte_array_t *g, char *buf, int buf_sz)
-{
-	static const char str[] = "[Guid[16]:";
-	int i = 0, n = sizeof(str) - 1;
-	char *a = (char *)g->bytes;
-
-	/* buf_sz >= strlen(str) + SDO_GUID_BYTES + ']' + '\0' */
-	if (buf_sz < n + SDO_GUID_BYTES + 1 + 1)
-		return NULL;
-
-	if (memcpy_s(buf, buf_sz, str, n) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		return NULL;
-	}
-
-	while (i < SDO_GUID_BYTES) {
-		buf[n++] = INT2HEX(((*a >> 4) & 0xf));
-		buf[n++] = INT2HEX((*a & 0xf));
-		i++;
-		a++;
-	}
-	buf[n++] = ']';
-	buf[n++] = 0;
-	return buf;
-}
-#endif
-
 /**
  * Write the SigInfo of the form:
  * SigInfo = [
@@ -1295,20 +737,15 @@ end:
 }
 
 /**
- * Allocate Certificate chain and initialize to NULL
- * @return null
+ * Read the SigInfo of the form:
+ * SigInfo = [
+ *   sgType: DeviceSgType,
+ *   Info: bstr
+ * ]
+ * @param sdor - pointer to the struct containing GID
+ * @return true if write is successfull. false, otherwise.
  */
-sdo_cert_chain_t *sdo_cert_chain_alloc_empty(void)
-{
-	return sdo_alloc(sizeof(sdo_cert_chain_t));
-}
-
-/**
- * Do a dummy read for ECDSA
- * @param sdor - pointer to the read location in CBOR format
- * @return true on success and false on failure
- */
-bool sdo_eb_read(sdor_t *sdor)
+bool sdo_siginfo_read(sdor_t *sdor)
 {
 	bool ret = false;
 	int type = 0;
@@ -1475,72 +912,14 @@ void sdo_hash_free(sdo_hash_t *hp)
 	sdo_free(hp);
 }
 
-#if LOG_LEVEL == LOG_MAX_LEVEL
 /**
- * Convert hash type to string
- * @param hash_type - hash type that has to be converted to string
- * @return the converted string
- */
-char *sdo_hash_type_to_string(int hash_type)
-{
-	static char buf[25];
-
-	switch (hash_type) {
-	case SDO_CRYPTO_HASH_TYPE_NONE:
-		return "NONE";
-	case SDO_CRYPTO_HASH_TYPE_SHA_1:
-		return "SHA1";
-	case SDO_CRYPTO_HASH_TYPE_SHA_256:
-		return "SHA256";
-	case SDO_CRYPTO_HASH_TYPE_SHA_384:
-		return "SHA384";
-	case SDO_CRYPTO_HASH_TYPE_SHA_512:
-		return "SHA512";
-	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
-		return "HMAC_SHA256";
-	case SDO_CRYPTO_HMAC_TYPE_SHA_512:
-		return "HMAC_SHA512";
-	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
-		return "HMAC_SHA384";
-	default:
-		return "NONE";
-	}
-	if (snprintf_s_i(buf, sizeof(buf), "-type%u?", hash_type) < 0) {
-		LOG(LOG_ERROR, "snprintf() failed!\n");
-		return NULL;
-	}
-	return buf;
-}
-
-/**
- * convert the hash type to the string
- * @param hp - pointer to the struct if type hash
- * @param buf - pointer to the converted string
- * @param buf_sz - size of the converted string
- * @return pointer to the converted string
- */
-char *sdo_hash_to_string(sdo_hash_t *hp, char *buf, int buf_sz)
-{
-	char name[35];
-	char *hash_ptr = NULL;
-
-	hash_ptr = sdo_hash_type_to_string(hp->hash_type);
-	if (hash_ptr) {
-		if (strncpy_s(name, sizeof(name), hash_ptr,
-			      strnlen_s(hash_ptr, sizeof(name))) != 0) {
-			LOG(LOG_ERROR, "strcpy() failed!\n");
-			return NULL;
-		}
-		return sdo_bits_to_string(hp->hash, name, buf, buf_sz);
-	} else
-		return NULL;
-}
-#endif
-
-/**
- * Read the hash from JSON format
+ * Read the hash of the form:
+ * Hash = [
+ *   hashtype: uint8,
+ *   hash: bstr
+ * ]
  * @param sdor - input data in JSON format
- * @param hp - pointer to the struct fof type hash
+ * @param hp - pointer to the struct of type hash
  * @return number of bytes read , 0 if read failed
  */
 int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
@@ -1595,7 +974,11 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
 }
 
 /**
- * Write the hash type
+ * Read the hash of the form:
+ * Hash = [
+ *   hashtype: uint8,
+ *   hash: bstr
+ * ]
  * @param sdow - pointer to the output struct of type JSON message
  * @param hp - pointer to the struct of type hash
  * @return bool true if write was successful, false otherwise
@@ -1603,33 +986,28 @@ int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp)
 bool sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp)
 {
 	bool ret = false;
-	if (!sdow || !hp)
-		ret = false;
-	if (!sdow_start_array(sdow, 2))
-		ret = false;
-	if (!sdow_signed_int(sdow, hp->hash_type))
-		ret = false;
-	if (!sdow_byte_string(sdow, hp->hash->bytes, hp->hash->byte_sz))
-		ret = false;
-	if (!sdow_end_array(sdow))
-		ret = false;
+	if (!sdow || !hp) {
+		return ret;
+	}
+	if (!sdow_start_array(sdow, 2)) {
+		LOG(LOG_ERROR, "Hash write: Failed to start array\n");
+		return ret;
+	}
+	if (!sdow_signed_int(sdow, hp->hash_type)) {
+		LOG(LOG_ERROR, "Hash write: Failed to write hashtype\n");
+		return ret;
+	}
+	if (!sdow_byte_string(sdow, hp->hash->bytes, hp->hash->byte_sz)) {
+		LOG(LOG_ERROR, "Hash write: Failed to write hash\n");
+		return ret;
+	}
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "Hash write: Failed to end array\n");
+		return ret;
+	}
 	LOG(LOG_DEBUG, "Hash write completed\n");
 	ret = true;
 	return ret;
-}
-
-/**
- * TO-DO : Empty byte here?
- * Write out a NULL value hash
- * @param sdow - pointer to the output buffer
- * @return none
- */
-void sdo_hash_null_write(sdow_t *sdow)
-{
-	if (!sdow)
-		return;
-	sdo_hash_t *hp = sdo_hash_alloc_empty();
-	sdo_hash_write(sdow, hp);
 }
 
 //------------------------------------------------------------------------------
@@ -1877,6 +1255,14 @@ bool sdo_read_ipaddress(sdor_t *sdor, sdo_ip_address_t *sdoip)
 	return true;
 }
 
+/**
+ * Copy the IP Address contents stored in the input sdo_byte_array_t, into
+ * the pre-initialized sdo_ip_address_t struct.
+ * 
+ * @param ip_bytes source byte array containing IP Address and its length to copy
+ * @param sdoip pre-initialized IP Address struct as destination
+ * @return true if the operation was a success, false otherwise
+ */
 bool sdo_convert_to_ipaddress(sdo_byte_array_t *ip_bytes, sdo_ip_address_t *sdoip)
 {
 	if (!ip_bytes || !sdoip)
@@ -1890,81 +1276,6 @@ bool sdo_convert_to_ipaddress(sdo_byte_array_t *ip_bytes, sdo_ip_address_t *sdoi
 	}
 
 	return true;
-}
-
-/**
- * Wrirte the IP address
- * @param sdow - output to which IP is written to
- * @param sdoip - pointer to the struct of type IP address
- * @return none
- */
-void sdo_write_ipaddress(sdow_t *sdow, sdo_ip_address_t *sdoip)
-{
-	sdow_byte_string(sdow, &sdoip->addr[0], sdoip->length);
-	// sdo_write_byte_array(sdow, &sdoip->addr[0], sdoip->length);
-}
-
-/**
- * Internal API
- */
-#if 0
-void SDODNSEmpty(sdo_dns_name_t *b)
-{
-	if (b->name) {
-		sdo_free(b->name);
-		b->name = NULL;
-	}
-	b->length = 0;
-}
-#endif
-
-/**
- * Read the DNS information
- * @param sdor - pointer to the input information
- */
-char *sdo_read_dns(sdor_t *sdor)
-{
-	char *buf;
-	size_t len;
-
-	/* read length of DNS */
-	if (sdor_string_length(sdor, &len) || len <= 0) {
-		// TO-DO : Evaluate this
-		// sdo_free(buf);
-		return NULL;
-	}
-
-	buf = sdo_alloc(len + 1);
-
-	if (!buf)
-		return NULL;
-
-	if(!sdor_text_string(sdor, buf, len + 1)) {
-		sdo_free(buf);
-		LOG(LOG_ERROR, "DNSAddress read failed\n");
-		return NULL;
-	}
-
-	return buf;
-}
-
-/**
- * TO-DO : Pass in the AppID's length.
- * 
- * Write the APPID
- * @param sdow - pointer to the written APPID
- */
-void sdo_app_id_write(sdow_t *sdow)
-{
-	/* Swap appid to network endianess if needed */
-	/* TODO: Change to compilation time byteswap */
-	uint32_t appid = sdo_host_to_net_long(APPID);
-	/* AppID is always bytes according specification, so we can hardcode it
-	 * here
-	 */
-	sdow_byte_string(sdow, (uint8_t *)&appid, sizeof(appid));
-	/*sdo_write_byte_array_one_int(sdow, SDO_APP_ID_TYPE_BYTES,
-				     (uint8_t *)&appid, sizeof(appid));*/
 }
 
 //------------------------------------------------------------------------------
@@ -2085,61 +1396,13 @@ void sdo_public_key_free(sdo_public_key_t *pk)
 }
 
 /**
- * Convert he alggorith to string
- * @param alg - type of the algorithm
- * @return pointer to converted algorith string
- */
-const char *sdo_pk_alg_to_string(int alg)
-{
-	static char buf[25];
-
-	switch (alg) {
-	case SDO_CRYPTO_PUB_KEY_ALGO_NONE:
-		return "AlgNONE";
-	case SDO_CRYPTO_PUB_KEY_ALGO_RSA:
-		return "AlgRSA";
-	case SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1:
-		return "AlgEPID11";
-	case SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0:
-		return "AlgEPID20";
-	default:
-		return NULL;
-	}
-	if (snprintf_s_i(buf, sizeof(buf), "Alg:%u?", alg) < 0) {
-		LOG(LOG_ERROR, "snprintf() failed!\n");
-		return NULL;
-	}
-	return buf;
-}
-
-/**
- * Convert the encoding type to string
- * @param enc - type encoding
- * @return pointer to the converted encoding type string
- */
-const char *sdo_pk_enc_to_string(int enc)
-{
-	static char buf[25];
-
-	switch (enc) {
-	case SDO_CRYPTO_PUB_KEY_ENCODING_X509:
-		return "EncX509";
-	case SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP:
-		return "EncRSAMODEXP";
-	case SDO_CRYPTO_PUB_KEY_ENCODING_EPID:
-		return "EncEPID";
-	default:
-		return NULL;
-	}
-	if (snprintf_s_i(buf, sizeof(buf), "Enc:%u?", enc) < 0) {
-		LOG(LOG_ERROR, "snprintf() failed!\n");
-		return NULL;
-	}
-	return buf;
-}
-
-/**
  * Write a full public key to the output buffer
+ * PublicKey = [
+ *	pkType,
+ *	pkEnc,
+ *	pkBody
+ * ]
+ *
  * @param sdow - output buffer to hold CBOR representation
  * @param pk - pointer to the sdo_public_key_t object
  * @return none
@@ -2149,13 +1412,6 @@ bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
 	if (!sdow)
 		return false;
 
-	/* PublicKey format as per Section 3.3.4 of FDO specification:
-	* PublicKey = [
-    *	pkType,
-    *	pkEnc,
-    *	pkBody
-	*	]
-	*/
 	if (!sdow_start_array(sdow, 3)) {
 		LOG(LOG_ERROR, "PublicKey write: Failed to start array.\n");
 		return false;
@@ -2181,177 +1437,13 @@ bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk)
 }
 
 /**
- * Convert the public key to string
- * @param pk - pointer to the public key
- * @param buf - pointer to the converted string
- * @param bufsz - size of the converted string
- * @return pointer to the converted string
- */
-char *sdo_public_key_to_string(sdo_public_key_t *pk, char *buf, int bufsz)
-{
-	char *buf0 = buf;
-	int n = 0;
-	char temp_char[20];
-	const char *char_ptr;
-
-	if (!pk || !buf)
-		return NULL;
-
-	char_ptr = temp_char;
-
-	if (strncpy_s(buf, bufsz, "[SDOPublic_key", bufsz) != 0) {
-		LOG(LOG_ERROR, "strcpy() failed!\n");
-		return NULL;
-	}
-
-	n = strnlen_s(buf, bufsz);
-
-	if (!n || n == bufsz) {
-		LOG(LOG_ERROR, "strlen() failed!\n");
-		return NULL;
-	}
-
-	buf += n;
-	bufsz -= n;
-
-	char_ptr = sdo_pk_alg_to_string(pk->pkalg);
-
-	if (!char_ptr)
-		return NULL;
-
-	if (strncpy_s(buf, bufsz, " alg:", bufsz) != 0) {
-		LOG(LOG_ERROR, "strcpy() failed!\n");
-		return NULL;
-	}
-	if (strcat_s(buf, bufsz, char_ptr) != 0) {
-		LOG(LOG_ERROR, "strcat() failed!\n");
-		return NULL;
-	}
-	n = strnlen_s(" alg:", bufsz) + strnlen_s(char_ptr, bufsz);
-
-	if (!n || n == bufsz) {
-		LOG(LOG_ERROR, "strlen() failed!\n");
-		return NULL;
-	}
-
-	buf += n;
-	bufsz -= n;
-
-	char_ptr = sdo_pk_enc_to_string(pk->pkenc);
-
-	if (!char_ptr)
-		return NULL;
-
-	if (strncpy_s(buf, bufsz, " enc:", bufsz) != 0) {
-		LOG(LOG_ERROR, "strcpy() failed!\n");
-		return NULL;
-	}
-
-	if (strcat_s(buf, bufsz, char_ptr) != 0) {
-		LOG(LOG_ERROR, "strcat() failed!\n");
-		return NULL;
-	}
-
-	n = strnlen_s(" enc:", bufsz) + strnlen_s(char_ptr, bufsz);
-
-	if (!n || n == bufsz) {
-		LOG(LOG_ERROR, "strlen() failed!\n");
-		return NULL;
-	}
-
-	buf += n;
-	bufsz -= n;
-
-	if (pk->pkenc == SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP) {
-		char strkey1[] = "\nkey1: ";
-
-		if (strcat_s(buf, SDO_MAX_STR_SIZE, strkey1) != 0) {
-			LOG(LOG_ERROR,
-			    "Owner's PK(RSA_key1) strcat failed !!'\n");
-			return NULL;
-		}
-
-		n = strnlen_s(strkey1, SDO_MAX_STR_SIZE);
-		buf += n;
-		bufsz -= n;
-
-		sdo_byte_array_to_string(pk->key1, buf, bufsz);
-		n = strnlen_s(buf, SDO_MAX_STR_SIZE);
-		if (!n || n == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR,
-			    "Owner's PK(RSA_key1) is either 'NULL' or "
-			    "'isn't NULL terminated'\n");
-			return NULL;
-		}
-		buf += n;
-		bufsz -= n;
-
-		char strkey2[] = "\nkey2: ";
-
-		if (strcat_s(buf, SDO_MAX_STR_SIZE, strkey2) != 0) {
-			LOG(LOG_ERROR,
-			    "Owner's PK(RSA_key2) strcat failed !!'\n");
-			return NULL;
-		}
-
-		n = strnlen_s(strkey2, SDO_MAX_STR_SIZE);
-		buf += n;
-		bufsz -= n;
-
-		if (pk->key2 != NULL) {
-			sdo_byte_array_to_string(pk->key2, buf, bufsz);
-			n = strnlen_s(buf, SDO_MAX_STR_SIZE);
-
-			if (!n || n == SDO_MAX_STR_SIZE) {
-				LOG(LOG_ERROR,
-				    "Owner's PK(RSA_key2) is either 'NULL' "
-				    "or 'isn't NULL terminated'\n");
-				return NULL;
-			}
-
-			buf += n;
-			bufsz -= n;
-		} else {
-			if (strncpy_s(buf, bufsz, "key2 was NULL", bufsz) !=
-			    0) {
-				LOG(LOG_ERROR, "strcpy() failed!\n");
-				return NULL;
-			}
-
-			n = strnlen_s("key2 was NULL", bufsz);
-
-			if (!n || n == bufsz) {
-				LOG(LOG_ERROR, "strlen() failed!\n");
-				return NULL;
-			}
-
-			buf += n;
-			bufsz -= n;
-		}
-	} else {
-		sdo_byte_array_to_string(pk->key1, buf, bufsz);
-		n = strnlen_s(buf, SDO_MAX_STR_SIZE);
-
-		if (!n || n == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR, "buf(non_RSA_key1) is either 'NULL' or "
-				       "'isn't NULL terminated'\n");
-			return NULL;
-		}
-
-		buf += n;
-		bufsz -= n;
-	}
-	if (bufsz > 1) {
-		*buf++ = ']';
-		*buf = 0;
-	}
-	return buf0;
-}
-
-/**
- * TO-DO : Needs to be re-written.
+ * Read the public key information of the form:
+ * PublicKey = [
+ *	pkType,
+ *	pkEnc,
+ *	pkBody
+ * ]
  * 
- * Read the public key information
  * @param sdor - read public key info
  * return pointer to the struct of type public key if success else error code
  */
@@ -2477,9 +1569,14 @@ void sdo_rendezvous_free(sdo_rendezvous_t *rv)
 }
 
 /** 
- * Write a rendezvous object to the output buffer
+ * Write a RendezvousInstr object to the output buffer
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
+ *
  * @param sdow - the buffer pointer
- * @param rv - pointer to the rendezvous object to write
+ * @param rv - pointer to the RendezvousInstr object to write
  * @return true if written successfully, otherwise false
  */
 bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
@@ -2487,105 +1584,144 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 	if (!sdow || !rv)
 		return false;
 	
-	if (!sdow_start_array(sdow, rv->num_params))
+	if (!sdow_start_array(sdow, rv->num_params)) {
+		LOG(LOG_ERROR, "RendezvousInstr: Failed to start array\n");
 		return false;
+	}
 
 	if (rv->dev_only != NULL && *rv->dev_only == true) {
-		if (!sdow_signed_int(sdow, RVDEVONLY))
+		if (!sdow_signed_int(sdow, RVDEVONLY)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDevOnly\n");
 			return false;
+		}
 	}
 
 	if (rv->owner_only != NULL && *rv->owner_only == true) {
-		if (!sdow_signed_int(sdow, RVOWNERONLY))
+		if (!sdow_signed_int(sdow, RVOWNERONLY)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVOwnerOnly\n");
 			return false;
+		}
 	}
 
 	if (rv->ip != NULL) {
 		if (!sdow_signed_int(sdow, RVIPADDRESS) ||
-			!sdow_byte_string(sdow, (uint8_t *) &rv->ip->addr, rv->ip->length))
+			!sdow_byte_string(sdow, (uint8_t *) &rv->ip->addr, rv->ip->length)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVIPAddress\n");
 			return false;
+		}
 	}
 
 	if (rv->po != NULL) {
 		if (!sdow_signed_int(sdow, RVDEVPORT) ||
-			!sdow_signed_int(sdow, *rv->po))
+			!sdow_signed_int(sdow, *rv->po)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDevPort\n");
 			return false;
+		}
 	}
 
 	if (rv->pow != NULL) {
 		if (!sdow_unsigned_int(sdow, RVOWNERPORT) ||
-			!sdow_signed_int(sdow, *rv->pow))
+			!sdow_signed_int(sdow, *rv->pow)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVOwnerPort\n");
 			return false;
+		}
 	}
 
 	if (rv->dn != NULL) {
 		if (!sdow_signed_int(sdow, RVDNS) ||
-			!sdow_text_string(sdow, rv->dn->bytes, rv->dn->byte_sz))
+			!sdow_text_string(sdow, rv->dn->bytes, rv->dn->byte_sz)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDns\n");
 			return false;
+		}
 	}
 
 	if (rv->sch != NULL) {
 		if (!sdow_signed_int(sdow, RVSVCERTHASH) ||
-			!sdo_hash_write(sdow, rv->sch))
+			!sdo_hash_write(sdow, rv->sch)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVSvCertHash\n");
 			return false;
+		}
 	}
 
 	if (rv->cch != NULL) {
 		if (!sdow_signed_int(sdow, RVCLCERTHASH) ||
-			!sdo_hash_write(sdow, rv->cch))
+			!sdo_hash_write(sdow, rv->cch)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVClCertHash\n");
 			return false;
+		}
 	}
 
 	if (rv->ui != NULL) {
 		if (!sdow_signed_int(sdow, RVUSERINPUT) ||
-			!sdow_boolean(sdow, *rv->ui))
+			!sdow_boolean(sdow, *rv->ui)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVUserInput\n");
 			return false;
+		}
 	}
 
 	if (rv->ss != NULL) {
 		if (!sdow_signed_int(sdow, RVWIFISSID) ||
-			!sdow_text_string(sdow, rv->ss->bytes, rv->ss->byte_sz))
+			!sdow_text_string(sdow, rv->ss->bytes, rv->ss->byte_sz)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVWiFiSsid\n");
 			return false;
+		}
 	}
 
 	if (rv->pw != NULL) {
 		if (!sdow_signed_int(sdow, RVWIFIPW) ||
-			!sdow_text_string(sdow, rv->pw->bytes, rv->pw->byte_sz))
+			!sdow_text_string(sdow, rv->pw->bytes, rv->pw->byte_sz)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVWifiPw\n");
 			return false;
+		}
 	}
 
 	if (rv->me != NULL) {
 		if (!sdow_signed_int(sdow, RVMEDIUM) ||
-			!sdow_unsigned_int(sdow, *rv->me))
+			!sdow_unsigned_int(sdow, *rv->me)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVMedium\n");
 			return false;
+		}
 	}
 
 	if (rv->pr != NULL) {
 		if (!sdow_signed_int(sdow, RVPROTOCOL) ||
-			!sdow_unsigned_int(sdow, *rv->pr))
+			!sdow_unsigned_int(sdow, *rv->pr)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVProtocol\n");
 			return false;
+		}
 	}
 
 	if (rv->delaysec != NULL) {
 		if (!sdow_signed_int(sdow, RVDELAYSEC) ||
-			!sdow_unsigned_int(sdow, *rv->delaysec))
+			!sdow_unsigned_int(sdow, *rv->delaysec)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDelaysec\n");
 			return false;
+		}
 	}
 
 	if (rv->bypass != NULL && *rv->bypass == true) {
-		if (!sdow_signed_int(sdow, RVBYPASS))
+		if (!sdow_signed_int(sdow, RVBYPASS)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVBypass\n");
 			return false;
+		}
 	}
 
-	if (!sdow_end_array(sdow))
+	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "RendezvousInstr: Failed to end array\n");
 		return false;
+	}
 	return true;
 }
 
 /**
- * Read the rendezvous from the input buffer
+ * Read the RendezvousInstr from the input buffer
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
+ *
  * @param sdor - the input buffer object
- * @param rv - pointer to the rendezvous object to fill
+ * @param rv - pointer to the RendezvousInstr object to fill
  * @return true of read correctly, false otherwise
  */
 bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
@@ -2906,41 +2042,6 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 	return ret;
 }
 
-#if LOG_LEVEL == LOG_MAX_LEVEL
-/**
- * Takes sdo_rendezvous_t object as input and writes string
- * format data to buffer buf.
- * @param rv - sdo_rendezvous_t pointer as input buffer.
- * @param buf - char pointer as output buffer buf.
- * @param bufsz - size of buffer buf
- * @return char buffer.
- */
-char *sdo_rendezvous_to_string(sdo_rendezvous_t *rv, char *buf, int bufsz)
-{
-	char *r = buf;
-
-	sdo_ipaddress_to_string(rv->ip, buf, bufsz);
-	int i = strnlen_s(buf, SDO_MAX_STR_SIZE);
-
-	if (!i || i == SDO_MAX_STR_SIZE) {
-		LOG(LOG_ERROR,
-		    "buf(rv_ip) is either 'NULL' or 'isn't NULL terminated'\n");
-		return NULL;
-	}
-
-	buf += i;
-	bufsz -= i;
-	i = snprintf_s_i(buf, bufsz, ":%" PRIu32, *rv->po);
-
-	if (i < 0) {
-		LOG(LOG_ERROR, "snprintf() failed!\n");
-		return NULL;
-	}
-
-	return r;
-}
-#endif
-
 //------------------------------------------------------------------------------
 // Rendezvous_list Routines
 //
@@ -2955,7 +2056,7 @@ sdo_rendezvous_list_t *sdo_rendezvous_list_alloc(void)
 }
 
 /**
- * Free all entries  in the list.
+ * Free all entries in the list.
  * @param list - the list to sdo_free.
  * @return none
  */
@@ -3051,6 +2152,12 @@ int sdo_rendezvous_list_add(sdo_rendezvous_directive_t *directives, sdo_rendezvo
 	return directives->num_entries;
 }
 
+/**
+ * Function will return the RendezvousDirective as per the num passed.
+ * @param list - Pointer to the list for the entries.
+ * @param num - index of which entry (RendezvousDirective) to return.
+ * @return sdo_rendezvous_directive_t object.
+ */
 sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(sdo_rendezvous_list_t *list, int num)
 {
 	int index;
@@ -3074,12 +2181,11 @@ sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(sdo_rendezvous_list_t *
 }
 
 /**
- * Function will return the list as per the num passed.
+ * Function will return the RendezvousInstr as per the num passed.
  * @param list - Pointer to the list for the entries.
- * @param num - index of which entry[rventry] to return.
+ * @param num - index of which entry (RendezvousInstr) to return.
  * @return sdo_rendezvous_t object.
  */
-
 sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_directive_t *directive, int num)
 {
 	int index;
@@ -3103,9 +2209,17 @@ sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_directive_t *directive,
 }
 
 /**
- * TO-DO : Method re-qrite
- * 
- * Reads the rendezvous info from the sdor w.r.t the number of entries.
+ * Reads the RendezvousInfo from the sdor w.r.t the number of entries.
+ * RendezvousInfo = [
+ *   + RendezvousDirective
+ * ]
+ * RendezvousDirective = [
+ *   + RendezvousInstr
+ * ]
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
  * @param sdor - Pointer of type sdor_t as input.
  * @param list- Pointer to the sdo_rendezvous_list_t list to be filled.
  * @return true if reads correctly ,else false
@@ -3196,15 +2310,22 @@ int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list)
 }
 
 /**
- * TO-DO : Rewrite based on new structure.
- * 
- * Writes out the entire Rendezvous list as sequences inside a sequence.
+ * Writes out the entire RendezvousInfo list as sequences inside a sequence.
+ * RendezvousInfo = [
+ *   + RendezvousDirective
+ * ]
+ * RendezvousDirective = [
+ *   + RendezvousInstr
+ * ]
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
  * @param sdow - Pointer of type sdow to be filled.
  * @param list- Pointer to the sdo_rendezvous_list_t list from which sdow will
  * be filled w.r.t num_entries specified in the list.
  * @return true if writes correctly ,else false
  */
-
 bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list)
 {
 	if (!sdow || !list)
@@ -3411,74 +2532,6 @@ error:
 }
 
 /**
- * Read the IV
- * @param pkt - pointer to the struct of type packet
- * @param ps_iv - pointer to the read IV
- * @param last_pkt - pointer of type sdo_encrypted_packet_t
- * @return true if success else false
- */
-bool sdo_get_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv,
-		sdo_encrypted_packet_t *last_pkt)
-{
-	uint32_t iv_ctr_ntohl;
-
-	if (!pkt || !ps_iv)
-		return false;
-
-	iv_ctr_ntohl = sdo_net_to_host_long(ps_iv->ctr_dec);
-	if (memcpy_s(pkt->iv, AES_IV, ps_iv->ctr_iv, AES_CTR_IV) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		return false;
-	}
-
-	/* Set the last 4 bytes */
-	if (memcpy_s(pkt->iv + AES_CTR_IV, AES_IV - AES_CTR_IV, &iv_ctr_ntohl,
-		     AES_CTR_IV_COUNTER) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		return false;
-	}
-
-	/* Might not be needed if we get ctr in each packet */
-	if (last_pkt != NULL)
-		ps_iv->ctr_dec += (pkt->em_body->byte_sz + last_pkt->offset) /
-				  SDO_AES_BLOCK_SIZE;
-	else
-		ps_iv->ctr_dec += pkt->em_body->byte_sz / SDO_AES_BLOCK_SIZE;
-	return true;
-}
-
-/**
- * Write the IV
- * @param pkt - pointer to the struct of type packet
- * @param ps_iv - pointer to the struct of type IV
- * @param len - written length
- * @return true if success else false
- */
-bool sdo_write_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv, int len)
-{
-	uint32_t iv_ctr_ntohl = 0;
-
-	if (!pkt || !ps_iv)
-		return false;
-
-	iv_ctr_ntohl = sdo_net_to_host_long(ps_iv->ctr_enc);
-	if (memcpy_s(pkt->iv, AES_IV, ps_iv->ctr_iv, AES_CTR_IV) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		return false;
-	}
-
-	if (memcpy_s(pkt->iv + AES_CTR_IV, AES_IV - AES_CTR_IV, &iv_ctr_ntohl,
-		     AES_CTR_IV_COUNTER) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		return false;
-	}
-
-	ps_iv->pkt_count += len;
-	ps_iv->ctr_enc = ps_iv->pkt_count / SDO_AES_BLOCK_SIZE;
-	return true;
-}
-
-/**
  * Write the ETMInnerBlock stucture (COSE_Encrypt0) in the SDOW buffer using the contents
  * of sdo_encrypted_packet_t.
  * ETMInnerBlock = [
@@ -3487,8 +2540,9 @@ bool sdo_write_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv, int len)
  *   payload:     ProtocolMessage
  *   signature:   bstr
  *]
- * 
- * return true if write is successfull, false otherwise.
+ * @param sdow - sdow_t object containing the buffer where CBOR data will be written to
+ * @param pkt - sdo_encrypted_packet_t object
+ * @return true if write is successfull, false otherwise.
  */
 bool fdo_etminnerblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 {
@@ -3545,7 +2599,9 @@ err:
  *   hmac:        bstr 
  * ]
  * ETMPayloadTag = ETMInnerBlock
- * return true if write is successfull, false otherwise.
+ * @param sdow - sdow_t object containing the buffer where CBOR data will be written to
+ * @param pkt - sdo_encrypted_packet_t object
+ * @return  true if write is successfull, false otherwise.
  */
 bool fdo_etmouterblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt)
 {
@@ -3587,82 +2643,6 @@ err:
 	}
 	return false;
 }
-
-#if 0
-/**
- * Make a string representation of the encrypted packet
- * @param pkt - pointer to the packet to expose
- * @param buf - pointer to the start of the character buffer to fill
- * @param bufsz - the size of the destination buffer
- * @return pointer to the buffer filled
- */
-char *sdo_encrypted_packet_to_string(sdo_encrypted_packet_t *pkt, char *buf,
-				     int bufsz)
-{
-	char *buf0 = buf;
-	int n = 0;
-
-	memset(buf, 0, bufsz);
-
-	n = snprintf(buf, bufsz, "[Encrypted Message Body\n");
-	buf += n;
-	bufsz -= n;
-
-	//    // Write out the start of buffer counter
-	//	n = snprintf(buf, bufsz, "block_start: %d\n", pkt->block_start);
-	//	buf += n; bufsz -= n;
-
-	// Write out the Encrypted Body byte array
-	if (pkt->em_body != NULL) {
-		char strkey1[] = "Encrypted Body: ";
-
-		strcat(buf, strkey1);
-		n = strlen(strkey1);
-		buf += n;
-		bufsz -= n;
-
-		sdo_byte_array_to_string(pkt->em_body, buf, bufsz);
-		n = strlen(buf);
-		buf += n;
-		bufsz -= n;
-	} else {
-		char strkey1[] = "Encrypted Body: NULL";
-
-		strcat(buf, strkey1);
-		n = strlen(strkey1);
-		buf += n;
-		bufsz -= n;
-	}
-
-	// Write out the HMAC
-	if (pkt->em_body != NULL) {
-		char strkey1[] = "\nHMAC of Unencrypted Body: ";
-
-		strcat(buf, strkey1);
-		n = strlen(strkey1);
-		buf += n;
-		bufsz -= n;
-
-		sdo_hash_to_string(pkt->hmac, buf, bufsz);
-		n = strlen(buf);
-		buf += n;
-		bufsz -= n;
-	} else {
-		char strkey1[] = "\nHMAC of Unencrypted Body: NULL";
-
-		strcat(buf, strkey1);
-		n = strlen(strkey1);
-		buf += n;
-		bufsz -= n;
-	}
-
-	if (bufsz > 1) {
-		*buf++ = ']';
-		*buf = 0;
-	}
-	return buf0;
-}
-#endif
 
 /**
  * Take in encrypted data object and end up with it represented
@@ -3926,7 +2906,9 @@ void fdo_eat_free(fdo_eat_t *eat) {
  * payload,				// bstr
  * signature			// bstr
  * ]
- * Return true, if write was a success. False otherwise.
+ * @param sdow - sdow_t object holding the buffer where CBOR data will be written to
+ * @param eat - fdo_eat_t object that holds the EAT parameters
+ * @return true, if write was a success. False otherwise.
  */
 bool fdo_eat_write(sdow_t *sdow, fdo_eat_t *eat) {
 
@@ -4345,7 +3327,10 @@ bool fdo_cose_read_unprotected_header(sdor_t *sdor, fdo_cose_unprotected_header_
  * payload,				// bstr
  * signature			// bstr
  * ]
- * Return true, if read was a success. False otherwise.
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param cose - fdo_cose_t object that will hold the read COSE_Sign1 parameters
+ * @param empty_uph - true if the unprotected header is expected to be empty, false otherwise
+ * @return true, if read was a success. False otherwise.
  */
 bool fdo_cose_read(sdor_t *sdor, fdo_cose_t *cose, bool empty_uph) {
 
@@ -4531,7 +3516,9 @@ bool fdo_cose_write_unprotected_header(sdow_t *sdow) {
  * payload,				// bstr
  * signature			// bstr
  * ]
- * Return true, if write was a success. False otherwise.
+ * @param sdow - sdow_t object containing the buffer where CBOR data will be written
+ * @param cose - fdo_cose_t object that holds the COSE_Sign1 parameters to encode
+ * @return true, if write was a success. False otherwise.
  */
 bool fdo_cose_write(sdow_t *sdow, fdo_cose_t *cose) {
 	if (!sdow_start_array(sdow, 4)) {
@@ -4699,7 +3686,9 @@ bool fdo_cose_mac0_read_unprotected_header(sdor_t *sdor) {
  * payload,				// bstr
  * hmac					// bstr
  * ]
- * Return true, if read was a success. False otherwise.
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param cose_mac0 - fdo_cose_mac0_t object that will hold the read COSE_Mac0 parameters
+ * @return true, if read was a success. False otherwise.
  */
 bool fdo_cose_mac0_read(sdor_t *sdor, fdo_cose_mac0_t *cose_mac0) {
 
@@ -4876,7 +3865,9 @@ bool fdo_cose_mac0_write_unprotected_header(sdow_t *sdow) {
  * payload,				// bstr
  * hmac					// bstr
  * ]
- * Return true, if write was a success. False otherwise.
+ * @param sdow - sdow_t object containing the buffer where CBOR data will be written
+ * @param cose_mac0 - fdo_cose_mac0_t object that holds the COSE_Mac0 parameters to encode
+ * @return true, if write was a success. False otherwise.
  */
 bool fdo_cose_mac0_write(sdow_t *sdow, fdo_cose_mac0_t *cose_mac0) {
 	if (!sdow_start_array(sdow, 4)) {
@@ -5110,7 +4101,10 @@ bool fdo_cose_encrypt0_read_unprotected_header(sdor_t *sdor,
  * unprotected header,
  * payload,				// bstr
  * ]
- * Return true, if read was a success. False otherwise.
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param cose_encrypt0 - fdo_cose_encrypt0_t object that will hold the read COSE_Encrypt0
+ * parameters
+ * @return true, if read was a success. False otherwise.
  */
 bool fdo_cose_encrypt0_read(sdor_t *sdor, fdo_cose_encrypt0_t *cose_encrypt0) {
 	size_t num_cose_items = 3;
@@ -5291,7 +4285,10 @@ bool fdo_cose_encrypt0_write_unprotected_header(sdow_t *sdow,
  * unprotected header,
  * payload,				// bstr
  * ]
- * Return true, if write was a success. False otherwise.
+ * @param sdow - sdow_t object holding the buffer where CBOR data will be written to
+ * @param cose_encrypt0 - fdo_cose_encrypt0_t object that holds the COSE_Encrypt0 parameters to
+ * encode
+ * @return true, if write was a success. False otherwise.
  */
 bool fdo_cose_encrypt0_write(sdow_t *sdow, fdo_cose_encrypt0_t *cose_encrypt0) {
 	if (!sdow_start_array(sdow, 3)) {
@@ -5359,7 +4356,10 @@ void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr) {
  * RVPort,
  * RVProtocol
  * ]
- * Return true, if read was a success. False otherwise.
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param rvto2addr_entry - fdo_rvto2addr_entry_t object that will hold the read RVTO2AddrEntry
+ * parameters
+ * @return true, if read was a success. False otherwise.
  */
 bool fdo_rvto2addr_entry_read(sdor_t *sdor, fdo_rvto2addr_entry_t *rvto2addr_entry) {
 	size_t num_rvto2addr_entry_items = 0;
@@ -5438,7 +4438,9 @@ end:
  * [
  * +RVTO2AddrEntry 		// one or more RVTO2AddrEntry
  * ]
- * Return true, if read was a success. False otherwise.
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param rvto2addr - fdo_rvto2addr_t object that will hold the read RVTO2Addr parameters
+ * @return true, if read was a success. False otherwise.
  */
 bool fdo_rvto2addr_read(sdor_t *sdor, fdo_rvto2addr_t *rvto2addr) {
 	size_t num_rvto2addr_items = 0;
@@ -5492,347 +4494,7 @@ end:
 }
 
 /**
- * Begin the signature
- * @param sdow - pointe to the output buffer
- * @param sig - pointer to the struct of type signature
- * @param pk - pointer to the struct of type public key
- */
-bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
-			       sdo_public_key_t *pk)
-{
-	if (!sdow)
-		return false;
-	// TO-DO : Added now, so that arguments are used.
-	if (!sig || !pk)
-		return false;
-	/*
-	if (memset_s(sig, sizeof(*sig), 0)) {
-		LOG(LOG_ERROR, "Memset Failed\n");
-		return false;
-	}
-	sig->pk = pk;
-	sdow_begin_object(sdow);
-	sdo_write_tag(sdow, "bo");
-	// sig->sig_block_start = sdow->b.cursor;
-	*/
-	return true;
-}
-
-/**
- * Write the signature to the buffer
- * @param sdow - pointer to the output buffer
- * @param sig - pointer to the struct of type signature
- */
-bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig)
-{
-	/*
-	int sig_block_end;
-	int sig_block_sz;
-	sdo_byte_array_t *sigtext = NULL;
-	sdo_public_key_t *publickey;
-	*/
-
-	if (!sdow || !sig) {
-		LOG(LOG_ERROR, "Invalid arguments\n");
-		return false;
-	}
-
-	/*
-	// sig_block_end = sdow->b.cursor;
-	sig_block_sz = sig_block_end - sig->sig_block_start;
-
-	// Turn the message block into a zero terminated string
-	sdo_resize_block(&sdow->b, sdow->b.cursor + 1);
-	sdow->b.block[sdow->b.cursor] = 0;
-
-	uint8_t *adapted_message = sdo_alloc(sig_block_sz);
-
-	if (memcpy_s(adapted_message, sig_block_sz,
-		     &(sdow->b.block[sig->sig_block_start]),
-		     sig_block_sz) != 0) {
-		LOG(LOG_ERROR, "Memcpy failed\n");
-		sdo_free(adapted_message);
-		return false;
-	}
-
-	size_t adapted_message_len = sig_block_sz;
-
-	if (0 !=
-	    sdo_device_sign(adapted_message, adapted_message_len, &sigtext)) {
-		LOG(LOG_ERROR, "ECDSA signing failed!\n");
-		sdo_free(adapted_message);
-		sdo_byte_array_free(sigtext);
-		return false;
-	}
-	hexdump("Adapted message", (char *)adapted_message,
-		adapted_message_len);
-
-	// Release the allocated memory
-	sdo_free(adapted_message);
-
-	// =========================================================
-
-	// Write GID to represent public key
-	sdo_write_tag(sdow, "pk");
-
-	publickey = NULL;
-
-	sdo_public_key_write(sdow, publickey);
-	sdo_write_tag(sdow, "sg");
-	sdo_write_byte_array(sdow, sigtext->bytes, sigtext->byte_sz);
-	sdow_end_object(sdow);
-	sdo_bits_free(sigtext);
-	*/
-	return true;
-}
-
-/**
- * HMAC processing start of a block to HMAC
- * @param sdor - pointer to the input buffer
- * @param sig_block_start - pointer to the signature starting block
- * @return true if proper header present, otherwise false
- */
-bool sdo_begin_readHMAC(sdor_t *sdor, int *sig_block_start)
-{
-	if (!sdor)
-		return false;
-	// TO-DO : Added now so that argument is used.
-	if (!sig_block_start)
-		return false;
-	/*
-	if (!sdo_read_expected_tag(sdor, "oh")) {
-		LOG(LOG_ERROR, "No oh\n");
-		return false;
-	}
-	// *sig_block_start = sdor->b.cursor;
-	*/
-	return true;
-}
-
-/**
- * Create the HMAC using our secret
- * @param sdor - input buffer
- * @param hmac - pointer to the hash object to use
- * @param sig_block_start - pointer to the signature starting block
- * @return true if proper header present, otherwise false
- */
-bool sdo_end_readHMAC(sdor_t *sdor, sdo_hash_t **hmac, int sig_block_start)
-{
-	// Make the ending calculation for the buffer to sign
-
-	if (!sdor || !hmac)
-		return false;
-	// TO-DO : Remove this variable and subsequent usages.
-	printf("Signature starting block %d\n", sig_block_start);
-
-	/*
-	if (!sdor_end_object(sdor)) {
-		return false;
-	}
-
-	int sig_block_end = sdor->b.cursor;
-	int sig_block_sz = sig_block_end - sig_block_start;
-	uint8_t *plain_text = sdor_get_block_ptr(sdor, sig_block_start);
-
-	if (plain_text == NULL) {
-		LOG(LOG_ERROR, "sdor_get_block_ptr() returned null, "
-		    "%s failed !!", __func__);
-		return false;
-	}
-
-	// Display the block to be signed
-	uint8_t save_byte;
-
-	save_byte = plain_text[sig_block_sz];
-	plain_text[sig_block_sz] = 0;
-	LOG(LOG_DEBUG, "%s.plain_text: %s\n", __func__, plain_text);
-	plain_text[sig_block_sz] = save_byte;
-#if !defined(DEVICE_TPM20_ENABLED)
-	char buf[256];
-
-	LOG(LOG_DEBUG, "%s: %s\n", __func__,
-	    sdo_bits_to_string(*getOVKey(), "Secret:", buf, sizeof(buf)) ? buf
-									 : "");
-#endif
-	// Create the HMAC
-	*hmac =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
-	if (!*hmac) {
-		return false;
-	}
-
-	if (0 != sdo_device_ov_hmac(plain_text, sig_block_sz,
-				    (*hmac)->hash->bytes,
-				    (*hmac)->hash->byte_sz)) {
-		sdo_hash_free(*hmac);
-		return false;
-	}
-*/
-	return true;
-}
-
-/**
- * Signature processing.  Call this to mark the place before reading
- * the signature body.  Then call sdo_end_read_signature* afterwards.
- * The same sdo_sig_t object must be presented to both procedures.
- *
- * @param sdor - pointer to the input buffer
- * @param sig - pointer to the signature object to use
- * @return true if proper header present, otherwise false
- */
-bool sdo_begin_read_signature(sdor_t *sdor, sdo_sig_t *sig)
-{
-	if (!sdor || !sig)
-		return false;
-/*
-	if (!sdor_begin_object(sdor))
-		return false;
-	if (!sdo_read_expected_tag(sdor, "bo"))
-		return false;
-	sig->sig_block_start = sdor->b.cursor;
-	*/
-	return true;
-}
-
-#if 0
-/**
- * Simple Signature processing, yes or no, based on transmitted
- * public key.  The sig pointer must be the same one used for
- * the corresponding BEGIN call
- * @param sdor - pointer to the input buffer
- * @param sig - pointer to the signature object to use
- * @returns true if parsing is correct and signature verifies.
- */
-bool sdo_end_read_signature(sdor_t *sdor, sdo_sig_t *sig)
-{
-	return sdo_end_read_signature_full(sdor, sig, NULL);
-}
-#endif
-
-/**
- * Full Signature processing:
- * Any of these may be NULL, in which case it is ignored.
- * @param sdor - input buffer to check
- * @param sig - object holds offset of block start and holds returned signature
- * @param getpk - returns verify public key (caller must sdo_free)
- * @return true if verification successful, otherwise false
- */
-bool sdo_end_read_signature_full(sdor_t *sdor, sdo_sig_t *sig,
-				 sdo_public_key_t **getpk)
-{
-	// Save buffer at the end of the area to be checked
-	/*
-	int sig_block_end;
-	int sig_block_sz;
-	uint8_t *plain_text;
-	sdo_public_key_t *pk;
-	int ret;
-	*/
-	bool r = false;
-
-	if (!sdor || !sig || !getpk)
-		return false;
-/*
-	sig_block_end = sdor->b.cursor;
-	sig_block_sz = sig_block_end - sig->sig_block_start;
-	plain_text = sdor_get_block_ptr(sdor, sig->sig_block_start);
-
-	if (plain_text == NULL) {
-		LOG(LOG_ERROR, "sdor_get_block_ptr() returned null, "
-		    "%s failed !!", __func__);
-		return false;
-	}
-
-	if (!sdo_read_expected_tag(sdor, "pk"))
-		return false;
-	// LOG(LOG_ERROR, "this key\n");
-	pk = sdo_public_key_read(sdor);
-	if (pk == NULL) {
-		LOG(LOG_ERROR,
-		    "%s: Could not read \"pk\" "
-		    "in signature\n", __func__);
-		return false;
-	}
-	// Copy the read public key to the signature object
-	sig->pk = pk;
-
-	// LOG(LOG_ERROR, "Next char: '%c'\n", sdor_peek(sdor));
-
-	if (!sdo_read_expected_tag(sdor, "sg"))
-		return false;
-
-	if (!sdor_begin_sequence(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
-		return false;
-	}
-	// These bytes will be thrown away, some issue with zero length
-	sig->sg = sdo_byte_array_alloc(1);
-	if (!sig->sg) {
-		ret = -1;
-		goto result;
-	}
-
-	// Read the signature to the signature object
-	if (!sdo_byte_array_read(sdor, sig->sg)) {
-		ret = -1;
-		goto result;
-	}
-	// LOG(LOG_ERROR, "signature %lu bytes\n", sig->sg->byte_sz);
-
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
-		ret = -1;
-		goto result;
-	}
-
-	if (!sdor_end_object(sdor)) {
-		ret = -1;
-		goto result;
-	}
-
-	// Buffer read, all objects consumed, start verify
-
-	// Check the signature
-	uint8_t save_byte;
-	char buf[1024];
-	bool signature_verify = false;
-
-	save_byte = plain_text[sig_block_sz];
-	plain_text[sig_block_sz] = 0;
-	LOG(LOG_DEBUG, "sdo_end_read_signature.Sig_text: %s\n", plain_text);
-	plain_text[sig_block_sz] = save_byte;
-	LOG(LOG_DEBUG, "sdo_end_read_signature.PK: %s\n",
-	    sdo_public_key_to_string(pk, buf, sizeof(buf)) ? buf : "");
-
-	ret = sdo_ov_verify(plain_text, sig_block_sz, sig->sg->bytes,
-			    sig->sg->byte_sz, pk, &signature_verify);
-
-result:
-
-	if ((ret == 0) && (true == signature_verify)) {
-		LOG(LOG_DEBUG, "Signature verifies OK.\n");
-		r = true;
-	} else {
-		LOG(LOG_ERROR, "Signature internal failure, or signature does "
-			       "not verify.\n");
-		if (ret == -1 && sig->sg) {
-			sdo_byte_array_free(sig->sg);
-			sig->sg = NULL;
-		}
-		r = false;
-	}
-
-	// Return a copy of the data to use or clean up
-	if (getpk != NULL) {
-		*getpk = sdo_public_key_clone(pk);
-		sdo_public_key_free(pk);
-	}
-*/
-	return r;
-}
-
-/**
- * Verifies the RSA/ECDSA Signature using provided public key pk.
+ * Verifies the ECDSA Signature using provided public key pk.
  * @param plain_text - Pointer of type sdo_byte_array_t, for generating hash,
  * @param sg - Pointer of type sdo_byte_array_t, as signature.
  * @param pk - Pointer of type sdo_public_key_t, holds the public-key used for
@@ -5859,116 +4521,6 @@ bool sdo_signature_verification(sdo_byte_array_t *plain_text,
 		return true;
 	}
 
-	LOG(LOG_ERROR, "Signature internal failure, or signature does "
-	    "not verify.\n");
-	return false;
-}
-
-/**
- * Read the pk information
- * @param sdor - pointer to the output buffer
- * @return true if read else flase
- */
-bool sdo_read_pk_null(sdor_t *sdor)
-{
-	if (!sdor)
-		return false;
-/*
-	//"pk":[0,0,[0]]
-	if (!sdo_read_expected_tag(sdor, "pk"))
-		return false;
-	if (!sdor_begin_sequence(sdor))
-		return false;
-
-	sdo_read_uint(sdor);
-	sdo_read_uint(sdor);
-
-	if (!sdor_begin_sequence(sdor))
-		return false;
-
-	sdo_read_uint(sdor);
-	if (!sdor_end_sequence(sdor))
-		return false;
-
-	if (!sdor_end_sequence(sdor))
-		return false;
-*/
-	return true;
-}
-
-/**
- * Verifies the Signature for ownership voucher using provided public key pk.
- * @param sdor - Pointer of type sdor_t, holds the signature and plaintext
- * for generating hash.
- * @param sig - Pointer of type sdo_sig_t, as signature
- * @param pk - Pointer of type sdo_public_key_t, holds the key used for
- * verification.
- * @return true if success, else false
- */
-
-bool sdoOVSignature_verification(sdor_t *sdor, sdo_sig_t *sig,
-				 sdo_public_key_t *pk)
-{
-
-	/*
-	int ret;
-	int sig_block_end;
-	int sig_block_sz;
-	uint8_t *plain_text;
-	bool signature_verify = false;
-	*/
-
-	if (!sdor || !sig || !pk)
-		return false;
-	/*
-	sig_block_end = sdor->b.cursor;
-	sig_block_sz = sig_block_end - sig->sig_block_start;
-	plain_text = sdor_get_block_ptr(sdor, sig->sig_block_start);
-
-	if (plain_text == NULL) {
-		LOG(LOG_ERROR, "sdor_get_block_ptr() returned null, "
-		    "%s() failed !!", __func__);
-		return false;
-	}
-
-	if (!sdo_read_pk_null(sdor))
-		return false;
-
-	if (!sdo_read_expected_tag(sdor, "sg"))
-		return false;
-
-	if (!sdor_begin_sequence(sdor)) {
-		LOG(LOG_ERROR, "Not at beginning of sequence\n");
-		return false;
-	}
-
-	sig->sg = sdo_byte_array_alloc(
-	    16); // These bytes will be thrown away, some issue with zero length
-
-	if (!sig->sg) {
-		LOG(LOG_ERROR, "Alloc failed\n");
-		return false;
-	}
-	// Read the signature to the signature object
-	sdo_byte_array_read(sdor, sig->sg);
-	// LOG(LOG_ERROR, "signature %lu bytes\n", sig->sg->byte_sz);
-
-	if (!sdor_end_sequence(sdor)) {
-		LOG(LOG_ERROR, "End Sequence not found!\n");
-		return false;
-	}
-
-	if (!sdor_end_object(sdor))
-		return false;
-
-	ret = sdo_ov_verify(plain_text, sig_block_sz, sig->sg->bytes,
-			    sig->sg->byte_sz, pk, &signature_verify);
-
-	if ((ret == 0) && (true == signature_verify)) {
-		LOG(LOG_DEBUG, "Signature verifies OK.\n");
-		return true;
-	}
-*/
 	LOG(LOG_ERROR, "Signature internal failure, or signature does "
 	    "not verify.\n");
 	return false;
@@ -6083,96 +4635,6 @@ void sdo_kv_free(sdo_key_value_t *kv)
 	sdo_free(kv);
 }
 
-/**
- * TO-DO : Method Rewrite based on serviceinfo info implementation.
- * 
- * Write the key value to the buffer
- * @param sdow - pointer to the output buffer
- * @param kv - pointer to the struct of type key value
- */
-void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv)
-{
-	if (!sdow || !kv) {
-		// throw error here.
-		return;
-	}
-	// sdo_write_tag_len(sdow, kv->key->bytes, kv->key->byte_sz);
-	// sdo_write_string_len(sdow, kv->str_val->bytes, kv->str_val->byte_sz);
-}
-
-/**
- * Read multiple Sv_info (OSI) Key/Value pairs from the input buffer
- * All Key-value pairs MUST be a null terminated strings.
- * @param sdor - pointer to the input buffer
- * @param module_list - Global Module List Head Pointer.
- * @param kv - pointer to the Sv_info key/value pair
- * @param cb_return_val - Pointer of type int which will be filled with CB
- * return value.
- * @return true of read succeeded, false otherwise
- */
-bool sdo_osi_parsing(sdor_t *sdor,
-		     sdo_sdk_service_info_module_list_t *module_list,
-		     sdo_sdk_si_key_value *kv, int *cb_return_val)
-{
-	// int str_len;
-
-	if (!sdor || module_list || !kv || !cb_return_val)
-		return false;
-/*
-	if (!sdor || !kv) {
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return false;
-	}
-
-	// loop in to get all the  OSI key value pairs
-	// (block_size-2) is done to skip 2 curly braces to end objects
-	// for "sv" tag and "end of Msg 49".
-
-	while (sdor->b.cursor < sdor->b.block_size - 2) {
-		// get len of "key" in KV pair
-		str_len = sdo_read_string_sz(sdor);
-
-		kv->key = sdo_alloc(str_len + 1); // +1 for null termination
-
-		if (!kv->key) {
-			LOG(LOG_ERROR, "Malloc failed!\n");
-			return false;
-		}
-
-		// read tag "" from KV pair and copy to "kv->key"
-		sdo_read_tag(sdor, kv->key, str_len + 1);
-
-		// get len of "value" in KV pair
-		str_len = sdo_read_string_sz(sdor);
-
-		kv->value = sdo_alloc(str_len + 1); // +1 for null termination
-
-		if (!kv->value) {
-			LOG(LOG_ERROR, "Malloc failed!\n");
-			sdo_free(kv->key);
-			return false;
-		}
-
-		// read value for above tag and copy into "kv->value"
-		sdo_read_string(sdor, kv->value, str_len + 1);
-
-		LOG(LOG_DEBUG, "OSI_KV pair:\n_key->%s,Value->%s\n", kv->key,
-		    kv->value);
-
-		// call module callback's with appropriate KV pairs
-		if (!sdo_osi_handling(module_list, kv, cb_return_val)) {
-			sdo_free(kv->key);
-			sdo_free(kv->value);
-			return false;
-		}
-		// free present KV pair memory
-		sdo_free(kv->key);
-		sdo_free(kv->value);
-	}
-*/
-	return true;
-}
-
 //----------------------------------------------------------------------
 // Service_info handling
 //
@@ -6190,7 +4652,10 @@ bool sdo_osi_parsing(sdor_t *sdor,
  *   ServiceInfoVal: cborSimpleType
  * ]
  * ServiceInfoKey = moduleName:messageName
- * return true if read was a success, false otherwise
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param module_list - Owner ServiceInfo module list
+ * @param cb_return_val - out value to hold the return value from the registered modules.
+ * @return true if read was a success, false otherwise
  */
 bool fdo_serviceinfo_read(sdor_t *sdor, sdo_sdk_service_info_module_list_t *module_list,
 		int *cb_return_val) {
@@ -6312,6 +4777,13 @@ exit:
  * within SDOR and return true/false depending on callback's execution.
  * If the module name is not supported, or is not active, skip the ServiceInfoVal
  * and return true.
+ * 
+ * @param sdor - sdor_t object containing the buffer to read
+ * @param module_name - moduleName as received in Owner ServiceInfo
+ * @param module_message - messageName as received in Owner ServiceInfo
+ * @param module_list - Owner ServiceInfo module list
+ * @param cb_return_val - out value to hold the return value from the registered modules.
+ * @return true if the operation was a success, false otherwise
  */
 bool fdo_supply_serviceinfoval(sdor_t *sdor, char *module_name, char *module_message,
 	sdo_sdk_service_info_module_list_t *module_list, int *cb_return_val)
@@ -6416,36 +4888,9 @@ bool fdo_supply_serviceinfoval(sdor_t *sdor, char *module_name, char *module_mes
  * Allocate an empty sdo_service_info_t object.
  * @return an allocated sdo_service_info_t object.
  */
-
 sdo_service_info_t *sdo_service_info_alloc(void)
 {
 	return sdo_alloc(sizeof(sdo_service_info_t));
-}
-
-/**
- * Create a SDOService_info object, by filling the object with key & val
- * passed as parameter.
- * @param val - Value to be mapped to the key, passed as an char pointer.
- * @param key - Pointer to the char buffer key.
- * @return an allocated SDOService_info object containing the key & val.
- */
-
-sdo_service_info_t *sdo_service_info_alloc_with(char *key, char *val)
-{
-	sdo_key_value_t *kv;
-
-	sdo_service_info_t *si = sdo_service_info_alloc();
-
-	if (si == NULL)
-		return NULL;
-	kv = sdo_kv_alloc_with_str(key, val);
-	if (!kv) {
-		sdo_service_info_free(si);
-		return NULL;
-	}
-	si->kv = kv;
-	si->numKV = 1;
-	return si;
 }
 
 /**
@@ -6453,7 +4898,6 @@ sdo_service_info_t *sdo_service_info_alloc_with(char *key, char *val)
  * @param si - the object to sdo_free
  * @return none
  */
-
 void sdo_service_info_free(sdo_service_info_t *si)
 {
 	sdo_key_value_t *kv = NULL;
@@ -6475,7 +4919,6 @@ void sdo_service_info_free(sdo_service_info_t *si)
  * @param key - Pointer to the char buffer key,
  * @return pointer to sdo_key_value_t.
  */
-
 sdo_key_value_t **sdo_service_info_fetch(sdo_service_info_t *si,
 					 const char *key)
 {
@@ -6505,7 +4948,6 @@ sdo_key_value_t **sdo_service_info_fetch(sdo_service_info_t *si,
  * @param key_num - Integer variable determines service request Info number,
  * @return pointer to sdo_key_value_t.
  */
-
 sdo_key_value_t **sdo_service_info_get(sdo_service_info_t *si, int key_num)
 {
 	sdo_key_value_t **kvp, *kv;
@@ -6748,7 +5190,6 @@ bool sdo_service_info_add_kv_int(sdo_service_info_t *si, const char *key,
  * @param kvs - Pointer to the sdo_key_value_t kvs, to be added,
  * @return true if updated correctly else false.
  */
-
 bool sdo_service_info_add_kv(sdo_service_info_t *si, sdo_key_value_t *kvs)
 {
 	sdo_key_value_t *kv = NULL;
@@ -6773,15 +5214,27 @@ bool sdo_service_info_add_kv(sdo_service_info_t *si, sdo_key_value_t *kvs)
 }
 
 /**
- * Combine sdo_key_value_t objects into a single string from already built
- * platform DSI list.
- * @param sdow  - Pointer to the output buffer.
- * @param si  - Pointer to the sdo_service_info_t list containing all platform
- * DSI's.
- * @return true if combined successfully else false.
+ * Write the given ServiceInfo struct contents as CBOR.
+ * Currently, only used to write 'devmod' Device ServiceInfo module.
+ * ServiceInfo = [
+ *   *ServiceInfoKeyVal		// one or more ServiceInfoKeyVal
+ * ]
+ * ServiceInfoKeyVal = [
+ *   *ServiceInfoKV			// one or more ServiceInfoKV
+ * ]
+ * ServiceInfoKV = [
+ *   ServiceInfoKey: tstr,
+ *   ServiceInfoVal: cborSimpleType
+ * ]
+ * ServiceInfoKey = moduleName:messageName
+ * return true if read was a success, false otherwise
+ * 
+ * @param sdow - Pointer to the writer.
+ * @param si - Pointer to the sdo_service_info_t list containing all platform
+ * Device ServiceInfos (only 'devmod' for now).
+ * @return true if the opration was a success, false otherwise
  */
-
-bool sdo_combine_platform_dsis(sdow_t *sdow, sdo_service_info_t *si)
+bool fdo_serviceinfo_write(sdow_t *sdow, sdo_service_info_t *si)
 {
 	int num = 0;
 	sdo_key_value_t **kvp = NULL;
@@ -6801,7 +5254,7 @@ bool sdo_combine_platform_dsis(sdow_t *sdow, sdo_service_info_t *si)
 		LOG(LOG_ERROR, "Plaform Device ServiceInfoKeyVal: Failed to write start array\n");
 		goto end;
 	}
-	// fetch all platfrom DSI's one-by-one
+	// fetch all platfrom Device ServiceInfo's one-by-one
 	while (num != si->numKV) {
 		kvp = sdo_service_info_get(si, num);
 
@@ -6874,7 +5327,6 @@ end:
  * @param type - a valid Sv_info type.
  * @return true if success, false otherwise
  */
-
 bool sdo_mod_exec_sv_infotype(sdo_sdk_service_info_module_list_t *module_list,
 			      sdo_sdk_si_type type)
 {
@@ -6888,176 +5340,6 @@ bool sdo_mod_exec_sv_infotype(sdo_sdk_service_info_module_list_t *module_list,
 		module_list = module_list->next;
 	}
 	return true;
-}
-
-/**
- * Create Key_value Pair using mod_name sv_kv key-value pair
- * @param mod_name - Pointer to the char, to be used as a partial key
- * @param sv_kv - Pointer of type sdo_sdk_si_key_value, which holds message &
- * value.
- * @return true if success else false.
- */
-
-bool sdo_mod_data_kv(char *mod_name, sdo_sdk_si_key_value *sv_kv)
-{
-	// Example : "keypair:pubkey":"sample o/p of pubkey"
-	sdo_sdk_si_key_value sv_kv_t;
-
-	if (!mod_name || !sv_kv || !sv_kv->key || !sv_kv->value)
-		return false;
-
-	int strlen_name = strnlen_s(mod_name, SDO_MAX_STR_SIZE);
-	int strlen_sv_key = strnlen_s(sv_kv->key, SDO_MAX_STR_SIZE);
-
-	if (!strlen_name || !strlen_sv_key ||
-	    strlen_sv_key == SDO_MAX_STR_SIZE ||
-	    strlen_name == SDO_MAX_STR_SIZE) {
-		LOG(LOG_ERROR, "strlen() failed!\n");
-		return false;
-	}
-
-	// + 1 is for ':' between mod_name & mod message(sv_kv->key)
-	// +1 for terminating null character
-	int sv_kv_t_key_size = strlen_name + strlen_sv_key + 2;
-
-	sv_kv_t.key = sdo_alloc(sv_kv_t_key_size);
-
-	if (!sv_kv_t.key) {
-		LOG(LOG_ERROR, "Malloc Failed!\n");
-		return false;
-	}
-
-	if (strcpy_s(sv_kv_t.key, sv_kv_t_key_size, mod_name) != 0) {
-		LOG(LOG_ERROR, "strcpy() failed!\n");
-		return false;
-	}
-
-	sv_kv_t.key[strlen_name] = ':';
-
-	if (strcpy_s(sv_kv_t.key + strlen_name + 1,
-		     sv_kv_t_key_size - (strlen_name + 1), sv_kv->key) != 0) {
-		LOG(LOG_ERROR, "strcpy() failed!\n");
-		return false;
-	}
-
-	sv_kv->key = sv_kv_t.key;
-
-	int sv_kv_t_val_size = strnlen_s(sv_kv->value, SDO_MAX_STR_SIZE);
-
-	if (sv_kv_t_val_size == SDO_MAX_STR_SIZE) {
-		LOG(LOG_ERROR, "strlen() failed!\n");
-		return false;
-	}
-
-	sv_kv_t.value =
-	    sdo_alloc(sv_kv_t_val_size + 1); // 1 is for NULL at the end
-
-	if (!sv_kv_t.value) {
-		LOG(LOG_ERROR, "Malloc Failed!\n");
-		return false;
-	}
-
-	if (strcpy_s(sv_kv_t.value, sv_kv_t_val_size + 1, sv_kv->value) != 0) {
-		LOG(LOG_ERROR, "strcpy() failed!\n");
-		return false;
-	}
-
-	sv_kv->value = sv_kv_t.value;
-	return true;
-}
-
-/**
- * TO-DO : To be updated when external DeviceServiceInfo support is added.
- * Internal API
- */
-bool sdo_construct_module_dsi(sdo_sv_info_dsi_info_t *dsi_info,
-			      sdo_sdk_si_key_value *sv_kv, int *cb_return_val)
-{
-	int temp_dsi_count;
-
-	if (!cb_return_val || !dsi_info)
-		return false;
-
-	if (!sv_kv) {
-		*cb_return_val = SDO_SI_INTERNAL_ERROR;
-		return false;
-	}
-
-	temp_dsi_count = dsi_info->list_dsi->module_dsi_count;
-
-	/* Finish DSI module-by-module */
-	if (dsi_info->module_dsi_index < temp_dsi_count) {
-		// check if module CB is successful
-		*cb_return_val =
-		    dsi_info->list_dsi->module.service_info_callback(
-			SDO_SI_GET_DSI, NULL, NULL);
-		if (*cb_return_val != SDO_SI_SUCCESS) {
-			LOG(LOG_ERROR, "Sv_info: %s's DSI CB Failed!\n",
-			    dsi_info->list_dsi->module.module_name);
-			return false;
-		}
-
-		if (!sdo_mod_data_kv(dsi_info->list_dsi->module.module_name,
-				     sv_kv)) {
-			*cb_return_val = SDO_SI_INTERNAL_ERROR;
-			return false;
-		}
-		// Inc Module_dsi_index
-		dsi_info->module_dsi_index++;
-	}
-
-	/* reset module DSI index for next module */
-	if (dsi_info->module_dsi_index == temp_dsi_count) {
-		dsi_info->module_dsi_index = 0;
-		dsi_info->list_dsi = dsi_info->list_dsi->next;
-	}
-	*cb_return_val = SDO_SI_SUCCESS;
-	return true;
-}
-
-/**
- * Write the key value to the buffer
- * @param sdow - pointer to the output buffer
- * @param sv_kv - pointer to the struct of type key value
- * @return true if success else false
- */
-bool sdo_mod_kv_write(sdow_t *sdow, sdo_sdk_si_key_value *sv_kv)
-{
-	// Probably remove this check later. 
-	if (!sdow || !sv_kv)
-		return false;
-	/*
-	int strlen_kv_key = strnlen_s(sv_kv->key, SDO_MAX_STR_SIZE);
-	int strlen_kv_value = strnlen_s(sv_kv->value, SDO_MAX_STR_SIZE);
-
-	if (!strlen_kv_key || strlen_kv_key == SDO_MAX_STR_SIZE ||
-	    strlen_kv_value == SDO_MAX_STR_SIZE) {
-		LOG(LOG_ERROR, "strlen() failed!\n");
-		return false;
-	}
-
-	sdo_write_tag_len(sdow, sv_kv->key, strlen_kv_key);
-	sdo_write_string_len(sdow, sv_kv->value, strlen_kv_value);
-	sdow->need_comma = true;
-	*/
-	return true;
-}
-
-/**
- * Free Module Key Value
- * @param sv_kv - the object to free
- * @return none
- */
-void sdo_sv_key_value_free(sdo_sdk_si_key_value *sv_kv)
-{
-	// TODO: ALL free below will change to sdo_free.
-	if (sv_kv == NULL)
-		return;
-	if (sv_kv->key != NULL)
-		sdo_free(sv_kv->key);
-	if (sv_kv->value != NULL)
-		sdo_free(sv_kv->value);
-	sdo_free(sv_kv);
 }
 
 /**
@@ -7075,71 +5357,6 @@ void sdo_sv_info_clear_module_psi_osi_index(sdo_sdk_service_info_module_list_t
 			module_list = module_list->next;
 		}
 	}
-}
-
-/**
- * Construct the Module List using separator for device service info keys
- * @param module_list - Global Module List Head Pointer.
- * @param module_name - Pointer of type char in which List will be copied.
- * @return true if success else false.
- */
-bool sdo_construct_module_list(sdo_sdk_service_info_module_list_t *module_list,
-			       char **module_name)
-{
-
-	if (!module_name)
-		return false;
-
-	// When there are no modules, send empty string
-	if (!module_list) {
-		*module_name = sdo_alloc(1); // 1 is for empty string)
-		if (!*module_name) {
-			LOG(LOG_ERROR, "Malloc Failed\n");
-			return false;
-		}
-		return true;
-	}
-
-	char *temp = sdo_alloc(SDO_MAX_STR_SIZE);
-
-	if (!temp) {
-		LOG(LOG_ERROR, "Malloc Failed\n");
-		return false;
-	}
-
-	int len = 0;
-	int count = 0;
-	// Example string: devconfig;keypair
-	while (module_list) {
-		if (strcpy_s(temp + count, SDO_MAX_STR_SIZE - count,
-			     module_list->module.module_name) != 0) {
-			LOG(LOG_ERROR, "Strcpy failed!\n");
-			sdo_free(temp);
-			return false;
-		}
-		len = strnlen_s(module_list->module.module_name,
-				SDO_MAX_STR_SIZE);
-		if (!len || len == SDO_MAX_STR_SIZE) {
-			LOG(LOG_ERROR, "Strlen failed!\n");
-			sdo_free(temp);
-			return false;
-		}
-		count += len;
-
-		module_list = module_list->next;
-		if (module_list) {
-			if (strcpy_s(temp + count, SDO_MAX_STR_SIZE - count,
-				     SEPARATOR) != 0) {
-				LOG(LOG_ERROR, "Strcpy failed!\n");
-				sdo_free(temp);
-				return false;
-			}
-			count++; // 1 is for separator
-		}
-	}
-	*module_name = temp;
-
-	return true;
 }
 
 /**
@@ -7245,24 +5462,3 @@ void sdo_log_block(sdo_block_t *sdob) {
 	LOG(LOG_INFO, "\n");
 }
 
-#if 0
-    /**
-     * Internal API
-     */
-void sdo_service_info_print(sdo_service_info_t *si)
-{
-	sdo_key_value_t *kv;
-#define KVBUF_SIZE 32
-	char kbuf[KVBUF_SIZE];
-	char vbuf[KVBUF_SIZE];
-
-	LOG(LOG_DEBUG, "{#SDOService_info numKV: %u\n", si->numKV);
-	for (kv = si->kv; kv; kv = kv->next) {
-		LOG(LOG_DEBUG, "    \"%s\":\"%s\"%s\n",
-		    sdo_string_to_string(kv->key, kbuf, KVBUF_SIZE),
-		    sdo_string_to_string(kv->str_val, vbuf, KVBUF_SIZE),
-		    kv->next ? "," : "");
-	}
-	LOG(LOG_DEBUG, "}\n");
-}
-#endif

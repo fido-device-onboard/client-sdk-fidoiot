@@ -20,11 +20,11 @@
 #define PUBLIC_KEY_OFFSET 12
 
 /*------------------------------------------------------------------------------
- * PM.Cred_ownwer routines
+ * DeviceCredential's Owner Credential (sdo_cred_owner_t) routines
  */
 
 /**
- * Allocate a Cred_owner object and allocate its members
+ * Allocate a sdo_cred_owner_t object
  * @return and allocated sdo_cred_owner_t object
  */
 sdo_cred_owner_t *sdo_cred_owner_alloc(void)
@@ -33,7 +33,7 @@ sdo_cred_owner_t *sdo_cred_owner_alloc(void)
 }
 
 /**
- * Free an allocated Cred_owner object
+ * Free an allocated sdo_cred_owner_t object
  * @param ocred - the object to sdo_free
  * @return none
  */
@@ -55,38 +55,12 @@ void sdo_cred_owner_free(sdo_cred_owner_t *ocred)
 	sdo_free(ocred);
 }
 
-#if LOG_LEVEL == LOG_MAX_LEVEL
-/**
- * Print the Ocred as decoded
- * @param ocred - the Owner Credential object
- * @return none
- */
-void sdo_cred_owner_print(sdo_cred_owner_t *ocred)
-{
-	char pbuf[1024] = {0};
-	char *p_pbuf = NULL;
-
-	LOG(LOG_DEBUG, "========================================\n");
-	LOG(LOG_DEBUG, "PM.Cred_owner\n");
-	LOG(LOG_DEBUG, " pv : %d\n", ocred->pv);
-	p_pbuf = sdo_pk_enc_to_string(ocred->pe);
-	LOG(LOG_DEBUG, " pe : %s\n", p_pbuf ? p_pbuf : "");
-	p_pbuf = sdo_guid_to_string(ocred->guid, pbuf, sizeof(pbuf));
-	LOG(LOG_DEBUG, " g  : %s\n", p_pbuf ? p_pbuf : "");
-	p_pbuf = sdo_rendezvous_to_string(ocred->rvlst->rv_entries, pbuf,
-					  sizeof(pbuf));
-	LOG(LOG_DEBUG, " r  : %s\n", p_pbuf ? p_pbuf : "");
-	p_pbuf = sdo_hash_to_string(ocred->pkh, pbuf, sizeof(pbuf));
-	LOG(LOG_DEBUG, " pkh: %s\n", p_pbuf ? p_pbuf : "");
-}
-#endif
-
 /*------------------------------------------------------------------------------
- * PM.Cred_mfg Manufacturer's Block routines
+ * DeviceCredential's Manufacturer's Block (sdo_cred_mfg_t) routines
  */
 
 /**
- * Allocate a Owner Credential Manufacturer object
+ * Allocate a sdo_cred_mfg_t object
  * return an allocated sdo_cred_mfg_t object
  */
 sdo_cred_mfg_t *sdo_cred_mfg_alloc(void)
@@ -105,43 +79,12 @@ void sdo_cred_mfg_free(sdo_cred_mfg_t *ocred_mfg)
 	if (ocred_mfg->d)
 		sdo_string_free(ocred_mfg->d);
 
-	if (ocred_mfg->cu)
-		sdo_string_free(ocred_mfg->cu);
-
-	if (ocred_mfg->ch)
-		sdo_hash_free(ocred_mfg->ch);
-
 	sdo_free(ocred_mfg);
 	ocred_mfg = NULL;
 }
 
-#if LOG_LEVEL == LOG_MAX_LEVEL
-/**
- * Print the values in the Manufacturer's Block to stdout
- * @param ocred_mfg - The object to print
- * @return none
- */
-void sdo_cred_mfg_print(sdo_cred_mfg_t *ocred_mfg)
-{
-	char ocbuf[OCBUF_SIZE] = {0};
-	char *ocbufp = NULL;
-
-	LOG(LOG_DEBUG, "========================================\n");
-	LOG(LOG_DEBUG, "PM.Cred_mfg\n");
-	ocbufp = sdo_string_to_string(ocred_mfg->d, ocbuf, OCBUF_SIZE);
-	if (ocbufp)
-		LOG(LOG_DEBUG, "d  : %s\n", ocbufp);
-	ocbufp = sdo_string_to_string(ocred_mfg->cu, ocbuf, OCBUF_SIZE);
-	if (ocbufp)
-		LOG(LOG_DEBUG, "cu : %s\n", ocbufp);
-	ocbufp = sdo_hash_to_string(ocred_mfg->ch, ocbuf, OCBUF_SIZE);
-	if (ocbufp)
-		LOG(LOG_DEBUG, "ch : %s\n", ocbufp);
-}
-#endif
-
 /*------------------------------------------------------------------------------
- * PMDevice_credentials routines
+ * DeviceCredential routines
  */
 
 /**
@@ -154,7 +97,7 @@ sdo_dev_cred_t *sdo_dev_cred_alloc(void)
 }
 
 /**
- * Clear a devcred object
+ * Clear a sdo_dev_cred_t object
  * @param dev_cred - object to be cleared
  * @return none
  */
@@ -230,13 +173,13 @@ sdo_hash_t *sdo_pub_key_hash(sdo_public_key_t *pub_key)
 }
 
 /*------------------------------------------------------------------------------
- * Owner Proxy Entry Routines
+ * OwnershipVoucher.OVEntries Routines
  */
 
 /**
- * Allocate an empty Owner Proxy Entry
+ * Allocate an empty sdo_ov_entry_t
  * @param - none
- * @return e - an newly allocated, cleared, Owner Proxy Entry
+ * @return e - an newly allocated, cleared, sdo_ov_entry_t
  */
 sdo_ov_entry_t *sdo_ov_entry_alloc_empty(void)
 {
@@ -245,7 +188,7 @@ sdo_ov_entry_t *sdo_ov_entry_alloc_empty(void)
 }
 
 /**
- * Release and sdo_free an Ownership Voucher entry
+ * Release and sdo_free an sdo_ov_entry_t
  * @param e - the entry to sdo_free
  * @return - the entry pointed to by the next value
  */
@@ -263,12 +206,12 @@ sdo_ov_entry_t *sdo_ov_entry_free(sdo_ov_entry_t *e)
 	return next;
 }
 /*------------------------------------------------------------------------------
- * Ownership Voucher Routines
+ * OwnershipVoucher Routines
  */
 
 /**
- * Allocate an Owner Proxy Base object
- * @return The newly allocated Owner Proxy
+ * Allocate an sdo_ownership_voucher_t object
+ * @return The newly allocated sdo_ownership_voucher_t
  */
 sdo_ownership_voucher_t *sdo_ov_alloc(void)
 {
@@ -282,8 +225,8 @@ sdo_ownership_voucher_t *sdo_ov_alloc(void)
 }
 
 /**
- * Free and Ownership Voucher Oject
- * @param ov - Ownership Voucher to sdo_free
+ * Free an sdo_ownership_voucher_t object
+ * @param ov - sdo_ownership_voucher_t to sdo_free
  * @return none
  */
 void sdo_ov_free(sdo_ownership_voucher_t *ov)
@@ -303,7 +246,7 @@ void sdo_ov_free(sdo_ownership_voucher_t *ov)
 	if (ov->hdc)
 		sdo_hash_free(ov->hdc);
 
-	// Free all listed Owner Proxy Entries
+	// Free all listed OVEntries
 	while ((e = ov->ov_entries) != NULL) {
 		ov->ov_entries = e->next;
 		sdo_ov_entry_free(e);
@@ -312,11 +255,11 @@ void sdo_ov_free(sdo_ownership_voucher_t *ov)
 }
 
 /**
- * Read the Ownership Voucher header passed in TO2 Prove Ov_header
+ * Read the OwnershipVoucher header passed in TO2.ProveOVHeader
  * @param sdor - the received context from the server
  * @param hmac a place top store the resulting HMAC
  * @param cal_hp_hc - calculate hp, hc if true.
- * @return A newly allocated Ownership Voucher with the header completed
+ * @return A newly allocated OwnershipVoucher with the header completed
  */
 sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac)
 {
@@ -329,7 +272,7 @@ sdo_ownership_voucher_t *sdo_ov_hdr_read(sdor_t *sdor, sdo_hash_t **hmac)
 	int ret = -1;
 
 	if (ov == NULL) {
-		LOG(LOG_ERROR, "Ownership Voucher allocation failed!");
+		LOG(LOG_ERROR, "OwnershipVoucher allocation failed!");
 		return NULL;
 	}
 
@@ -431,7 +374,7 @@ exit:
 }
 
 /**
- * Given an Ownership Voucher header, CBOR encode it and generate hmac.
+ * Given an OwnershipVoucher header (OVHeader), proceed to CBOR encode it and generate hmac.
  * @param ov - the received ownership voucher from the server
  * @param hmac a place top store the resulting HMAC
  * @param num_ov_items - number of items in ownership voucher header
@@ -458,6 +401,7 @@ bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac) {
 	*hmac =
 	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
 	if (!*hmac) {
+		LOG(LOG_ERROR, "Failed to alloc for OVHeaderHmac\n");
 		goto exit;
 	}
 
@@ -465,6 +409,7 @@ bool sdo_ov_hdr_hmac(sdo_ownership_voucher_t *ov, sdo_hash_t **hmac) {
 				    (*hmac)->hash->bytes,
 				    (*hmac)->hash->byte_sz)) {
 		sdo_hash_free(*hmac);
+		LOG(LOG_ERROR, "Failed to generate OVHeaderHmac\n");
 		goto exit;
 	}
 	ret = true;
@@ -477,31 +422,54 @@ exit :
 	return ret;
 }
 
+/**
+ * Given an OwnershipVoucher header (OVHeader), CBOR encode it.
+ * OVHeader = [
+ *   OVProtVer:         protver,        ;; protocol version
+ *   OVGuid:            Guid,           ;; guid
+ *   OVRVInfo:          RendezvousInfo, ;; rendezvous instructions
+ *   OVDeviceInfo:      tstr,           ;; DeviceInfo
+ *   OVPubKey:          PublicKey,      ;; mfg public key
+ *   OVDevCertChainHash:OVDevCertChainHashOrNull
+ * ]
+ * @param ov - the received ownership voucher from the server
+ * @param hmac a place top store the resulting HMAC
+ * @param num_ov_items - number of items in ownership voucher header
+ * @return true if hmac was successfully generated, false otherwise.
+ */
 bool fdo_ovheader_write(sdow_t *sdow, int protver, sdo_byte_array_t *guid, sdo_rendezvous_list_t *rvlst,
 	sdo_string_t *dev_info, sdo_public_key_t *pubkey, sdo_hash_t *hdc) {
 
 	if (!sdow_start_array(sdow, 6)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to start array\n");
 		return false;
 	}
 	if (!sdow_signed_int(sdow, protver)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to write OVProtVer\n");
 		return false;
 	}
 	if (!sdow_byte_string(sdow, guid->bytes, guid->byte_sz)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to write OVGuid\n");
 		return false;
 	}
 	if (!sdo_rendezvous_list_write(sdow, rvlst)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to write OVRVInfo\n");
 		return false;
 	}
 	if (!sdow_text_string(sdow, dev_info->bytes, dev_info->byte_sz)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to write OVDeviceInfo\n");
 		return false;
 	}
 	if (!sdo_public_key_write(sdow, pubkey)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to write OVPubKey\n");
 		return false;
 	}
 	if (!sdo_hash_write(sdow, hdc)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to write OVDevCertChainHash\n");
 		return false;
 	}
 	if (!sdow_end_array(sdow)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to end array\n");
 		return false;
 	}
 	if (!sdow_encoded_length(sdow, &sdow->b.block_size)) {
@@ -510,6 +478,11 @@ bool fdo_ovheader_write(sdow_t *sdow, int protver, sdo_byte_array_t *guid, sdo_r
 	return true;
 }
 
+/**
+ * Given an OwnershipVoucher, calculate and save the OVEHashHdrInfo.
+ * @param ov - pointer to the sdo_ownership_voucher_t object
+ * @return true if operation is a success, false otherwise
+ */
 bool fdo_ove_hash_hdr_info_save(sdo_ownership_voucher_t *ov) {
 
 	bool ret = false;
@@ -553,6 +526,13 @@ exit:
 	return ret;	
 }
 
+/**
+ * Given an OwnershipVoucher and hmac, calculate and save the OVEHashPrevEntry.
+ * @param sdow - sdow_t object to use for encoding data into CBOR
+ * @param ov - pointer to the sdo_ownership_voucher_t object
+ * @param hmac - OVHeaderHMac.OVHeaderHMac object
+ * @return true if operation is a success, false otherwise
+ */
 bool fdo_ove_hash_prev_entry_save(sdow_t *sdow, sdo_ownership_voucher_t *ov,
 	sdo_hash_t *hmac) {
 
@@ -658,10 +638,8 @@ exit:
 }
 
 /**
- * TO-DO : Update during TO2 implementation.
- * However, this might be a duplicate of the above.
- * 
- * Take the the values in the "oh" and create a new HMAC
+ * Take the the values of old OVHeader contents and newly supplied replacement credentials
+ * and create a new HMAC.
  * @param dev_cred - pointer to the Device_credential to source
  * @param new_pub_key - the public key to use in the signature
  * @param hdc - device cert-chain hash

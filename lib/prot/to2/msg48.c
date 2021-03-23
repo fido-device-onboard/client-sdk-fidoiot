@@ -64,7 +64,7 @@ int32_t msg68(sdo_prot_t *ps)
 		}
 
 		// Construct and write platform DSI's into a single msg
-		if (!sdo_combine_platform_dsis(&ps->sdow, ps->service_info)) {
+		if (!fdo_serviceinfo_write(&ps->sdow, ps->service_info)) {
 			LOG(LOG_ERROR, "Error in combining platform DSI's!\n");
 			goto err;
 		}

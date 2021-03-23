@@ -57,7 +57,7 @@ static state_func to1_state_fn[] = {
  * State functions for TO2
  */
 static state_func to2_state_fn[] = {
-    msg60, // TO2.Hello_device
+    msg60, // TO2.HelloDevice
     msg61, // TO2.ProveOVHdr
     msg62, // TO2.GetOVNextEntry
     msg63, // TO2.OVNextEntry

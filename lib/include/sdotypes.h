@@ -35,8 +35,6 @@ bool sdo_bits_fill_with(sdo_bits_t *b, uint8_t *data, uint32_t data_len);
 bool sdo_bits_resize_with(sdo_bits_t *b, int new_byte_sz, uint8_t *data);
 bool sdo_bits_equal(sdo_bits_t *b1, sdo_bits_t *b2);
 int sdo_bits_randomize(sdo_bits_t *b);
-char *sdo_bits_to_string(sdo_bits_t *b, const char *typname, char *buf,
-			 int buf_sz);
 char *sdo_bits_to_string_hex(sdo_bits_t *b, char *buf, int buf_sz);
 
 #if 0
@@ -65,14 +63,6 @@ sdo_byte_array_t *sdo_byte_array_append(sdo_byte_array_t *baA,
 					sdo_byte_array_t *baB);
 sdo_byte_array_t *sdo_byte_array_clone(sdo_byte_array_t *ba);
 bool sdo_byte_array_equal(sdo_byte_array_t *ba1, sdo_byte_array_t *ba2);
-char *sdo_byte_array_to_string(sdo_byte_array_t *g, char *buf, int buf_sz);
-int sdo_byte_array_read(sdor_t *sdor, sdo_byte_array_t *ba);
-int sdo_byte_array_read_chars(sdor_t *sdor, sdo_byte_array_t *ba);
-int sdo_byte_array_read_with_type(sdor_t *sdor, sdo_byte_array_t *ba,
-				  sdo_byte_array_t **ct_string,
-				  uint8_t *iv_data);
-void sdo_byte_array_write(sdow_t *sdow, sdo_byte_array_t *ba);
-void sdo_byte_array_write_chars(sdow_t *sdow, sdo_byte_array_t *ba);
 
 // Bignum
 
@@ -103,8 +93,6 @@ sdo_string_t *sdo_string_alloc_with_str(const char *data);
 void sdo_string_free(sdo_string_t *b);
 bool sdo_string_resize(sdo_string_t *b, int byte_sz);
 bool sdo_string_resize_with(sdo_string_t *b, int new_byte_sz, const char *data);
-char *sdo_string_to_string(sdo_string_t *b, char *buf, int buf_sz);
-bool sdo_string_read(sdor_t *sdor, sdo_string_t *b);
 
 #define SDO_GUID_BYTES (128 / 8)
 #define SDO_GID_BYTES (128 / 8)
@@ -126,9 +114,6 @@ typedef uint8_t sdo_guid_t[SDO_GUID_BYTES];
 typedef uint8_t sdo_nonce_t[SDO_NONCE_BYTES];
 typedef uint8_t sdo_ueid_t[SDO_UEID_BYTES];
 
-/* GUID */
-char *sdo_guid_to_string(sdo_byte_array_t *g, char *buf, int buf_sz);
-
 /* Nonce  */
 void sdo_nonce_init_rand(sdo_byte_array_t *n);
 char *sdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz);
@@ -142,17 +127,14 @@ typedef struct _sdo_hash_t {
 /*GID*/
 bool sdo_siginfo_write(sdow_t *sdow);
 
-/* Hash type as defined by protocol */
+// 3.3.2, hashtype as defined in FDO spec
 #define SDO_CRYPTO_HASH_TYPE_SHA_256 8
 #define SDO_CRYPTO_HASH_TYPE_SHA_384 14
 #define SDO_CRYPTO_HMAC_TYPE_SHA_256 5
 #define SDO_CRYPTO_HMAC_TYPE_SHA_384 6
 
-// TO-DO : legacy.. remove?
+// Legacy value, Currently used to represent an empty hash type for now
 #define SDO_CRYPTO_HASH_TYPE_NONE 0
-#define SDO_CRYPTO_HASH_TYPE_SHA_1 3
-#define SDO_CRYPTO_HMAC_TYPE_SHA_512 110
-#define SDO_CRYPTO_HASH_TYPE_SHA_512 10
 
 #if !defined(KEX_ECDH384_ENABLED) /* TODO: do more generic */
 #define SDO_CRYPTO_HASH_TYPE_USED SDO_CRYPTO_HASH_TYPE_SHA_256
@@ -166,12 +148,6 @@ sdo_hash_t *sdo_hash_alloc(int hash_type, int size);
 void sdo_hash_free(sdo_hash_t *hp);
 int sdo_hash_read(sdor_t *sdor, sdo_hash_t *hp);
 bool sdo_hash_write(sdow_t *sdow, sdo_hash_t *hp);
-void sdo_hash_null_write(sdow_t *sdow);
-char *sdo_hash_type_to_string(int hash_type);
-char *sdo_hash_to_string(sdo_hash_t *hp, char *buf, int buf_sz);
-
-bool sdo_begin_readHMAC(sdor_t *sdor, int *sig_block_start);
-bool sdo_end_readHMAC(sdor_t *sdor, sdo_hash_t **hmac, int sig_block_start);
 
 typedef sdo_byte_array_t sdo_key_exchange_t;
 
@@ -188,7 +164,6 @@ void sdo_init_ipv6_address(sdo_ip_address_t *sdoip, uint8_t *ipv6);
 #endif
 bool sdo_read_ipaddress(sdor_t *sdor, sdo_ip_address_t *sdoip);
 bool sdo_convert_to_ipaddress(sdo_byte_array_t * ip_bytes, sdo_ip_address_t *sdoip);
-void sdo_write_ipaddress(sdow_t *sdow, sdo_ip_address_t *sdoip);
 char *sdo_ipaddress_to_string(sdo_ip_address_t *sdoip, char *buf, int buf_sz);
 #if 0
 int sdo_ipaddress_to_mem(sdo_ip_address_t *sdoip, uint8_t *copyto);
@@ -199,13 +174,8 @@ typedef struct {
 	char *name;
 } sdo_dns_name_t;
 
-char *sdo_read_dns(sdor_t *sdor);
-
-#define SDO_APP_ID_TYPE_BYTES 2
-
-void sdo_app_id_write(sdow_t *sdow);
-
-// 4.2.1 Hash and HMAC types
+// Legacy Hash and HMAC types
+// TO-DO : Used in RSA-based crypto operations. Remove when the classes themselves are removed.
 #define SDO_PK_HASH_NONE 0
 #define SDO_PK_HASH_SHA1 3
 #define SDO_PK_HASH_SHA256 8
@@ -215,15 +185,13 @@ void sdo_app_id_write(sdow_t *sdow);
 #define SDO_PK_HASH_HMAC_SHA512 110
 #define SDO_PK_HASH_HMAC_SHA_384 114
 
-// 4.2.2 Public key types
-#define SDO_CRYPTO_PUB_KEY_ALGO_NONE 0
-#define SDO_CRYPTO_PUB_KEY_ALGO_RSA 1
-#define SDO_CRYPTO_PUB_KEY_ALGO_DH 2
-#define SDO_CRYPTO_PUB_KEY_ALGO_DSA 3
+// 3.3.4, PublicKey types (pkType)
 #define SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 13
 #define SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384 14
-#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1 91
-#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0 92
+
+// TO-DO: Legacy, Used in RSA-based crypto operations.
+// Remove when the classes themselves are removed.
+#define SDO_CRYPTO_PUB_KEY_ALGO_RSA 1
 
 // 3.3.5 COSECompatibleSignatureTypes
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
@@ -245,23 +213,21 @@ void sdo_app_id_write(sdow_t *sdow);
 #define FDO_COSE_SIGN1_CUPHNONCE_KEY -17760701
 #define FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY -17760702
 
-//#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1 201
-//#define SDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0 202
-
 // Appendix E. AESPlainType values.
 #define FDO_CRYPTO_COSEAES128CBC -17760703
 #define FDO_CRYPTO_COSEAES128CTR -17760704
 #define FDO_CRYPTO_COSEAES256CBC -17760705
 #define FDO_CRYPTO_COSEAES256CTR -17760706
 
-// 4.2.3 Public key encodings
+// 3.3.4 PublicKey encodings (pkEnc)
 #define SDO_CRYPTO_PUB_KEY_ENCODING_NONE 0
 #define SDO_CRYPTO_PUB_KEY_ENCODING_X509 1
 #define FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 2
+#define FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY 3
+
+// TO-DO: Legacy, Used in RSA-based crypto operations.
+// Remove when the classes themselves are removed.
 #define SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP 3
-#define SDO_CRYPTO_PUB_KEY_ENCODING_EPID 4
-#define SDO_EPID20 92 // should be 3
-#define SDOEPID_VERSION SDO_EPID20
 
 #define SDOEPID20_GID_LEN (16)
 
@@ -269,16 +235,6 @@ void sdo_app_id_write(sdow_t *sdow);
 #define SDO_PK_ENC_DEFAULT SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP
 // Define the encryption values
 //#define SDOEAlgAES_ECB_No_padding 1
-
-typedef struct {
-	uint16_t len;	// Total bytes in the certificate chain
-	uint8_t type;	// Format of certificate entries (1 == x509)
-	uint8_t num_entries; // number of entries
-	sdo_byte_array_t
-	    *cert; // certs, from Device to CA, each signed by next.
-} sdo_cert_chain_t;
-sdo_cert_chain_t *sdo_cert_chain_alloc_empty(void);
-sdo_cert_chain_t *sdo_cert_chain_read(sdor_t *sdor);
 
 typedef struct {
 	int pkalg;
@@ -293,8 +249,7 @@ typedef struct {
 	sdo_public_key_t *pubkey;
 } sdo_sig_info_t;
 
-int32_t sdo_epid_info_eb_read(sdor_t *sdor);
-bool sdo_eb_read(sdor_t *sdor);
+bool sdo_siginfo_read(sdor_t *sdor);
 
 sdo_public_key_t *sdo_public_key_alloc_empty(void);
 sdo_public_key_t *sdo_public_key_alloc(int pkalg, int pkenc, int pklen,
@@ -303,10 +258,6 @@ void sdo_public_key_free(sdo_public_key_t *pk);
 bool sdo_public_key_write(sdow_t *sdow, sdo_public_key_t *pk);
 sdo_public_key_t *sdo_public_key_read(sdor_t *sdor);
 sdo_public_key_t *sdo_public_key_clone(sdo_public_key_t *pk);
-const char *sdo_pk_alg_to_string(int alg);
-const char *sdo_pk_enc_to_string(int enc);
-bool sdo_read_pk_null(sdor_t *sdor);
-char *sdo_public_key_to_string(sdo_public_key_t *pk, char *buf, int bufsz);
 
 #define AES_IV 16
 #define AES_CTR_IV 12
@@ -336,15 +287,9 @@ void sdo_encrypted_packet_free(sdo_encrypted_packet_t *pkt);
 sdo_encrypted_packet_t *sdo_encrypted_packet_read(sdor_t *sdor);
 bool fdo_etminnerblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt);
 bool fdo_etmouterblock_write(sdow_t *sdow, sdo_encrypted_packet_t *pkt);
-#if 0
-char *sdo_encrypted_packet_to_string(sdo_encrypted_packet_t *pkt, char *buf, int bufsz);
-#endif
 bool sdo_encrypted_packet_unwind(sdor_t *sdor, sdo_encrypted_packet_t *pkt,
 				 sdo_iv_t *iv);
 bool sdo_encrypted_packet_windup(sdow_t *sdow, int type, sdo_iv_t *iv);
-bool sdo_get_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv,
-		sdo_encrypted_packet_t *last_pkt);
-bool sdo_write_iv(sdo_encrypted_packet_t *pkt, sdo_iv_t *ps_iv, int len);
 
 #define SDO_AES_128_BLOCK_SIZE 16
 
@@ -359,16 +304,6 @@ typedef struct {
 	sdo_byte_array_t *plain_text;
 	sdo_byte_array_t *obsig;
 } sdo_redirect_t;
-
-bool sdo_begin_read_signature(sdor_t *sdor, sdo_sig_t *sig);
-bool sdo_end_read_signature(sdor_t *sdor, sdo_sig_t *sig);
-bool sdo_end_read_signature_full(sdor_t *sdor, sdo_sig_t *sig,
-				 sdo_public_key_t **getpk);
-bool sdo_end_write_signature(sdow_t *sdow, sdo_sig_t *sig);
-bool sdo_begin_write_signature(sdow_t *sdow, sdo_sig_t *sig,
-			       sdo_public_key_t *pk);
-bool sdoOVSignature_verification(sdor_t *sdor, sdo_sig_t *sig,
-				 sdo_public_key_t *pk);
 
 typedef struct {
 	int aes_plain_type;
@@ -506,7 +441,6 @@ sdo_key_value_t *sdo_kv_alloc_with_array(const char *key,
 sdo_key_value_t *sdo_kv_alloc_with_str(const char *key, const char *val);
 sdo_key_value_t *sdo_kv_alloc_key_only(const char *key);
 void sdo_kv_free(sdo_key_value_t *kv);
-void sdo_kv_write(sdow_t *sdow, sdo_key_value_t *kv);
 
 /*
  * This is a lookup on all possible RVVariable
@@ -565,7 +499,6 @@ sdo_rendezvous_t *sdo_rendezvous_alloc(void);
 void sdo_rendezvous_free(sdo_rendezvous_t *rv);
 bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv);
 bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv);
-char *sdo_rendezvous_to_string(sdo_rendezvous_t *rv, char *buf, int bufsz);
 #define SDO_RENDEZVOUS_GET_IP_ADDRESS_P(rv) ((rv)->ip)
 #define SDO_RENDEZVOUS_GET_PORT(rv) (*(rv)->po)
 //#define SDORendezvous_set_port(rv,p) ((rv)->po = (p))
@@ -588,7 +521,6 @@ sdo_rendezvous_directive_t *sdo_rendezvous_directive_get(
 sdo_rendezvous_list_t *sdo_rendezvous_list_alloc(void);
 void sdo_rendezvous_list_free(sdo_rendezvous_list_t *list);
 int sdo_rendezvous_list_add(sdo_rendezvous_directive_t *list, sdo_rendezvous_t *rv);
-// int SDORendezvous_list_remove(sdo_rendezvous_list_t *list, int num);
 sdo_rendezvous_t *sdo_rendezvous_list_get(sdo_rendezvous_directive_t *list, int num);
 int sdo_rendezvous_list_read(sdor_t *sdor, sdo_rendezvous_list_t *list);
 bool sdo_rendezvous_list_write(sdow_t *sdow, sdo_rendezvous_list_t *list);
@@ -599,7 +531,6 @@ typedef struct sdo_service_info_s {
 } sdo_service_info_t;
 
 sdo_service_info_t *sdo_service_info_alloc(void);
-sdo_service_info_t *sdo_service_info_alloc_with(char *key, char *val);
 void sdo_service_info_free(sdo_service_info_t *si);
 sdo_key_value_t **sdo_service_info_fetch(sdo_service_info_t *si,
 					 const char *key);
@@ -617,7 +548,7 @@ bool sdo_signature_verification(sdo_byte_array_t *plain_text,
 				sdo_byte_array_t *sg, sdo_public_key_t *pk);
 
 bool sdo_compare_public_keys(sdo_public_key_t *pk1, sdo_public_key_t *pk2);
-bool sdo_combine_platform_dsis(sdow_t *sdow, sdo_service_info_t *si);
+bool fdo_serviceinfo_write(sdow_t *sdow, sdo_service_info_t *si);
 
 /*==================================================================*/
 /* Service Info functionality */
@@ -639,41 +570,16 @@ typedef struct sdo_sv_info_dsi_info_s {
 	int module_dsi_index;
 } sdo_sv_info_dsi_info_t;
 
-/* exposed API for modules to registr */
+/* exposed API for modules to register */
 void sdo_sdk_service_info_register_module(sdo_sdk_service_info_module *module);
 void sdo_sdk_service_info_deregister_module(void);
 void print_service_info_module_list(void);
-bool sdo_get_module_name_msg_value(char *psi_tuple, int psi_len, char *mod_name,
-				   char *mod_msg, char *mod_val,
-				   int *cb_return_val);
 
-bool sdo_psi_parsing(sdo_sdk_service_info_module_list_t *module_list, char *psi,
-		     int psi_len, int *cb_return_val);
 bool sdo_mod_exec_sv_infotype(sdo_sdk_service_info_module_list_t *module_list,
 			      sdo_sdk_si_type type);
-bool sdo_get_dsi_count(sdo_sdk_service_info_module_list_t *module_list,
-		       int *modmescount, int *cb_return_val);
-bool sdo_mod_data_kv(char *mod_name, sdo_sdk_si_key_value *sv_kv);
-bool sdo_construct_module_dsi(sdo_sv_info_dsi_info_t *dsi_info,
-			      sdo_sdk_si_key_value *sv_kv, int *cb_return_val);
-bool sdo_mod_kv_write(sdow_t *sdow, sdo_sdk_si_key_value *kv);
-void sdo_sv_key_value_free(sdo_sdk_si_key_value *sv_kv);
 
-bool sdo_supply_modulePSI(sdo_sdk_service_info_module_list_t *module_list,
-			  char *mod_name, sdo_sdk_si_key_value *sv_kv,
-			  int *cb_return_val);
-bool sdo_supply_moduleOSI(sdo_sdk_service_info_module_list_t *module_list,
-			  char *mod_name, sdo_sdk_si_key_value *sv_kv,
-			  int *cb_return_val);
-bool sdo_osi_parsing(sdor_t *sdor,
-		     sdo_sdk_service_info_module_list_t *module_list,
-		     sdo_sdk_si_key_value *kv, int *cb_return_val);
-bool sdo_osi_handling(sdo_sdk_service_info_module_list_t *module_list,
-		      sdo_sdk_si_key_value *sv, int *cb_return_val);
 void sdo_sv_info_clear_module_psi_osi_index(
     sdo_sdk_service_info_module_list_t *module_list);
-bool sdo_construct_module_list(sdo_sdk_service_info_module_list_t *module_list,
-			       char **mod_name);
 
 bool fdo_serviceinfo_read(sdor_t *sdor, sdo_sdk_service_info_module_list_t *module_list,
 	int *cb_return_val);
@@ -684,15 +590,10 @@ bool sdo_compare_hashes(sdo_hash_t *hash1, sdo_hash_t *hash2);
 bool sdo_compare_byte_arrays(sdo_byte_array_t *ba1, sdo_byte_array_t *ba2);
 bool sdo_compare_rv_lists(sdo_rendezvous_list_t *rv_list1,
 			  sdo_rendezvous_list_t *rv_list2);
-bool sdo_ecdsa_dummyEBRead(sdor_t *sdor);
 
 void sdo_log_block(sdo_block_t *sdob);
 
 #define SDO_DSI_ACTIVE_LEN 6
 /*==================================================================*/
-
-#if 0
-void sdo_service_info_print(sdo_service_info_t *si);
-#endif
 
 #endif /* __SDOTYPES_H__ */
