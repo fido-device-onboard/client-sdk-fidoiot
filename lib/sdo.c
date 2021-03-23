@@ -1038,7 +1038,7 @@ static bool _STATE_TO1(void)
 				rv = rv->next;
 				continue;
 			}
-			if (rv->pr && *rv->pr == RVPROTHTTPS) {
+			if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
 				tls = true;
 			}
 			rv = rv->next;
@@ -1177,7 +1177,7 @@ static bool _STATE_TO2(void)
 				port = *rv->po;
 				rv = rv->next;
 			}
-			if (rv->pr && *rv->pr == RVPROTHTTPS) {
+			if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
 				tls = true;
 			}
 
@@ -1201,8 +1201,10 @@ static bool _STATE_TO2(void)
 			}
 			dns = g_sdo_data->current_rvto2addrentry->rvdns;
 			port = g_sdo_data->current_rvto2addrentry->rvport;
-			if (g_sdo_data->current_rvto2addrentry->rvprotocol == RVPROTHTTPS)
+			if (g_sdo_data->current_rvto2addrentry->rvprotocol == RVPROTHTTPS ||
+				g_sdo_data->current_rvto2addrentry->rvprotocol == RVPROTTLS) {
 				tls = true;
+			}
 			// prepare for next iteration beforehand
 			g_sdo_data->current_rvto2addrentry = g_sdo_data->current_rvto2addrentry->next;
 
