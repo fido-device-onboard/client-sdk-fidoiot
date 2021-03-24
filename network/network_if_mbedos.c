@@ -362,6 +362,9 @@ int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
 	rest->prot_ver = protocol_version;
 	rest->msg_type = message_type;
 	rest->content_length = length;
+	if (ssl) {
+		rest->tls = true;
+	}
 
 	if (!construct_rest_header(rest, rest_hdr, REST_MAX_MSGHDR_SIZE)) {
 		LOG(LOG_ERROR, "Error during constrcution of REST hdr!\n");

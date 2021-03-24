@@ -2490,12 +2490,12 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 	if (!sdow_start_array(sdow, rv->num_params))
 		return false;
 
-	if (rv->dev_only != NULL) {
+	if (rv->dev_only != NULL && *rv->dev_only == true) {
 		if (!sdow_signed_int(sdow, RVDEVONLY))
 			return false;
 	}
 
-	if (rv->owner_only != NULL) {
+	if (rv->owner_only != NULL && *rv->owner_only == true) {
 		if (!sdow_signed_int(sdow, RVOWNERONLY))
 			return false;
 	}
@@ -2538,7 +2538,7 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 
 	if (rv->ui != NULL) {
 		if (!sdow_signed_int(sdow, RVUSERINPUT) ||
-			!sdow_boolean(sdow, rv->ui->value))
+			!sdow_boolean(sdow, *rv->ui))
 			return false;
 	}
 
@@ -2572,7 +2572,7 @@ bool sdo_rendezvous_write(sdow_t *sdow, sdo_rendezvous_t *rv)
 			return false;
 	}
 
-	if (rv->bypass != NULL) {
+	if (rv->bypass != NULL && *rv->bypass == true) {
 		if (!sdow_signed_int(sdow, RVBYPASS))
 			return false;
 	}
@@ -2632,24 +2632,24 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 	// Parse the values found
 	switch (key) {
 	case RVDEVONLY:
-		rv->dev_only = sdo_alloc(sizeof(sdo_bool_t));
+		rv->dev_only = sdo_alloc(sizeof(bool));
 		if (!rv->dev_only) {
 			LOG(LOG_ERROR, "RVDEVONLY alloc failed\n");
 			ret = false;
 			break;
 		}
-		*rv->dev_only->value = true;
+		*rv->dev_only = true;
 		rv->num_params = 1;
 		break;
 
 	case RVOWNERONLY:
-		rv->owner_only = sdo_alloc(sizeof(sdo_bool_t));
+		rv->owner_only = sdo_alloc(sizeof(bool));
 		if (!rv->owner_only) {
 			LOG(LOG_ERROR, "RVOWNERONLY alloc failed\n");
 			ret = false;
 			break;
 		}
-		*rv->owner_only->value = true;
+		*rv->owner_only = true;
 		rv->num_params = 1;
 		break;
 
@@ -2773,13 +2773,13 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 
 	case RVUSERINPUT:
 
-		rv->ui = sdo_alloc(sizeof(sdo_bool_t));
+		rv->ui = sdo_alloc(sizeof(bool));
 		if (!rv->ui) {
 			LOG(LOG_ERROR, "RVUSERINPUT alloc failed\n");
 			ret = false;
 			break;
 		}
-		if (!sdor_boolean(sdor, rv->ui->value)) {
+		if (!sdor_boolean(sdor, rv->ui)) {
 			LOG(LOG_ERROR, "RVUSERINPUT read failed\n");
 			ret = false;
 		}
@@ -2875,13 +2875,13 @@ bool sdo_rendezvous_read(sdor_t *sdor, sdo_rendezvous_t *rv)
 
 	case RVBYPASS:
 
-		rv->bypass = sdo_alloc(sizeof(sdo_bool_t));
+		rv->bypass = sdo_alloc(sizeof(bool));
 		if (!rv->bypass) {
 			LOG(LOG_ERROR, "RVBYPASS alloc failed\n");
 			ret = false;
 			break;
 		}
-		*rv->bypass->value = true;
+		*rv->bypass = true;
 		rv->num_params = 1;
 		break;
 

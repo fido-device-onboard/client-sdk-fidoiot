@@ -140,7 +140,8 @@ static bool sdo_prot_ctx_connect(sdo_prot_ctx_t *prot_ctx)
 		if (prot_ctx->host_dns) {
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port, NULL,
+					prot_ctx->host_port,
+					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
 					is_owner_proxy_defined())) {
 				ret = false;
 				break;
@@ -168,7 +169,7 @@ static bool sdo_prot_ctx_connect(sdo_prot_ctx_t *prot_ctx)
 		ATTRIBUTE_FALLTHROUGH;
 	case SDO_STATE_TO2_RCV_DONE_2: /* type 51 */
 		ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, NULL);
+				       &prot_ctx->sock_hdl, (prot_ctx->tls ? &prot_ctx->ssl : NULL));
 		break;
 	default:
 		LOG(LOG_ERROR, "%s reached unknown state\n", __func__);
