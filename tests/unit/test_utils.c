@@ -4,10 +4,10 @@
 
 /*!
  * \file
- * \brief Unit tests for printing and file handling utilities of SDO library.
+ * \brief Unit tests for printing and file handling utilities of FDO library.
  */
 
-#include "sdoblockio.h"
+#include "fdoblockio.h"
 #include "unity.h"
 #include <stdlib.h>
 #include "util.h"
@@ -19,7 +19,7 @@ FILE *__wrap_fopen(const char *filename, const char *mode);
 int __wrap_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int __wrap_fclose(FILE *stream);
 long int __wrap_ftell(FILE *stream);
-void *__wrap_sdo_alloc(size_t size);
+void *__wrap_fdo_alloc(size_t size);
 void test_file_utils(void);
 
 /*** Unity functions. ***/
@@ -81,11 +81,11 @@ long int __wrap_ftell(FILE *stream)
 }
 #ifdef TARGET_OS_LINUX
 bool g_malloc_fail = false;
-void *__real_sdo_alloc(size_t size);
-void *__wrap_sdo_alloc(size_t size)
+void *__real_fdo_alloc(size_t size);
+void *__wrap_fdo_alloc(size_t size)
 {
 	if (g_malloc_fail)
-		return __real_sdo_alloc(size);
+		return __real_fdo_alloc(size);
 	else
 		return NULL;
 }

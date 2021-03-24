@@ -8,7 +8,7 @@
  * \ brief Abstraction layer for ECDSA signing routine using SE
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
@@ -18,7 +18,7 @@
 
 /*
  * Helper API designed to convert the raw signature into DER format required by
- * SDO.
+ * FDO.
  * raw_sig: input a 64 Byte r and s format signature.
  * message_signature: outputs a DER encoded signature value
  * signature_length: outputs the size of the signature after converting to DER
@@ -151,7 +151,7 @@ int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
 	}
 
 	/* one extra byte for compression information. */
-	local_raw_key = (uint8_t *)sdo_alloc(BUFF_SIZE_65_BYTES);
+	local_raw_key = (uint8_t *)fdo_alloc(BUFF_SIZE_65_BYTES);
 	if (NULL == local_raw_key) {
 		LOG(LOG_ERROR, "Allocation of buffer for raw key failed\n");
 		ret = -1;
@@ -212,7 +212,7 @@ err:
 		LOG(LOG_ERROR, "Memset for local raw key failed\n");
 		ret = -1;
 	}
-	sdo_free(local_raw_key);
+	fdo_free(local_raw_key);
 	mbedtls_pk_free(&pk_ctx);
 	return ret;
 }

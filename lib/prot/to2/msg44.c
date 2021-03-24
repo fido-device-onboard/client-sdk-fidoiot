@@ -8,10 +8,10 @@
  * \brief This file implements msg44 of TO2 state machine.
  */
 
-#include "sdoprot.h"
-#include "sdokeyexchange.h"
+#include "fdoprot.h"
+#include "fdokeyexchange.h"
 #include "util.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 
 /**
  * msg64() - TO2.ProveDevice
@@ -30,12 +30,12 @@
  *   TO2ProveDevicePayload
  * )
  */
-int32_t msg64(sdo_prot_t *ps)
+int32_t msg64(fdo_prot_t *ps)
 {
 	int ret = -1;
 
 	fdo_eat_payload_base_map_t payloadbasemap;
-	sdo_byte_array_t *encoded_payloadbasemap = NULL;
+	fdo_byte_array_t *encoded_payloadbasemap = NULL;
 
 	LOG(LOG_DEBUG, "TO2.ProveDevice started\n");
 
@@ -59,13 +59,13 @@ int32_t msg64(sdo_prot_t *ps)
 	}
 
 	// copy Nonce6 and GUID into the struct
-	if (0 != memcpy_s(&payloadbasemap.eatnonce, SDO_NONCE_BYTES,
+	if (0 != memcpy_s(&payloadbasemap.eatnonce, FDO_NONCE_BYTES,
 		ps->n6->bytes, ps->n6->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy Nonce6\n");
 		goto err;
 	}
 	payloadbasemap.eatueid[0] = 1;
-	if (0 != memcpy_s(&payloadbasemap.eatueid[1], SDO_GUID_BYTES,
+	if (0 != memcpy_s(&payloadbasemap.eatueid[1], FDO_GUID_BYTES,
 		ps->dev_cred->owner_blk->guid->bytes, ps->dev_cred->owner_blk->guid->byte_sz)) {
 			LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy GUID\n");
 			goto err;
@@ -73,86 +73,86 @@ int32_t msg64(sdo_prot_t *ps)
 
 	/* Get the second part of Key Exchange */
 	payloadbasemap.eatpayloads = NULL;
-	ret = sdo_get_kex_paramB(&payloadbasemap.eatpayloads);
+	ret = fdo_get_kex_paramB(&payloadbasemap.eatpayloads);
 	if (0 != ret || !payloadbasemap.eatpayloads) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to generate xBKeyExchange\n");
 		goto err;
 	}
 	ret = -1;
 
-	// reset the given SDOW for the next encoding
-	// This is done out of cycle here because SDOW object was used in Type 63
-	sdo_block_reset(&ps->sdow.b);
-	ps->sdow.b.block_size = CBOR_BUFFER_LENGTH;
-	if (!sdow_encoder_init(&ps->sdow)) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize SDOW encoder\n");
+	// reset the given FDOW for the next encoding
+	// This is done out of cycle here because FDOW object was used in Type 63
+	fdo_block_reset(&ps->fdow.b);
+	ps->fdow.b.block_size = CBOR_BUFFER_LENGTH;
+	if (!fdow_encoder_init(&ps->fdow)) {
+		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto err;
 	}
 
 	// Create the payload as CBOR map. Sign the encoded payload.
 	// Then, wrap the encoded payload as a bstr later.
-	if (!fdo_eat_write_payloadbasemap(&ps->sdow, &payloadbasemap)) {
+	if (!fdo_eat_write_payloadbasemap(&ps->fdow, &payloadbasemap)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to write EATPayloadBaseMap\n");
 		goto err;
 	}
 	size_t payload_length = 0;
-	if (!sdow_encoded_length(&ps->sdow, &payload_length) || payload_length == 0) {
+	if (!fdow_encoded_length(&ps->fdow, &payload_length) || payload_length == 0) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to read EATPayload length\n");
 		goto err;
 	}
-	ps->sdow.b.block_size = payload_length;
+	ps->fdow.b.block_size = payload_length;
 
 	LOG(LOG_DEBUG, "TO2.ProveDevice: EATPayloadBaseMap created successfuly\n");
 
 	// Set the encoded payload into buffer
 	encoded_payloadbasemap =
-		sdo_byte_array_alloc_with_byte_array(ps->sdow.b.block, ps->sdow.b.block_size);
+		fdo_byte_array_alloc_with_byte_array(ps->fdow.b.block, ps->fdow.b.block_size);
 	if (!encoded_payloadbasemap) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy encoded EATPayload\n");
 		goto err;
 	}
 	eat->eat_payload = encoded_payloadbasemap;
 
-	// reset the SDOW block to prepare for the next encoding.
-	sdo_block_reset(&ps->sdow.b);
-	ps->sdow.b.block_size = CBOR_BUFFER_LENGTH;
-	if (!sdow_encoder_init(&ps->sdow)) {
-		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to initilize SDOW encoder\n");
+	// reset the FDOW block to prepare for the next encoding.
+	fdo_block_reset(&ps->fdow.b);
+	ps->fdow.b.block_size = CBOR_BUFFER_LENGTH;
+	if (!fdow_encoder_init(&ps->fdow)) {
+		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to initilize FDOW encoder\n");
 		goto err;
 	}
 
 	// generate the signature on encoded payload
 	if (0 !=
-	    sdo_device_sign(eat->eat_payload->bytes, eat->eat_payload->byte_sz,
+	    fdo_device_sign(eat->eat_payload->bytes, eat->eat_payload->byte_sz,
 			&eat->eat_signature)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to generate signature\n");
 		goto err;		
 	}
 
 	// Set the EAT.UnprotectedHeader contents
-	ps->n7 = sdo_byte_array_alloc(SDO_NONCE_BYTES);
+	ps->n7 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->n7) {
 		LOG(LOG_ERROR, "Alloc failed \n");
 		goto err;
 	}
-	sdo_nonce_init_rand(ps->n7);
+	fdo_nonce_init_rand(ps->n7);
 
 	// copy Nonce7 into the struct
-	eat->eat_uph->euphnonce = sdo_byte_array_alloc_with_byte_array(ps->n7->bytes, ps->n7->byte_sz);
+	eat->eat_uph->euphnonce = fdo_byte_array_alloc_with_byte_array(ps->n7->bytes, ps->n7->byte_sz);
 	if (!eat->eat_uph->euphnonce) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy Nonce7 into EUPHNonce\n");
 		goto err;
 	}
 
-	sdow_next_block(&ps->sdow, SDO_TO2_PROVE_DEVICE);
+	fdow_next_block(&ps->fdow, FDO_TO2_PROVE_DEVICE);
 	// write the EAT structure
-	if (!fdo_eat_write(&ps->sdow, eat)) {
+	if (!fdo_eat_write(&ps->fdow, eat)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to write EAT\n");
 		goto err;
 	}
 
 	ret = 0; /* Mark as success */
-	ps->state = SDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO;
+	ps->state = FDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.ProveDevice comleted successfully\n");
 err:
 	if (eat)

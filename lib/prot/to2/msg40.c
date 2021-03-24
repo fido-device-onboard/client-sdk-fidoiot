@@ -8,9 +8,9 @@
  * \brief This file implements msg40 of TO2
  */
 
-#include "sdoprot.h"
+#include "fdoprot.h"
 #include "util.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 
 /**
  * msg60() - TO2.Hello_device
@@ -25,65 +25,65 @@
  *   eASigInfo
  * ]
  */
-int32_t msg60(sdo_prot_t *ps)
+int32_t msg60(fdo_prot_t *ps)
 {
 	int ret = -1;
-	sdo_string_t *kx = sdo_get_device_kex_method();
-	sdo_string_t *cs = sdo_get_device_crypto_suite();
+	fdo_string_t *kx = fdo_get_device_kex_method();
+	fdo_string_t *cs = fdo_get_device_crypto_suite();
 
 	LOG(LOG_DEBUG, "TO2.HelloDevice started\n");
 
-	sdow_next_block(&ps->sdow, SDO_TO2_HELLO_DEVICE);
+	fdow_next_block(&ps->fdow, FDO_TO2_HELLO_DEVICE);
 
 	/* Begin the message */
-	if (!sdow_start_array(&ps->sdow, 5)) {
+	if (!fdow_start_array(&ps->fdow, 5)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to start array\n");
 		return false;
 	}
 
 	/* Fill in the GUID */
-	if (!sdow_byte_string(&ps->sdow, ps->g2->bytes, ps->g2->byte_sz)) {
+	if (!fdow_byte_string(&ps->fdow, ps->g2->bytes, ps->g2->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write Guid\n");
 		return false;
 	}
 
 	/* Fill in the Nonce */
-	ps->n5 = sdo_byte_array_alloc(SDO_NONCE_BYTES);
+	ps->n5 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->n5) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to allocate memory for Nonce5\n");
 		goto err;
 	}
-	sdo_nonce_init_rand(ps->n5);
-	if (!sdow_byte_string(&ps->sdow, ps->n5->bytes, ps->n5->byte_sz)) {
+	fdo_nonce_init_rand(ps->n5);
+	if (!fdow_byte_string(&ps->fdow, ps->n5->bytes, ps->n5->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write Nonce5\n");
 		return false;
 	}
 
 	/* Fill in the key exchange */
-	if (!sdow_text_string(&ps->sdow, kx->bytes, kx->byte_sz)) {
+	if (!fdow_text_string(&ps->fdow, kx->bytes, kx->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write kexSuiteName\n");
 		return false;
 	}
 
 	/* Fill in the ciphersuite info */
-	if (!sdow_text_string(&ps->sdow, cs->bytes, cs->byte_sz)) {
+	if (!fdow_text_string(&ps->fdow, cs->bytes, cs->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write cipherSuiteName\n");
 		return false;
 	}
 
 	/* Write the eA info */
-	if (!sdo_siginfo_write(&ps->sdow)) {
+	if (!fdo_siginfo_write(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write eASigInfo\n");
 		return false;
 	}
 
-	if (!sdow_end_array(&ps->sdow)) {
+	if (!fdow_end_array(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to end array\n");
 		return false;
 	}
 
 	/* Mark to move to next message */
-	ps->state = SDO_STATE_TO2_RCV_PROVE_OVHDR;
+	ps->state = FDO_STATE_TO2_RCV_PROVE_OVHDR;
 	ret = 0;
 	LOG(LOG_DEBUG, "TO2.HelloDevice completed successfully\n");
 

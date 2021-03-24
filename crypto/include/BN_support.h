@@ -5,7 +5,7 @@
 #ifndef __BNSUPPORT_H__
 #define __BNSUPPORT_H__
 
-#include "sdotypes.h"
+#include "fdotypes.h"
 
 #ifdef USE_OPENSSL
 #include <openssl/bn.h>
@@ -24,8 +24,8 @@ typedef mbedtls_mpi BN_CTX;
 #endif
 
 int bn_rand(bignum_t *rnd, int size);
-int byte_array_to_bn(bignum_t *bn, sdo_byte_array_t *in);
-sdo_byte_array_t *bn_to_byte_array(bignum_t *in);
+int byte_array_to_bn(bignum_t *bn, fdo_byte_array_t *in);
+fdo_byte_array_t *bn_to_byte_array(bignum_t *in);
 
 #ifdef USE_MBEDTLS
 static inline int bn_bin2bn(const unsigned char *s, int len, bignum_t *bn)

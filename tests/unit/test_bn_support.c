@@ -4,12 +4,12 @@
 
 /*!
  * \file
- * \brief Unit tests for bignum format encoding/decoding routines of SDO
+ * \brief Unit tests for bignum format encoding/decoding routines of FDO
  * library.
  */
 
 #include "unity.h"
-#include <sdoCryptoHal.h>
+#include <fdoCryptoHal.h>
 #include <assert.h>
 #include <stdlib.h>
 #include "BN_support.h"
@@ -51,7 +51,7 @@ bool simul_crypto_hal_random_bytes = false;
 void set_up(void);
 void tear_down(void);
 int __wrap_BN_num_bits(const bignum_t *a);
-sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz);
+fdo_byte_array_t *__wrap_fdo_byte_array_alloc(int byte_sz);
 bignum_t *__wrap_BN_bin2bn(const unsigned char *s, int len, bignum_t *ret);
 int __wrap_BN_bn2bin(const bignum_t *a, unsigned char *to);
 int __wrap_BN_mod_exp(bignum_t *r, bignum_t *a, const bignum_t *p,
@@ -117,12 +117,12 @@ int __wrap_BN_num_bits(const bignum_t *a)
 
 #endif /* USE_OPENSSL */
 
-extern sdo_byte_array_t *__real_sdo_byte_array_alloc(int byte_sz);
+extern fdo_byte_array_t *__real_fdo_byte_array_alloc(int byte_sz);
 
 /* Needed by bn_to_byte_array. */
-sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz)
+fdo_byte_array_t *__wrap_fdo_byte_array_alloc(int byte_sz)
 {
-	static sdo_byte_array_t *a;
+	static fdo_byte_array_t *a;
 
 	if (simul_out_of_mem) {
 		return NULL;
@@ -133,11 +133,11 @@ sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz)
 	 * allocate one extra byte for internal need.
 	 */
 	if (simul_9_byte_alloc) {
-		a = sdo_byte_array_alloc_with_byte_array(tab_9, sizeof(tab_9));
+		a = fdo_byte_array_alloc_with_byte_array(tab_9, sizeof(tab_9));
 		return a;
 	}
 
-	a = __real_sdo_byte_array_alloc(byte_sz);
+	a = __real_fdo_byte_array_alloc(byte_sz);
 
 	return a;
 }
@@ -271,7 +271,7 @@ int __wrap_BN_rand(BIGNUM *rnd, int bits, int top, int bottom)
 #ifndef TARGET_OS_FREERTOS
 void test_bn_bin2bn(void)
 #else
-TEST_CASE("bn_bin2bn", "[bn_support][sdo]")
+TEST_CASE("bn_bin2bn", "[bn_support][fdo]")
 #endif
 {
 	simul_bn_mbedtls_mpi_size = true;
@@ -295,7 +295,7 @@ TEST_CASE("bn_bin2bn", "[bn_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_bn_bn2bin(void)
 #else
-TEST_CASE("bn_bn2bin", "[bn_support][sdo]")
+TEST_CASE("bn_bn2bin", "[bn_support][fdo]")
 #endif
 {
 	simul_bn_mbedtls_mpi_size = true;
@@ -322,7 +322,7 @@ TEST_CASE("bn_bn2bin", "[bn_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_bn_rand(void)
 #else
-TEST_CASE("bn_rand", "[bn_support][sdo]")
+TEST_CASE("bn_rand", "[bn_support][fdo]")
 #endif
 {
 #ifdef USE_OPENSSL
@@ -367,7 +367,7 @@ TEST_CASE("bn_rand", "[bn_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_bn_mod_exp(void)
 #else
-TEST_CASE("bn_mod_exp", "[bn_support][sdo]")
+TEST_CASE("bn_mod_exp", "[bn_support][fdo]")
 #endif
 {
 	simul_bn_mbedtls_mpi_size = true;
@@ -390,7 +390,7 @@ TEST_CASE("bn_mod_exp", "[bn_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_bn_num_bytes(void)
 #else
-TEST_CASE("bn_num_bytes", "[bn_support][sdo]")
+TEST_CASE("bn_num_bytes", "[bn_support][fdo]")
 #endif
 {
 	simul_bn_mbedtls_mpi_size = true;
@@ -405,12 +405,12 @@ TEST_CASE("bn_num_bytes", "[bn_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_byte_array_to_bn(void)
 #else
-TEST_CASE("byte_array_to_bn", "[bn_support][sdo]")
+TEST_CASE("byte_array_to_bn", "[bn_support][fdo]")
 #endif
 {
 #ifdef USE_OPENSSL
 	simul_bn_mbedtls_mpi_size = true;
-	sdo_byte_array_t ba;
+	fdo_byte_array_t ba;
 	bignum_t *n = VALID_BN;
 	int ret;
 
@@ -449,12 +449,12 @@ TEST_CASE("byte_array_to_bn", "[bn_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_bn_to_byte_array(void)
 #else
-TEST_CASE("bn_to_byte_array", "[bn_support][sdo]")
+TEST_CASE("bn_to_byte_array", "[bn_support][fdo]")
 #endif
 {
 #ifdef USE_OPENSSL
 	simul_bn_mbedtls_mpi_size = true;
-	sdo_byte_array_t *ba = NULL;
+	fdo_byte_array_t *ba = NULL;
 	bignum_t *n = VALID_BN;
 	simul_9_byte_alloc = true;
 	real_bn2bin_enabled = false;
@@ -463,7 +463,7 @@ TEST_CASE("bn_to_byte_array", "[bn_support][sdo]")
 	ba = bn_to_byte_array(NULL);
 	TEST_ASSERT_NULL(ba);
 	if (ba != NULL) {
-		sdo_byte_array_free(ba);
+		fdo_byte_array_free(ba);
 		ba = NULL;
 	}
 
@@ -473,7 +473,7 @@ TEST_CASE("bn_to_byte_array", "[bn_support][sdo]")
 	TEST_ASSERT_NULL(ba);
 	simul_out_of_mem = false;
 	if (ba != NULL) {
-		sdo_byte_array_free(ba);
+		fdo_byte_array_free(ba);
 		ba = NULL;
 	}
 
@@ -483,7 +483,7 @@ TEST_CASE("bn_to_byte_array", "[bn_support][sdo]")
 	TEST_ASSERT_NULL(ba);
 	simul_bn_bn2bin_error = false;
 	if (ba != NULL) {
-		sdo_byte_array_free(ba);
+		fdo_byte_array_free(ba);
 		ba = NULL;
 	}
 
@@ -491,7 +491,7 @@ TEST_CASE("bn_to_byte_array", "[bn_support][sdo]")
 	ba = bn_to_byte_array(n);
 	TEST_ASSERT_NOT_NULL(ba);
 	if (ba != NULL) {
-		sdo_byte_array_free(ba);
+		fdo_byte_array_free(ba);
 		ba = NULL;
 	}
 

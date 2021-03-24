@@ -8,9 +8,9 @@
  * \brief This file implements msg50 of TO2 state machine.
  */
 
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 #include "load_credentials.h"
-#include "sdoprot.h"
+#include "fdoprot.h"
 #include "util.h"
 
 #define REUSE_HMAC_MAX_LEN 1
@@ -23,10 +23,10 @@
  *                  ;; ...and sent to Device ROE in Msg TO2.ProveOVHdr
  * ]
  */
-int32_t msg70(sdo_prot_t *ps)
+int32_t msg70(fdo_prot_t *ps)
 {
 	int ret = -1;
-	sdo_hash_t *hmac = NULL;
+	fdo_hash_t *hmac = NULL;
 
 	LOG(LOG_DEBUG, "TO2.Done started\n");
 
@@ -38,26 +38,26 @@ int32_t msg70(sdo_prot_t *ps)
 	 * credential (among them this, new GUID). That's why
 	 * simple memorizing GUID in RAM is not needed.
 	 */
-	sdo_byte_array_free(ps->dev_cred->owner_blk->guid);
+	fdo_byte_array_free(ps->dev_cred->owner_blk->guid);
 	ps->dev_cred->owner_blk->guid = ps->osc->guid;
 
-	sdo_rendezvous_list_free(ps->dev_cred->owner_blk->rvlst);
+	fdo_rendezvous_list_free(ps->dev_cred->owner_blk->rvlst);
 	ps->dev_cred->owner_blk->rvlst = ps->osc->rvlst;
 
-	sdo_public_key_free(ps->dev_cred->owner_blk->pk);
+	fdo_public_key_free(ps->dev_cred->owner_blk->pk);
 	ps->dev_cred->owner_blk->pk = ps->osc->pubkey;
 
 	if (ps->reuse_enabled && reuse_supported) {
 		// Reuse scenario, moving to post DI state
-		ps->dev_cred->ST = SDO_DEVICE_STATE_READY1;
+		ps->dev_cred->ST = FDO_DEVICE_STATE_READY1;
 	} else if (resale_supported) {
 		// Done with Secure Device Onboard.
 		// As of now moving to done state for resale
-		ps->dev_cred->ST = SDO_DEVICE_STATE_IDLE;
+		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
 	}
 
 	/* Rotate Data Protection Key */
-	if (0 != sdo_generate_storage_hmac_key()) {
+	if (0 != fdo_generate_storage_hmac_key()) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to rotate data protection key.\n");
 	}
 	LOG(LOG_DEBUG, "TO2.Done: Data protection key rotated successfully!!\n");
@@ -75,9 +75,9 @@ int32_t msg70(sdo_prot_t *ps)
 	ps->dev_cred->owner_blk->rvlst = NULL;
 	ps->dev_cred->owner_blk->pk = NULL;
 
-	sdow_next_block(&ps->sdow, SDO_TO2_DONE);
+	fdow_next_block(&ps->fdow, FDO_TO2_DONE);
 
-	if (!sdow_start_array(&ps->sdow, 1)) {
+	if (!fdow_start_array(&ps->fdow, 1)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to start array\n");
 		return false;
 	}
@@ -87,28 +87,28 @@ int32_t msg70(sdo_prot_t *ps)
 		return false;
 	}
 
-	if (!sdow_byte_string(&ps->sdow, ps->n6->bytes, ps->n6->byte_sz)) {
+	if (!fdow_byte_string(&ps->fdow, ps->n6->bytes, ps->n6->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to write Nonce6\n");
 		return false;
 	}
 
-	if (!sdow_end_array(&ps->sdow)) {
+	if (!fdow_end_array(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to end array\n");
 		return false;
 	}
 
-	if (!sdo_encrypted_packet_windup(&ps->sdow, SDO_TO2_DONE, ps->iv)) {
+	if (!fdo_encrypted_packet_windup(&ps->fdow, FDO_TO2_DONE, ps->iv)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to create Encrypted Message\n");
 		goto err;
 	}
 
 	ps->success = true;
-	ps->state = SDO_STATE_TO2_RCV_DONE_2;
+	ps->state = FDO_STATE_TO2_RCV_DONE_2;
 	LOG(LOG_DEBUG, "TO2.Done completed successfully\n");
 	ret = 0; /*Mark as success */
 
 err:
 	if (hmac)
-		sdo_hash_free(hmac);
+		fdo_hash_free(hmac);
 	return ret;
 }

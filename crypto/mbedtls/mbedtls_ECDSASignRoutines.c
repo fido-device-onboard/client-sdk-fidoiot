@@ -15,7 +15,7 @@
 #include "mbedtls/ecdsa.h"
 
 #include "safe_lib.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "stdlib.h"
 #include "storage_al.h"
@@ -54,7 +54,7 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 	if (!data || !data_len || !message_signature || !signature_length ||
 	    !drbg_ctx) {
-		LOG(LOG_ERROR, "sdo_cryptoDSASign params not valid\n");
+		LOG(LOG_ERROR, "fdo_cryptoDSASign params not valid\n");
 		ret = -1;
 		goto end;
 	}
@@ -143,7 +143,7 @@ end:
 	if (privkey) {
 		if (memset_s(privkey, privkeysize, 0) != 0)
 			LOG(LOG_ERROR, "Memset Failed\n");
-		sdo_free(privkey);
+		fdo_free(privkey);
 	}
 	return ret;
 }

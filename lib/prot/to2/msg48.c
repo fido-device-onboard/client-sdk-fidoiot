@@ -8,8 +8,8 @@
  * \brief This file implements msg48 of TO2 state machine.
  */
 
-#include "sdoprot.h"
-#include "sdokeyexchange.h"
+#include "fdoprot.h"
+#include "fdokeyexchange.h"
 #include "util.h"
 
 /**
@@ -32,16 +32,16 @@
  *   ServiceInfoVal: cborSimpleType
  * ]
  */
-int32_t msg68(sdo_prot_t *ps)
+int32_t msg68(fdo_prot_t *ps)
 {
 	int ret = -1;
 
 	LOG(LOG_DEBUG, "TO2.DeviceServiceInfo started\n");
 
 	/* send entry number to load */
-	sdow_next_block(&ps->sdow, SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO);
+	fdow_next_block(&ps->fdow, FDO_TO2_GET_NEXT_OWNER_SERVICE_INFO);
 
-	if (!sdow_start_array(&ps->sdow, 2)) {
+	if (!fdow_start_array(&ps->fdow, 2)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to start array\n");
 		return false;
 	}
@@ -58,13 +58,13 @@ int32_t msg68(sdo_prot_t *ps)
 
 	if (ps->service_info && ps->serv_req_info_num == 0) {
 
-		if (!sdow_boolean(&ps->sdow, true)) {
+		if (!fdow_boolean(&ps->fdow, true)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 			return false;
 		}
 
 		// Construct and write platform DSI's into a single msg
-		if (!fdo_serviceinfo_write(&ps->sdow, ps->service_info)) {
+		if (!fdo_serviceinfo_write(&ps->fdow, ps->service_info)) {
 			LOG(LOG_ERROR, "Error in combining platform DSI's!\n");
 			goto err;
 		}
@@ -75,33 +75,33 @@ int32_t msg68(sdo_prot_t *ps)
 	} else {
 
 		// Empty ServiceInfo. send [false, []]
-		if (!sdow_boolean(&ps->sdow, false)) {
+		if (!fdow_boolean(&ps->fdow, false)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 			return false;
 		}
 
-		if (!sdow_start_array(&ps->sdow, 0)) {
+		if (!fdow_start_array(&ps->fdow, 0)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to start empty ServiceInfo array\n");
 			return false;
 		}
-		if (!sdow_end_array(&ps->sdow)) {
+		if (!fdow_end_array(&ps->fdow)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to end empty ServiceInfo array\n");
 			return false;
 		}
 	}
 
-	if (!sdow_end_array(&ps->sdow)) {
+	if (!fdow_end_array(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to end array\n");
 		return false;
 	}
 
-	if (!sdo_encrypted_packet_windup(
-		&ps->sdow, SDO_TO2_GET_NEXT_OWNER_SERVICE_INFO, ps->iv)) {
+	if (!fdo_encrypted_packet_windup(
+		&ps->fdow, FDO_TO2_GET_NEXT_OWNER_SERVICE_INFO, ps->iv)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to create Encrypted Message\n");
 		goto err;
 	}
 
-	ps->state = SDO_STATE_T02_RCV_NEXT_OWNER_SERVICE_INFO;
+	ps->state = FDO_STATE_T02_RCV_NEXT_OWNER_SERVICE_INFO;
 	ret = 0; /* Mark as success */
 	LOG(LOG_DEBUG, "TO2.DeviceServiceInfo completed successfully\n");
 err:

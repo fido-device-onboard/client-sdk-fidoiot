@@ -8,8 +8,8 @@
  * \brief This file implements msg47 of TO2 state machine.
  */
 
-#include "sdoprot.h"
-#include "sdokeyexchange.h"
+#include "fdoprot.h"
+#include "fdokeyexchange.h"
 #include "util.h"
 
 /**
@@ -19,50 +19,50 @@
  *   maxDeviceServiceInfoSz    ;; maximum size service info that Owner can receive, uint/NULL
  * ]
  */
-int32_t msg67(sdo_prot_t *ps)
+int32_t msg67(fdo_prot_t *ps)
 {
 	int ret = -1;
-	char prot[] = "SDOProtTO2";
-	sdo_encrypted_packet_t *pkt = NULL;
+	char prot[] = "FDOProtTO2";
+	fdo_encrypted_packet_t *pkt = NULL;
 	int rec_maxDeviceServiceInfoSz = 0;
 
-	if (!sdo_check_to2_round_trips(ps)) {
+	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
 	}
 
-	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!fdo_prot_rcv_msg(&ps->fdor, &ps->fdow, prot, &ps->state)) {
 		ret = 0; /* Get the data, and come back */
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady started\n");
 
-	pkt = sdo_encrypted_packet_read(&ps->sdor);
+	pkt = fdo_encrypted_packet_read(&ps->fdor);
 	if (pkt == NULL) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfoReady: Failed to parse encrypted packet\n");
 		goto err;
 	}
 
-	if (!sdo_encrypted_packet_unwind(&ps->sdor, pkt, ps->iv)) {
+	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt, ps->iv)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfoReady: Failed to decrypt packet!\n");
 		goto err;
 	}
 
-	if (!sdor_start_array(&ps->sdor)) {
+	if (!fdor_start_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfoReady: Failed to start array\n");
 		goto err;
 	}
 
 	// maxDeviceServiceInfoSz = CBOR NULL implies that MAXDEVICESERVICEINFOSZ should be accepted
 	// maxDeviceServiceInfoSz = Unsigned Integer implies that the given value should be processed
-	if (sdor_is_value_signed_int(&ps->sdor)) {
-		if (!sdor_signed_int(&ps->sdor, &rec_maxDeviceServiceInfoSz)) {
+	if (fdor_is_value_signed_int(&ps->fdor)) {
+		if (!fdor_signed_int(&ps->fdor, &rec_maxDeviceServiceInfoSz)) {
 			LOG(LOG_ERROR,
 				"TO2.OwnerServiceInfoReady: Failed to read maxDeviceServiceInfoSz as number\n");
 			goto err;
 		}
-	} else if (sdor_is_value_null(&ps->sdor)) {
-		if (!sdor_next(&ps->sdor)) {
+	} else if (fdor_is_value_null(&ps->fdor)) {
+		if (!fdor_next(&ps->fdor)) {
 			LOG(LOG_ERROR,
 				"TO2.OwnerServiceInfoReady: Failed to read maxDeviceServiceInfoSz as null\n");
 			goto err;
@@ -81,19 +81,19 @@ int32_t msg67(sdo_prot_t *ps)
 		ps->maxDeviceServiceInfoSz = MAXDEVICESERVICEINFOSZ;
 	}
 
-	if (!sdor_end_array(&ps->sdor)) {
+	if (!fdor_end_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfoReady: Failed to end array\n");
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Expected Maximum Device ServiceInfo size is %d \n",
 	    ps->maxDeviceServiceInfoSz);
-	ps->state = SDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
+	ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady completed successfully\n");
 	ret = 0; /* Mark as success */
 
 err:
-	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.have_block = false;
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.have_block = false;
 	return ret;
 }

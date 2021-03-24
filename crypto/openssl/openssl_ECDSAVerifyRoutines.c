@@ -13,7 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/ec.h>
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
@@ -58,8 +58,8 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	/* Check validity of key type. */
 	// TO-DO : Add back support for X509 if needed.
 	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 ||
-	    (key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
-	     key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
+	    (key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
+	     key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		goto end;
 	}
@@ -72,7 +72,7 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	}
 
 	/* generate required EC_KEY based on type */
-	if (key_algorithm == SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
+	if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
 		eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 		/* Perform SHA-256 digest of the message */
 		if (SHA256((const unsigned char *)message, message_length,
@@ -98,13 +98,13 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 		goto end;
 	}
 
-	pub_key_affinex = sdo_alloc(key_param1Length/2);
+	pub_key_affinex = fdo_alloc(key_param1Length/2);
 	if (0 != memcpy_s(pub_key_affinex, key_param1Length/2,
 		pub_key, key_param1Length/2)) {
 		LOG(LOG_ERROR, "Copy of affine-x failed!\n");
 		goto end;
 	}
-	pub_key_affiney = sdo_alloc(key_param1Length/2);
+	pub_key_affiney = fdo_alloc(key_param1Length/2);
 	if (0 != memcpy_s(pub_key_affiney, key_param1Length/2,
 		pub_key + key_param1Length/2, key_param1Length/2)) {
 		LOG(LOG_ERROR, "Copy of affine-y failed!\n");
@@ -134,8 +134,8 @@ end:
 	if (y)
 		BN_free(y);
 	if (pub_key_affinex)
-		sdo_free(pub_key_affinex);
+		fdo_free(pub_key_affinex);
 	if (pub_key_affiney)
-		sdo_free(pub_key_affiney);
+		fdo_free(pub_key_affiney);
 	return ret;
 }

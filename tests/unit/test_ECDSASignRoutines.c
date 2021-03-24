@@ -4,12 +4,12 @@
 
 /*!
  * \file
- * \brief Unit tests for RSA abstraction routines of SDO library.
+ * \brief Unit tests for RSA abstraction routines of FDO library.
  */
 
 #include "test_RSARoutines.h"
 #include "safe_lib.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "storage_al.h"
 
 //#define HEXDEBUG 1
@@ -23,7 +23,7 @@
 /*** Unity Declarations ***/
 void set_up(void);
 void tear_down(void);
-void test_sdo_cryptoECDSASign(void);
+void test_fdo_cryptoECDSASign(void);
 
 /*** Unity functions. ***/
 void set_up(void)
@@ -84,9 +84,9 @@ static void dump_pubkey(const char *title, void *ctx)
 }
 #endif
 
-static sdo_byte_array_t *getcleartext(int length)
+static fdo_byte_array_t *getcleartext(int length)
 {
-	sdo_byte_array_t *cleartext = sdo_byte_array_alloc(length);
+	fdo_byte_array_t *cleartext = fdo_byte_array_alloc(length);
 	if (!cleartext)
 		return NULL;
 	int i = length;
@@ -136,7 +136,7 @@ static int generateECDSA_key(mbedtls_ecdsa_context *ctx_sign)
 {
 	int ret;
 	char *pers = "ecdsa_genkey";
-	size_t pers_len = strnlen_s(pers, SDO_MAX_STR_SIZE);
+	size_t pers_len = strnlen_s(pers, FDO_MAX_STR_SIZE);
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 
@@ -174,9 +174,9 @@ static int generateECDSA_key(mbedtls_ecdsa_context *ctx_sign)
 // Below test case is replacement of EPID with ECDSA
 #if !(defined(ECDSA256_DA) || defined(ECDSA384_DA))
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_cryptoECDSASign(void)
+void test_fdo_cryptoECDSASign(void)
 #else
-TEST_CASE("sdo_cryptoECDSASign", "[ECDSARoutines][sdo]")
+TEST_CASE("fdo_cryptoECDSASign", "[ECDSARoutines][fdo]")
 #endif
 {
 	TEST_IGNORE();
@@ -184,13 +184,13 @@ TEST_CASE("sdo_cryptoECDSASign", "[ECDSARoutines][sdo]")
 
 #else
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_cryptoECDSASign(void)
+void test_fdo_cryptoECDSASign(void)
 #else
-TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][sdo]")
+TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 #endif
 {
 	int result = -1;
-	sdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
+	fdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
 	TEST_ASSERT_NOT_NULL(testdata);
 	size_t siglen = ECDSA_SIG_MAX_LENGTH;
 	unsigned char *sigtestdata = malloc(ECDSA_SIG_MAX_LENGTH);
@@ -243,7 +243,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][sdo]")
 	BIO_get_mem_ptr(outbio, &bptr);
 
 	printf("buffer :\n %s", bptr->data);
-	result = sdo_blob_write((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
+	result = fdo_blob_write((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA,
 				(const uint8_t *)bptr->data, bptr->length);
 	TEST_ASSERT_NOT_EQUAL(-1, result);
 
@@ -267,7 +267,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][sdo]")
 	 * file/partition
 	 * using blob read/write, so we don't lose it*/
 	// Writing Privatekey to a file
-	result = sdo_blob_write((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
+	result = fdo_blob_write((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA,
 				privatekey, privatekey_buflen);
 	TEST_ASSERT_NOT_EQUAL(-1, result);
 
@@ -361,6 +361,6 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][sdo]")
 #endif
 	free(sigtestdata);
 	free(privatekey);
-	sdo_byte_array_free(testdata);
+	fdo_byte_array_free(testdata);
 }
 #endif

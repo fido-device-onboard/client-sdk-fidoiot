@@ -8,7 +8,7 @@
  * \brief This file implements generic utility functions for mbedTLS hal
  */
 
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "storage_al.h"
 #include "util.h"
 #include "safe_lib.h"
@@ -33,7 +33,7 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 	}
 
 	/* Get the ECDSA private key size from storage */
-	privkeysize = sdo_blob_size((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA);
+	privkeysize = fdo_blob_size((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA);
 	if (privkeysize <= 0) {
 		LOG(LOG_ERROR, "No ECDSA private key exists\n");
 		goto err;
@@ -45,13 +45,13 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 #endif
 
 	/* Read private key in buffer */
-	privkey = sdo_alloc(privkeysize + (is_pem ? 1 : 0));
+	privkey = fdo_alloc(privkeysize + (is_pem ? 1 : 0));
 	if (!privkey) {
 		LOG(LOG_ERROR, "Malloc Failed for ECDSA private key\n");
 		goto err;
 	}
 
-	ret = sdo_blob_read((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
+	ret = fdo_blob_read((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA,
 			    (uint8_t *)privkey, privkeysize);
 	if (ret == -1) {
 		LOG(LOG_ERROR, "Reading private key for ECDSA Failed\n");
@@ -72,7 +72,7 @@ err:
 	if (privkey) {
 		if (memset_s(privkey, privkeysize, 0) != 0)
 			LOG(LOG_ERROR, "Memset Failed\n");
-		sdo_free(privkey);
+		fdo_free(privkey);
 	}
 	return ret;
 }

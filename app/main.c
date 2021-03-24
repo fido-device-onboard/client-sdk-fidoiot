@@ -6,12 +6,12 @@
 /*!
  * \file
  * \brief Main application. This file has implementation for entry point into
- * the platform and necessary things to initialize sdo, run it and exit
+ * the platform and necessary things to initialize fdo, run it and exit
  * gracefully.
  */
 
-#include "sdo.h"
-#include "sdomodules.h"
+#include "fdo.h"
+#include "fdomodules.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +33,7 @@ static bool is_ownership_transfer(bool do_resale)
 {
 	FILE *fp = NULL;
 	char state = 0;
-	sdo_sdk_status ret;
+	fdo_sdk_status ret;
 
 	if (do_resale) {
 		state = '1';
@@ -56,13 +56,13 @@ static bool is_ownership_transfer(bool do_resale)
 		LOG(LOG_INFO, "Fclose Failed");
 #endif
 	if (state == '1') {
-		ret = sdo_sdk_resale();
-		if (ret == SDO_ERROR) {
+		ret = fdo_sdk_resale();
+		if (ret == FDO_ERROR) {
 			LOG(LOG_INFO,
 			    "Failed to set Ownership transfer app exits\n");
 			exit(-1);
 		}
-		if (ret == SDO_SUCCESS) {
+		if (ret == FDO_SUCCESS) {
 			fp = fopen(OWNERSHIP_TRANSFER_FILE, "w");
 			if (!fp)
 				return false;
@@ -77,12 +77,12 @@ static bool is_ownership_transfer(bool do_resale)
 			if (fclose(fp) == EOF)
 				LOG(LOG_INFO, "Fclose Failed");
 			return true;
-		} else if (ret == SDO_RESALE_NOT_READY) {
+		} else if (ret == FDO_RESALE_NOT_READY) {
 			/*Device is not yet ready for ownership transfer
 			 * First do the initial configuration
 			 */
 			return false;
-		} else if (ret == SDO_RESALE_NOT_SUPPORTED) {
+		} else if (ret == FDO_RESALE_NOT_SUPPORTED) {
 			LOG(LOG_INFO, "Device doesn't support Resale\n");
 			return false;
 		}
@@ -92,17 +92,17 @@ static bool is_ownership_transfer(bool do_resale)
 
 /**
  * API to initialize service-info modules with their correspoding data. This
- * in-turn calls another API, which finally register them to SDO.
+ * in-turn calls another API, which finally register them to FDO.
  *
  * @return
  *        pointer to array of Sv_info modules.
  */
-static sdo_sdk_service_info_module *sdo_sv_info_modules_init(void)
+static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
-	sdo_sdk_service_info_module *module_info = NULL;
+	fdo_sdk_service_info_module *module_info = NULL;
 
 #ifdef MODULES_ENABLED
-	module_info = malloc(SDO_MAX_MODULES * (sizeof(*module_info)));
+	module_info = malloc(FDO_MAX_MODULES * (sizeof(*module_info)));
 
 	if (!module_info) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
@@ -110,18 +110,18 @@ static sdo_sdk_service_info_module *sdo_sv_info_modules_init(void)
 	}
 
 	/* module#1: sdo_sys */
-	if (strncpy_s(module_info[0].module_name, SDO_MODULE_NAME_LEN,
-		      "sdo_sys", SDO_MODULE_NAME_LEN) != 0) {
+	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
+		      "sdo_sys", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
 		free(module_info);
 		return NULL;
 	}
-	module_info[0].service_info_callback = sdo_sys;
+	module_info[0].service_info_callback = fdo_sys;
 
 #if defined(EXTRA_MODULES)
 	/* module#2: devconfig */
-	if (strncpy_s(module_info[1].module_name, SDO_MODULE_NAME_LEN,
-		      "devconfig", SDO_MODULE_NAME_LEN) != 0) {
+	if (strncpy_s(module_info[1].module_name, FDO_MODULE_NAME_LEN,
+		      "devconfig", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
 		free(module_info);
 		return NULL;
@@ -129,8 +129,8 @@ static sdo_sdk_service_info_module *sdo_sv_info_modules_init(void)
 	module_info[1].service_info_callback = devconfig;
 
 	/* module#3: keypair */
-	if (strncpy_s(module_info[2].module_name, SDO_MODULE_NAME_LEN,
-		      "keypair", SDO_MODULE_NAME_LEN) != 0) {
+	if (strncpy_s(module_info[2].module_name, FDO_MODULE_NAME_LEN,
+		      "keypair", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
 		free(module_info);
 		return NULL;
@@ -139,8 +139,8 @@ static sdo_sdk_service_info_module *sdo_sv_info_modules_init(void)
 
 #ifdef TARGET_OS_LINUX
 	/* module#4: pelionconfig (only supported on linux as of now) */
-	if (strncpy_s(module_info[3].module_name, SDO_MODULE_NAME_LEN,
-		      "pelionconfig", SDO_MODULE_NAME_LEN) != 0) {
+	if (strncpy_s(module_info[3].module_name, FDO_MODULE_NAME_LEN,
+		      "pelionconfig", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
 		free(module_info);
 		return NULL;
@@ -153,7 +153,7 @@ static sdo_sdk_service_info_module *sdo_sv_info_modules_init(void)
 	return module_info;
 }
 
-static int error_cb(sdo_sdk_status type, sdo_sdk_error errorcode)
+static int error_cb(fdo_sdk_status type, fdo_sdk_error errorcode)
 {
 	static unsigned int rv_timeout;
 	static unsigned int conn_timeout;
@@ -164,43 +164,43 @@ static int error_cb(sdo_sdk_status type, sdo_sdk_error errorcode)
 	(void)type;
 
 	switch (errorcode) {
-	case SDO_RV_TIMEOUT:
+	case FDO_RV_TIMEOUT:
 		rv_timeout++;
 		if (rv_timeout > ERROR_RETRY_COUNT) {
 			LOG(LOG_INFO, "Sending ABORT RV connection from app\n");
-			return SDO_ABORT;
+			return FDO_ABORT;
 		}
 		break;
 
-	case SDO_CONN_TIMEOUT:
+	case FDO_CONN_TIMEOUT:
 		conn_timeout++;
 		if (conn_timeout > ERROR_RETRY_COUNT) {
 			LOG(LOG_INFO, "Sending ABORT connection from app\n");
-			return SDO_ABORT;
+			return FDO_ABORT;
 		}
 		break;
 
-	case SDO_DI_ERROR:
+	case FDO_DI_ERROR:
 		di_err++;
 		if (di_err > ERROR_RETRY_COUNT) {
 			LOG(LOG_INFO, "Sending ABORT DI from app\n");
-			return SDO_ABORT;
+			return FDO_ABORT;
 		}
 		break;
 
-	case SDO_TO1_ERROR:
+	case FDO_TO1_ERROR:
 		to1_err++;
 		if (to1_err > ERROR_RETRY_COUNT) {
 			LOG(LOG_INFO, "Sending ABORT T01 from app\n");
-			return SDO_ABORT;
+			return FDO_ABORT;
 		}
 		break;
 
-	case SDO_TO2_ERROR:
+	case FDO_TO2_ERROR:
 		to2_err++;
 		if (to2_err > ERROR_RETRY_COUNT) {
 			LOG(LOG_INFO, "Sending ABORT T02 from app\n");
-			return SDO_ABORT;
+			return FDO_ABORT;
 		}
 		break;
 
@@ -213,23 +213,23 @@ static int error_cb(sdo_sdk_status type, sdo_sdk_error errorcode)
 	    "%u, to2_err: %u\n",
 	    rv_timeout, conn_timeout, di_err, to1_err, to2_err);
 
-	return SDO_SUCCESS;
+	return FDO_SUCCESS;
 }
 
 static void print_device_status(void)
 {
-	sdo_sdk_device_state status = SDO_STATE_ERROR;
+	fdo_sdk_device_state status = FDO_STATE_ERROR;
 
-	status = sdo_sdk_get_status();
-	if (status == SDO_STATE_PRE_DI)
+	status = fdo_sdk_get_status();
+	if (status == FDO_STATE_PRE_DI)
 		LOG(LOG_DEBUG, "Device is ready for DI\n");
-	if (status == SDO_STATE_PRE_TO1)
+	if (status == FDO_STATE_PRE_TO1)
 		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
-	if (status == SDO_STATE_IDLE)
+	if (status == FDO_STATE_IDLE)
 		LOG(LOG_DEBUG, "Device Ownership transfer Done\n");
-	if (status == SDO_STATE_RESALE)
+	if (status == FDO_STATE_RESALE)
 		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
-	if (status == SDO_STATE_ERROR)
+	if (status == FDO_STATE_ERROR)
 		LOG(LOG_DEBUG, "Error in getting device status\n");
 }
 
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
 int app_main(bool is_resale)
 #endif
 {
-	sdo_sdk_service_info_module *module_info;
+	fdo_sdk_service_info_module *module_info;
 
 	bool do_resale = false;
 	LOG(LOG_DEBUG, "Starting Secure Device Onboard\n");
@@ -263,22 +263,22 @@ int app_main(bool is_resale)
 	}
 
 	/* List and Init all Sv_info modules */
-	module_info = sdo_sv_info_modules_init();
+	module_info = fdo_sv_info_modules_init();
 
 	if (!module_info) {
 		LOG(LOG_DEBUG, "Sv_info Modules not loaded!\n");
 	}
 
-	/* Init sdo sdk */
-	if (SDO_SUCCESS !=
-	    sdo_sdk_init(error_cb, SDO_MAX_MODULES, module_info)) {
-		LOG(LOG_ERROR, "sdo_sdk_init failed!!\n");
+	/* Init fdo sdk */
+	if (FDO_SUCCESS !=
+	    fdo_sdk_init(error_cb, FDO_MAX_MODULES, module_info)) {
+		LOG(LOG_ERROR, "fdo_sdk_init failed!!\n");
 		free(module_info);
 		return -1;
 	}
 
 	/* free the module related info
-	 * SDO has created the required DB
+	 * FDO has created the required DB
 	 */
 	free(module_info);
 
@@ -309,7 +309,7 @@ int app_main(bool is_resale)
 
 	print_device_status();
 
-	if (SDO_SUCCESS != sdo_sdk_run()) {
+	if (FDO_SUCCESS != fdo_sdk_run()) {
 		LOG(LOG_ERROR, "Secure device onboarding failed\n");
 		return -1;
 	}

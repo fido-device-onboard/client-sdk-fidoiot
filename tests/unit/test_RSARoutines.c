@@ -4,7 +4,7 @@
 
 /*!
  * \file
- * \brief Unit tests for RSA abstraction routines of SDO library.
+ * \brief Unit tests for RSA abstraction routines of FDO library.
  */
 #include "test_RSARoutines.h"
 #include "safe_lib.h"
@@ -17,11 +17,11 @@ void set_up(void);
 void tear_down(void);
 void test_rsaencrypt(void);
 void test_rsasigverification(void);
-void showPK(sdo_public_key_t *pk);
+void showPK(fdo_public_key_t *pk);
 RSA *generateRSA_key(void);
 int sha256_sign(unsigned char *msg, unsigned int mlen, unsigned char *out,
 		unsigned int *outlen, RSA *r);
-sdo_public_key_t *getSDOpk(RSA *r);
+fdo_public_key_t *getFDOpk(RSA *r);
 
 /*** Unity functions. ***/
 void set_up(void)
@@ -36,9 +36,9 @@ void tear_down(void)
 #ifdef PK_ENC_RSA
 /*** Wrapper functions (function stubbing). ***/
 
-static sdo_byte_array_t *getcleartext(int length)
+static fdo_byte_array_t *getcleartext(int length)
 {
-	sdo_byte_array_t *cleartext = sdo_byte_array_alloc(length);
+	fdo_byte_array_t *cleartext = fdo_byte_array_alloc(length);
 	if (!cleartext)
 		return NULL;
 	int i = length;
@@ -54,12 +54,12 @@ static sdo_byte_array_t *getcleartext(int length)
 	return cleartext;
 }
 
-void showPK(sdo_public_key_t *pk)
+void showPK(fdo_public_key_t *pk)
 {
 	char buf[BUFF_SIZE_1K_BYTES] = {0};
 	char *ret_buf = NULL;
 	TEST_ASSERT_NOT_NULL(pk);
-	ret_buf = sdo_public_key_to_string(pk, buf, sizeof buf);
+	ret_buf = fdo_public_key_to_string(pk, buf, sizeof buf);
 	TEST_ASSERT_NOT_NULL(ret_buf);
 	printf("PK: %s\n", ret_buf);
 }
@@ -122,7 +122,7 @@ int sha256_sign(unsigned char *msg, unsigned int mlen, unsigned char *out,
 	return result;
 }
 
-sdo_public_key_t *getSDOpk(RSA *r)
+fdo_public_key_t *getFDOpk(RSA *r)
 {
 
 	const BIGNUM *n = NULL;
@@ -139,9 +139,9 @@ sdo_public_key_t *getSDOpk(RSA *r)
 	pkmodulusbuffer = malloc(sizeofpkmodulus);
 	BN_bn2bin(n, pkmodulusbuffer);
 
-	sdo_public_key_t *pk =
-	    sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_RSA,
-				 SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
+	fdo_public_key_t *pk =
+	    fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_RSA,
+				 FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
 				 sizeofpkmodulus, pkmodulusbuffer);
 	if (pkmodulusbuffer)
 		free(pkmodulusbuffer);
@@ -150,13 +150,13 @@ sdo_public_key_t *getSDOpk(RSA *r)
 	int pkexponent = BN_num_bytes(e);
 	unsigned char *ebuff = malloc(pkexponent);
 	if (!ebuff) {
-		sdo_public_key_free(pk);
+		fdo_public_key_free(pk);
 		return NULL;
 	}
 
 	if (BN_bn2bin(e, ebuff)) {
 		pk->key2 =
-		    sdo_byte_array_alloc_with_byte_array(ebuff, pkexponent);
+		    fdo_byte_array_alloc_with_byte_array(ebuff, pkexponent);
 
 #ifdef HEXDEBUG
 		hexdump("key1", (unsigned char *)pk->key1, sizeofpkmodulus);
@@ -165,11 +165,11 @@ sdo_public_key_t *getSDOpk(RSA *r)
 #endif
 
 		if (!pk->key2) {
-			sdo_public_key_free(pk);
+			fdo_public_key_free(pk);
 			pk = NULL;
 		}
 	} else {
-		sdo_public_key_free(pk);
+		fdo_public_key_free(pk);
 		pk = NULL;
 	}
 	free(ebuff);
@@ -182,7 +182,7 @@ int generateRSA_key(mbedtls_rsa_context *rsa)
 {
 	int ret;
 	char *pers = "rsa_genkey";
-	size_t pers_len = strnlen_s(pers, SDO_MAX_STR_SIZE);
+	size_t pers_len = strnlen_s(pers, FDO_MAX_STR_SIZE);
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_ctr_drbg_init(&ctr_drbg);
@@ -255,18 +255,18 @@ int sha256_sign(unsigned char *msg, unsigned int mlen, unsigned char *out,
 	return 1;
 }
 
-sdo_public_key_t *getSDOpk(mbedtls_rsa_context *pkey)
+fdo_public_key_t *getFDOpk(mbedtls_rsa_context *pkey)
 {
-	/* convert mbedtls struct to SDO struct   */
+	/* convert mbedtls struct to FDO struct   */
 	int sizeofpkmodulus = pkey->len;
 	unsigned char *pkmodulusbuffer = malloc(sizeofpkmodulus);
 	if (!pkmodulusbuffer)
 		return NULL;
 	mbedtls_mpi_write_binary(&(pkey->N), (unsigned char *)pkmodulusbuffer,
 				 sizeofpkmodulus);
-	sdo_public_key_t *pk =
-	    sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_RSA,
-				 SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
+	fdo_public_key_t *pk =
+	    fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_RSA,
+				 FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
 				 sizeofpkmodulus, pkmodulusbuffer);
 	if (!pk) {
 		return NULL;
@@ -279,7 +279,7 @@ sdo_public_key_t *getSDOpk(mbedtls_rsa_context *pkey)
 	 * investigation*/
 	int len = mbedtls_mpi_size(&(pkey->E));
 	mbedtls_mpi_write_binary(&(pkey->E), (unsigned char *)ebuff, len);
-	pk->key2 = sdo_byte_array_alloc_with_byte_array((uint8_t *)&ebuff, len);
+	pk->key2 = fdo_byte_array_alloc_with_byte_array((uint8_t *)&ebuff, len);
 
 #ifdef HEXDEBUG
 	hexdump("key1", (unsigned char *)pk->key1, pkey->len);
@@ -299,7 +299,7 @@ sdo_public_key_t *getSDOpk(mbedtls_rsa_context *pkey)
 #ifndef TARGET_OS_FREERTOS
 void test_rsaencrypt(void)
 #else
-TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
+TEST_CASE("rsaencrypt", "[RSARoutines][fdo]")
 #endif
 {
 	TEST_IGNORE();
@@ -308,7 +308,7 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_rsasigverification(void)
 #else
-TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
+TEST_CASE("rsasigverification", "[RSARoutines][fdo]")
 #endif
 {
 	TEST_IGNORE();
@@ -319,31 +319,31 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_rsaencrypt(void)
 #else
-TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
+TEST_CASE("rsaencrypt", "[RSARoutines][fdo]")
 #endif
 {
 	int32_t cipher_length = 0;
 	uint8_t *cipher_text = NULL;
 	int ret;
-	sdo_byte_array_t *testdata = getcleartext(BUFF_SIZE_128_BYTES);
+	fdo_byte_array_t *testdata = getcleartext(BUFF_SIZE_128_BYTES);
 	TEST_ASSERT_NOT_NULL(testdata);
 #ifdef USE_OPENSSL
 	RSA *avalidkey = generateRSA_key();
 	TEST_ASSERT_NOT_NULL(avalidkey);
-	sdo_public_key_t *pk = getSDOpk(avalidkey);
+	fdo_public_key_t *pk = getFDOpk(avalidkey);
 	TEST_ASSERT_NOT_NULL(pk);
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_rsa_context avalidkey;
 	ret = generateRSA_key(&avalidkey);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	sdo_public_key_t *pk = getSDOpk(&avalidkey);
+	fdo_public_key_t *pk = getFDOpk(&avalidkey);
 	TEST_ASSERT_NOT_NULL(pk);
 #endif
 
 	/* Get cypher text length required by sending NULL as cypher_text */
 	cipher_length = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    testdata->bytes, testdata->byte_sz, NULL, (uint32_t)cipher_length,
 	    pk->key1->bytes, (uint32_t)pk->key1->byte_sz, pk->key2->bytes,
 	    (uint32_t)pk->key2->byte_sz);
@@ -354,7 +354,7 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 	TEST_ASSERT_NOT_NULL(cipher_text);
 	/* positive test case */
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    (uint8_t *)testdata->bytes, (uint32_t)testdata->byte_sz,
 	    cipher_text, (uint32_t)cipher_length, pk->key1->bytes,
 	    pk->key1->byte_sz, pk->key2->bytes, (uint32_t)pk->key2->byte_sz);
@@ -372,21 +372,21 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 	/*Negative test cases */
 
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    NULL, (uint32_t)testdata->byte_sz, cipher_text,
 	    (uint32_t)cipher_length, pk->key1->bytes, pk->key1->byte_sz,
 	    pk->key2->bytes, (uint32_t)pk->key2->byte_sz);
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "RSA Encryption Failed");
 
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    (uint8_t *)testdata->bytes, 0, cipher_text, (uint32_t)cipher_length,
 	    pk->key1->bytes, pk->key1->byte_sz, pk->key2->bytes,
 	    (uint32_t)pk->key2->byte_sz);
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "RSA Encryption Failed");
 
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    (uint8_t *)testdata->bytes, (uint32_t)testdata->byte_sz,
 	    cipher_text, (uint32_t)cipher_length, NULL,
 	    (uint32_t)pk->key1->byte_sz, pk->key2->bytes,
@@ -394,21 +394,21 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "RSA Encryption Failed");
 
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    (uint8_t *)testdata->bytes, (uint32_t)testdata->byte_sz,
 	    cipher_text, (uint32_t)cipher_length, pk->key1->bytes, 0,
 	    pk->key2->bytes, (uint32_t)pk->key2->byte_sz);
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "RSA Encryption Failed");
 
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    (uint8_t *)testdata->bytes, (uint32_t)testdata->byte_sz,
 	    cipher_text, (uint32_t)cipher_length, pk->key1->bytes,
 	    (uint32_t)pk->key1->byte_sz, NULL, pk->key2->byte_sz);
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "RSA Encryption Failed");
 
 	ret = crypto_hal_rsa_encrypt(
-	    (uint8_t)SDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
+	    (uint8_t)FDO_PK_HASH_SHA256, (uint8_t)pk->pkenc, (uint8_t)pk->pkalg,
 	    (uint8_t *)testdata->bytes, (uint32_t)testdata->byte_sz,
 	    cipher_text, (uint32_t)cipher_length, pk->key1->bytes,
 	    (uint32_t)pk->key1->byte_sz, pk->key2->bytes, 0);
@@ -418,8 +418,8 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 	if (cipher_text != NULL) {
 		free(cipher_text);
 	}
-	sdo_byte_array_free(testdata);
-	sdo_public_key_free(pk);
+	fdo_byte_array_free(testdata);
+	fdo_public_key_free(pk);
 #ifdef USE_OPENSSL
 	if (avalidkey)
 		RSA_free(avalidkey);
@@ -432,11 +432,11 @@ TEST_CASE("rsaencrypt", "[RSARoutines][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_rsasigverification(void)
 #else
-TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
+TEST_CASE("rsasigverification", "[RSARoutines][fdo]")
 #endif
 {
 	int result = -1;
-	sdo_byte_array_t *testdata = getcleartext(256);
+	fdo_byte_array_t *testdata = getcleartext(256);
 	TEST_ASSERT_NOT_NULL(testdata);
 	unsigned int siglen = testdata->byte_sz;
 	unsigned char *sigtestdata = malloc(siglen);
@@ -449,7 +449,7 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 	if (1 == (result = sha256_sign(testdata->bytes, testdata->byte_sz,
 				       sigtestdata, &siglen, avalidkey))) {
 		TEST_ASSERT_EQUAL(1, result);
-		sdo_public_key_t *pk = getSDOpk(avalidkey);
+		fdo_public_key_t *pk = getFDOpk(avalidkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -460,7 +460,7 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 		    (result = sha256_sign(testdata->bytes, testdata->byte_sz,
 					  sigtestdata, &siglen, &avalidkey))) {
 			TEST_ASSERT_EQUAL(1, result);
-			sdo_public_key_t *pk = getSDOpk(&avalidkey);
+			fdo_public_key_t *pk = getFDOpk(&avalidkey);
 #endif
 
 			TEST_ASSERT_NOT_NULL(pk);
@@ -486,13 +486,13 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 			/* force a failure by using another/different key */
 			RSA *anotherkey = generateRSA_key();
 			TEST_ASSERT_NOT_NULL(anotherkey);
-			sdo_public_key_t *anotherpk = getSDOpk(anotherkey);
+			fdo_public_key_t *anotherpk = getFDOpk(anotherkey);
 #endif
 #ifdef USE_MBEDTLS
 			mbedtls_rsa_context anotherkey;
 			result = generateRSA_key(&anotherkey);
 			TEST_ASSERT_EQUAL(0, result);
-			sdo_public_key_t *anotherpk = getSDOpk(&anotherkey);
+			fdo_public_key_t *anotherpk = getFDOpk(&anotherkey);
 #endif
 			TEST_ASSERT_NOT_NULL(anotherpk);
 			result = crypto_hal_sig_verify(
@@ -517,8 +517,8 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 			    pk->key2->byte_sz);
 			TEST_ASSERT_NOT_EQUAL(0, result);
 			/* clean up */
-			sdo_byte_array_free(testdata);
-			sdo_public_key_free(anotherpk);
+			fdo_byte_array_free(testdata);
+			fdo_public_key_free(anotherpk);
 #ifdef USE_OPENSSL
 			if (anotherkey)
 				RSA_free(anotherkey);
@@ -526,7 +526,7 @@ TEST_CASE("rsasigverification", "[RSARoutines][sdo]")
 #ifdef USE_MBEDTLS
 			mbedtls_rsa_free(&anotherkey);
 #endif
-			sdo_public_key_free(pk);
+			fdo_public_key_free(pk);
 		}
 
 #ifdef USE_OPENSSL

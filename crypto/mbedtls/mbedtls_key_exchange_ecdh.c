@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 #include "util.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "crypto_utils.h"
 #include "BN_support.h"
 #include "safe_lib.h"
@@ -18,12 +18,12 @@
 #define AX_AY_SIZE_DEF BUFF_SIZE_32_BYTES
 #define OWNERRAND_SIZE_DEF BUFF_SIZE_16_BYTES
 #define GROUP_ID_SIZE MBEDTLS_ECP_DP_SECP256R1
-#define DEVICE_RANDOM_SIZE SDO_ECDH256_DEV_RANDOM
+#define DEVICE_RANDOM_SIZE FDO_ECDH256_DEV_RANDOM
 #elif defined(KEX_ECDH384_ENABLED)
 #define AX_AY_SIZE_DEF BUFF_SIZE_48_BYTES
 #define OWNERRAND_SIZE_DEF BUFF_SIZE_48_BYTES
 #define GROUP_ID_SIZE MBEDTLS_ECP_DP_SECP384R1
-#define DEVICE_RANDOM_SIZE SDO_ECDH384_DEV_RANDOM
+#define DEVICE_RANDOM_SIZE FDO_ECDH384_DEV_RANDOM
 #endif
 
 typedef struct {
@@ -56,7 +56,7 @@ int32_t crypto_hal_kex_init(void **context)
 	}
 
 	/* Allocate key_ex_data*/
-	key_ex_data = sdo_alloc(sizeof(ecdh_context_t));
+	key_ex_data = fdo_alloc(sizeof(ecdh_context_t));
 	if (!key_ex_data)
 		goto error;
 
@@ -64,7 +64,7 @@ int32_t crypto_hal_kex_init(void **context)
 	/* Generate Device Random bits */
 	key_ex_data->_Dev_rand_size = DEVICE_RANDOM_SIZE;
 
-	key_ex_data->_Device_random = sdo_alloc(key_ex_data->_Dev_rand_size);
+	key_ex_data->_Device_random = fdo_alloc(key_ex_data->_Dev_rand_size);
 	if (!key_ex_data->_Device_random) {
 		LOG(LOG_ERROR, "Memory alloc failed\n");
 		goto error;
@@ -109,16 +109,16 @@ int32_t crypto_hal_kex_close(void **context)
 	}
 
 	if (key_ex_data->_shared_secret)
-		sdo_free(key_ex_data->_shared_secret);
+		fdo_free(key_ex_data->_shared_secret);
 	if (key_ex_data->_publicA)
-		sdo_free(key_ex_data->_publicA);
+		fdo_free(key_ex_data->_publicA);
 	if (key_ex_data->_publicB)
-		sdo_free(key_ex_data->_publicB);
+		fdo_free(key_ex_data->_publicB);
 	if (key_ex_data->_Device_random)
-		sdo_free(key_ex_data->_Device_random);
+		fdo_free(key_ex_data->_Device_random);
 	mbedtls_ecdh_free(&key_ex_data->ecdh);
 	if (key_ex_data)
-		sdo_free(key_ex_data);
+		fdo_free(key_ex_data);
 
 	return 0;
 }
@@ -167,7 +167,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	allocbytes = bn_num_bytes(&key_ex_data->ecdh.Q.X) +
 		     bn_num_bytes(&key_ex_data->ecdh.Q.Y) +
 		     key_ex_data->_Dev_rand_size + 6;
-	temp = sdo_alloc(allocbytes);
+	temp = fdo_alloc(allocbytes);
 	if (!temp) {
 		LOG(LOG_ERROR, "Memory alloc failed\n");
 		goto error;
@@ -242,7 +242,7 @@ error:
 	if (retval == false) {
 		LOG(LOG_ERROR, "compute_publicB failed\n");
 		if (temp)
-			sdo_free(temp);
+			fdo_free(temp);
 	}
 	return retval;
 }
@@ -325,7 +325,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto exit;
 	}
 
-	key_ex_data->_publicA = sdo_alloc(peer_rand_length);
+	key_ex_data->_publicA = fdo_alloc(peer_rand_length);
 	if (!key_ex_data->_publicA) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto exit;
@@ -348,7 +348,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		LOG(LOG_ERROR, "Size of Ax more than 32 bytes\n");
 		goto exit;
 	}
-	Ax = sdo_alloc(size_Ax);
+	Ax = fdo_alloc(size_Ax);
 	if (!Ax) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto exit;
@@ -364,7 +364,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		LOG(LOG_ERROR, "Size of Ay more than 32 bytes\n");
 		goto exit;
 	}
-	Ay = sdo_alloc(size_Ay);
+	Ay = fdo_alloc(size_Ay);
 	if (!Ay) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto exit;
@@ -381,7 +381,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		LOG(LOG_ERROR, "Size of owner random more than 16/48 bytes\n");
 		goto exit;
 	}
-	owner_random = sdo_alloc(size_owner_random);
+	owner_random = fdo_alloc(size_owner_random);
 	if (!owner_random) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto exit;
@@ -412,7 +412,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 
 	ret = -1; /* reset to -1 for correct error handling */
 
-	secret = sdo_alloc(secret_buf_MAX);
+	secret = fdo_alloc(secret_buf_MAX);
 	if (!secret) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto exit;
@@ -433,7 +433,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 	/* Derive the custom shared secret */
 	custom_shse_size =
 	    key_ex_data->_Dev_rand_size + size_owner_random + size_shse;
-	shse = sdo_alloc(custom_shse_size);
+	shse = fdo_alloc(custom_shse_size);
 	if (!shse) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto exit;
@@ -478,35 +478,35 @@ exit:
 			LOG(LOG_ERROR, "Failed to clear Shared Secret\n");
 			ret = -1;
 		}
-		sdo_free(shse);
+		fdo_free(shse);
 	}
 	if (Ax) {
 		if (memset_s(Ax, size_Ax, 0)) {
 			LOG(LOG_ERROR, "Failed to clear secret data Ax\n");
 			ret = -1;
 		}
-		sdo_free(Ax);
+		fdo_free(Ax);
 	}
 	if (Ay) {
 		if (memset_s(Ay, size_Ay, 0)) {
 			LOG(LOG_ERROR, "Failed to clear secret data Ay\n");
 			ret = -1;
 		}
-		sdo_free(Ay);
+		fdo_free(Ay);
 	}
 	if (owner_random) {
 		if (memset_s(owner_random, size_owner_random, 0)) {
 			LOG(LOG_ERROR, "Failed to clear secret data Ay\n");
 			ret = -1;
 		}
-		sdo_free(owner_random);
+		fdo_free(owner_random);
 	}
 	if (secret) {
 		if (memset_s(secret, secret_buf_MAX, 0)) {
 			LOG(LOG_ERROR, "Failed to clear secret\n");
 			ret = -1;
 		}
-		sdo_free(secret);
+		fdo_free(secret);
 	}
 	return ret;
 }

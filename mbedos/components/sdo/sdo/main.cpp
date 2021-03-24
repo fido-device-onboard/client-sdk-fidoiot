@@ -6,7 +6,7 @@
 /*!
  * \file
  * \brief Main application. This file has implementation for entry point into
- * the platform and necessary things to initialize sdo, run it and exit
+ * the platform and necessary things to initialize fdo, run it and exit
  * gracefully.
  */
 

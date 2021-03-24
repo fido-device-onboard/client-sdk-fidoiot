@@ -11,9 +11,9 @@
 
 #include <stdlib.h>
 #include "network_al.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "crypto_utils.h"
 #include "BN_support.h"
 #include "mbedtls/dhm.h"
@@ -84,7 +84,7 @@ int32_t crypto_hal_kex_init(void **context)
 		goto err;
 	}
 
-	key_ex_data = sdo_alloc(sizeof(dh_context_t));
+	key_ex_data = fdo_alloc(sizeof(dh_context_t));
 	if (NULL == key_ex_data) {
 		goto err;
 	}
@@ -110,7 +110,7 @@ err:
 }
 
 /**
- * sdo_cryptoDHClose closes the dh section
+ * fdo_cryptoDHClose closes the dh section
  * @param context - dh context
  * @return
  *        returns 0 on success and -1 on failure
@@ -124,11 +124,11 @@ int32_t crypto_hal_kex_close(void **context)
 
 	mbedtls_dhm_free(&key_ex_data->dhm);
 	if (key_ex_data->_shared_secret)
-		sdo_free(key_ex_data->_shared_secret);
+		fdo_free(key_ex_data->_shared_secret);
 	if (key_ex_data->_publicB)
-		sdo_free(key_ex_data->_publicB);
+		fdo_free(key_ex_data->_publicB);
 
-	sdo_free(key_ex_data);
+	fdo_free(key_ex_data);
 	return 0;
 }
 
@@ -154,7 +154,7 @@ static bool compute_publicBDH(dh_context_t *key_ex_data)
 	if (retval == 0)
 		goto err;
 	key_ex_data->dhm.len = retval;
-	key_ex_data->_publicB = sdo_alloc(key_ex_data->dhm.len);
+	key_ex_data->_publicB = fdo_alloc(key_ex_data->dhm.len);
 	if (!key_ex_data->_publicB) {
 		LOG(LOG_ERROR, "Failled to alloc Dev public\n");
 		goto err;
@@ -257,7 +257,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto err;
 
 	key_ex_data->_shared_secret_length = key_ex_data->dhm.len;
-	key_ex_data->_shared_secret = sdo_alloc(key_ex_data->dhm.len);
+	key_ex_data->_shared_secret = fdo_alloc(key_ex_data->dhm.len);
 	if (NULL == key_ex_data->_shared_secret)
 		goto err;
 	ret = mbedtls_dhm_calc_secret(

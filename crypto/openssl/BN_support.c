@@ -9,15 +9,15 @@
  */
 
 #include "BN_support.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "util.h"
 
 /**
- * Convert a SDOBits object to a bignum_t
+ * Convert a FDOBits object to a bignum_t
  */
-int byte_array_to_bn(bignum_t *bn, sdo_byte_array_t *in)
+int byte_array_to_bn(bignum_t *bn, fdo_byte_array_t *in)
 {
 
 	if (in == NULL || bn == NULL) {
@@ -36,24 +36,24 @@ int byte_array_to_bn(bignum_t *bn, sdo_byte_array_t *in)
  * top of the array.
  * We must do the same thing if we are to interwork with java
  */
-sdo_byte_array_t *bn_to_byte_array(bignum_t *in)
+fdo_byte_array_t *bn_to_byte_array(bignum_t *in)
 {
 	int len;
-	sdo_byte_array_t *ba;
+	fdo_byte_array_t *ba;
 
 	if (in == NULL) {
 		return NULL;
 	}
 
 	len = bn_num_bytes(in);
-	ba = sdo_byte_array_alloc(len + 1);
+	ba = fdo_byte_array_alloc(len + 1);
 	if (ba == NULL) {
 		return NULL;
 	}
 
 	/* do the conversion*/
 	if (bn_bn2bin(in, ba->bytes) == 0) {
-		sdo_byte_array_free(ba);
+		fdo_byte_array_free(ba);
 		return NULL;
 	}
 
@@ -65,7 +65,7 @@ sdo_byte_array_t *bn_to_byte_array(bignum_t *in)
 		if (memmove_s(&ba->bytes[1], ba->byte_sz, ba->bytes, len) !=
 		    0) {
 			LOG(LOG_ERROR, "Memmove Failed\n");
-			sdo_byte_array_free(ba);
+			fdo_byte_array_free(ba);
 			return NULL;
 		}
 		ba->bytes[0] = 0;

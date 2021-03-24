@@ -11,17 +11,17 @@
 #include <openssl/ec.h>
 #include <openssl/x509.h>
 
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "ec_key.h"
-#include "sdocred.h"
-#include "sdoCryptoHal.h"
+#include "fdocred.h"
+#include "fdoCryptoHal.h"
 
 /**
  * crypto_hal_get_device_csr() - get the device CSR
  */
-int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
+int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 {
 	int ret = -1;
 	uint8_t *csr_data = NULL;
@@ -36,7 +36,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	X509_NAME *x509_name = NULL;
 	EVP_PKEY *ec_pkey = EVP_PKEY_new();
 	X509_REQ *x509_req = X509_REQ_new();
-	sdo_byte_array_t *csr_byte_arr = NULL;
+	fdo_byte_array_t *csr_byte_arr = NULL;
 
 	if (!ec_pkey || !x509_req) {
 		ret = -1;
@@ -105,7 +105,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 					MBSTRING_ASC, (unsigned char *)"IN", -1,
 					-1, 0) ||
 	    !X509_NAME_add_entry_by_NID(x509_name, NID_commonName, MBSTRING_ASC,
-					(unsigned char *)"sdo", -1, -1, 0) ||
+					(unsigned char *)"fdo", -1, -1, 0) ||
 	    !X509_NAME_add_entry_by_NID(x509_name, NID_localityName,
 					MBSTRING_ASC, (unsigned char *)"Blr",
 					-1, -1, 0) ||
@@ -169,7 +169,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	}
 
 	/* Allocate byte array to send back data to DI state machine */
-	csr_byte_arr = sdo_byte_array_alloc(csr_size);
+	csr_byte_arr = fdo_byte_array_alloc(csr_size);
 	if (!csr_byte_arr) {
 		LOG(LOG_ERROR,
 		    "Failed to allocate data for storing csr data\n");
@@ -187,7 +187,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	ret = 0;
 err:
 	if (csr_byte_arr && ret) {
-		sdo_byte_array_free(csr_byte_arr);
+		fdo_byte_array_free(csr_byte_arr);
 		csr_byte_arr = NULL;
 	}
 	if (csr_mem_bio) {

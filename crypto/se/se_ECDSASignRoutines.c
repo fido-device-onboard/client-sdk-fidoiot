@@ -8,11 +8,11 @@
  * \ brief Abstraction layer for ECDSA signing routine using SE
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 #include <atca_basic.h>
 #include "se_config.h"
 
@@ -38,7 +38,7 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
 		goto err;
 	}
 
-	if (ATCA_SUCCESS != sdo_crypto_hash((uint8_t *)message, message_len,
+	if (ATCA_SUCCESS != fdo_crypto_hash((uint8_t *)message, message_len,
 					    hash, SHA256_DIGEST_SIZE)) {
 		ret = -1;
 		goto err;

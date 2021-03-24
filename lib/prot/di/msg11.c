@@ -9,8 +9,8 @@
  */
 
 #include "load_credentials.h"
-#include "sdoCrypto.h"
-#include "sdoprot.h"
+#include "fdoCrypto.h"
+#include "fdoprot.h"
 #include "util.h"
 
 /**
@@ -26,12 +26,12 @@
  *   OVDevCertChainHash:OVDevCertChainHashOrNull
  * ]
  */
-int32_t msg11(sdo_prot_t *ps)
+int32_t msg11(fdo_prot_t *ps)
 {
 	int ret = -1;
-	char prot[] = "SDOProtDI";
-	sdo_ownership_voucher_t *ov = NULL;
-	sdo_dev_cred_t *dev_cred = app_get_credentials();
+	char prot[] = "FDOProtDI";
+	fdo_ownership_voucher_t *ov = NULL;
+	fdo_dev_cred_t *dev_cred = app_get_credentials();
 
 	/* Is device credentials memory allocated */
 	if (!dev_cred) {
@@ -44,22 +44,22 @@ int32_t msg11(sdo_prot_t *ps)
 	 * break out from here for now. Mark the state as true, but don't set
 	 * the state to next msg (msg12)
 	 */
-	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!fdo_prot_rcv_msg(&ps->fdor, &ps->fdow, prot, &ps->state)) {
 		ret = 0;
 		goto err;
 	}
 
 	/* Prepare for writing device credentials */
-	if (!sdor_start_array(&ps->sdor)) {
+	if (!fdor_start_array(&ps->fdor)) {
 		goto err;
 	}
 
 	if (NULL == ps->dev_cred->mfg_blk) {
-		ps->dev_cred->mfg_blk = sdo_cred_mfg_alloc();
+		ps->dev_cred->mfg_blk = fdo_cred_mfg_alloc();
 	}
 
 	if (NULL == ps->dev_cred->owner_blk) {
-		ps->dev_cred->owner_blk = sdo_cred_owner_alloc();
+		ps->dev_cred->owner_blk = fdo_cred_owner_alloc();
 		if (!ps->dev_cred->owner_blk) {
 			LOG(LOG_ERROR, "Alloc failed\n");
 			goto err;
@@ -72,20 +72,20 @@ int32_t msg11(sdo_prot_t *ps)
 		goto err;
 	}
 
-	if (0 != sdo_generate_ov_hmac_key()) {
+	if (0 != fdo_generate_ov_hmac_key()) {
 		LOG(LOG_ERROR, "OV HMAC key generation failed.\n");
 		goto err;
 	}
 
 	/* Parse the complete Ownership header and calcuate HMAC over it */
-	ov = sdo_ov_hdr_read(&ps->sdor, &ps->new_ov_hdr_hmac);
+	ov = fdo_ov_hdr_read(&ps->fdor, &ps->new_ov_hdr_hmac);
 	if (!ov) {
 		LOG(LOG_ERROR, "Failed to read OVHeader\n");
 		goto err;
 	}
 
-	if (ov->prot_version != SDO_PROT_SPEC_VERSION) {
-		sdo_ov_free(ov);
+	if (ov->prot_version != FDO_PROT_SPEC_VERSION) {
+		fdo_ov_free(ov);
 		LOG(LOG_ERROR, "Invalid OVProtVer\n");
 		goto err;
 	}
@@ -99,18 +99,18 @@ int32_t msg11(sdo_prot_t *ps)
 	ps->dev_cred = dev_cred;
 
 	if (ov->hdc) {
-		sdo_hash_free(ov->hdc);
+		fdo_hash_free(ov->hdc);
 	}
-	sdo_free(ov);
+	fdo_free(ov);
 
-	if (!sdor_end_array(&ps->sdor)) {
+	if (!fdor_end_array(&ps->fdor)) {
 		goto err;
 	}
 
 	/* All good, move to msg12 */
-	ps->state = SDO_STATE_DI_SET_HMAC;
-	ps->sdor.have_block = false;
-	sdo_block_reset(&ps->sdor.b);
+	ps->state = FDO_STATE_DI_SET_HMAC;
+	ps->fdor.have_block = false;
+	fdo_block_reset(&ps->fdor.b);
 	LOG(LOG_DEBUG, "DISetCredentials completed\n");
 	ret = 0;
 

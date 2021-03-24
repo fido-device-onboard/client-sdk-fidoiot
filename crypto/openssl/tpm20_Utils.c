@@ -11,16 +11,16 @@
 #include "util.h"
 #include "safe_lib.h"
 #include "tpm20_Utils.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "storage_al.h"
 
-static int32_t sdoTPMEsys_context_init(ESYS_CONTEXT **esys_context);
-static int32_t sdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
+static int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context);
+static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
 					    ESYS_TR *session_handle);
-static int32_t sdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
+static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 					 ESYS_TR *auth_session_handle,
 					 ESYS_TR *primary_handle);
-static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
+static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
 						  ESYS_TR *primary_handle,
 						  ESYS_TR *auth_session_handle);
 
@@ -38,7 +38,7 @@ static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
  *	0, on success
  *	-1, on failure
  */
-int32_t sdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
+int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 			 size_t hmac_length, char *tpmHMACPub_key,
 			 char *tpmHMACPriv_key)
 {
@@ -75,7 +75,7 @@ int32_t sdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	/*Creating TPM Primary Key Context*/
 
-	if (0 != sdoTPMGenerate_primary_key_context(&esys_context,
+	if (0 != fdoTPMGenerate_primary_key_context(&esys_context,
 						    &primary_key_handle,
 						    &auth_session_handle)) {
 		LOG(LOG_ERROR,
@@ -324,7 +324,7 @@ err:
 				hmac_key_handle = ESYS_TR_NONE;
 			}
 		}
-		if (0 != sdoTPMTSSContext_clean_up(&esys_context,
+		if (0 != fdoTPMTSSContext_clean_up(&esys_context,
 						   &auth_session_handle,
 						   &primary_key_handle)) {
 			LOG(LOG_ERROR,
@@ -349,7 +349,7 @@ err:
  *		0, on success
  *		-1, on failure
  */
-int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
+int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 {
 	int32_t ret = -1;
 	TSS2_RC ret_val = TPM2_RC_FAILURE;
@@ -386,7 +386,7 @@ int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 		goto err;
 	}
 
-	if (0 != sdoTPMGenerate_primary_key_context(&esys_context,
+	if (0 != fdoTPMGenerate_primary_key_context(&esys_context,
 						    &primary_key_handle,
 						    &auth_session_handle)) {
 		LOG(LOG_ERROR,
@@ -414,7 +414,7 @@ int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 	}
 
 	if ((int32_t)offset !=
-	    sdo_blob_write(tpmHMACPub_key, SDO_SDK_RAW_DATA, buffer, offset)) {
+	    fdo_blob_write(tpmHMACPub_key, FDO_SDK_RAW_DATA, buffer, offset)) {
 		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
 		goto err;
 	}
@@ -430,7 +430,7 @@ int32_t sdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 	}
 
 	if ((int32_t)offset !=
-	    sdo_blob_write(tpmHMACPriv_key, SDO_SDK_RAW_DATA, buffer, offset)) {
+	    fdo_blob_write(tpmHMACPriv_key, FDO_SDK_RAW_DATA, buffer, offset)) {
 		LOG(LOG_ERROR,
 		    "Failed to save the private HMAC key context.\n");
 		goto err;
@@ -449,7 +449,7 @@ err:
 	TPM2_ZEROISE_FREE(creation_ticket);
 
 	if (esys_context &&
-	    (0 != sdoTPMTSSContext_clean_up(&esys_context, &auth_session_handle,
+	    (0 != fdoTPMTSSContext_clean_up(&esys_context, &auth_session_handle,
 					    &primary_key_handle))) {
 		LOG(LOG_ERROR, "Failed to tear down all the TSS context.\n");
 	}
@@ -467,7 +467,7 @@ err:
  *		0, on success
  *		-1, on failure
  */
-static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
+static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
 						  ESYS_TR *primary_key_handle,
 						  ESYS_TR *auth_session_handle)
 {
@@ -489,7 +489,7 @@ static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
 
 	LOG(LOG_DEBUG, "Generate Primary key context.\n");
 
-	if (0 != sdoTPMEsys_context_init(esys_context) || (!*esys_context)) {
+	if (0 != fdoTPMEsys_context_init(esys_context) || (!*esys_context)) {
 		LOG(LOG_ERROR, "Failed to Create Esys Context.\n");
 		goto err;
 	}
@@ -497,7 +497,7 @@ static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
 	LOG(LOG_DEBUG, "Esys Context created succesfully!!\n");
 
 	if (0 !=
-	    sdoTPMEsys_auth_session_init(*esys_context, auth_session_handle)) {
+	    fdoTPMEsys_auth_session_init(*esys_context, auth_session_handle)) {
 		LOG(LOG_ERROR, "Failed to create Auth Session for Esys API.\n");
 		goto err;
 	}
@@ -518,7 +518,7 @@ static int32_t sdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
 
 err:
 	if (esys_context && *esys_context) {
-		sdoTPMTSSContext_clean_up(esys_context, auth_session_handle,
+		fdoTPMTSSContext_clean_up(esys_context, auth_session_handle,
 					  primary_key_handle);
 	}
 
@@ -540,7 +540,7 @@ out:
  *		0, on success
  *		-1, on failure
  */
-static int32_t sdoTPMEsys_context_init(ESYS_CONTEXT **esys_context)
+static int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context)
 {
 	int ret = -1;
 	TSS2_TCTI_CONTEXT *tcti_context = NULL;
@@ -584,7 +584,7 @@ err:
  *	0, on success
  *	-1, on failure
  */
-static int32_t sdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
+static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
 					    ESYS_TR *session_handle)
 {
 	int ret = -1;
@@ -613,7 +613,7 @@ static int32_t sdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
  *	0, on success
  *	-1, on failure
  */
-static int32_t sdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
+static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 					 ESYS_TR *auth_session_handle,
 					 ESYS_TR *primary_handle)
 {

@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "util.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "crypto_utils.h"
 #include "platform_utils.h"
 #include "safe_lib.h"
@@ -67,14 +67,14 @@ static int getSDfilepath(char *filepath, const char *name)
  **********************************************************/
 
 /**
- * sdo_blob_size Get specified SDO blob(file) size
+ * fdo_blob_size Get specified FDO blob(file) size
  *
  * @param name - pointer to the blob/file name
  * @param flags - descriptor telling type of file
  * @return file size on success, 0 if file does not exits, -1 on failure
  */
 
-int32_t sdo_blob_size(const char *name, sdo_sdk_blob_flags flags)
+int32_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 {
 	int32_t retval = -1;
 	char filepath[MAX_FILE_PATH + 1] = {0};
@@ -98,18 +98,18 @@ int32_t sdo_blob_size(const char *name, sdo_sdk_blob_flags flags)
 	}
 
 	switch (flags) {
-	case SDO_SDK_RAW_DATA:
+	case FDO_SDK_RAW_DATA:
 		/* Raw Files are stored as plain files */
 		retval = (int32_t)(get_file_size(filepath));
 		break;
-	case SDO_SDK_NORMAL_DATA:
+	case FDO_SDK_NORMAL_DATA:
 		/* Normal blob is stored as:
 		 * [HMAC(32bytes)||data-content-size(4bytes)||data-content(?)]
 		 */
 		retval = (int32_t)(get_file_size(filepath) -
 				   PLATFORM_HMAC_SIZE - BLOB_CONTENT_SIZE);
 		break;
-	case SDO_SDK_SECURE_DATA:
+	case FDO_SDK_SECURE_DATA:
 		/* Secure blob is stored as:
 		 * [IV_data(12byte)||TAG(16bytes)||
 		 * data-content-size(4bytes)||data-content(?)]
@@ -132,17 +132,17 @@ end:
 }
 
 /**
- * sdo_blob_read Read SDO blob(file) into specified buffer,
- * sdo_blob_read ensures authenticity &  integrity for non-secure
+ * fdo_blob_read Read FDO blob(file) into specified buffer,
+ * fdo_blob_read ensures authenticity &  integrity for non-secure
  * data & additionally confidentiality for secure data.
- * Note: SDO_SDK_OTP_DATA flag is not supported for this platform.
+ * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
  * @param name - pointer to the blob/file name
  * @param flags - descriptor telling type of file
  * @param buf - pointer to buf where data is read into
  * @param n_bytes - length of data(in bytes) to be read
  * @return num of bytes read if success, -1 on error
  */
-int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
+int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		    uint32_t n_bytes)
 {
 	if (!name || !buf)
@@ -175,12 +175,12 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 
 	if (n_bytes > R_MAX_SIZE) {
 		LOG(LOG_ERROR, "file read buffer is more than R_MAX_SIZE in "
-			       "sdo_blob_read()!\n");
+			       "fdo_blob_read()!\n");
 		goto exit;
 	}
 
 	switch (flags) {
-	case SDO_SDK_RAW_DATA:
+	case FDO_SDK_RAW_DATA:
 		// Raw Files are stored as plain files
 		if (0 != read_buffer_from_file(filepath, buf, n_bytes)) {
 			LOG(LOG_ERROR, "Failed to read %s file!\n", filepath);
@@ -188,17 +188,17 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 		}
 		break;
 
-	case SDO_SDK_NORMAL_DATA:
+	case FDO_SDK_NORMAL_DATA:
 		/* HMAC-256 is being used to store files under
-		 * SDO_SDK_NORMAL_DATA flag.
+		 * FDO_SDK_NORMAL_DATA flag.
 		 * File content to be stored as:
 		 * [HMAC(32 bytes)||Sizeof_plaintext(4 bytes)||Plaintext(n_bytes
 		 * bytes)] */
 
 		sealed_data_len = PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE + n_bytes;
 
-		if (NULL == (sealed_data = (uint8_t *)sdo_alloc(sealed_data_len))) {
-			LOG(LOG_ERROR, "Malloc Failed in sdo_blob_read()!\n");
+		if (NULL == (sealed_data = (uint8_t *)fdo_alloc(sealed_data_len))) {
+			LOG(LOG_ERROR, "Malloc Failed in fdo_blob_read()!\n");
 			goto exit;
 		}
 
@@ -226,7 +226,7 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 		if (memcpy_s(stored_hmac, PLATFORM_HMAC_SIZE, sealed_data,
 			     PLATFORM_HMAC_SIZE) != 0) {
 			LOG(LOG_ERROR, "Copying stored HMAC failed during "
-				       "sdo_blob_read()!\n");
+				       "fdo_blob_read()!\n");
 			goto exit;
 		}
 
@@ -239,12 +239,12 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 		}
 
 		// compute HMAC
-		if (0 != crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_SHA_256, data,
+		if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_SHA_256, data,
 				       data_length, computed_hmac,
 				       PLATFORM_HMAC_SIZE, hmac_key,
 				       HMACSHA256_KEY_SIZE)) {
 			LOG(LOG_ERROR,
-			    "HMAC computation dailed during sdo_blob_read()!\n");
+			    "HMAC computation dailed during fdo_blob_read()!\n");
 			goto exit;
 		}
 
@@ -253,22 +253,22 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 			 PLATFORM_HMAC_SIZE, &strcmp_result);
 		if (strcmp_result != 0) {
 			LOG(LOG_ERROR,
-			    "sdo_blob_read(): HMACs do not compare!\n");
+			    "fdo_blob_read(): HMACs do not compare!\n");
 			goto exit;
 		}
 
 		// copy data into supplied buffer
 		if (memcpy_s(buf, n_bytes, data, data_length) != 0) {
-			LOG(LOG_ERROR, "sdo_blob_read(): Copying data into "
+			LOG(LOG_ERROR, "fdo_blob_read(): Copying data into "
 				       "buffer failed!\n");
 			goto exit;
 		}
 		break;
 
-	case SDO_SDK_SECURE_DATA:
+	case FDO_SDK_SECURE_DATA:
 		/* AES GCM authenticated encryption is being used to store files
 		 * under
-		 * SDO_SDK_SECURE_DATA flag. File content to be stored as:
+		 * FDO_SDK_SECURE_DATA flag. File content to be stored as:
 		 * [IV_data(12byte)||[AuthenticatedTAG(16 bytes)||
 		 * Sizeof_ciphertext(8 * bytes)||Ciphertet(n_bytes bytes)] */
 
@@ -277,8 +277,8 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 				   n_bytes;
 
 		if (NULL ==
-		    (encrypted_data = (uint8_t *)sdo_alloc(encrypted_data_len))) {
-			LOG(LOG_ERROR, "Malloc Failed in sdo_blob_read()!\n");
+		    (encrypted_data = (uint8_t *)fdo_alloc(encrypted_data_len))) {
+			LOG(LOG_ERROR, "Malloc Failed in fdo_blob_read()!\n");
 			goto exit;
 		}
 
@@ -307,7 +307,7 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 		if (memcpy_s(iv, PLATFORM_IV_DEFAULT_LEN, encrypted_data,
 			     PLATFORM_IV_DEFAULT_LEN) != 0) {
 			LOG(LOG_ERROR, "Copying stored IV failed during "
-				       "sdo_blob_read()!\n");
+				       "fdo_blob_read()!\n");
 			goto exit;
 		}
 
@@ -315,7 +315,7 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 			     encrypted_data + PLATFORM_IV_DEFAULT_LEN,
 			     PLATFORM_GCM_TAG_SIZE) != 0) {
 			LOG(LOG_ERROR, "Copying stored TAG failed during "
-				       "sdo_blob_read()!\n");
+				       "fdo_blob_read()!\n");
 			goto exit;
 		}
 
@@ -329,7 +329,7 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 
 		// decrypt and authenticate cipher-text content and fill the
 		// given buffer with clear-text
-		if (sdo_crypto_aes_gcm_decrypt(buf, n_bytes, data, data_length, iv,
+		if (fdo_crypto_aes_gcm_decrypt(buf, n_bytes, data, data_length, iv,
 					   PLATFORM_IV_DEFAULT_LEN, aes_key,
 					   PLATFORM_AES_KEY_DEFAULT_LEN,
 					   stored_tag, AES_GCM_TAG_LEN) < 0) {
@@ -340,7 +340,7 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 		break;
 
 	default:
-		LOG(LOG_ERROR, "Invalid SDO blob flag!!\n");
+		LOG(LOG_ERROR, "Invalid FDO blob flag!!\n");
 		goto exit;
 	}
 
@@ -348,9 +348,9 @@ int32_t sdo_blob_read(const char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
 
 exit:
 	if (sealed_data)
-		sdo_free(sealed_data);
+		fdo_free(sealed_data);
 	if (encrypted_data)
-		sdo_free(encrypted_data);
+		fdo_free(encrypted_data);
 	if (memset_s(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN, 0)) {
                 LOG(LOG_ERROR, "Failed to clear HMAC key\n");
 		retval = -1;
@@ -363,10 +363,10 @@ exit:
 }
 
 /**
- * sdo_blob_write Write SDO blob(file) from specified buffer
- * sdo_blob_write ensures integrity & authenticity for non-secure
+ * fdo_blob_write Write FDO blob(file) from specified buffer
+ * fdo_blob_write ensures integrity & authenticity for non-secure
  * data & additionally confidentiality for secure data.
- * Note: SDO_SDK_OTP_DATA flag is not supported for this platform.
+ * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
  * @param name - pointer to the blob/file name
  * @param flags - descriptor telling type of file
  * @param buf - pointer to buf from where data is read and then written
@@ -374,7 +374,7 @@ exit:
  * @return num of bytes write if success, -1 on error
  */
 
-int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
+int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		     const uint8_t *buf, uint32_t n_bytes)
 {
 	if (!buf || !name)
@@ -390,8 +390,8 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 		return -1;
 
 	/*File content to be stored as HMAC_DIGEST+Sizeof_cipher_text+Cipher_text
-	 * for SDO_SDK_SECURE_DATA flag,
-	 * HMAC_DIGEST+Sizeof_plaintext+Plaintext for SDO_SDK_NORMAL_DATA flag.
+	 * for FDO_SDK_SECURE_DATA flag,
+	 * HMAC_DIGEST+Sizeof_plaintext+Plaintext for FDO_SDK_NORMAL_DATA flag.
 	 */
 
 	FILE *f = NULL;
@@ -407,18 +407,18 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 
 	if (n_bytes > R_MAX_SIZE) {
 		LOG(LOG_ERROR, "file write buffer is more than R_MAX_SIZE in "
-			       "sdo_blob_read()!\n");
+			       "fdo_blob_read()!\n");
 		goto exit;
 	}
 
 	switch (flags) {
-	case SDO_SDK_RAW_DATA:
+	case FDO_SDK_RAW_DATA:
 		// Raw Files are stored as plain files
 		write_context_len = n_bytes;
 
 		if (NULL ==
-		    (write_context = (uint8_t *)sdo_alloc(write_context_len))) {
-			LOG(LOG_ERROR, "Malloc Failed in sdo_blob_write!\n");
+		    (write_context = (uint8_t *)fdo_alloc(write_context_len))) {
+			LOG(LOG_ERROR, "Malloc Failed in fdo_blob_write!\n");
 			goto exit;
 		}
 
@@ -429,9 +429,9 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 		}
 		break;
 
-	case SDO_SDK_NORMAL_DATA:
+	case FDO_SDK_NORMAL_DATA:
 		/* HMAC-256 is being used to store files under
-		 * SDO_SDK_NORMAL_DATA flag.
+		 * FDO_SDK_NORMAL_DATA flag.
 		 * File content to be stored as:
 		 * [HMAC(32 bytes)||Sizeof_plaintext(4 bytes)||Plaintext(n_bytes
 		 * bytes)] */
@@ -439,8 +439,8 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 		    PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE + n_bytes;
 
 		if (NULL ==
-		    (write_context = (uint8_t *)sdo_alloc(write_context_len))) {
-			LOG(LOG_ERROR, "Malloc Failed in sdo_blob_write!\n");
+		    (write_context = (uint8_t *)fdo_alloc(write_context_len))) {
+			LOG(LOG_ERROR, "Malloc Failed in fdo_blob_write!\n");
 			goto exit;
 		}
 
@@ -450,7 +450,7 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 			goto exit;
 		}
 
-		if (0 != crypto_hal_hmac(SDO_CRYPTO_HMAC_TYPE_SHA_256, buf,
+		if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_SHA_256, buf,
 				       n_bytes, write_context, PLATFORM_HMAC_SIZE,
 				       hmac_key, HMACSHA256_KEY_SIZE)) {
 			LOG(LOG_ERROR, "Computing HMAC failed during Normal "
@@ -474,10 +474,10 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 		}
 		break;
 
-	case SDO_SDK_SECURE_DATA:
+	case FDO_SDK_SECURE_DATA:
 		/* AES GCM authenticated encryption is being used to store files
 		 * under
-		 * SDO_SDK_SECURE_DATA flag. File content to be stored as:
+		 * FDO_SDK_SECURE_DATA flag. File content to be stored as:
 		 * [IV_data(12byte)AuthenticatedTAG(16
 		 * bytes)||Sizeof_ciphertext(8
 		 * bytes)||Ciphertet(n_bytes bytes)] */
@@ -486,8 +486,8 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 				  n_bytes;
 
 		if (NULL ==
-		    (write_context = (uint8_t *)sdo_alloc(write_context_len))) {
-			LOG(LOG_ERROR, "Malloc Failed in sdo_blob_write()!\n");
+		    (write_context = (uint8_t *)fdo_alloc(write_context_len))) {
+			LOG(LOG_ERROR, "Malloc Failed in fdo_blob_write()!\n");
 			goto exit;
 		}
 
@@ -502,7 +502,7 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 		}
 
 		// encrypt plain-text and copy cipher-text content
-		if (sdo_crypto_aes_gcm_encrypt(
+		if (fdo_crypto_aes_gcm_encrypt(
 			buf, n_bytes,
 			write_context + PLATFORM_IV_DEFAULT_LEN +
 			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE,
@@ -540,7 +540,7 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 		break;
 
 	default:
-		LOG(LOG_ERROR, "Invalid SDO blob flag!!\n");
+		LOG(LOG_ERROR, "Invalid FDO blob flag!!\n");
 		goto exit;
 	}
 
@@ -562,10 +562,10 @@ int32_t sdo_blob_write(const char *name, sdo_sdk_blob_flags flags,
 
 exit:
 	if (write_context)
-		sdo_free(write_context);
+		fdo_free(write_context);
 	if (f)
 		if (fclose(f) == EOF) {
-			LOG(LOG_ERROR, "fclose() Failed in sdo_blob_write\n");
+			LOG(LOG_ERROR, "fclose() Failed in fdo_blob_write\n");
 			retval = -1;
 		}
 	if (memset_s(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN, 0)) {

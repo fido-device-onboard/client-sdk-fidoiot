@@ -4,13 +4,13 @@
 
 /*!
  * \file
- * \brief Unit tests for RSA abstraction routines of SDO library.
+ * \brief Unit tests for RSA abstraction routines of FDO library.
  */
 
 #include "test_RSARoutines.h"
 #include "safe_lib.h"
-#include "sdoCryptoHal.h"
-#include "sdoCrypto.h"
+#include "fdoCryptoHal.h"
+#include "fdoCrypto.h"
 #include "storage_al.h"
 
 //#define HEXDEBUG 1
@@ -86,14 +86,14 @@ static void dump_pubkey(const char *title, void *ctx)
 }
 #endif // HEXDEBUG
 
-static sdo_byte_array_t *getcleartext(int length)
+static fdo_byte_array_t *getcleartext(int length)
 {
-	sdo_byte_array_t *cleartext = sdo_byte_array_alloc(length);
+	fdo_byte_array_t *cleartext = fdo_byte_array_alloc(length);
 	if (!cleartext)
 		return NULL;
 	int i = length;
 	random_init();
-	sdo_crypto_random_bytes(cleartext->bytes, cleartext->byte_sz);
+	fdo_crypto_random_bytes(cleartext->bytes, cleartext->byte_sz);
 	while (i) {
 		cleartext->bytes[i - 1] = 'A' + (cleartext->bytes[i - 1] % 26);
 		i--;
@@ -104,10 +104,10 @@ static sdo_byte_array_t *getcleartext(int length)
 	return cleartext;
 }
 #ifdef HEXDEBUG
-static void showPK(sdo_public_key_t *pk)
+static void showPK(fdo_public_key_t *pk)
 {
 	char buf[ECDSA_PK_MAX_LENGTH];
-	printf("PK: %s\n", sdo_public_key_toString(pk, buf, sizeof buf));
+	printf("PK: %s\n", fdo_public_key_toString(pk, buf, sizeof buf));
 }
 #endif
 //----------------------------------------------------
@@ -184,7 +184,7 @@ done:
 	return result;
 }
 
-static sdo_public_key_t *getSDOpk(int curve, EC_KEY *eckey)
+static fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 {
 	size_t pub_len = 0;
 	uint8_t *pub_copy = NULL;
@@ -202,14 +202,14 @@ static sdo_public_key_t *getSDOpk(int curve, EC_KEY *eckey)
 		return NULL;
 	}
 
-	sdo_public_key_t *pk = NULL;
+	fdo_public_key_t *pk = NULL;
 	if (curve == 256)
-		pk = sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-					  SDO_CRYPTO_PUB_KEY_ENCODING_X509,
+		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
 					  pub_len, pub);
 	else if (curve == 384)
-		pk = sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-					  SDO_CRYPTO_PUB_KEY_ENCODING_X509,
+		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
 					  pub_len, pub);
 	else
 		return NULL;
@@ -241,7 +241,7 @@ static int generateECDSA_key(int curve, mbedtls_ecdsa_context *ctx_sign)
 {
 	int ret = -1;
 	char *pers = "ecdsa_genkey";
-	size_t pers_len = strnlen_s(pers, SDO_MAX_STR_SIZE);
+	size_t pers_len = strnlen_s(pers, FDO_MAX_STR_SIZE);
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 
@@ -332,13 +332,13 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	return 1;
 }
 
-static sdo_public_key_t *getSDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
+static fdo_public_key_t *getFDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
 {
-	/* convert mbedtls struct to SDO struct   */
+	/* convert mbedtls struct to FDO struct   */
 	unsigned char buf[ECDSA_PK_MAX_LENGTH];
 	size_t buflen = 0;
 	int ret = 0;
-	sdo_public_key_t *pk = NULL;
+	fdo_public_key_t *pk = NULL;
 
 	if (!ctx_sign)
 		return NULL;
@@ -352,12 +352,12 @@ static sdo_public_key_t *getSDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
 	}
 
 	if (curve == 256)
-		pk = sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-					  SDO_CRYPTO_PUB_KEY_ENCODING_X509,
+		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
 					  buflen, buf);
 	else
-		pk = sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-					  SDO_CRYPTO_PUB_KEY_ENCODING_X509,
+		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
 					  buflen, buf);
 	if (!pk || !pk->key1) {
 		return NULL;
@@ -378,12 +378,12 @@ static sdo_public_key_t *getSDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
 static void ec_sig_varification(int curve)
 {
 	int result = -1;
-	sdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
+	fdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
 	TEST_ASSERT_NOT_NULL(testdata);
 	unsigned int siglen = ECDSA_SIG_MAX_LENGTH;
 	unsigned char *sigtestdata = malloc(siglen);
 	TEST_ASSERT_NOT_NULL(sigtestdata);
-	sdo_public_key_t *pk = NULL;
+	fdo_public_key_t *pk = NULL;
 	unsigned char key_buf[DER_PUBKEY_LEN_MAX] = {0};
 	int key_buf_len = 0;
 //	int curve = 256;
@@ -400,7 +400,7 @@ static void ec_sig_varification(int curve)
 		TEST_ASSERT_NOT_EQUAL_MESSAGE(0, key_buf_len,
 					      "DER encoding failed!");
 
-		pk = getSDOpk(curve, avalidkey);
+		pk = getFDOpk(curve, avalidkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -413,7 +413,7 @@ static void ec_sig_varification(int curve)
 					       testdata->byte_sz, sigtestdata,
 					       &siglen, &avalidkey))) {
 			TEST_ASSERT_EQUAL(1, result);
-			pk = getSDOpk(curve, &avalidkey);
+			pk = getFDOpk(curve, &avalidkey);
 
 			/* convert ecdsa_context to pk_context */
 			mbedtls_pk_context pk_ctx;
@@ -468,18 +468,18 @@ static void ec_sig_varification(int curve)
 			    pk->key1->bytes, pk->key1->byte_sz, NULL, 0);
 			TEST_ASSERT_NOT_EQUAL(0, result);
 
-			sdo_public_key_t *anotherpk = NULL;
+			fdo_public_key_t *anotherpk = NULL;
 #ifdef USE_OPENSSL
 			/* force a failure by using another/different key */
 			EC_KEY *anotherkey = generateECDSA_key(curve);
 			TEST_ASSERT_NOT_NULL(anotherkey);
-			anotherpk = getSDOpk(curve, anotherkey);
+			anotherpk = getFDOpk(curve, anotherkey);
 #endif
 #ifdef USE_MBEDTLS
 			mbedtls_ecdsa_context anotherkey;
 			result = generateECDSA_key(curve, &anotherkey);
 			TEST_ASSERT_EQUAL(0, result);
-			anotherpk = getSDOpk(curve, &anotherkey);
+			anotherpk = getFDOpk(curve, &anotherkey);
 #endif
 			TEST_ASSERT_NOT_NULL(anotherpk);
 			result = crypto_hal_sig_verify(
@@ -491,7 +491,7 @@ static void ec_sig_varification(int curve)
 
 			/* force a failure by using a modified/different message
 			 */
-			sdo_crypto_random_bytes(testdata->bytes, 8);
+			fdo_crypto_random_bytes(testdata->bytes, 8);
 #ifdef HEXDEBUG
 			hexdump("MODIFIED CLEARTEXT", testdata->bytes,
 				testdata->byte_sz);
@@ -502,7 +502,7 @@ static void ec_sig_varification(int curve)
 			    pk->key1->bytes, pk->key1->byte_sz, NULL, 0);
 			TEST_ASSERT_NOT_EQUAL(0, result);
 			/* clean up */
-			sdo_public_key_free(anotherpk);
+			fdo_public_key_free(anotherpk);
 #ifdef USE_OPENSSL
 			if (anotherkey)
 				EC_KEY_free(anotherkey);
@@ -510,7 +510,7 @@ static void ec_sig_varification(int curve)
 #ifdef USE_MBEDTLS
 			mbedtls_ecdsa_free(&anotherkey);
 #endif
-			sdo_public_key_free(pk);
+			fdo_public_key_free(pk);
 		}
 
 #ifdef USE_OPENSSL
@@ -520,7 +520,7 @@ static void ec_sig_varification(int curve)
 #ifdef USE_MBEDTLS
 		mbedtls_ecdsa_free(&avalidkey);
 #endif
-		sdo_byte_array_free(testdata);
+		fdo_byte_array_free(testdata);
 		free(sigtestdata);
 	}
 
@@ -531,7 +531,7 @@ static void ec_sig_varification(int curve)
 #ifndef TARGET_OS_FREERTOS
 	void test_ecdsa256sigverification(void)
 #else
-TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][sdo]")
+TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][fdo]")
 #endif
 	{
 		TEST_IGNORE();
@@ -542,7 +542,7 @@ TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_ecdsa256sigverification(void)
 #else
-TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][sdo]")
+TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][fdo]")
 #endif
 {
 	ec_sig_varification(256);
@@ -553,7 +553,7 @@ TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][sdo]")
 #ifndef TARGET_OS_FREERTOS
 	void test_ecdsa384sigverification(void)
 #else
-TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][sdo]")
+TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][fdo]")
 #endif
 	{
 		TEST_IGNORE();
@@ -564,7 +564,7 @@ TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_ecdsa384sigverification(void)
 #else
-TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][sdo]")
+TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][fdo]")
 #endif
 {
 	ec_sig_varification(384);

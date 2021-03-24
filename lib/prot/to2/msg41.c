@@ -8,9 +8,9 @@
  * \brief This file implements msg41 of TO2 state machine.
  */
 
-#include "sdoprot.h"
+#include "fdoprot.h"
 #include "safe_lib.h"
-#include "sdokeyexchange.h"
+#include "fdokeyexchange.h"
 #include "util.h"
 
 /**
@@ -36,26 +36,26 @@
  *   xAKeyExchange ;; Key exchange first step
  * ]
  */
-int32_t msg61(sdo_prot_t *ps)
+int32_t msg61(fdo_prot_t *ps)
 {
-	char prot[] = "SDOProtTO2";
+	char prot[] = "FDOProtTO2";
 	int ret = -1;
 	int result_memcmp = 0;
-	sdo_byte_array_t *xA = NULL;
+	fdo_byte_array_t *xA = NULL;
 	fdo_cose_t *cose = NULL;
 
 	/*
 	 * Check that we don't exceed Round Trip Times requirements. The reason
-	 * for checking here is that sdo_prot_rcv_msg() fails the first time.
+	 * for checking here is that fdo_prot_rcv_msg() fails the first time.
 	 * So, the parent loop send the contents of previous message and
 	 * receives for this message, thus, housing the Round Trip Times.
 	 */
-	if (!sdo_check_to2_round_trips(ps)) {
+	if (!fdo_check_to2_round_trips(ps)) {
 		LOG(LOG_ERROR, "Max round trips reached\n");
 		goto err;
 	}
 
-	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!fdo_prot_rcv_msg(&ps->fdor, &ps->fdow, prot, &ps->state)) {
 		ret = 0; /* Get the data, and come back */
 		goto err;
 	}
@@ -64,32 +64,32 @@ int32_t msg61(sdo_prot_t *ps)
 
 	// Allocate for cose object now. Allocate for its members when needed later.
 	// Free immediately once its of no use.
-	cose = sdo_alloc(sizeof(fdo_cose_t));
+	cose = fdo_alloc(sizeof(fdo_cose_t));
 	if (!cose) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc COSE\n");
 		goto err;
 	}
 
-	if (!fdo_cose_read(&ps->sdor, cose, false)) {
+	if (!fdo_cose_read(&ps->fdor, cose, false)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read COSE\n");
 		goto err;
 	}
 
 	// get the Owner public key & Nonce6 from the COSE's Unprotected header and save it
-	ps->owner_public_key = sdo_public_key_clone(cose->cose_uph->cuphowner_public_key);
-	ps->n6 = sdo_byte_array_alloc(SDO_NONCE_BYTES);
+	ps->owner_public_key = fdo_public_key_clone(cose->cose_uph->cuphowner_public_key);
+	ps->n6 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->n6) {
 		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to alloc Nonce6\n");
 		goto err;
 	}
-	if (0 != memcpy_s(ps->n6->bytes, SDO_NONCE_BYTES,
+	if (0 != memcpy_s(ps->n6->bytes, FDO_NONCE_BYTES,
 		&cose->cose_uph->cuphnonce, sizeof(cose->cose_uph->cuphnonce))) {
 		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy Nonce6\n");
 		goto err;
 	}
 
 	/* The signature verification over TO2.ProveOPHdr.bo must verify */
-	if (!sdo_signature_verification(cose->cose_payload,
+	if (!fdo_signature_verification(cose->cose_payload,
 					cose->cose_signature,
 					ps->owner_public_key)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: COSE signature verification failed\n");
@@ -101,7 +101,7 @@ int32_t msg61(sdo_prot_t *ps)
 	// TO-DO : needs to happen only when TO2 was started without RVBypass flow.
 	// Add one more condition check for bypass when it is fixed up.
 	if (ps->to1d_cose) {
-		if (!sdo_signature_verification(ps->to1d_cose->cose_payload,
+		if (!fdo_signature_verification(ps->to1d_cose->cose_payload,
 					ps->to1d_cose->cose_signature,
 					ps->owner_public_key)) {
 			LOG(LOG_ERROR, "TO2.ProveOVHdr: COSE signature verification failed\n");
@@ -110,10 +110,10 @@ int32_t msg61(sdo_prot_t *ps)
 		LOG(LOG_DEBUG, "TO2.ProveOVHdr: to1d signature verification successful\n");
 	}
 
-	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
-	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.b.block_size = cose->cose_payload->byte_sz;
-	if (0 != memcpy_s(ps->sdor.b.block, ps->sdor.b.block_size,
+	// clear the FDOR buffer and push COSE payload into it, essentially reusing the FDOR object.
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.b.block_size = cose->cose_payload->byte_sz;
+	if (0 != memcpy_s(ps->fdor.b.block, ps->fdor.b.block_size,
 		cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to copy Nonce4\n");
 		goto err;
@@ -122,25 +122,25 @@ int32_t msg61(sdo_prot_t *ps)
 	cose = NULL;
 
 	// initialize the parser once the buffer contains COSE payload to be decoded.
-	if (!sdor_parser_init(&ps->sdor)) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to initilize SDOR parser\n");
+	if (!fdor_parser_init(&ps->fdor)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to initilize FDOR parser\n");
 		goto err;
 	}
 
 	size_t num_payloadbasemap_items = 0;
-	if (!sdor_array_length(&ps->sdor, &num_payloadbasemap_items) ||
+	if (!fdor_array_length(&ps->fdor, &num_payloadbasemap_items) ||
 		num_payloadbasemap_items != 6) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read array length\n");
 		goto err;
 	}
 
-	if (!sdor_start_array(&ps->sdor)) {
+	if (!fdor_start_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to start TO2ProveOVHdrPayload array\n");
 		goto err;
 	}
 
 	// Read the ownership header
-	ps->ovoucher = sdo_ov_hdr_read(&ps->sdor, &ps->new_ov_hdr_hmac);
+	ps->ovoucher = fdo_ov_hdr_read(&ps->fdor, &ps->new_ov_hdr_hmac);
 	if (!ps->ovoucher) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read OVHeader\n");
 		goto err;
@@ -152,7 +152,7 @@ int32_t msg61(sdo_prot_t *ps)
 	 * to the real owner (end-user)
 	 */
 	ps->ovoucher->num_ov_entries = 0;
-	if (!sdor_signed_int(&ps->sdor, &ps->ovoucher->num_ov_entries) ||
+	if (!fdor_signed_int(&ps->fdor, &ps->ovoucher->num_ov_entries) ||
 		ps->ovoucher->num_ov_entries == 0) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read NumOVEntries\n");
 		goto err;
@@ -160,12 +160,12 @@ int32_t msg61(sdo_prot_t *ps)
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Total number of OwnershipVoucher.OVEntries: %d\n",
 		ps->ovoucher->num_ov_entries);
 
-	ps->ovoucher->ovoucher_hdr_hash = sdo_hash_alloc_empty();
+	ps->ovoucher->ovoucher_hdr_hash = fdo_hash_alloc_empty();
 	if (!ps->ovoucher->ovoucher_hdr_hash) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc HMac\n");
 		goto err;
 	}
-	if (!sdo_hash_read(&ps->sdor, ps->ovoucher->ovoucher_hdr_hash)) {
+	if (!fdo_hash_read(&ps->fdor, ps->ovoucher->ovoucher_hdr_hash)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read HMac\n");
 		goto err;
 	}
@@ -189,33 +189,33 @@ int32_t msg61(sdo_prot_t *ps)
 	ret = -1; /* Reset to error */
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Valid Ownership Header received\n");
 
-	ps->n5r = sdo_byte_array_alloc(SDO_NONCE_BYTES);
+	ps->n5r = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->n5r) {
 		goto err;
 	}
 	size_t nonce5_length = 0;
-	if (!sdor_string_length(&ps->sdor, &nonce5_length) || nonce5_length != SDO_NONCE_BYTES) {
+	if (!fdor_string_length(&ps->fdor, &nonce5_length) || nonce5_length != FDO_NONCE_BYTES) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Invalid/Failed to read Nonce5 length\n");
 		goto err;
 	}
-	if (!sdor_byte_string(&ps->sdor, ps->n5r->bytes, ps->n5r->byte_sz)) {
+	if (!fdor_byte_string(&ps->fdor, ps->n5r->bytes, ps->n5r->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read Nonce5\n");
 		goto err;		
 	}
 
 	/* The nonces "n5" (msg40) and "n6" here must match */
-	if (!sdo_nonce_equal(ps->n5r, ps->n5)) {
+	if (!fdo_nonce_equal(ps->n5r, ps->n5)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Received Nonce5 and Nonce5 do not match\n");
 		goto err;
 	}
 
 	// clear them now since the Nonces have served their purpose
-	sdo_byte_array_free(ps->n5);
+	fdo_byte_array_free(ps->n5);
 	ps->n5 = NULL;
-	sdo_byte_array_free(ps->n5r);
+	fdo_byte_array_free(ps->n5r);
 	ps->n5r = NULL;	
 
-	if (!sdo_siginfo_read(&ps->sdor)) {
+	if (!fdo_siginfo_read(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read eBSigInfo\n");
 		goto err;
 	}
@@ -225,32 +225,32 @@ int32_t msg61(sdo_prot_t *ps)
 	 * info. xA is used based on KEX selected (asym, RSA, DH)
 	 */
 	size_t xA_length = 8;
-	if (!sdor_string_length(&ps->sdor, &xA_length)) {
+	if (!fdor_string_length(&ps->fdor, &xA_length)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read xAKeyExchange length\n");
 		goto err;	
 	}
-	xA = sdo_byte_array_alloc(xA_length);
+	xA = fdo_byte_array_alloc(xA_length);
 	if (!xA) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to allocate memory for xAKeyExchange\n");
 		goto err;
 	}
-	if(!sdor_byte_string(&ps->sdor, xA->bytes, xA->byte_sz)) {
+	if(!fdor_byte_string(&ps->fdor, xA->bytes, xA->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read xAKeyExchange\n");
 		goto err;
 	}
 
 	// Save TO2.ProveOPHdr.pk for Asymmetric Key Exchange algorithm
-	if (sdo_set_kex_paramA(xA, ps->owner_public_key)) {
+	if (fdo_set_kex_paramA(xA, ps->owner_public_key)) {
 		goto err;
 	}
 
-	if (!sdor_end_array(&ps->sdor)) {
+	if (!fdor_end_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to end TO2ProveOVHdrPayload array\n");
 		goto err;
 	}
 
 	// Save the initial OVEHashPrevEntry and OVEHashHdrInfo
-	ps->ovoucher->ov_entries = sdo_ov_entry_alloc_empty();
+	ps->ovoucher->ov_entries = fdo_ov_entry_alloc_empty();
 	if (!ps->ovoucher->ov_entries) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc OVEntry\n");
 		goto err;		
@@ -259,19 +259,19 @@ int32_t msg61(sdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to save OVEHashHdrInfo\n");
 		goto err;
 	}
-	// reset the SDOW block to prepare for OVEHashPrevEntry
-	sdo_block_reset(&ps->sdow.b);
-	ps->sdow.b.block_size = CBOR_BUFFER_LENGTH;
-	if (!sdow_encoder_init(&ps->sdow)) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to initilize SDOW encoder\n");
+	// reset the FDOW block to prepare for OVEHashPrevEntry
+	fdo_block_reset(&ps->fdow.b);
+	ps->fdow.b.block_size = CBOR_BUFFER_LENGTH;
+	if (!fdow_encoder_init(&ps->fdow)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to initilize FDOW encoder\n");
 		goto err;
 	}
-	if (!fdo_ove_hash_prev_entry_save(&ps->sdow, ps->ovoucher, ps->ovoucher->ovoucher_hdr_hash)) {
+	if (!fdo_ove_hash_prev_entry_save(&ps->fdow, ps->ovoucher, ps->ovoucher->ovoucher_hdr_hash)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to save OVEHashPrevEntry\n");
 		goto err;
 	}
 	// To verify the next entry in the ownership voucher
-	ps->ovoucher->ov_entries->pk = sdo_public_key_clone(ps->ovoucher->mfg_pub_key);
+	ps->ovoucher->ov_entries->pk = fdo_public_key_clone(ps->ovoucher->mfg_pub_key);
 
 	/*
 	 * If the TO2.ProveOPHdr.bo.sz > 0, get next Ownership Voucher (msg42),
@@ -279,10 +279,10 @@ int32_t msg61(sdo_prot_t *ps)
 	 */
 	if (ps->ovoucher->num_ov_entries > 0) {
 		ps->ov_entry_num = 0;
-		ps->state = SDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY;
+		ps->state = FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY;
 	} else {
 		LOG(LOG_INFO, "No Ownership Vouchers, jumping to msg44\n");
-		ps->state = SDO_STATE_TO2_SND_PROVE_DEVICE;
+		ps->state = FDO_STATE_TO2_SND_PROVE_DEVICE;
 	}
 
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr completed. %d OVEntry(s) to follow\n",
@@ -290,17 +290,17 @@ int32_t msg61(sdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
-	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.have_block = false;
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.have_block = false;
 	if (xA) {
-		sdo_byte_array_free(xA);
+		fdo_byte_array_free(xA);
 	}
 	if (cose) {
 		fdo_cose_free(cose);
 		cose = NULL;
 	}
 	if (ps->n5r != NULL) {
-		sdo_byte_array_free(ps->n5r);
+		fdo_byte_array_free(ps->n5r);
 		ps->n5r = NULL;
 	}
 	return ret;

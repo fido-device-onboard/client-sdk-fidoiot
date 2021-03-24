@@ -8,12 +8,12 @@
  * \brief Abstraction layer for ECDSA signature verification
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
 #include "se_config.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 #include <atca_basic.h>
 #include <atcacert/atcacert_der.h>
 
@@ -53,8 +53,8 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	(void) key_param2Length;
 
 	/* Check validity of key type. */
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
-	    (key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256)) {
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
+	    (key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256)) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		ret = -1;
 		goto err;
@@ -67,7 +67,7 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 		goto err;
 	}
 
-	if (0 != sdo_crypto_hash((uint8_t *)message, message_length, hash,
+	if (0 != fdo_crypto_hash((uint8_t *)message, message_length, hash,
 				 BUFF_SIZE_32_BYTES)) {
 		ret = -1;
 		goto err;

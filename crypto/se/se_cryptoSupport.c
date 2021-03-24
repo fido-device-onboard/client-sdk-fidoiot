@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "safe_lib.h"
 #include "util.h"
 #include <atca_basic.h>
@@ -76,7 +76,7 @@ int32_t crypto_hal_se_init(void)
 int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 {
 	/* Because the SE will  always give out 32 bytes of random data
-	 * we might need to truncate it for SDO purposes.
+	 * we might need to truncate it for FDO purposes.
 	 */
 	uint8_t local_buffer[32];
 
@@ -104,9 +104,9 @@ int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 }
 
 /**
- * sdo_crypto_hash function calculate hash on input data
+ * fdo_crypto_hash function calculate hash on input data
  *
- * @param hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
+ * @param hash_type - Hash type (FDO_CRYPTO_HASH_TYPE_SHA_256)
  * @param buffer - pointer to input data buffer of uint8_t type.
  * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
@@ -125,7 +125,7 @@ int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
 	}
 
 	switch (hash_type) {
-	case SDO_CRYPTO_HASH_TYPE_SHA_256:
+	case FDO_CRYPTO_HASH_TYPE_SHA_256:
 		if (output_length < SHA256_DIGEST_SIZE) {
 			return -1;
 		}
@@ -138,7 +138,7 @@ int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
 		}
 		break;
 
-	case SDO_CRYPTO_HASH_TYPE_SHA_384:
+	case FDO_CRYPTO_HASH_TYPE_SHA_384:
 		/* AT608A does not support this feature */
 		LOG(LOG_ERROR, "Secure Element doesn't support the SHA 384");
 		return -1;
@@ -224,7 +224,7 @@ static int32_t se_key_write(const uint8_t *key)
 /**
  * crypto_hal_hmac function calculate hmac on input data
  *
- * @param hmac_type - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256)
+ * @param hmac_type - Hmac type (FDO_CRYPTO_HMAC_TYPE_SHA_256)
  * @param buffer - pointer to input data buffer of uint8_t type.
  * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
@@ -241,7 +241,7 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 {
 	if (NULL == output || 0 == output_length || NULL == buffer ||
 	    0 == buffer_length || NULL == key || 0 == key_length ||
-	    hmac_type != SDO_CRYPTO_HMAC_TYPE_SHA_256) {
+	    hmac_type != FDO_CRYPTO_HMAC_TYPE_SHA_256) {
 		return -1;
 	}
 

@@ -38,18 +38,18 @@ int mos_resolvedns(char *dn, char *ip)
 	}
 
 	LOG(LOG_DEBUG, "DNS: query \"%s\" => \"%s\"\n", dn, tmpip);
-	if (strncpy_s(ip, strnlen_s(tmpip, SDO_MAX_STR_SIZE) + 1, tmpip,
-		      strnlen_s(tmpip, SDO_MAX_STR_SIZE) + 1) != 0) {
+	if (strncpy_s(ip, strnlen_s(tmpip, FDO_MAX_STR_SIZE) + 1, tmpip,
+		      strnlen_s(tmpip, FDO_MAX_STR_SIZE) + 1) != 0) {
 		LOG(LOG_ERROR, " ip from dns, copy failed\n");
 		return -1;
 	}
 	return 0;
 }
 
-sdo_con_handle *mos_socket_open(void)
+fdo_con_handle *mos_socket_open(void)
 {
 	NetworkInterface *net = getNetinterface();
-	sdo_con_handle *socket = new sdo_con_handle;
+	fdo_con_handle *socket = new fdo_con_handle;
 	int r = -1;
 
 	if (!net) {
@@ -71,7 +71,7 @@ sdo_con_handle *mos_socket_open(void)
 	return socket;
 }
 
-int mos_socket_con_only(sdo_con_handle *socket, sdo_ip_address_t *ip_addr,
+int mos_socket_con_only(fdo_con_handle *socket, fdo_ip_address_t *ip_addr,
 		      uint16_t port)
 {
 	int r = -1;
@@ -92,10 +92,10 @@ int mos_socket_con_only(sdo_con_handle *socket, sdo_ip_address_t *ip_addr,
 	return r;
 }
 
-sdo_con_handle *mos_socket_connect(sdo_ip_address_t *ip_addr, uint16_t port)
+fdo_con_handle *mos_socket_connect(fdo_ip_address_t *ip_addr, uint16_t port)
 {
 	int r = -1;
-	sdo_con_handle *socket = NULL;
+	fdo_con_handle *socket = NULL;
 	if (!ip_addr || !port) {
 		LOG(LOG_ERROR, "socket params not correct\n");
 		return NULL;
@@ -117,7 +117,7 @@ err:
 	return NULL;
 }
 
-void mos_socket_close(sdo_con_handle *socket)
+void mos_socket_close(fdo_con_handle *socket)
 {
 	if (socket) {
 		socket->close();
@@ -125,7 +125,7 @@ void mos_socket_close(sdo_con_handle *socket)
 	}
 }
 
-int mos_socket_send(sdo_con_handle *socket, void *buf, size_t len, int flags)
+int mos_socket_send(fdo_con_handle *socket, void *buf, size_t len, int flags)
 {
 	if (socket) {
 		return (socket->send((char *)buf, len));
@@ -133,7 +133,7 @@ int mos_socket_send(sdo_con_handle *socket, void *buf, size_t len, int flags)
 	return -1;
 }
 
-int mos_socket_recv(sdo_con_handle *socket, void *buf, size_t len, int flags)
+int mos_socket_recv(fdo_con_handle *socket, void *buf, size_t len, int flags)
 {
 	if (socket) {
 		return (socket->recv((char *)buf, len));
