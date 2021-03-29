@@ -157,9 +157,13 @@
  */
 #define DEBUGBUFSZ 1024
 
-// TO-DO : Update with flags during serviceinfo implementation
-#define MAXOWNERSERVICEINFOSZ 1300
-#define MAXDEVICESERVICEINFOSZ 1300
+// minimum ServiceInfo size
+#define MIN_SERVICEINFO_SZ 1300
+// maximum ServiceInfo size
+#define MAX_SERVICEINFO_SZ 8192
+// margin that gets added to either max or min ServiceInfo size to create
+// the final buffer to read/write protcol (DI/TO1/TO2)
+#define BUFF_MARGIN 700
 
 #if defined(REUSE_SUPPORTED)
 static const bool reuse_supported = true;
@@ -206,6 +210,7 @@ typedef struct fdo_prot_s {
 	uint16_t serv_req_info_num;
 	int maxOwnerServiceInfoSz;
 	int maxDeviceServiceInfoSz;
+	bool device_serviceinfo_ismore;
 	int owner_supplied_service_info_num;
 	int owner_supplied_service_info_rcv;
 	fdo_owner_supplied_credentials_t *osc;

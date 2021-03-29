@@ -21,6 +21,7 @@ if(TARGET_OS MATCHES linux)
     -DMANUFACTURER_IP=\"${BLOB_PATH}/data/manufacturer_ip.bin\"
     -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
     -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
+    -DMAX_SERVICEINFO_SIZE=\"${BLOB_PATH}/data/max_serviceinfo_size\"
     )
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
@@ -105,6 +106,7 @@ if(TARGET_OS MATCHES linux)
       -DMANUFACTURER_IP=\"${BLOB_PATH}/data/manufacturer_ip.bin\"
       -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
       -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
+      -DMAX_SERVICEINFO_SIZE=\"${BLOB_PATH}/data/max_serviceinfo_sz\"
       )
     if (${unit-test} MATCHES true)
       client_sdk_compile_definitions(
@@ -174,4 +176,4 @@ file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
 file(WRITE ${BLOB_PATH}/data/Normal.blob "")
 file(WRITE ${BLOB_PATH}/data/Secure.blob "")
 file(WRITE ${BLOB_PATH}/data/raw.blob "")
-
+file(WRITE ${BLOB_PATH}/data/max_serviceinfo_size "")

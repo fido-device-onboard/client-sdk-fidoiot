@@ -109,9 +109,9 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 		return NULL;
 	}
 
-	/* module#1: sdo_sys */
+	/* module#1: fdo_sys */
 	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
-		      "sdo_sys", FDO_MODULE_NAME_LEN) != 0) {
+		      "fdo_sys", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
 		free(module_info);
 		return NULL;

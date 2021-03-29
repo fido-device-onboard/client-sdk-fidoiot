@@ -549,6 +549,7 @@ bool fdo_signature_verification(fdo_byte_array_t *plain_text,
 
 bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2);
 bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
+bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
 
 /*==================================================================*/
 /* Service Info functionality */

@@ -20,7 +20,12 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 	int strcmp_exec = 1;
 	int result = FDO_SI_INTERNAL_ERROR;
 	uint8_t *bin_data = NULL;
-	size_t bin_len = 0;
+	size_t bin_len = 0, max_bin_len = MOD_MAX_EXEC_LEN,
+		exec_array_length = 0, exec_array_index = 0;
+	char exec_instructions[MOD_MAX_EXEC_ARG_LEN];
+	size_t exec_instructions_sz = 0;
+	char space_delimeter = ' ';
+	char exec_terminator = '\0';
 
 	switch (type) {
 		case FDO_SI_START:
@@ -72,7 +77,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 				goto end;
 			}
 
-			if (!fdor_byte_string(fdor, bin_data, bin_len)) {
+			if (!fdor_text_string(fdor, (char *)bin_data, bin_len)) {
 #ifdef DEBUG_LOGS
 				printf("Failed to read fdo_sys:filedesc\n");
 #endif
@@ -135,33 +140,79 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 		}
 		else if (strcmp_exec == 0) {
 
-			if (!fdor_string_length(fdor, &bin_len)) {
-#ifdef DEBUG_LOGS
-				printf("Failed to read fdo_sys:exec length\n");
-#endif
-				goto end;			
-			}
-			
-			bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
+			bin_data = ModuleAlloc(max_bin_len * sizeof(uint8_t));
 			if (!bin_data) {
 #ifdef DEBUG_LOGS
 					printf("Failed to alloc for fdo_sys:exec\n");
 #endif
+					goto end;
+			}
+			if (memset_s(bin_data, max_bin_len, 0) != 0) {
+#ifdef DEBUG_LOGS
+				printf("Failed to clear fdo_sys:filedesc buffer\n");
+#endif
 				goto end;
 			}
-			if (memset_s(bin_data, bin_len, 0) != 0) {
+			bin_data[0] = exec_terminator;
+
+			if (!fdor_array_length(fdor, &exec_array_length)) {
 #ifdef DEBUG_LOGS
-				printf("Failed to clear fdo_sys:exec buffer\n");
+				printf("Failed to read fdo_sys:exec array length\n");
 #endif
 				goto end;
 			}
 
-			if (!fdor_byte_string(fdor, bin_data, bin_len)) {
+			if (!fdor_start_array(fdor)) {
 #ifdef DEBUG_LOGS
-				printf("Failed to read value for fdo_sys:exec\n");
+				printf("Failed to start fdo_sys:exec array\n");
 #endif
 				goto end;
 			}
+
+			for (exec_array_index = 0; exec_array_index < exec_array_length; exec_array_index++) {
+				if (0 != memset_s(&exec_instructions, sizeof(exec_instructions), 0)) {
+#ifdef DEBUG_LOGS
+					printf("fdo_sys exec : Failed to clear exec instructions\n");
+#endif
+				}
+				if (!fdor_string_length(fdor, &exec_instructions_sz)) {
+#ifdef DEBUG_LOGS
+					printf("Failed to read fdo_sys:exec text length\n");
+#endif
+					goto end;
+				}
+				if (!fdor_text_string(fdor, &exec_instructions[0], exec_instructions_sz)) {
+#ifdef DEBUG_LOGS
+					printf("Failed to read fdo_sys:exec text\n");
+#endif
+					goto end;
+				}
+				// do +1 for extra space delimeter to be added and add the space
+				exec_instructions_sz++;
+				exec_instructions[exec_instructions_sz - 1] = space_delimeter;
+				exec_instructions[exec_instructions_sz] = exec_terminator;
+
+				// create the command by concatenating the received array content
+				// add the additional intermediate space
+				if (strncat_s((char *)bin_data, max_bin_len,
+					exec_instructions, exec_instructions_sz) != 0) {
+#ifdef DEBUG_LOGS
+					printf("Failed to concatenate fdo_sys:exec text\n");
+#endif
+					goto end;
+				}
+				// length of the command so far
+				bin_len += strnlen_s((char *) bin_data, MOD_MAX_EXEC_ARG_LEN);
+			}
+			// remove the final space by pushing \0 at the position
+			bin_data[bin_len - 1] = exec_terminator;
+			if (!fdor_end_array(fdor)) {
+#ifdef DEBUG_LOGS
+				printf("Failed to start fdo_sys:exec array\n");
+#endif
+				goto end;
+			}
+
 			if (!process_data(FDO_SYS_MOD_MSG_EXEC, bin_data, bin_len, NULL)) {
 #ifdef DEBUG_LOGS
 				printf("Failed to process fdo_sys:exec\n");

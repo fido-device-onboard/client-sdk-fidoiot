@@ -41,6 +41,7 @@ int32_t msg69(fdo_prot_t *ps)
 	bool IsMoreServiceInfo;
 	bool isDone;
 	int module_ret_val = -1;
+	fdo_sdk_service_info_module_list_t *module_list_itr = NULL;
 
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -79,7 +80,7 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!IsMoreServiceInfo && isDone) {
+	if (ps->device_serviceinfo_ismore && !IsMoreServiceInfo && !isDone) {
 		// Expecting ServiceInfo to be an empty array [].
 		if (!fdor_start_array(&ps->fdor)) {
 			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start empty ServiceInfo array\n");
@@ -91,9 +92,22 @@ int32_t msg69(fdo_prot_t *ps)
 			goto err;
 		}
 	} else {
-		// process the received ServiceInfo
-		if (!fdo_serviceinfo_read(&ps->fdor, ps->sv_info_mod_list_head, &module_ret_val)) {
-			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
+		// the message [bool,bool, [],[]..], when CBOR encoded, will always take up 3 bytes:
+		// 1 byte for main array, 1 byte each for bool values.
+		// the remaining data is the ServiceInfo, and hence we can deduce the size of received
+		// ServiceInfo by subtracting 3 from the total message length.
+		if ((int)(ps->fdor.b.block_size - 3) <= ps->maxOwnerServiceInfoSz) {
+			// process the received ServiceInfo
+			module_list_itr = ps->sv_info_mod_list_head;
+			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val)) {
+				LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
+				goto err;
+			}
+		} else {
+			// do not process ServiceInfo since the ServiceInfo size received is more than the
+			// agreed maxOwnerServiceInfoSz from TO2.OwnerServiceInfoReady, Type 67
+			LOG(LOG_ERROR,
+				"TO2.OwnerServiceInfo: Received ServiceInfo size is greater than maxOwnerServiceInfoSz\n");
 			goto err;
 		}
 	}
