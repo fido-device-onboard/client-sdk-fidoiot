@@ -35,6 +35,18 @@ node('ccode'){
       '''
     }
 
+    stage('Build TPM'){
+      sh '''
+        export SAFESTRING_ROOT=$WORKSPACE/safestringlib
+        export TINYCBOR_ROOT=$WORKSPACE/tinycbor
+        cd $WORKSPACE/client-sdk
+        ./cDevice_Build_tpm.sh
+        tar -cvzf tpm_ecdsa_c_device_bin.tar.gz tpm_ecdsa_c_device_bin
+      '''
+      print "Archive the artifacts"
+      archiveArtifacts artifacts: 'client-sdk/tpm_*.tar.gz', fingerprint: true, allowEmptyArchive: false
+    }
+    
     stage('Build ClientSDK'){
       sh '''
         export SAFESTRING_ROOT=$WORKSPACE/safestringlib
@@ -48,18 +60,6 @@ node('ccode'){
       '''
       print "Archive the artifacts"
       archiveArtifacts artifacts: 'client-sdk/x86_*.tar.gz', fingerprint: true, allowEmptyArchive: false
-    }
-
-    stage('Build TPM'){
-      sh '''
-        export SAFESTRING_ROOT=$WORKSPACE/safestringlib
-        export TINYCBOR_ROOT=$WORKSPACE/tinycbor
-        cd $WORKSPACE/client-sdk
-        ./cDevice_Build_tpm.sh
-        tar -cvzf tpm_ecdsa_c_device_bin.tar.gz tpm_ecdsa_c_device_bin
-      '''
-      print "Archive the artifacts"
-      archiveArtifacts artifacts: 'client-sdk/tpm_*.tar.gz', fingerprint: true, allowEmptyArchive: false
     }
 
   try
