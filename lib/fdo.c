@@ -333,11 +333,11 @@ static fdo_sdk_status app_initialize(void)
 	}
 #endif
 
-	// read the file at path MAX_SERVICEINFO_SIZE to get the maximum ServiceInfo size
+	// read the file at path MAX_SERVICEINFO_SZ_FILE to get the maximum ServiceInfo size
 	// that will be supported for both Owner and Device ServiceInfo
 	// default to MIN_SERVICEINFO_SZ if the file is empty/non-existent
 	// file of size 1 is also considered an empty file containing new-line character
-	fsize = fdo_blob_size((char *)MAX_SERVICEINFO_SIZE, FDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA);
 	if (fsize == 0 || fsize == 1) {
 		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
@@ -346,7 +346,7 @@ static fdo_sdk_status app_initialize(void)
 		if (buffer == NULL) {
 			LOG(LOG_ERROR, "malloc failed\n");
 		} else {
-			if (fdo_blob_read((char *)MAX_SERVICEINFO_SIZE, FDO_SDK_RAW_DATA,
+			if (fdo_blob_read((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA,
 					(uint8_t *)buffer, fsize) == -1) {
 				LOG(LOG_ERROR, "Failed to read Manufacture DN\n");
 			}
@@ -357,7 +357,7 @@ static fdo_sdk_status app_initialize(void)
 			else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MAX_SERVICEINFO_SZ;
 			}
-			prot_buff_sz = max_serviceinfo_sz + BUFF_MARGIN;
+			prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
 			g_fdo_data->prot.maxDeviceServiceInfoSz = max_serviceinfo_sz;
 			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
 		}

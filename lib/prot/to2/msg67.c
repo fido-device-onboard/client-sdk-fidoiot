@@ -83,13 +83,17 @@ int32_t msg67(fdo_prot_t *ps)
 			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is less than "
 			"the minimum size supported. Defaulting to %d\n",
 			ps->maxDeviceServiceInfoSz);
-	}
-	else if	(rec_maxDeviceServiceInfoSz >= ps->maxDeviceServiceInfoSz) {
+	} else if (rec_maxDeviceServiceInfoSz >= ps->maxDeviceServiceInfoSz) {
 		// nothing to do, just log it
 		LOG(LOG_DEBUG,
 			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is more than "
 			"the maximum size supported. Defaulting to %d\n",
 			ps->maxDeviceServiceInfoSz);
+	} else {
+		// set the received value
+		ps->maxDeviceServiceInfoSz = rec_maxDeviceServiceInfoSz;
+		LOG(LOG_DEBUG,
+			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is valid\n");
 	}
 
 	if (!fdor_end_array(&ps->fdor)) {

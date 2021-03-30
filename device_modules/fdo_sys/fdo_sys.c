@@ -20,8 +20,10 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 	int strcmp_exec = 1;
 	int result = FDO_SI_INTERNAL_ERROR;
 	uint8_t *bin_data = NULL;
-	size_t bin_len = 0, max_bin_len = MOD_MAX_EXEC_LEN,
-		exec_array_length = 0, exec_array_index = 0;
+	size_t bin_len = 0;
+	size_t max_bin_len = MOD_MAX_EXEC_LEN;
+	size_t exec_array_length = 0;
+	size_t exec_array_index = 0;
 	char exec_instructions[MOD_MAX_EXEC_ARG_LEN];
 	size_t exec_instructions_sz = 0;
 	char space_delimeter = ' ';

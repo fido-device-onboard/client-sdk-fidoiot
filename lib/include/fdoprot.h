@@ -163,7 +163,7 @@
 #define MAX_SERVICEINFO_SZ 8192
 // margin that gets added to either max or min ServiceInfo size to create
 // the final buffer to read/write protcol (DI/TO1/TO2)
-#define BUFF_MARGIN 700
+#define MSG_METADATA_SIZE 700
 
 #if defined(REUSE_SUPPORTED)
 static const bool reuse_supported = true;
