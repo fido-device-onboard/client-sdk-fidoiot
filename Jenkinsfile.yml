@@ -79,11 +79,10 @@ node('ccode'){
       // Copying the contents to the folder
       print "Copying PRI-FIDOIOT and CSDK-FIDO artifacts"
       copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
-      copyArtifacts filter: 'x86_ecdsa256_c_sct_bin.tar.gz', fingerprintArtifacts: true, projectName: 'client-sdk-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/client-sdk-fidoiot/'
       print "Extracting PRI-FIDOIOT and Client-SDK-FIDO artifacts"
       sh '''
+        ls;cd client-sdk;ls;cd ecdsa256_c_sct_device_bin;ls
         tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
-        tar -xvzf sdo-test/binaries/client-sdk-fidoiot/x86_ecdsa256_c_sct_bin.tar.gz
         cd x86_ecdsa256_c_sct_bin;ls;cd ../
         cp -r demo/* sdo-test/binaries/pri-fidoiot/
         cp -r x86_ecdsa256_c_sct_bin/linux-client sdo-test/binaries/client-sdk-fidoiot
