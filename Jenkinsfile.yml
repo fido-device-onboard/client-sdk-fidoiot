@@ -74,6 +74,8 @@ node('ccode'){
         mkdir -p sdo-test/binaries/pri-fidoiot
         mkdir -p sdo-test/binaries/client-sdk-fidoiot
         ls -a
+        cd client-sdk
+        ls -a
       '''
 
       // Copying the contents to the folder
