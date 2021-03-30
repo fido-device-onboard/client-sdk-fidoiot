@@ -71,6 +71,7 @@ node('ccode'){
 
       // Creating the required directories
       sh '''
+        ll
         mkdir -p sdo-test/binaries/pri-fidoiot
         mkdir -p sdo-test/binaries/client-sdk-fidoiot
       '''
