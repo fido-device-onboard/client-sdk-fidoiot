@@ -84,8 +84,8 @@ node('ccode'){
       print "Extracting PRI-FIDOIOT artifacts"
       sh '''
         tar -xvf sdo-test/binaries/pri-fidoiot/demo.tar.gz
-        cp -r {source-csdk-build}/* sdo-test/binaries/client-sdk-fidoiot
-        cp -r {source-csdk-data} sdo-test/
+        cp -r client-sdk/build/* sdo-test/binaries/client-sdk-fidoiot
+        cp -r client-sdk/data sdo-test/
       '''
 
       // Setting the TEST_DIR and executing smoke test
