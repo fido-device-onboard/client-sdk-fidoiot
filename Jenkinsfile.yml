@@ -73,22 +73,15 @@ node('ccode'){
       sh '''
         mkdir -p sdo-test/binaries/pri-fidoiot
         mkdir -p sdo-test/binaries/client-sdk-fidoiot
-        ls -a
-        cd client-sdk
-        cd data/
-        ls -a
-        echo '1234'
-        cd ../build/
-        ls -a
         
       '''
 
       // Copying the contents to the folder
       print "Copying PRI-FIDOIOT artifacts"
-      copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: '{pri-fidoiot/master}', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
+      copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
       print "Extracting PRI-FIDOIOT artifacts"
       sh '''
-        tar -xvf sdo-test/binaries/pri-fidoiot/demo.tar.gz
+        tar -xvf sdo-test/binaries/pri-fidoiot/demo.tar.gz -C sdo-test/binaries/pri-fidoiot
         cp -r client-sdk/build/* sdo-test/binaries/client-sdk-fidoiot
         cp -r client-sdk/data sdo-test/
       '''
