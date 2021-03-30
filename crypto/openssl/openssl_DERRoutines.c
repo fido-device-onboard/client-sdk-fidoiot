@@ -8,14 +8,14 @@
  * \ brief Abstraction layer for ECDSA signing routine using SE
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
 
 /*
  * Helper API designed to convert the raw signature into DER format required by
- * SDO.
+ * FDO.
  * raw_sig: input a 64 Byte r and s format signature.
  * message_signature: outputs a DER encoded signature value
  * signature_length: outputs the size of the signature after converting to DER

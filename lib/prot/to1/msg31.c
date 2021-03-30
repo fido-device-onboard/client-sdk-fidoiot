@@ -9,7 +9,7 @@
  */
 
 #include "util.h"
-#include "sdoprot.h"
+#include "fdoprot.h"
 
 /**
  * msg31() - TO1.HelloRVAck, Type 31
@@ -22,44 +22,44 @@
  *   eBSigInfo
  * ]
  */
-int32_t msg31(sdo_prot_t *ps)
+int32_t msg31(fdo_prot_t *ps)
 {
 	int ret = -1;
-	char prot[] = "SDOProtTO1";
+	char prot[] = "FDOProtTO1";
 
 	/* Read network data from internal buffer */
-	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!fdo_prot_rcv_msg(&ps->fdor, &ps->fdow, prot, &ps->state)) {
 		ret = 0; /* Mark for retry */
 		goto err;
 	}
 
 	LOG(LOG_DEBUG, "TO1.HelloRVAck started\n");
 
-	if (!sdor_start_array(&ps->sdor)) {
+	if (!fdor_start_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to start array\n");
 		goto err;
 	}
 
-	ps->n4 = sdo_byte_array_alloc(SDO_NONCE_BYTES);
-	if (!ps->n4 || !sdor_byte_string(&ps->sdor, ps->n4->bytes, ps->n4->byte_sz)) {
+	ps->n4 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->n4 || !fdor_byte_string(&ps->fdor, ps->n4->bytes, ps->n4->byte_sz)) {
 		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to read Nonce4\n");
 		goto err;
 	}
 
-	if (!sdo_eb_read(&ps->sdor)) {
+	if (!fdo_siginfo_read(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to read eBSigInfo\n");
 		goto err;
 	}
 
-	if (!sdor_end_array(&ps->sdor)) {
+	if (!fdor_end_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to end array\n");
 		goto err;
 	}
 
 	/* Updated state to move to msg32 */
-	ps->state = SDO_STATE_TO1_SND_PROVE_TO_SDO;
-	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.have_block = false;
+	ps->state = FDO_STATE_TO1_SND_PROVE_TO_FDO;
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.have_block = false;
 	ret = 0;
 	LOG(LOG_DEBUG, "TO1.HelloRVAck completed successfully\n");
 

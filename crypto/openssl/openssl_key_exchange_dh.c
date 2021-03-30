@@ -10,7 +10,7 @@
  */
 
 #include "network_al.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "BN_support.h"
@@ -64,12 +64,12 @@ int32_t crypto_hal_kex_init(void **context)
 
 	_g15_t _g15 = {0};
 
-	key_ex_data = sdo_alloc(sizeof(dh_context_t));
+	key_ex_data = fdo_alloc(sizeof(dh_context_t));
 	if (!key_ex_data)
 		return -1;
 	/*
 	 * Start by memory allocation so then all pointers will be initialized
-	 * in case of sdo_crypto_init error.
+	 * in case of fdo_crypto_init error.
 	 */
 	key_ex_data->_g15 = BN_new();
 	key_ex_data->_p15 = BN_new();
@@ -81,7 +81,7 @@ int32_t crypto_hal_kex_init(void **context)
 	key_ex_data->_p15 = GET_PRIME(key_ex_data->_p15);
 
 	/* Must be big-endian for openssl */
-	_g15.as_int = sdo_host_to_net_long(2);
+	_g15.as_int = fdo_host_to_net_long(2);
 
 	/* Create our _g15 value. */
 	bn_bin2bn(_g15.as_bytes, sizeof(int), key_ex_data->_g15);
@@ -98,7 +98,7 @@ err:
 }
 
 /**
- * sdo_cryptoDHClose closes the dh section
+ * fdo_cryptoDHClose closes the dh section
  * @param context - ecdh context
  * @return
  *        returns 0 on success and -1 on failure
@@ -121,7 +121,7 @@ int32_t crypto_hal_kex_close(void **context)
 	BN_FREE(key_ex_data->_publicA);
 	BN_FREE(key_ex_data->_shared_secret);
 
-	sdo_free(key_ex_data);
+	fdo_free(key_ex_data);
 	key_ex_data = NULL;
 	return 0;
 }
@@ -244,12 +244,12 @@ int32_t crypto_hal_set_peer_random(void *context,
 /* TODO: remove lib call and replace proper */
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Display publicB */
-	sdo_byte_array_t *publicB = bn_to_byte_array(key_ex_data->_publicB);
+	fdo_byte_array_t *publicB = bn_to_byte_array(key_ex_data->_publicB);
 
 	if (publicB) {
 		LOG(LOG_DEBUG, "publicB : %lu bytes :\n", publicB->byte_sz);
 		hexdump("Public B", publicB->bytes, publicB->byte_sz);
-		sdo_byte_array_free(publicB);
+		fdo_byte_array_free(publicB);
 	} else {
 		LOG(LOG_ERROR, "publicB allocation failed!");
 		return -1;

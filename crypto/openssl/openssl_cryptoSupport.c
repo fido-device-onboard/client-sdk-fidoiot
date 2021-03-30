@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief Abstraction of openssl library for crypto services required by SDO
+ * \brief Abstraction of openssl library for crypto services required by FDO
  * library.
  */
 
@@ -20,7 +20,7 @@
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include <assert.h>
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 
 #ifndef SECURE_ELEMENT
 static bool g_random_initialised;
@@ -226,11 +226,11 @@ int32_t crypto_close(void)
 
 #ifndef SECURE_ELEMENT
 /**
- * sdo_crypto_hash function calculate hash on input data
+ * fdo_crypto_hash function calculate hash on input data
  *
- * @param _hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256/
- *				SDO_CRYPTO_HASH_TYPE_SHA_384/
- *				SDO_CRYPTO_HASH_TYPE_SHA_512)
+ * @param _hash_type - Hash type (FDO_CRYPTO_HASH_TYPE_SHA_256/
+ *				FDO_CRYPTO_HASH_TYPE_SHA_384/
+ *				FDO_CRYPTO_HASH_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
  * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
@@ -244,7 +244,7 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 			 size_t buffer_length, uint8_t *output,
 			 size_t output_length)
 {
-	uint8_t hash_type = SDO_CRYPTO_HASH_TYPE_USED;
+	uint8_t hash_type = FDO_CRYPTO_HASH_TYPE_USED;
 
 	(void)_hash_type; /* Unused parameter */
 
@@ -254,7 +254,7 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 	}
 
 	switch (hash_type) {
-	case SDO_CRYPTO_HASH_TYPE_SHA_256:
+	case FDO_CRYPTO_HASH_TYPE_SHA_256:
 		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
 		if (NULL == SHA256((const unsigned char *)buffer, buffer_length,
@@ -262,7 +262,7 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 			return -1;
 		}
 		break;
-	case SDO_CRYPTO_HASH_TYPE_SHA_384:
+	case FDO_CRYPTO_HASH_TYPE_SHA_384:
 		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
 		if (NULL == SHA384((const unsigned char *)buffer, buffer_length,
@@ -280,9 +280,9 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 /**
  * crypto_hal_hmac function calculate hmac on input data
  *
- * @param hmac_type - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_384/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_512)
+ * @param hmac_type - Hmac type (FDO_CRYPTO_HMAC_TYPE_SHA_256/
+ *				FDO_CRYPTO_HMAC_TYPE_SHA_384/
+ *				FDO_CRYPTO_HMAC_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
  * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
@@ -303,7 +303,7 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 	}
 
 	switch (hmac_type) {
-	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
+	case FDO_CRYPTO_HMAC_TYPE_SHA_256:
 		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
 		if (NULL == HMAC(EVP_sha256(), key, key_length, buffer,
@@ -311,7 +311,7 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 			return -1;
 		}
 		break;
-	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
+	case FDO_CRYPTO_HMAC_TYPE_SHA_384:
 		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
 		if (NULL == HMAC(EVP_sha384(), key, key_length, buffer,

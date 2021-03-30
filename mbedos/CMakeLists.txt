@@ -4,7 +4,7 @@
 #
 
 
-set (MBED_OS_DIR ${BASE_DIR}/mbedos/components/sdo)
+set (MBED_OS_DIR ${BASE_DIR}/mbedos/components/fdo)
 
 if (${HTTPPROXY} STREQUAL true)
   list (APPEND MBED_FLAGS -DHTTPPROXY="\"10.223.4.20\"" -DHTTPPROXYPORT=911)
@@ -50,15 +50,15 @@ execute_process(COMMAND
 
 execute_process(COMMAND
   ${CMAKE_COMMAND} -E create_symlink
-  ${BASE_DIR}/app/main.c ${MBED_OS_DIR}/sdo/app_main.c)
+  ${BASE_DIR}/app/main.c ${MBED_OS_DIR}/fdo/app_main.c)
 
 execute_process(COMMAND
   ${CMAKE_COMMAND} -E create_symlink
-  ${BASE_DIR}/app/blob.c ${MBED_OS_DIR}/sdo/blob.c)
+  ${BASE_DIR}/app/blob.c ${MBED_OS_DIR}/fdo/blob.c)
 
 execute_process(COMMAND
   ${CMAKE_COMMAND} -E create_symlink
-  ${BASE_DIR}/app/include/blob.h ${MBED_OS_DIR}/sdo/blob.h)
+  ${BASE_DIR}/app/include/blob.h ${MBED_OS_DIR}/fdo/blob.h)
 
 execute_process(COMMAND
   ${CMAKE_COMMAND} -E create_symlink
@@ -71,7 +71,7 @@ execute_process(COMMAND
 if (${MODULES} STREQUAL true)
   execute_process(COMMAND
     ${CMAKE_COMMAND} -E create_symlink
-    ${BASE_DIR}/device_modules/sdo_sys/ ${MBED_OS_DIR}/sdo_sys)
+    ${BASE_DIR}/device_modules/fdo_sys/ ${MBED_OS_DIR}/fdo_sys)
 endif()
 
 list (APPEND MBED_FLAGS -DSTDC_HEADERS)
@@ -107,13 +107,13 @@ endif()
 
 if (${KEX} STREQUAL dh)
   list (APPEND MBEDTLS_IGNORE "mbedtls_key_exchange_ecdh.c\n")
-  list (APPEND COMMON_IGNORE "sdokeyexchange_asym.c\n")
+  list (APPEND COMMON_IGNORE "fdokeyexchange_asym.c\n")
 endif()
 
 if (${KEX} MATCHES ecdh)
   list (APPEND MBEDTLS_IGNORE "mbedtls_key_exchange_dh.c\n")
   list (APPEND MBEDTLS_IGNORE "mbedtls_RSARoutines.c\n")
-  list (APPEND COMMON_IGNORE "sdokeyexchange_asym.c\n")
+  list (APPEND COMMON_IGNORE "fdokeyexchange_asym.c\n")
 endif()
 
 if (${KEX} STREQUAL asym)
@@ -170,25 +170,25 @@ if (${MODULES} MATCHES true)
     OUTPUT mbed_json_update
     COMMAND
     ${CMAKE_COMMAND} -E copy
-    ${MBED_OS_DIR}/sdo/mbed_app.json_pelion
-    ${MBED_OS_DIR}/sdo/mbed_app.json
+    ${MBED_OS_DIR}/fdo/mbed_app.json_pelion
+    ${MBED_OS_DIR}/fdo/mbed_app.json
     )
 
-list (APPEND MBED_FLAGS  --source=sdo_sys --source=simple-mbed-cloud-client -DCLOUD_CLIENT)
+list (APPEND MBED_FLAGS  --source=fdo_sys --source=simple-mbed-cloud-client -DCLOUD_CLIENT)
 
 else()
   add_custom_command(
     OUTPUT mbed_json_update
     COMMAND
     ${CMAKE_COMMAND} -E copy
-    ${MBED_OS_DIR}/sdo/mbed_app.json_sdo_only
-    ${MBED_OS_DIR}/sdo/mbed_app.json
+    ${MBED_OS_DIR}/fdo/mbed_app.json_fdo_only
+    ${MBED_OS_DIR}/fdo/mbed_app.json
     )
 endif()
 
 
 add_custom_command(
-  OUTPUT sdo_deploy
+  OUTPUT fdo_deploy
   COMMAND
   mbed deploy -v --insecure
   WORKING_DIRECTORY ${MBED_OS_DIR}/
@@ -201,15 +201,15 @@ client_sdk_get_compile_definitions(c_defines "-D")
  
 
 add_custom_command(
-  OUTPUT sdo_bin
+  OUTPUT fdo_bin
   COMMAND
-  mbed-cli compile -m ${BOARD} -t GCC_ARM --source=sdo --source=data --source=network --source=crypto --source=storage --source=lib --source=include --source=safestring --source=mbed-os ${MBED_FLAGS} ${c_defines} --build=${BASE_DIR}/build
+  mbed-cli compile -m ${BOARD} -t GCC_ARM --source=fdo --source=data --source=network --source=crypto --source=storage --source=lib --source=include --source=safestring --source=mbed-os ${MBED_FLAGS} ${c_defines} --build=${BASE_DIR}/build
   WORKING_DIRECTORY ${MBED_OS_DIR}
-  DEPENDS sdo_deploy
+  DEPENDS fdo_deploy
   VERBATIM
   )
 
-add_custom_target(mbedos_build ALL DEPENDS sdo_bin)
+add_custom_target(mbedos_build ALL DEPENDS fdo_bin)
 
 # Set for nv ram
 if (NOT(${DATASTORE} STREQUAL sd))

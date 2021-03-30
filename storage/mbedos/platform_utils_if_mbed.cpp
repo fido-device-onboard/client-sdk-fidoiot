@@ -6,12 +6,12 @@
 /*
  * Platform Utilities
  *
- * The file implements required platform utilities for SDO.
+ * The file implements required platform utilities for FDO.
  */
 #include <stdlib.h>
 #include "util.h"
 #include "storage_al.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "platform_utils.h"
 #include "safe_lib.h"
 
@@ -41,11 +41,11 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 		goto end;
 	}
 
-	fsize = sdo_blob_size((const char *)PLATFORM_IV, SDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((const char *)PLATFORM_IV, FDO_SDK_RAW_DATA);
 
 	if (fsize != PLATFORM_IV_DEFAULT_LEN * 2) {
 		/* generate new IV and store into file */
-		if ((p_iv = (uint8_t *)sdo_alloc(PLATFORM_IV_DEFAULT_LEN)) ==
+		if ((p_iv = (uint8_t *)fdo_alloc(PLATFORM_IV_DEFAULT_LEN)) ==
 		    NULL) {
 			LOG(LOG_ERROR, "Allocation failed for plaform IV!\n");
 			goto end;
@@ -73,8 +73,8 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 
 	} else {
 		/* return the previously generated IV */
-		if (-1 == sdo_blob_read((const char *)PLATFORM_IV,
-				      SDO_SDK_RAW_DATA, buf, sizeof(buf))) {
+		if (-1 == fdo_blob_read((const char *)PLATFORM_IV,
+				      FDO_SDK_RAW_DATA, buf, sizeof(buf))) {
 			LOG(LOG_ERROR, "Failed to read platform IV file!\n");
 			goto end;
 		}
@@ -86,7 +86,7 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 			goto end;
 		}
 	}
-	if (sdo_blob_write((const char *)PLATFORM_IV, SDO_SDK_RAW_DATA, buf,
+	if (fdo_blob_write((const char *)PLATFORM_IV, FDO_SDK_RAW_DATA, buf,
 			 sizeof(buf)) == -1) {
 		LOG(LOG_ERROR, "Plaform IV file is not written properly!\n")
 		goto end;
@@ -102,7 +102,7 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 
 end:
 	if (p_iv)
-		sdo_free(p_iv);
+		fdo_free(p_iv);
 	return retval;
 }
 
@@ -124,7 +124,7 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 		goto end;
 	}
 
-	fsize = sdo_blob_size((const char *)PLATFORM_AES_KEY, SDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((const char *)PLATFORM_AES_KEY, FDO_SDK_RAW_DATA);
 
 	if (fsize != PLATFORM_AES_KEY_DEFAULT_LEN) {
 		/* generate new AES Key and store into file */
@@ -137,8 +137,8 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 			goto end;
 		}
 
-		if (sdo_blob_write((const char *)PLATFORM_AES_KEY,
-				 SDO_SDK_RAW_DATA, key,
+		if (fdo_blob_write((const char *)PLATFORM_AES_KEY,
+				 FDO_SDK_RAW_DATA, key,
 				 PLATFORM_AES_KEY_DEFAULT_LEN) == -1) {
 			LOG(LOG_ERROR,
 			    "Plaform AES Key file is not written properly!\n");
@@ -146,8 +146,8 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 		}
 	} else {
 		/* return the previously generated AES Key */
-		if (-1 == sdo_blob_read((const char *)PLATFORM_AES_KEY,
-				      SDO_SDK_RAW_DATA, key,
+		if (-1 == fdo_blob_read((const char *)PLATFORM_AES_KEY,
+				      FDO_SDK_RAW_DATA, key,
 				      PLATFORM_AES_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Failed to read platform AES Key file!\n");
@@ -178,7 +178,7 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 		goto end;
 	}
 
-	fsize = sdo_blob_size((const char *)PLATFORM_HMAC_KEY, SDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((const char *)PLATFORM_HMAC_KEY, FDO_SDK_RAW_DATA);
 
 	if (fsize != PLATFORM_HMAC_KEY_DEFAULT_LEN) {
 		/* generate new HMAC Key and store into file */
@@ -191,17 +191,17 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 			goto end;
 		}
 
-		if (sdo_blob_write((const char *)PLATFORM_HMAC_KEY,
-				 SDO_SDK_RAW_DATA, key,
+		if (fdo_blob_write((const char *)PLATFORM_HMAC_KEY,
+				 FDO_SDK_RAW_DATA, key,
 				 PLATFORM_HMAC_KEY_DEFAULT_LEN) == -1) {
-			LOG(LOG_ERROR, "sdo_blob_write Failed: Plaform HMAC Key "
+			LOG(LOG_ERROR, "fdo_blob_write Failed: Plaform HMAC Key "
 				       "file is not written properly!\n");
 			goto end;
 		}
 	} else {
 		/* return the previously generated HMAC Key */
-		if (-1 == sdo_blob_read((const char *)PLATFORM_HMAC_KEY,
-				      SDO_SDK_RAW_DATA, key,
+		if (-1 == fdo_blob_read((const char *)PLATFORM_HMAC_KEY,
+				      FDO_SDK_RAW_DATA, key,
 				      PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Failed to read platform HMAC Key file!\n");

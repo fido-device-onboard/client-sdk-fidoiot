@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief Implementation of interface between crypto library and SDO library.
+ * \brief Implementation of interface between crypto library and FDO library.
  */
 
 #include "crypto_utils.h"
@@ -14,7 +14,7 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "base64.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 
 /**
  * Encrypt the characters in the clear_txt buffer, place the result and a HMAC
@@ -29,7 +29,7 @@
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int aes_encrypt_packet(sdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
+int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 		       size_t clear_txt_size)
 {
 	if (NULL == cipher_txt || NULL == clear_txt || 0 == clear_txt_size)
@@ -43,13 +43,13 @@ int aes_encrypt_packet(sdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 
 	/* Get cipher text length  */
 	if (0 !=
-	    sdo_msg_encrypt_get_cipher_len(clear_txt_size, &cipher_length)) {
+	    fdo_msg_encrypt_get_cipher_len(clear_txt_size, &cipher_length)) {
 		LOG(LOG_ERROR, "Failed to get ciphertext buffer size.\n");
 		goto end;
 	}
 
 	/* Allocate cyphertxt placeholder */
-	cipher_txt->em_body = sdo_byte_array_alloc(cipher_length);
+	cipher_txt->em_body = fdo_byte_array_alloc(cipher_length);
 	if (NULL == cipher_txt->em_body) {
 		goto end;
 	}
@@ -57,7 +57,7 @@ int aes_encrypt_packet(sdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 	cipher_text = cipher_txt->em_body->bytes;
 
 	// get encryted data
-	if (0 != sdo_msg_encrypt(ct, clear_txt_size, cipher_text,
+	if (0 != fdo_msg_encrypt(ct, clear_txt_size, cipher_text,
 				 &cipher_length, cipher_txt->iv)) {
 		LOG(LOG_ERROR, "Failed to get encrypt.\n");
 		goto end;
@@ -65,12 +65,12 @@ int aes_encrypt_packet(sdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 	ret = 0;
 end:
 	if (temp) {
-		sdo_free(temp);
+		fdo_free(temp);
 	}
 
 	if (ret) {
 		if (cipher_txt->em_body) {
-			sdo_byte_array_free(cipher_txt->em_body);
+			fdo_byte_array_free(cipher_txt->em_body);
 			cipher_txt->em_body = NULL;
 		}
 	}
@@ -78,7 +78,7 @@ end:
 }
 
 /**
- * Decrypt a SDOEncrypted_packet object to an sdo_string_t. Also calculate HMAC
+ * Decrypt a FDOEncrypted_packet object to an fdo_string_t. Also calculate HMAC
  * of decrypted text and compare it with received HMAC.
  *
  * @param cipher_txt
@@ -88,12 +88,12 @@ end:
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int aes_decrypt_packet(sdo_encrypted_packet_t *cipher_txt,
-		       sdo_byte_array_t *clear_txt)
+int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
+		       fdo_byte_array_t *clear_txt)
 {
 	int ret = -1;
 	uint32_t clear_text_length = 0;
-	sdo_hash_t *cipher_txt_hmac = NULL;
+	fdo_hash_t *cipher_txt_hmac = NULL;
 	uint8_t *cleartext = NULL;
 	int result = -1;
 
@@ -104,14 +104,14 @@ int aes_decrypt_packet(sdo_encrypted_packet_t *cipher_txt,
 
 	clear_text_length = cipher_txt->em_body->byte_sz;
 
-	result = sdo_msg_decrypt_get_pt_len(cipher_txt->em_body->byte_sz,
+	result = fdo_msg_decrypt_get_pt_len(cipher_txt->em_body->byte_sz,
 					    &clear_text_length);
 	if (result != 0) {
 		LOG(LOG_ERROR, "Can't get required clear text size\n");
 		goto end;
 	}
 
-	cleartext = sdo_alloc(clear_text_length);
+	cleartext = fdo_alloc(clear_text_length);
 	if (!cleartext) {
 		LOG(LOG_ERROR, "Failed to allocate cleartext buffer\n");
 		goto end;
@@ -119,14 +119,14 @@ int aes_decrypt_packet(sdo_encrypted_packet_t *cipher_txt,
 
 	/* Create an HMAC of the decrypted message. */
 	cipher_txt_hmac =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 
 	if (!cipher_txt_hmac) {
-		LOG(LOG_ERROR, "failed to allocated memory: sdo-hash struct\n");
+		LOG(LOG_ERROR, "failed to allocated memory: fdo-hash struct\n");
 		goto end;
 	}
 
-	if (0 != sdo_to2_hmac(cipher_txt->ct_string->bytes,
+	if (0 != fdo_to2_hmac(cipher_txt->ct_string->bytes,
 			      cipher_txt->ct_string->byte_sz,
 			      cipher_txt_hmac->hash->bytes,
 			      cipher_txt_hmac->hash->byte_sz)) {
@@ -140,12 +140,12 @@ int aes_decrypt_packet(sdo_encrypted_packet_t *cipher_txt,
 		 &result);
 
 	if (result != 0) {
-		LOG(LOG_ERROR, "sdoAESDecrypt_packet : FAILED, HMACs do "
+		LOG(LOG_ERROR, "fdoAESDecrypt_packet : FAILED, HMACs do "
 			       "not compare\n");
 		goto end;
 	}
 
-	if (0 != sdo_msg_decrypt(
+	if (0 != fdo_msg_decrypt(
 		     cleartext, &clear_text_length, cipher_txt->em_body->bytes,
 		     cipher_txt->em_body->byte_sz, cipher_txt->iv)) {
 		LOG(LOG_ERROR, "Failed to Decrypt\n");
@@ -158,7 +158,7 @@ int aes_decrypt_packet(sdo_encrypted_packet_t *cipher_txt,
 	 * without NULL termination. So, it must be moved to a different
 	 * data structure.
 	 */
-	if (sdo_byte_array_resize(clear_txt, clear_text_length) == false) {
+	if (fdo_byte_array_resize(clear_txt, clear_text_length) == false) {
 		LOG(LOG_ERROR, "Failed to resize clear text buffer\n");
 		goto end;
 	}
@@ -170,13 +170,13 @@ int aes_decrypt_packet(sdo_encrypted_packet_t *cipher_txt,
 	}
 
 #ifdef AES_MODE_CTR_ENABLED
-	cipher_txt->offset = cipher_txt->em_body->byte_sz % SDO_AES_BLOCK_SIZE;
+	cipher_txt->offset = cipher_txt->em_body->byte_sz % FDO_AES_BLOCK_SIZE;
 #endif
 	ret = 0;
 end:
 	if (cleartext)
-		sdo_free(cleartext);
+		fdo_free(cleartext);
 	if (cipher_txt_hmac)
-		sdo_hash_free(cipher_txt_hmac);
+		fdo_hash_free(cipher_txt_hmac);
 	return ret;
 }

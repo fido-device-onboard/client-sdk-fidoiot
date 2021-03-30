@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief Abstraction of mbedTLS library for crypto services required by SDO
+ * \brief Abstraction of mbedTLS library for crypto services required by FDO
  * library.
  */
 
@@ -15,7 +15,7 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/sha256.h"
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "mbedtls_random.h"
@@ -174,11 +174,11 @@ int32_t crypto_close(void)
 }
 
 /**
- * sdo_crypto_hash function calculate hash on input data
+ * fdo_crypto_hash function calculate hash on input data
  *
- * @param _hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256/
- *				SDO_CRYPTO_HASH_TYPE_SHA_384/
- *				SDO_CRYPTO_HASH_TYPE_SHA_512)
+ * @param _hash_type - Hash type (FDO_CRYPTO_HASH_TYPE_SHA_256/
+ *				FDO_CRYPTO_HASH_TYPE_SHA_384/
+ *				FDO_CRYPTO_HASH_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
  * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
@@ -192,7 +192,7 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 			 size_t output_length)
 {
 	mbedtls_md_type_t mbedhash_type = MBEDTLS_MD_NONE;
-	uint8_t hash_type = SDO_CRYPTO_HASH_TYPE_USED;
+	uint8_t hash_type = FDO_CRYPTO_HASH_TYPE_USED;
 
 	if (NULL == output || 0 == output_length || NULL == buffer ||
 	    0 == buffer_length) {
@@ -202,12 +202,12 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 	(void)_hash_type;
 
 	switch (hash_type) {
-	case SDO_CRYPTO_HASH_TYPE_SHA_256:
+	case FDO_CRYPTO_HASH_TYPE_SHA_256:
 		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
 		mbedhash_type = MBEDTLS_MD_SHA256;
 		break;
-	case SDO_CRYPTO_HASH_TYPE_SHA_384:
+	case FDO_CRYPTO_HASH_TYPE_SHA_384:
 		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
 		mbedhash_type = MBEDTLS_MD_SHA384;
@@ -229,9 +229,9 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 /**
  * crypto_hal_hmac function calculate hmac on input data
  *
- * @param hmac_type - Hmac type (SDO_CRYPTO_HMAC_TYPE_SHA_256/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_384/
- *				SDO_CRYPTO_HMAC_TYPE_SHA_512)
+ * @param hmac_type - Hmac type (FDO_CRYPTO_HMAC_TYPE_SHA_256/
+ *				FDO_CRYPTO_HMAC_TYPE_SHA_384/
+ *				FDO_CRYPTO_HMAC_TYPE_SHA_512)
  * @param buffer - pointer to input data buffer of uint8_t type.
  * @param buffer_length - input data buffer size
  * @param output - pointer to output data buffer of uint8_t type.
@@ -253,7 +253,7 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 	}
 
 	switch (hmac_type) {
-	case SDO_CRYPTO_HMAC_TYPE_SHA_256:
+	case FDO_CRYPTO_HMAC_TYPE_SHA_256:
 		if (output_length < SHA256_DIGEST_SIZE)
 			return -1;
 		return mbedtls_md_hmac(
@@ -261,7 +261,7 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 		    (const uint8_t *)key, key_length, buffer, buffer_length,
 		    output);
 		break;
-	case SDO_CRYPTO_HMAC_TYPE_SHA_384:
+	case FDO_CRYPTO_HMAC_TYPE_SHA_384:
 		if (output_length < SHA384_DIGEST_SIZE)
 			return -1;
 		return mbedtls_md_hmac(

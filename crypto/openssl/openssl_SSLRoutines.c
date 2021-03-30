@@ -8,7 +8,7 @@
  * \brief Abstraction layer for SSL setup and send/recv APIs of openssl library.
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include <openssl/ssl.h>
@@ -24,7 +24,7 @@ static SSL_CTX *ctx;
  * @return ssl
  *        return pointer to ssl structure on success. NULL on failure.
  */
-void *sdo_ssl_setup(int sock)
+void *fdo_ssl_setup(int sock)
 {
 
 	SSL *ssl = NULL;
@@ -83,7 +83,7 @@ err:
  * @return
  *        return 0 on success. -1 on failure.
  */
-int sdo_ssl_connect(void *ssl)
+int fdo_ssl_connect(void *ssl)
 {
 	int ret = SSL_connect((SSL *)ssl);
 
@@ -107,7 +107,7 @@ int sdo_ssl_connect(void *ssl)
  * @return
  *        return 0 on success. -1 on failure.
  */
-int sdo_ssl_close(void *ssl)
+int fdo_ssl_close(void *ssl)
 {
 	if(NULL == ssl) {
 		return -1;
@@ -154,7 +154,7 @@ int sdo_ssl_close(void *ssl)
  * @return ret
  *        return 0 on success. -1 on failure.
  */
-int sdo_ssl_read(void *ssl, void *buf, int num)
+int fdo_ssl_read(void *ssl, void *buf, int num)
 {
 	int ret = SSL_read((SSL *)ssl, buf, num);
 
@@ -179,7 +179,7 @@ int sdo_ssl_read(void *ssl, void *buf, int num)
  * @return ret
  *        return no of byte on success. <=0 on failure.
  */
-int sdo_ssl_write(void *ssl, const void *buf, int num)
+int fdo_ssl_write(void *ssl, const void *buf, int num)
 {
 	int ret = SSL_write((SSL *)ssl, buf, num);
 

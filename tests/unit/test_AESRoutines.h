@@ -5,13 +5,13 @@
 #ifndef __TEST_AESROUTINES_H__
 #define __TEST_AESROUTINES_H__
 
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "unity.h"
 #include <stdbool.h>
 #include <string.h>
 
 #include "BN_support.h"
-#include <sdoCryptoHal.h>
+#include <fdoCryptoHal.h>
 
 #ifdef USE_OPENSSL
 #include <openssl/sha.h>

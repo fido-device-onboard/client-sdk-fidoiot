@@ -15,12 +15,12 @@
 #include "mbedtls/cipher_internal.h"
 
 #include "util.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "BN_support.h"
 #include "safe_lib.h"
 
-#define STREAM_BLOCK_SIZE SDO_AES_BLOCK_SIZE
+#define STREAM_BLOCK_SIZE FDO_AES_BLOCK_SIZE
 
 #ifdef AES_256_BIT
 
@@ -84,7 +84,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	 * cipher_length needs to be filled in with the expected size
 	 */
 	if (!clear_text || !clear_text_length || !cipher_length ||
-	    SDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
+	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
 	    KEY_LENGTH_LOCAL != key_length) {
 		LOG(LOG_ERROR, "Invalid parameters received\n");
 		return -1;
@@ -133,7 +133,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 		goto end;
 	}
 
-	ret = mbedtls_cipher_set_iv(&cipher_ctx, iv, SDO_AES_IV_SIZE);
+	ret = mbedtls_cipher_set_iv(&cipher_ctx, iv, FDO_AES_IV_SIZE);
 	if (ret != 0) {
 		LOG(LOG_ERROR, "failed to set IV\n");
 		goto end;
@@ -185,7 +185,7 @@ end:
  * @param cipher_length
  *        Encrypted text size in Byte.
  * @param block_size
- *        AES encryption block size in Byte. SDO_AES_BLOCK_SIZE
+ *        AES encryption block size in Byte. FDO_AES_BLOCK_SIZE
  * @param iv
  *        AES encryption initialization vector.
  * @param key
@@ -211,7 +211,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 
 	/* Check all the incoming parameters */
 	if (!clear_text_length || !cipher_text || !cipher_length ||
-	    SDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
+	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
 	    KEY_LENGTH_LOCAL != key_length) {
 		LOG(LOG_ERROR, "Invalid paramters received\n");
 		goto end;

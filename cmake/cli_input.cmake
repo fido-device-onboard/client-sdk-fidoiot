@@ -40,7 +40,7 @@ set (WIFI_PASS " ")
 set (MANUFACTURER_IP " ")
 set (MANUFACTURER_DN " ")
 
-# Following piece of code is needed to configure the SDO
+# Following piece of code is needed to configure the FDO
 # Command line inputs are given higher prority than cached/defaults
 # note to change the variable values subsequent runs,
 # make pristine must be executed to update these values.

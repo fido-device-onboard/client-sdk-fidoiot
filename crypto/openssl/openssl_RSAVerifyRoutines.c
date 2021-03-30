@@ -16,12 +16,12 @@
 #include <openssl/engine.h>
 #include <openssl/ossl_typ.h>
 #include "BN_support.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "safe_lib.h"
 
 /* An Example Public Key
- * Formats are described in the SDO documentation, but here is a public key
+ * Formats are described in the FDO documentation, but here is a public key
 encoded with the RSAMODEXP format:
 
 ["0228", # length in bytes
@@ -46,12 +46,12 @@ encoded with the RSAMODEXP format:
 /* routines */
 /*  PURPOSE: Convert a public key into an OpenSSL key */
 
-/*  REQUIRE: An public key in SDOPublic_key structure */
+/*  REQUIRE: An public key in FDOPublic_key structure */
 /*           A pointer to a PKEY structure, which will be allocated by this */
 /* routine */
 /*           using OpenSSL's EVP_PKEY alloc and free functions */
 
-/*  PROMISE: if SDOPublic_key is a valid RSA public key in version 0.5  */
+/*  PROMISE: if FDOPublic_key is a valid RSA public key in version 0.5  */
 /* structure in RSAMODENC */
 /*           this routine will take the modulus and public key and format  */
 /* them into a PKEY structure */
@@ -167,7 +167,7 @@ err:
 }
 
 /**
- * sdo_cryptoRSAVerify
+ * fdo_cryptoRSAVerify
  * Verify an RSA PKCS v1.5 Signature using provided public key
  * @param key_encoding - RSA Key encoding typee.
  * @param key_algorithm - RSA public key algorithm.
@@ -197,8 +197,8 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	uint8_t *hash = NULL;
 
 	/* Make sure we have a valid key type. */
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type.\n");
 		ret = -1;
 		goto end;

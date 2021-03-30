@@ -13,7 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/pem.h>
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
@@ -40,7 +40,7 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	size_t hash_length = 0;
 
 	if (!data || !data_len || !message_signature || !signature_length) {
-		LOG(LOG_ERROR, "sdo_cryptoECDSASign params not valid\n");
+		LOG(LOG_ERROR, "fdo_cryptoECDSASign params not valid\n");
 		goto end;
 	}
 

@@ -4,14 +4,14 @@
 
 /*!
  * \file
- * \brief Unit tests for OS abstraction layer of SDO library.
+ * \brief Unit tests for OS abstraction layer of FDO library.
  */
 
 #include <sys/socket.h>
 #include "network_al.h"
 #include <stdlib.h>
-#include "sdoCryptoHal.h"
-#include "sdoprotctx.h"
+#include "fdoCryptoHal.h"
+#include "fdoprotctx.h"
 #include "rest_interface.h"
 #include <openssl/ssl.h>
 #include "safe_str_lib.h"
@@ -21,7 +21,7 @@
 #ifdef TARGET_OS_LINUX
 
 /* Declaring internal structure here */
-struct sdo_sock_handle {
+struct fdo_sock_handle {
 	int sockfd;
 } g_handle;
 
@@ -34,10 +34,10 @@ ssize_t __wrap_send(int socket, const void *buffer, size_t length, int flags);
 int __wrap_socket(int domain, int type, int protocol);
 int __wrap_connect(int socket, const struct sockaddr *address,
 		   uint8_t address_len);
-void test_sdo_con_connect(void);
-void test_sdo_con_disconnect(void);
-void test_sdo_con_recv_message(void);
-void test_sdo_con_send_message(void);
+void test_fdo_con_connect(void);
+void test_fdo_con_disconnect(void);
+void test_fdo_con_recv_message(void);
+void test_fdo_con_send_message(void);
 void test_read_until_new_line(void);
 
 /*** Unity functions. ***/
@@ -137,11 +137,11 @@ int __wrap_connect(int socket, const struct sockaddr *address,
  * @param size - REST header size.
  * @retval true if line read was successful, false otherwise.
  */
-static bool read_until_new_line(sdo_con_handle handle, char *out, size_t size)
+static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size)
 {
 	int sz, n;
 	char c;
-	struct sdo_sock_handle *sock_hdl = handle;
+	struct fdo_sock_handle *sock_hdl = handle;
 	int sockfd = sock_hdl->sockfd;
 
 	if (!out || !size)
@@ -174,101 +174,101 @@ static bool read_until_new_line(sdo_con_handle handle, char *out, size_t size)
 
 /*** Test functions. ***/
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("sdo_con_connect", "[OS][HAL][sdo]")
+TEST_CASE("fdo_con_connect", "[OS][HAL][fdo]")
 #else
-void test_sdo_con_connect(void)
+void test_fdo_con_connect(void)
 #endif
 {
-	sdo_ip_address_t sdoip = {
+	fdo_ip_address_t fdoip = {
 	    0,
 	};
 	uint16_t port = 8085;
 
-	sdoip.length = 4;
+	fdoip.length = 4;
 
 	// setup rest protocol
-	TEST_ASSERT_EQUAL_INT(0, sdo_con_setup(NULL, NULL, 0));
+	TEST_ASSERT_EQUAL_INT(0, fdo_con_setup(NULL, NULL, 0));
 
 	/* False tests */
 	return_socket = -1;
 	TEST_ASSERT_EQUAL_INT(
-	    SDO_CON_INVALID_HANDLE,
-	    sdo_con_connect(&sdoip, port, NULL)); /* socket() returns -1 */
+	    FDO_CON_INVALID_HANDLE,
+	    fdo_con_connect(&fdoip, port, NULL)); /* socket() returns -1 */
 	return_socket = 0;
 	TEST_ASSERT_EQUAL_INT(
-	    SDO_CON_INVALID_HANDLE,
-	    sdo_con_connect(&sdoip, port, NULL)); /* connect() returns -1 */
+	    FDO_CON_INVALID_HANDLE,
+	    fdo_con_connect(&fdoip, port, NULL)); /* connect() returns -1 */
 
 	/* Pass tests */
 	return_socket = 123;
 	uint16_t *ret_val;
-	ret_val = sdo_con_connect(&sdoip, port, NULL);
-	TEST_ASSERT_NOT_EQUAL(SDO_CON_INVALID_HANDLE, ret_val);
-	sdo_free(ret_val);
+	ret_val = fdo_con_connect(&fdoip, port, NULL);
+	TEST_ASSERT_NOT_EQUAL(FDO_CON_INVALID_HANDLE, ret_val);
+	fdo_free(ret_val);
 
 	// undo setup rest protocol
-	sdo_con_teardown();
+	fdo_con_teardown();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("sdo_con_disconnect", "[OS][HAL][sdo]")
+TEST_CASE("fdo_con_disconnect", "[OS][HAL][fdo]")
 #else
-void test_sdo_con_disconnect(void)
+void test_fdo_con_disconnect(void)
 #endif
 {
-	sdo_con_handle handle = SDO_CON_INVALID_HANDLE;
-	TEST_ASSERT_EQUAL_INT(0, sdo_con_disconnect(handle, NULL));
+	fdo_con_handle handle = FDO_CON_INVALID_HANDLE;
+	TEST_ASSERT_EQUAL_INT(0, fdo_con_disconnect(handle, NULL));
 }
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("sdo_con_recv_message", "[OS][HAL][sdo]")
+TEST_CASE("fdo_con_recv_message", "[OS][HAL][fdo]")
 #else
-void test_sdo_con_recv_message(void)
+void test_fdo_con_recv_message(void)
 #endif
 {
 	uint8_t buf[5];
-	sdo_con_handle handle = &g_handle;
+	fdo_con_handle handle = &g_handle;
 	ssize_t nbytes = 5;
 	TEST_ASSERT_EQUAL_INT(33,
-			      sdo_con_recv_msg_body(handle, buf, nbytes, NULL));
+			      fdo_con_recv_msg_body(handle, buf, nbytes, NULL));
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("sdo_con_send_message", "[OS][HAL][sdo]")
+TEST_CASE("fdo_con_send_message", "[OS][HAL][fdo]")
 #else
-void test_sdo_con_send_message(void)
+void test_fdo_con_send_message(void)
 #endif
 {
-	sdo_con_handle sock = SDO_CON_INVALID_HANDLE;
+	fdo_con_handle sock = FDO_CON_INVALID_HANDLE;
 	uint8_t buf[42];
 	ssize_t nbytes = 42;
 
 	// setup rest protocol
-	TEST_ASSERT_EQUAL_INT(0, sdo_con_setup(NULL, NULL, 0));
+	TEST_ASSERT_EQUAL_INT(0, fdo_con_setup(NULL, NULL, 0));
 
 	TEST_ASSERT_EQUAL_INT(
-	    -1, sdo_con_send_message(sock, 0, 0, buf, nbytes, NULL));
+	    -1, fdo_con_send_message(sock, 0, 0, buf, nbytes, NULL));
 
 	// undo setup rest protocol
-	sdo_con_teardown();
+	fdo_con_teardown();
 }
 
 #ifndef TARGET_OS_FREERTOS
 void test_read_until_new_line(void)
 #else
-TEST_CASE("read_until_new_line", "[OS][HAL][sdo]")
+TEST_CASE("read_until_new_line", "[OS][HAL][fdo]")
 #endif
 {
 	char buff[50];
 	int bufsize = 22, ret;
 	bool retval;
-	struct sdo_sock_handle handle = {0};
+	struct fdo_sock_handle handle = {0};
 
-	sdo_prot_ctx_t *prot_ctx = malloc(sizeof(sdo_prot_ctx_t));
+	fdo_prot_ctx_t *prot_ctx = malloc(sizeof(fdo_prot_ctx_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx);
-	ret = memset_s(prot_ctx, sizeof(sdo_prot_ctx_t), 0);
+	ret = memset_s(prot_ctx, sizeof(fdo_prot_ctx_t), 0);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	handle.sockfd = 100;
-	prot_ctx->sock_hdl = (sdo_con_handle)&handle;
+	prot_ctx->sock_hdl = (fdo_con_handle)&handle;
 	prot_ctx->ssl = NULL;
 
 	recv_configured = 0;

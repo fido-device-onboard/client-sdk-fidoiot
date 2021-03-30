@@ -20,7 +20,7 @@
 #include "mbedtls/rsa.h"
 #include "safe_lib.h"
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "stdlib.h"
 
@@ -57,8 +57,8 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	mbedtls_pk_context ctx;
 
 	/* Check validity of key type. */
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		return -1;
 	}

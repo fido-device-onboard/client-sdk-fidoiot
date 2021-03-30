@@ -4,9 +4,9 @@
 #
 
 
-file(GLOB SDO_CRYPTO_COMMON_SOURCES common/*.c)
-file(GLOB SDO_CRYPTO_OPENSSL_SOURCES openssl/openssl*.c)
-file(GLOB SDO_CRYPTO_MBEDTLS_SOURCES mbedtls/mbedtls*.c)
+file(GLOB FDO_CRYPTO_COMMON_SOURCES common/*.c)
+file(GLOB FDO_CRYPTO_OPENSSL_SOURCES openssl/openssl*.c)
+file(GLOB FDO_CRYPTO_MBEDTLS_SOURCES mbedtls/mbedtls*.c)
 
 client_sdk_include_directories(
   include
@@ -17,17 +17,17 @@ add_library(crypto "")
 
 client_sdk_sources_with_lib(
   crypto
-  common/sdoOvVerify.c
-  common/sdoKeyExchange.c
-  common/sdoAes.c
-  common/sdoHmac.c
-  common/sdoDevSign.c
-  common/sdoCryptoCommon.c
-  common/sdoDevAttest.c
+  common/fdoOvVerify.c
+  common/fdoKeyExchange.c
+  common/fdoAes.c
+  common/fdoHmac.c
+  common/fdoDevSign.c
+  common/fdoCryptoCommon.c
+  common/fdoDevAttest.c
   )
 
 if (${KEX} MATCHES asym)
-  client_sdk_sources_with_lib( crypto common/sdokeyexchange_asym.c)
+  client_sdk_sources_with_lib( crypto common/fdokeyexchange_asym.c)
 endif()
 
 

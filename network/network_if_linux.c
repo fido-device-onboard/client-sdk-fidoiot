@@ -21,14 +21,14 @@
 
 #include "util.h"
 #include "network_al.h"
-#include "sdoCryptoHal.h"
-#include "sdoprotctx.h"
-#include "sdonet.h"
+#include "fdoCryptoHal.h"
+#include "fdoprotctx.h"
+#include "fdonet.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "rest_interface.h"
 
-struct sdo_sock_handle {
+struct fdo_sock_handle {
 	int sockfd;
 };
 /**
@@ -40,12 +40,12 @@ struct sdo_sock_handle {
  * @param ssl -  SSL pointer if TLS is active
  * @retval true if line read was successful, false otherwise.
  */
-static bool read_until_new_line(sdo_con_handle handle, char *out, size_t size,
+static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
 				void *ssl)
 {
 	size_t sz, n;
 	char c;
-	struct sdo_sock_handle *sock_hdl = handle;
+	struct fdo_sock_handle *sock_hdl = handle;
 	int sockfd = sock_hdl->sockfd;
 
 	if (!out || !size)
@@ -56,7 +56,7 @@ static bool read_until_new_line(sdo_con_handle handle, char *out, size_t size,
 	for (;;) {
 
 		if (ssl)
-			n = sdo_ssl_read(ssl, (uint8_t *)&c, 1);
+			n = fdo_ssl_read(ssl, (uint8_t *)&c, 1);
 		else
 			n = recv(sockfd, (uint8_t *)&c, 1, MSG_WAITALL);
 
@@ -85,14 +85,14 @@ static bool read_until_new_line(sdo_con_handle handle, char *out, size_t size,
 }
 
 /**
- * sdo_con_setup Connection Setup.
+ * fdo_con_setup Connection Setup.
  *
  * @param medium - specified network medium to connect to
  * @param params - parameters(if any) supported for 'medium'
  * @param count - number of valid string in params
  * @return 0 on success. -1 on failure
  */
-int32_t sdo_con_setup(char *medium, char **params, uint32_t count)
+int32_t fdo_con_setup(char *medium, char **params, uint32_t count)
 {
 	/*TODO: make use of input params (if required ?)*/
 	(void)medium;
@@ -115,14 +115,14 @@ int32_t sdo_con_setup(char *medium, char **params, uint32_t count)
  * @param ip_list_size - output number of IP address in ip_list
  * @retval -1 on failure, 0 on success.
  */
-int32_t sdo_con_dns_lookup(const char *url, sdo_ip_address_t **ip_list,
+int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
 			   uint32_t *ip_list_size)
 {
 	int idx;
 	struct addrinfo *result = NULL, *it = NULL;
 	struct addrinfo hints;
 	struct sockaddr_in *sa_in = NULL;
-	sdo_ip_address_t *ip_list_temp = NULL;
+	fdo_ip_address_t *ip_list_temp = NULL;
 	int32_t ret = -1;
 
 	if (!url || !ip_list || !ip_list_size)
@@ -151,7 +151,7 @@ int32_t sdo_con_dns_lookup(const char *url, sdo_ip_address_t **ip_list,
 		++len;
 	}
 
-	ip_list_temp = sdo_alloc(sizeof(sdo_ip_address_t) * len);
+	ip_list_temp = fdo_alloc(sizeof(fdo_ip_address_t) * len);
 
 	if (!ip_list_temp) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
@@ -188,7 +188,7 @@ end:
 	if (ret != 0) {
 		*ip_list_size = 0;
 		if (ip_list_temp) {
-			sdo_free(ip_list_temp);
+			fdo_free(ip_list_temp);
 		}
 	}
 	if (result)
@@ -197,7 +197,7 @@ end:
 }
 
 /**
- * sdo_con_connect connects to the network socket
+ * fdo_con_connect connects to the network socket
  *
  * @param ip_addr - pointer to IP address info
  * @param port - port number to connect
@@ -205,10 +205,10 @@ end:
  * @return connection handle on success. -ve value on failure
  */
 
-sdo_con_handle sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port,
+fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 			       void **ssl)
 {
-	struct sdo_sock_handle *sock_hdl = SDO_CON_INVALID_HANDLE;
+	struct fdo_sock_handle *sock_hdl = FDO_CON_INVALID_HANDLE;
 	struct sockaddr_in haddr;
 
 	if (!ip_addr)
@@ -226,7 +226,7 @@ sdo_con_handle sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port,
 	}
 
 	/* Allocate memory for sock handle */
-	sock_hdl = (struct sdo_sock_handle *)sdo_alloc(sizeof(*sock_hdl));
+	sock_hdl = (struct fdo_sock_handle *)fdo_alloc(sizeof(*sock_hdl));
 	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Out of memory for sock handle\n");
 		goto end;
@@ -269,7 +269,7 @@ sdo_con_handle sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port,
 			goto end;
 		}
 
-		*ssl = sdo_ssl_setup_connect(ipv4, port_s);
+		*ssl = fdo_ssl_setup_connect(ipv4, port_s);
 
 		if (NULL == *ssl) {
 			LOG(LOG_ERROR, "TLS connection "
@@ -291,14 +291,14 @@ sdo_con_handle sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port,
 	}
 #if defined(USE_OPENSSL)
 	if (ssl) {
-		*ssl = sdo_ssl_setup(sock_hdl->sockfd);
+		*ssl = fdo_ssl_setup(sock_hdl->sockfd);
 
 		if (NULL == *ssl) {
 			LOG(LOG_ERROR, "TLS connection setup failed\n");
 			goto end;
 		}
 
-		if (sdo_ssl_connect(*ssl)) {
+		if (fdo_ssl_connect(*ssl)) {
 			LOG(LOG_ERROR, "TLS connect failed\n");
 			goto end;
 		}
@@ -310,9 +310,9 @@ sdo_con_handle sdo_con_connect(sdo_ip_address_t *ip_addr, uint16_t port,
 end:
 	if (sock_hdl) {
 		close(sock_hdl->sockfd);
-		sdo_free(sock_hdl);
+		fdo_free(sock_hdl);
 	}
-	return SDO_CON_INVALID_HANDLE;
+	return FDO_CON_INVALID_HANDLE;
 }
 
 /**
@@ -322,10 +322,10 @@ end:
  * @param ssl - SSL handler in case of tls connection.
  * @retval -1 on failure, 0 on success.
  */
-int32_t sdo_con_disconnect(sdo_con_handle handle, void *ssl)
+int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl)
 {
 	int sockfd = 0, ret = -1;
-	struct sdo_sock_handle *sock_hdl = handle;
+	struct fdo_sock_handle *sock_hdl = handle;
 
 	if (!sock_hdl)
 		return 0;
@@ -333,7 +333,7 @@ int32_t sdo_con_disconnect(sdo_con_handle handle, void *ssl)
 	sockfd = sock_hdl->sockfd;
 
 	if (ssl) {
-		sdo_ssl_close(ssl);
+		fdo_ssl_close(ssl);
 
 #ifdef USE_MBEDTLS
 		return 0;
@@ -345,7 +345,7 @@ int32_t sdo_con_disconnect(sdo_con_handle handle, void *ssl)
 		if (!close(sockfd)) {
 			ret = 0;
 		}
-		sdo_free(sock_hdl);
+		fdo_free(sock_hdl);
 	}
 	return ret;
 }
@@ -354,13 +354,13 @@ int32_t sdo_con_disconnect(sdo_con_handle handle, void *ssl)
  * Receive(read) protocol version, message type and length of rest body
  *
  * @param handle - connection handler (for ex: socket-id)
- * @param protocol_version - out SDO protocol version
- * @param message_type - out message type of incoming SDO message.
+ * @param protocol_version - out FDO protocol version
+ * @param message_type - out message type of incoming FDO message.
  * @param msglen - out Number of received bytes.
  * @param ssl - handler in case of tls connection.
  * @retval -1 on failure, 0 on success.
  */
-int32_t sdo_con_recv_msg_header(sdo_con_handle handle,
+int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 				uint32_t *protocol_version,
 				uint32_t *message_type, uint32_t *msglen,
 				void *ssl)
@@ -438,13 +438,13 @@ err:
  * @param ssl - handler in case of tls connection.
  * @retval -1 on failure, number of bytes read on success.
  */
-int32_t sdo_con_recv_msg_body(sdo_con_handle handle, uint8_t *buf,
+int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
 			      size_t length, void *ssl)
 {
 	int n;
 	int32_t ret = -1;
 	int sockfd = 0;
-	struct sdo_sock_handle *sock_hdl = handle;
+	struct fdo_sock_handle *sock_hdl = handle;
 
 	if (!buf || !length || !sock_hdl)
 		goto err;
@@ -452,7 +452,7 @@ int32_t sdo_con_recv_msg_body(sdo_con_handle handle, uint8_t *buf,
 	sockfd = sock_hdl->sockfd;
 
 	if (ssl)
-		n = sdo_ssl_read(ssl, buf, length);
+		n = fdo_ssl_read(ssl, buf, length);
 	else
 		n = recv(sockfd, buf, length, MSG_WAITALL);
 
@@ -469,14 +469,14 @@ err:
  * Send(write) data.
  *
  * @param handle - connection handler (for ex: socket-id)
- * @param protocol_version - SDO protocol version
- * @param message_type - message type of outgoing SDO message.
+ * @param protocol_version - FDO protocol version
+ * @param message_type - message type of outgoing FDO message.
  * @param buf - data buffer to write from.
  * @param length - Number of sent bytes.
  * @param ssl - handler in case of tls connection.
  * @retval -1 on failure, number of bytes written.
  */
-int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
+int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			     uint32_t message_type, const uint8_t *buf,
 			     size_t length, void *ssl)
 {
@@ -486,7 +486,7 @@ int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
 	char rest_hdr[REST_MAX_MSGHDR_SIZE] = {0};
 	size_t header_len = 0;
 	int sockfd = 0;
-	struct sdo_sock_handle *sock_hdl = handle;
+	struct fdo_sock_handle *sock_hdl = handle;
 
 	if (!buf || !length || !sock_hdl)
 		goto err;
@@ -522,7 +522,7 @@ int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
 
 	/* Send REST header */
 	if (ssl) {
-		n = sdo_ssl_write(ssl, rest_hdr, header_len);
+		n = fdo_ssl_write(ssl, rest_hdr, header_len);
 
 		if (n <= 0) {
 			LOG(LOG_ERROR, "SSL Header write Failed!\n");
@@ -538,7 +538,7 @@ int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
 			    "errno=%d, %d\n",
 			    n, errno, __LINE__);
 
-			if (sdo_con_disconnect(handle, ssl)) {
+			if (fdo_con_disconnect(handle, ssl)) {
 				LOG(LOG_ERROR, "Error during socket close()\n");
 				goto hdrerr;
 			}
@@ -560,7 +560,7 @@ int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
 
 	/* Send REST body */
 	if (ssl) {
-		n = sdo_ssl_write(ssl, buf, length);
+		n = fdo_ssl_write(ssl, buf, length);
 		if (n <= 0) {
 			LOG(LOG_ERROR, "SSL Body write Failed!\n");
 			goto bodyerr;
@@ -574,7 +574,7 @@ int32_t sdo_con_send_message(sdo_con_handle handle, uint32_t protocol_version,
 			    "errno=%d, %d\n",
 			    n, errno, __LINE__);
 
-			if (sdo_con_disconnect(handle, ssl)) {
+			if (fdo_con_disconnect(handle, ssl)) {
 				LOG(LOG_ERROR, "Error during socket close()\n");
 				goto bodyerr;
 			}
@@ -603,11 +603,11 @@ err:
 }
 
 /**
- * sdo_con_tear_down connection tear-down.
+ * fdo_con_tear_down connection tear-down.
  *
  * @return 0 on success, -1 on failure
  */
-int32_t sdo_con_teardown(void)
+int32_t fdo_con_teardown(void)
 {
 	/* REST context over */
 	exit_rest_context();
@@ -615,14 +615,14 @@ int32_t sdo_con_teardown(void)
 }
 
 /**
- * Put the SDO device to low power state
+ * Put the FDO device to low power state
  *
  * @param sec
  *        number of seconds to put the device to low power state
  *
  * @return none
  */
-void sdo_sleep(int sec)
+void fdo_sleep(int sec)
 {
 	sleep(sec);
 }
@@ -636,7 +636,7 @@ void sdo_sleep(int sec)
  * @return
  *         Value in Host byte order.
  */
-uint32_t sdo_net_to_host_long(uint32_t value)
+uint32_t fdo_net_to_host_long(uint32_t value)
 {
 	return ntohl(value);
 }
@@ -650,7 +650,7 @@ uint32_t sdo_net_to_host_long(uint32_t value)
  * @return
  *        Number in network byte order.
  */
-uint32_t sdo_host_to_net_long(uint32_t value)
+uint32_t fdo_host_to_net_long(uint32_t value)
 {
 	return htonl(value);
 }
@@ -666,7 +666,7 @@ uint32_t sdo_host_to_net_long(uint32_t value)
  * @return
  *        1 on success. -1 on error. 0 if input format is invalie
  */
-int32_t sdo_printable_to_net(const char *src, void *addr)
+int32_t fdo_printable_to_net(const char *src, void *addr)
 {
 	return inet_pton(AF_INET, src, addr);
 }
@@ -679,7 +679,7 @@ int32_t sdo_printable_to_net(const char *src, void *addr)
  */
 const char *get_device_model(void)
 {
-	return "Intel-SDO-Linux";
+	return "Intel-FDO-Linux";
 }
 
 /**
@@ -690,11 +690,11 @@ const char *get_device_model(void)
  */
 const char *get_device_serial_number(void)
 {
-	return "sdo-linux-1234";
+	return "fdo-linux-1234";
 }
 
 /**
- * sdo_random generates random number and returns
+ * fdo_random generates random number and returns
  *
  * Note: this is only to be used for calculating random
  * network delay for retransmissions and NOT for crypto
@@ -702,7 +702,7 @@ const char *get_device_serial_number(void)
  * @return
  *        returns random number
  */
-int sdo_random(void)
+int fdo_random(void)
 {
 	return rand();
 }

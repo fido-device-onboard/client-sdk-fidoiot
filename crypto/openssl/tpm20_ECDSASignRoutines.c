@@ -15,7 +15,7 @@
 #include <openssl/sha.h>
 
 #include "util.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 
 /**
  * Sign a message using provided ECDSA Private Keys.

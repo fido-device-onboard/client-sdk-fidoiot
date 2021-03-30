@@ -16,7 +16,7 @@
 #include <mbedtls/pk.h>
 
 #include "safe_lib.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "stdlib.h"
 #include "storage_al.h"
@@ -57,9 +57,9 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	(void)key_param2;
 	(void)key_param2Length;
 
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
-	    (key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
-	     key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
+	    (key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
+	     key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
 		LOG(LOG_ERROR, "Incorrect key type!\n");
 		goto end;
 	}
@@ -74,7 +74,7 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
 	/* Initialize mbedtls_ecdsa_context with EC group */
 	mbedtls_ecdsa_init(&ec_ctx);
 
-	if (key_algorithm == SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
+	if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
 		LOG(LOG_DEBUG, "ECDSA256 verify\n");
 		result = mbedtls_ecp_group_load(&(ec_ctx.grp),
 						MBEDTLS_ECP_DP_SECP256R1);

@@ -7,15 +7,15 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 
-#include "sdoCrypto.h"
-#include "sdoCryptoHal.h"
+#include "fdoCrypto.h"
+#include "fdoCryptoHal.h"
 #include "safe_lib.h"
 #include "util.h"
 #include "mbedtls_random.h"
 #include "mbedtls/entropy_poll.h"
 
-#define SDO_PRO_SPEC_VERSION "112"
-#define SDO_PERS "SDO_version_" SDO_PRO_SPEC_VERSION
+#define FDO_PRO_SPEC_VERSION "112"
+#define FDO_PERS "FDO_version_" FDO_PRO_SPEC_VERSION
 
 static mbedtls_ctr_drbg_context g_prng_ctx;
 static mbedtls_entropy_context g_entropy;
@@ -64,7 +64,7 @@ static int entropy_source(void *data, unsigned char *output, size_t len,
 	(void)fp;
 	(void)result;
 
-	if (sdo_crypto_random_bytes(output, len))
+	if (fdo_crypto_random_bytes(output, len))
 		return -1;
 	*olen = len;
 #endif
@@ -82,7 +82,7 @@ static int entropy_source(void *data, unsigned char *output, size_t len,
 
 int random_init(void)
 {
-	const char pers[] = {SDO_PERS};
+	const char pers[] = {FDO_PERS};
 	entropy_src_funp funcptr = NULL;
 
 	if (!g_random_initialised) {

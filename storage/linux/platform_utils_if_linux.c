@@ -6,12 +6,12 @@
 /*
  * Platform Utilities
  *
- * The file implements required platform utilities for SDO.
+ * The file implements required platform utilities for FDO.
  */
 #include <stdlib.h>
 #include "util.h"
 #include "safe_lib.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "platform_utils.h"
 /**
  * Generate platform IV (if not already generated) else provide already
@@ -48,7 +48,7 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 
 	if (fsize != PLATFORM_IV_DEFAULT_LEN * 2) {
 		/* generate new IV and store into file */
-		p_iv = sdo_alloc(PLATFORM_IV_DEFAULT_LEN);
+		p_iv = fdo_alloc(PLATFORM_IV_DEFAULT_LEN);
 		if (p_iv == NULL) {
 			LOG(LOG_ERROR, "Allocation failed for plaform IV!\n");
 			goto end;
@@ -113,7 +113,7 @@ end:
 	if (fp)
 		fclose(fp);
 	if (p_iv)
-		sdo_free(p_iv);
+		fdo_free(p_iv);
 	return retval;
 }
 

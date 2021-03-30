@@ -12,7 +12,7 @@
 #include <openssl/ec.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "storage_al.h"
 #include "util.h"
 #include "ec_key.h"
@@ -71,7 +71,7 @@ err:
 			LOG(LOG_ERROR, "clearing ecdsa privkey failed\n");
 			ret = -1;
 		}
-		sdo_free(privkey);
+		fdo_free(privkey);
 	}
 	if (ecprivkey_evp)
 		EVP_PKEY_free(ecprivkey_evp);
@@ -130,7 +130,7 @@ err:
 			LOG(LOG_ERROR, "Memset Failed\n");
 			ret = 0; /* Mark as fail */
 		}
-		sdo_free(privkey);
+		fdo_free(privkey);
 	}
 	if (ec_key && !ret) {
 		EC_KEY_free(ec_key);

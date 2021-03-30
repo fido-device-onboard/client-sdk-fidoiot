@@ -34,7 +34,7 @@
 #include "blob.h"
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 #endif
 
 #if !defined(DEVICE_TPM20_ENABLED)
@@ -55,7 +55,7 @@ int32_t configure_normal_blob(void)
 	/* From the platfrom, read unsealed Normal Blob for the very first time
 	 * and
 	 * write back
-	 * sealed Normal blob for SDO.
+	 * sealed Normal blob for FDO.
 	 */
 	size_t bytes_written = 0;
 	uint8_t *raw_normal_blob = NULL;
@@ -66,7 +66,7 @@ int32_t configure_normal_blob(void)
 
 #if defined(DEVICE_TPM20_ENABLED)
 	if (0 == is_valid_tpm_data_protection_key_present()) {
-		if (0 != sdo_generate_storage_hmac_key()) {
+		if (0 != fdo_generate_storage_hmac_key()) {
 			LOG(LOG_ERROR, "Failed to generate TPM data protection"
 				       " key.\n");
 			goto err;
@@ -79,7 +79,7 @@ int32_t configure_normal_blob(void)
 	uint8_t hmac_key[PLATFORM_HMAC_KEY_DEFAULT_LEN] = {0};
 
 	size_t key_size_stored =
-	    sdo_blob_size((const char *)PLATFORM_HMAC_KEY, SDO_SDK_RAW_DATA);
+	    fdo_blob_size((const char *)PLATFORM_HMAC_KEY, FDO_SDK_RAW_DATA);
 	if (key_size_stored == 0) {
 		LOG(LOG_DEBUG,
 		    "Platform HMAC key size is zero, DI not done!\n");
@@ -92,8 +92,8 @@ int32_t configure_normal_blob(void)
 		}
 
 		if (PLATFORM_HMAC_KEY_DEFAULT_LEN !=
-		    sdo_blob_write((const char *)PLATFORM_HMAC_KEY,
-				   SDO_SDK_RAW_DATA, hmac_key,
+		    fdo_blob_write((const char *)PLATFORM_HMAC_KEY,
+				   FDO_SDK_RAW_DATA, hmac_key,
 				   PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR, "Plaform HMAC Key file is not written"
 				       " properly!\n");
@@ -101,7 +101,7 @@ int32_t configure_normal_blob(void)
 		}
 	}
 
-	if (sdo_blob_read((const char *)PLATFORM_HMAC_KEY, SDO_SDK_RAW_DATA,
+	if (fdo_blob_read((const char *)PLATFORM_HMAC_KEY, FDO_SDK_RAW_DATA,
 			  hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN) <= 0) {
 		LOG(LOG_ERROR, "Failed to read plain Normal blob!\n");
 		goto err;
@@ -109,7 +109,7 @@ int32_t configure_normal_blob(void)
 #endif
 
 	raw_normal_blob_size =
-	    sdo_blob_size((char *)SDO_CRED_NORMAL, SDO_SDK_RAW_DATA);
+	    fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_RAW_DATA);
 
 	if (raw_normal_blob_size == 0) {
 		LOG(LOG_DEBUG,
@@ -127,7 +127,7 @@ int32_t configure_normal_blob(void)
 		goto err;
 	}
 
-	raw_normal_blob = sdo_alloc(raw_normal_blob_size);
+	raw_normal_blob = fdo_alloc(raw_normal_blob_size);
 
 	if (!raw_normal_blob) {
 		LOG(LOG_ERROR, "Buffer Allocation failed for plain "
@@ -135,7 +135,7 @@ int32_t configure_normal_blob(void)
 		goto err;
 	}
 
-	if (sdo_blob_read((char *)SDO_CRED_NORMAL, SDO_SDK_RAW_DATA,
+	if (fdo_blob_read((char *)FDO_CRED_NORMAL, FDO_SDK_RAW_DATA,
 			  (uint8_t *)raw_normal_blob,
 			  raw_normal_blob_size) == -1) {
 		LOG(LOG_ERROR, "Failed to read plain Normal blob!\n");
@@ -149,14 +149,14 @@ int32_t configure_normal_blob(void)
 	signed_normal_blob_size =
 	    PLATFORM_HMAC_SIZE + DATA_CONTENT_SIZE + raw_normal_blob_size;
 
-	signed_normal_blob = sdo_alloc(signed_normal_blob_size);
+	signed_normal_blob = fdo_alloc(signed_normal_blob_size);
 	if (NULL == signed_normal_blob) {
 		LOG(LOG_ERROR,
 		    "Malloc Failed for sealed Normal Blob buffer!\n");
 		goto err;
 	}
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != sdo_compute_storage_hmac(raw_normal_blob, raw_normal_blob_size,
+	if (0 != fdo_compute_storage_hmac(raw_normal_blob, raw_normal_blob_size,
 					  signed_normal_blob,
 					  PLATFORM_HMAC_SIZE)) {
 		goto err;
@@ -193,7 +193,7 @@ int32_t configure_normal_blob(void)
 	}
 
 	bytes_written =
-	    sdo_blob_write(SDO_CRED_NORMAL, SDO_SDK_RAW_DATA,
+	    fdo_blob_write(FDO_CRED_NORMAL, FDO_SDK_RAW_DATA,
 			   signed_normal_blob, signed_normal_blob_size);
 	if (bytes_written != signed_normal_blob_size) {
 		LOG(LOG_ERROR,
@@ -203,8 +203,8 @@ int32_t configure_normal_blob(void)
 	ret = 0;
 err:
 	if (raw_normal_blob)
-		sdo_free(raw_normal_blob);
+		fdo_free(raw_normal_blob);
 	if (signed_normal_blob)
-		sdo_free(signed_normal_blob);
+		fdo_free(signed_normal_blob);
 	return ret;
 }

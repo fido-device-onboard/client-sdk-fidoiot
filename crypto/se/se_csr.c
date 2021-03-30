@@ -8,8 +8,8 @@
  * \brief This file implements CSR generation for ECDSA
  */
 
-#include "sdotypes.h"
-#include "sdoCryptoHal.h"
+#include "fdotypes.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "se_config.h"
@@ -114,14 +114,14 @@ const atcacert_def_t csr_def_device = {
 };
 
 /**
- * sdo_get_device_csr() - get the device CSR
+ * fdo_get_device_csr() - get the device CSR
  */
-int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
+int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 {
 	int ret = -1;
 
-	char *csr_tmp = sdo_alloc(SE_CSR_SIZE);
-	sdo_byte_array_t *csr_byte_arr = NULL;
+	char *csr_tmp = fdo_alloc(SE_CSR_SIZE);
+	fdo_byte_array_t *csr_byte_arr = NULL;
 
 	if (!csr_tmp) {
 		LOG(LOG_ERROR, "Failed to allocate data.\n");
@@ -137,7 +137,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	}
 
 	/* Allocate byte array to send back data to DI state machine */
-	csr_byte_arr = sdo_byte_array_alloc(csr_size);
+	csr_byte_arr = fdo_byte_array_alloc(csr_size);
 
 	if (!csr_byte_arr) {
 		LOG(LOG_ERROR,
@@ -153,10 +153,10 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	ret = 0;
 err:
 	if ((NULL != csr_byte_arr) && (0 != ret)) {
-		sdo_byte_array_free(csr_byte_arr);
+		fdo_byte_array_free(csr_byte_arr);
 		csr_byte_arr = NULL;
 	}
-	sdo_free(csr_tmp);
+	fdo_free(csr_tmp);
 
 	*csr = csr_byte_arr;
 	return ret;
