@@ -35,20 +35,6 @@ node('ccode'){
       '''
     }
 
-
-    stage('Build TPM'){
-      sh '''
-        export SAFESTRING_ROOT=$WORKSPACE/safestringlib
-        export TINYCBOR_ROOT=$WORKSPACE/tinycbor
-        cd $WORKSPACE/client-sdk
-        ./cDevice_Build_tpm.sh
-        tar -cvzf tpm_ecdsa_c_device_bin.tar.gz tpm_ecdsa_c_device_bin
-      '''
-      print "Archive the artifacts"
-      archiveArtifacts artifacts: 'client-sdk/tpm_*.tar.gz', fingerprint: true, allowEmptyArchive: false
-    }
-
-
     stage('Build ClientSDK'){
       sh '''
         export SAFESTRING_ROOT=$WORKSPACE/safestringlib
@@ -63,6 +49,19 @@ node('ccode'){
       print "Archive the artifacts"
       archiveArtifacts artifacts: 'client-sdk/x86_*.tar.gz', fingerprint: true, allowEmptyArchive: false
     }
+
+    stage('Build TPM'){
+      sh '''
+        export SAFESTRING_ROOT=$WORKSPACE/safestringlib
+        export TINYCBOR_ROOT=$WORKSPACE/tinycbor
+        cd $WORKSPACE/client-sdk
+        ./cDevice_Build_tpm.sh
+        tar -cvzf tpm_ecdsa_c_device_bin.tar.gz tpm_ecdsa_c_device_bin
+      '''
+      print "Archive the artifacts"
+      archiveArtifacts artifacts: 'client-sdk/tpm_*.tar.gz', fingerprint: true, allowEmptyArchive: false
+    }
+
   try
   {
     stage('Run Smoketest')
@@ -80,13 +79,15 @@ node('ccode'){
       // Copying the contents to the folder
       print "Copying PRI-FIDOIOT and CSDK-FIDO artifacts"
       copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
-      print "Extracting PRI-FIDOIOT artifacts"
+      copyArtifacts filter: 'x86_ecdsa256_c_sct_bin.tar.gz', fingerprintArtifacts: true, projectName: 'client-sdk-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/client-sdk-fidoiot/'
+      print "Extracting PRI-FIDOIOT and Client-SDK-FIDO artifacts"
       sh '''
         tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
+        tar -xvzf sdo-test/binaries/client-sdk-fidoiot/x86_ecdsa256_c_sct_bin.tar.gz
+        cd x86_ecdsa256_c_sct_bin;ls;cd ../
         cp -r demo/* sdo-test/binaries/pri-fidoiot/
-        cp -r client-sdk/build/* sdo-test/binaries/client-sdk-fidoiot/
-        cd sdo-test/binaries/client-sdk-fidoiot/;ls;../../../
-        cp -r client-sdk/data sdo-test/
+        cp -r x86_ecdsa256_c_sct_bin/linux-client sdo-test/binaries/client-sdk-fidoiot
+        cp -r x86_ecdsa256_c_sct_bin/data sdo-test/
       '''
 
       // Setting the TEST_DIR and executing smoke test
