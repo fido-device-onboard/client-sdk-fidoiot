@@ -83,9 +83,8 @@ node('ccode'){
       sh '''
         tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* sdo-test/binaries/pri-fidoiot/
-        ls;cd client-sdk;ls;cd ../../
-        cp client-sdk/x86_ecdsa256_c_sct_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
-        cp -r client-sdk/x86_ecdsa256_c_sct_bin/data sdo-test/
+        cp client-sdk/ecdsa256_c_sct_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
+        cp -r client-sdk/ecdsa256_c_sct_bin/data sdo-test/
       '''
 
       // Setting the TEST_DIR and executing smoke test
