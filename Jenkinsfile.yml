@@ -81,7 +81,8 @@ node('ccode'){
       copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
       print "Extracting PRI-FIDOIOT artifacts"
       sh '''
-        tar -xvf sdo-test/binaries/pri-fidoiot/demo.tar.gz -C sdo-test/binaries/pri-fidoiot
+        tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz -C sdo-test/binaries/pri-fidoiot/
+        cd sdo-test/binaries/pri-fidoiot/;ls;cd ../../../
         cp -r client-sdk/build/* sdo-test/binaries/client-sdk-fidoiot
         cp -r client-sdk/data sdo-test/
       '''
