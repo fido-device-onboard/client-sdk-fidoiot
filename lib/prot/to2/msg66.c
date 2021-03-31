@@ -89,7 +89,11 @@ int32_t msg66(fdo_prot_t *ps)
 		} else {
 			LOG(LOG_DEBUG,
 			    "TO2.DeviceServiceInfoReady: *****Resale triggered but not supported.*****\n");
-			// TO-DO: This case is no more, update the flags
+			// write CBOR NULL
+			if (!fdow_null(&ps->fdow)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to write ReplacementHMac\n");
+				goto err;
+			}
 			goto err;
 		}
 	}

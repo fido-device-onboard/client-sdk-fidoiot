@@ -591,6 +591,8 @@ bool fdo_compare_hashes(fdo_hash_t *hash1, fdo_hash_t *hash2);
 bool fdo_compare_byte_arrays(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
 bool fdo_compare_rv_lists(fdo_rendezvous_list_t *rv_list1,
 			  fdo_rendezvous_list_t *rv_list2);
+bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1,
+	fdo_rendezvous_t *entry2);
 
 void fdo_log_block(fdo_block_t *fdob);
 
