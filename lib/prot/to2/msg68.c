@@ -55,16 +55,21 @@ int32_t msg68(fdo_prot_t *ps)
 	// 1 for 'devmod' Device ServiceInfo
 	// however, it should contain total number of Device ServiceInfo rounds
 	ps->total_dsi_rounds = 1;
+	// since there is only 1 round-trip, isMoreServiceInfo is always false
+	ps->device_serviceinfo_ismore = false;
 
 	if (ps->service_info && ps->serv_req_info_num == 0) {
 
-		if (!fdow_boolean(&ps->fdow, true)) {
+		// for a single module and MIN_SERVICEINFO_SZ, only a single round-trip suffices
+		// TO-DO : To be updated when support for multiple Device ServiceInfo is added
+		if (!fdow_boolean(&ps->fdow, ps->device_serviceinfo_ismore)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 			return false;
 		}
 
+		fdo_service_info_t *serviceinfo_itr = ps->service_info;
 		// Construct and write platform DSI's into a single msg
-		if (!fdo_serviceinfo_write(&ps->fdow, ps->service_info)) {
+		if (!fdo_serviceinfo_write(&ps->fdow, serviceinfo_itr)) {
 			LOG(LOG_ERROR, "Error in combining platform DSI's!\n");
 			goto err;
 		}
@@ -75,7 +80,7 @@ int32_t msg68(fdo_prot_t *ps)
 	} else {
 
 		// Empty ServiceInfo. send [false, []]
-		if (!fdow_boolean(&ps->fdow, false)) {
+		if (!fdow_boolean(&ps->fdow, ps->device_serviceinfo_ismore)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 			return false;
 		}

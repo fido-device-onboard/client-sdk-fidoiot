@@ -300,6 +300,9 @@ fdo_dev_cred_t *app_get_credentials(void)
 static fdo_sdk_status app_initialize(void)
 {
 	int ret = FDO_ERROR;
+	int32_t fsize;
+	int max_serviceinfo_sz, prot_buff_sz = CBOR_BUFFER_LENGTH;
+	char *buffer = NULL;
 
 	if (!g_fdo_data)
 		return FDO_ERROR;
@@ -330,17 +333,50 @@ static fdo_sdk_status app_initialize(void)
 	}
 #endif
 
+	// read the file at path MAX_SERVICEINFO_SZ_FILE to get the maximum ServiceInfo size
+	// that will be supported for both Owner and Device ServiceInfo
+	// default to MIN_SERVICEINFO_SZ if the file is empty/non-existent
+	// file of size 1 is also considered an empty file containing new-line character
+	fsize = fdo_blob_size((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA);
+	if (fsize == 0 || fsize == 1) {
+		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
+		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
+	} else if (fsize > 0) {
+		buffer = fdo_alloc(fsize + 1);
+		if (buffer == NULL) {
+			LOG(LOG_ERROR, "malloc failed\n");
+		} else {
+			if (fdo_blob_read((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA,
+					(uint8_t *)buffer, fsize) == -1) {
+				LOG(LOG_ERROR, "Failed to read Manufacture DN\n");
+			}
+			max_serviceinfo_sz = atoi(buffer);
+			if (max_serviceinfo_sz <= MIN_SERVICEINFO_SZ) {
+				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
+			}
+			else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
+				max_serviceinfo_sz = MAX_SERVICEINFO_SZ;
+			}
+			prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
+			g_fdo_data->prot.maxDeviceServiceInfoSz = max_serviceinfo_sz;
+			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
+		}
+	}
+	if (buffer != NULL) {
+		fdo_free(buffer);
+	}
+
 	/* 
 	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's 
 	* protocol execution. Reuse the allocated memory by emptying the contents.
 	*/ 
 	if (!fdow_init(&g_fdo_data->prot.fdow) ||
-		!fdo_block_alloc(&g_fdo_data->prot.fdow.b)) {
+		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdow.b, prot_buff_sz)) {
 		LOG(LOG_ERROR, "fdow_init() failed!\n");
 		return FDO_ERROR;
 	}
 	if (!fdor_init(&g_fdo_data->prot.fdor) ||
-		!fdo_block_alloc(&g_fdo_data->prot.fdor.b)) {
+		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdor.b, prot_buff_sz)) {
 		LOG(LOG_ERROR, "fdor_init() failed!\n");
 		return FDO_ERROR;
 	}
@@ -412,8 +448,6 @@ static fdo_sdk_status app_initialize(void)
 	// support is added.
 	fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
 			    	1);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info,
-				    "devmod:modules", "sdo_sys");
 
 	if (fdo_null_ipaddress(&g_fdo_data->prot.i1) == false) {
 		return FDO_ERROR;

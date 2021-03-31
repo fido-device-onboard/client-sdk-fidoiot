@@ -19,7 +19,10 @@
 #define MOD_ACTIVE_TAG "active"
 #define MOD_ACTIVE_STATUS "1"
 
-#define MOD_MAX_DATA_LEN 1024
+// maximum length of exec command after combining all arguments of received exec array
+#define MOD_MAX_EXEC_LEN 1024
+// maximum length of the individual text arguments in the received exec array
+#define MOD_MAX_EXEC_ARG_LEN 100
 
 /**
  * The registered callback method for 'fdo_sys' Owner ServiceInfo module.

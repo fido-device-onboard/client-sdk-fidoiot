@@ -94,10 +94,12 @@ int32_t msg66(fdo_prot_t *ps)
 		}
 	}
 
-	if (!fdow_signed_int(&ps->fdow, MAXOWNERSERVICEINFOSZ)) {
+	if (!fdow_signed_int(&ps->fdow, ps->maxOwnerServiceInfoSz)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to write maxOwnerServiceInfoSz\n");
 		goto err;
 	}
+	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: Sent maxOwnerServiceInfoSz = %d\n",
+		ps->maxOwnerServiceInfoSz);
 
 	if (!fdow_end_array(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to end array\n");

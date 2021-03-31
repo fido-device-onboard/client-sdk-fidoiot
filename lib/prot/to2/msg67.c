@@ -53,7 +53,7 @@ int32_t msg67(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// maxDeviceServiceInfoSz = CBOR NULL implies that MAXDEVICESERVICEINFOSZ should be accepted
+	// maxDeviceServiceInfoSz = CBOR NULL implies that MIN_SERVICEINFO_SZ should be accepted
 	// maxDeviceServiceInfoSz = Unsigned Integer implies that the given value should be processed
 	if (fdor_is_value_signed_int(&ps->fdor)) {
 		if (!fdor_signed_int(&ps->fdor, &rec_maxDeviceServiceInfoSz)) {
@@ -74,11 +74,26 @@ int32_t msg67(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (rec_maxDeviceServiceInfoSz > 0 &&
-		rec_maxDeviceServiceInfoSz < MAXDEVICESERVICEINFOSZ) {
-		ps->maxDeviceServiceInfoSz = rec_maxDeviceServiceInfoSz;
+	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz = %d\n",
+		rec_maxDeviceServiceInfoSz);
+	if (rec_maxDeviceServiceInfoSz <= MIN_SERVICEINFO_SZ) {
+		// default to minimum and log it
+		ps->maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
+		LOG(LOG_DEBUG,
+			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is less than "
+			"the minimum size supported. Defaulting to %d\n",
+			ps->maxDeviceServiceInfoSz);
+	} else if (rec_maxDeviceServiceInfoSz >= ps->maxDeviceServiceInfoSz) {
+		// nothing to do, just log it
+		LOG(LOG_DEBUG,
+			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is more than "
+			"the maximum size supported. Defaulting to %d\n",
+			ps->maxDeviceServiceInfoSz);
 	} else {
-		ps->maxDeviceServiceInfoSz = MAXDEVICESERVICEINFOSZ;
+		// set the received value
+		ps->maxDeviceServiceInfoSz = rec_maxDeviceServiceInfoSz;
+		LOG(LOG_DEBUG,
+			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is valid\n");
 	}
 
 	if (!fdor_end_array(&ps->fdor)) {

@@ -4791,6 +4791,7 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 	int strcmp_result = 1;
 	bool retval = false;
 	bool module_name_found = false;
+	bool active = false;
 	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
 
 	if (!cb_return_val)
@@ -4811,33 +4812,21 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 			strcmp_s(module_message, FDO_MODULE_MSG_LEN,
 				FDO_MODULE_MESSAGE_ACTIVE, &strcmp_result);
 			if (strcmp_result == 0) {
-				// TO-DO : PRI sends bool wraped in bstr. Update when PRI is updated.
-				size_t active_val_length = 0;
-				if (!fdor_string_length(fdor, &active_val_length)) {
-					LOG(LOG_ERROR, "ServiceInfoKey: Failed to read module message active length %s\n",
+				if (!fdor_boolean(fdor, &active)) {
+					LOG(LOG_ERROR, "ServiceInfoKey: Failed to read module message active %s\n",
 				    	module_list->module.module_name);
 					return retval;					
 				}
-				// to hold 'true' or 'false' as char, hence +1
-				uint8_t active_val[active_val_length + 1];
-				if (!fdor_byte_string(fdor, &active_val[0], active_val_length)) {
-					LOG(LOG_ERROR, "ServiceInfoKey: Failed to read module message active for %s\n",
-				    	module_list->module.module_name);
-					return retval;
-				}
-				// null delimeter at last
-				active_val[active_val_length] = '\0';
-				strcmp_s((char *) &active_val, active_val_length,
-			 		"true", &strcmp_result);
-				if (strcmp_result == 0) {
+
+				if (active) {
 					// traverse the list to deactivate every module
 					while (traverse_list) {
 						traverse_list->module.active = false;
 						traverse_list = traverse_list->next;
 					}
 					// now activate the current module
-					module_list->module.active = true;
-					LOG(LOG_ERROR, "ServiceInfo: Activated module %s\n",
+					module_list->module.active = active;
+					LOG(LOG_DEBUG, "ServiceInfo: Activated module %s\n",
 						module_list->module.module_name);
 				}
 
@@ -5246,12 +5235,13 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
 		goto end;
 
 	if (!fdow_start_array(fdow, 1)) {
-		LOG(LOG_ERROR, "Plaform Device ServiceInfo: Failed to write start array\n");
+		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write start array\n");
 		goto end;
 	}
 
-	if (!fdow_start_array(fdow, si->numKV)) {
-		LOG(LOG_ERROR, "Plaform Device ServiceInfoKeyVal: Failed to write start array\n");
+	// +1 for writing "devmod:modules" at the end
+	if (!fdow_start_array(fdow, si->numKV + 1)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write start array\n");
 		goto end;
 	}
 	// fetch all platfrom Device ServiceInfo's one-by-one
@@ -5260,60 +5250,120 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
 
 		kv = *kvp;
 		if (!kv || !kv->key) {
-			LOG(LOG_ERROR, "Plaform Device ServiceInfo: Key/Value not found\n");
+			LOG(LOG_ERROR, "Platform Device ServiceInfo: Key/Value not found\n");
 			goto end;
 		}
 
 		if (!fdow_start_array(fdow, 2)) {
-			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write start array\n");
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write start array\n");
 			goto end;
 		}
 		// Write KV pair
 		if (!fdow_text_string(fdow, kv->key->bytes, kv->key->byte_sz)) {
-			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
 			goto end;
 		}
 		if (kv->str_val) {
 			if (!fdow_text_string(fdow, kv->str_val->bytes, kv->str_val->byte_sz)) {
-				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Text ServiceInfoVal\n");
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Text ServiceInfoVal\n");
 				goto end;
 			}
 		}
 		else if (kv->bin_val) {
 			if (!fdow_byte_string(fdow, kv->bin_val->bytes, kv->bin_val->byte_sz)) {
-				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Binary ServiceInfoVal\n");
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Binary ServiceInfoVal\n");
 				goto end;
 			}
 		}
 		else if (kv->bool_val) {
 			if (!fdow_boolean(fdow, *kv->bool_val)) {
-				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Bool ServiceInfoVal\n");
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Bool ServiceInfoVal\n");
 				goto end;
 			}
 		}
 		else if (kv->int_val) {
 			if (!fdow_signed_int(fdow, *kv->int_val)) {
-				LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write Int ServiceInfoVal\n");
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Int ServiceInfoVal\n");
 				goto end;
 			}
 		} else {
-			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: No ServiceInfoVal found\n");
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: No ServiceInfoVal found\n");
 			goto end;	
 		}
 
 		if (!fdow_end_array(fdow)) {
-			LOG(LOG_ERROR, "Plaform Device ServiceInfoKV: Failed to write end array\n");
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write end array\n");
 			goto end;
 		}
 		num++;
 	}
-	
+	// write the "devmod:modules" with value "[1,1,"fdo_sys"]"
+	// TO-DO: Update this when multi-module support is added.
+	if (!fdo_serviceinfo_modules_list_write(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write modules\n");
+		goto end;
+	}
+
 	if (!fdow_end_array(fdow)) {
-		LOG(LOG_ERROR, "Plaform Device ServiceInfoKeyVal: Failed to write end array\n");
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write end array\n");
 		goto end;
 	}
 	if (!fdow_end_array(fdow)) {
-		LOG(LOG_ERROR, "Plaform Device ServiceInfo: Failed to write end array\n");
+		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write end array\n");
+		goto end;
+	}
+	ret = true;
+end:
+	return ret;
+}
+
+/**
+ * Write the key 'devmod:modules' with value of form [int, int, text,....]
+ * into the given FDOW object. Currently, it only writes 1 ServiceInfo module name
+ * 'fdo_sys', i.e [1,1,"fdo_sys"].
+ * @param fdow - Pointer to the writer.
+ */
+bool fdo_serviceinfo_modules_list_write(fdow_t *fdow) {
+
+	bool ret = false;
+	char module_key[15] = "devmod:modules";
+	char module_value[8] = "fdo_sys";
+
+	if (!fdow_start_array(fdow, 2)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to start array\n");
+		goto end;
+	}
+	if (!fdow_text_string(fdow, module_key,
+		strnlen_s(module_key, FDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
+		goto end;
+	}
+	if (!fdow_start_array(fdow, 3)) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to start ServiceInfoVal (modules) array\n");
+		goto end;
+	}
+	if (!fdow_signed_int(fdow, 1)) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to write ServiceInfoVal (modules) nummodules\n");
+		goto end;
+	}
+	if (!fdow_signed_int(fdow, 1)) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to write ServiceInfoVal (modules) return count\n");
+		goto end;
+	}
+	if (!fdow_text_string(fdow, module_value, strnlen_s(module_value, FDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to write ServiceInfoVal (modules) module name\n");
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to end array\n");
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to end array\n");
 		goto end;
 	}
 	ret = true;
