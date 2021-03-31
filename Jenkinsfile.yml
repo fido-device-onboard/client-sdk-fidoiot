@@ -73,9 +73,6 @@ node('ccode'){
       sh '''
         mkdir -p sdo-test/binaries/pri-fidoiot
         mkdir -p sdo-test/binaries/client-sdk-fidoiot
-        docker ps
-        lsof -i :8040;cd ../..
-        ../..
       '''
 
       // Copying the contents to the folder
