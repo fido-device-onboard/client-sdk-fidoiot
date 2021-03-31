@@ -74,7 +74,7 @@ node('ccode'){
         mkdir -p sdo-test/binaries/pri-fidoiot
         mkdir -p sdo-test/binaries/client-sdk-fidoiot
         docker ps
-        netstat -ltnp | grep 8040;../..
+        lsof -i | grep 8040;../..
       '''
 
       // Copying the contents to the folder
@@ -106,9 +106,8 @@ node('ccode'){
       rm -f sdo-test/payload.bin
       rm -f sdo-test/result.txt
     '''
-    print "Removing and Pruning docker containers"
+    print "Pruning docker containers"
     sh'''
-      docker stop $(docker ps -a -q)
       docker system prune -a -f
     '''
   }
