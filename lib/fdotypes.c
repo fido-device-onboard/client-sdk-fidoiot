@@ -5490,18 +5490,154 @@ bool fdo_compare_rv_lists(fdo_rendezvous_list_t *rv_list1,
 			  fdo_rendezvous_list_t *rv_list2)
 {
 	bool retval = false;
+	int rv_directive_index = 0;
+	int rv_instr_index = 0;
+	fdo_rendezvous_list_t *rv_list1_traverse = rv_list1;
+	fdo_rendezvous_list_t *rv_list2_traverse = rv_list2;
 
-	if (!rv_list1 || !rv_list2) {
-		LOG(LOG_ERROR, "Null arguments!\n");
+	if (!rv_list1_traverse || !rv_list2_traverse) {
+		LOG(LOG_ERROR, "Received NULL arguments\n");
 		goto end;
 	}
 
-	// FIXME: rv_lists are very unlikely to change, being static scenario,
-	// therefore detailed check on rv_list is skipped.
+	if (rv_list1_traverse->num_rv_directives != rv_list2_traverse->num_rv_directives) {
+		LOG(LOG_ERROR, "Number of RendezvousDirective(s) do not match\n");
+		goto end;
+	}
+	while (rv_directive_index < rv_list1_traverse->num_rv_directives &&
+		rv_directive_index < rv_list2_traverse->num_rv_directives) {
+		fdo_rendezvous_directive_t *directive1 =
+			fdo_rendezvous_directive_get(rv_list1_traverse, rv_directive_index);
+		fdo_rendezvous_directive_t *directive2 =
+			fdo_rendezvous_directive_get(rv_list2_traverse, rv_directive_index);
+		if (!directive1 || !directive2) {
+			LOG(LOG_ERROR, "One of the RendezvousDirective(s) is empty\n");
+			goto end;
+		}
+		rv_instr_index = 0;
+		while (rv_instr_index < directive1->num_entries &&
+			rv_instr_index < directive2->num_entries) {
+			fdo_rendezvous_t *entry_ptr1 =
+				fdo_rendezvous_list_get(directive1, rv_instr_index);
+			fdo_rendezvous_t *entry_ptr2 =
+				fdo_rendezvous_list_get(directive2, rv_instr_index);
+			if ((!entry_ptr1 || !entry_ptr2)) {
+				LOG(LOG_ERROR, "One of the RendezvousInstr(s) is empty\n");
+				goto end;
+			}
+			if (!fdo_rendezvous_instr_compare(entry_ptr1, entry_ptr2)) {
+				LOG(LOG_ERROR, "One of the RendezvousInstr(s) is empty\n");
+				goto end;				
+			}
+			rv_instr_index++;
+		}
+		rv_directive_index++;
+	}
 	retval = true;
-
 end:
 	return retval;
+}
+
+/**
+ * Compare the given RendezvousInstr(s) represented by the two fdo_rendezvous_t, with one another.
+ * 
+ * @param entry1: pointer to input first fdo_rendezvous_t object
+ * @param entry2: pointer to input second fdo_rendezvous_t object
+ * @return
+ *        true if both RendexvousInstr(s) are same else false.
+ */
+bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1, fdo_rendezvous_t *entry2) {
+
+	int memcmp_diff = -1;
+
+	if (!entry1 || !entry2) {
+		LOG(LOG_ERROR, "Received NULL arguments\n");
+		return false;
+	}
+
+	if (entry1->dev_only != NULL && entry2->dev_only != NULL &&
+		*entry1->dev_only ==  *entry2->dev_only) {
+		return true;
+	}
+
+	if (entry1->owner_only != NULL && entry2->owner_only != NULL &&
+		*entry1->owner_only ==  *entry2->owner_only) {
+		return true;
+	}
+
+	if (entry1->ip != NULL && entry2->ip != NULL) {
+		memcmp_s(entry1->ip->addr, entry1->ip->length,
+			entry2->ip->addr,entry1->ip->length, &memcmp_diff);
+		if (memcmp_diff == 0) {
+			return true;
+		}
+	}
+
+	if (entry1->po != NULL && entry2->po != NULL &&
+		*entry1->po ==  *entry2->po) {
+		return true;
+	}
+
+	if (entry1->pow != NULL && entry2->pow != NULL &&
+		*entry1->pow ==  *entry2->pow) {
+		return true;
+	}
+
+	if (entry1->dn != NULL && entry2->dn != NULL &&
+		entry1->dn->byte_sz == entry2->dn->byte_sz &&
+		0 == strncmp(entry1->dn->bytes, entry2->dn->bytes, entry1->dn->byte_sz)) {
+		return true;
+	}
+
+	if (entry1->sch != NULL && entry2->sch != NULL &&
+		fdo_compare_hashes(entry1->sch, entry2->sch)) {
+		return true;
+	}
+
+	if (entry1->cch != NULL && entry2->cch != NULL &&
+		fdo_compare_hashes(entry1->cch, entry2->cch)) {
+		return true;
+	}
+
+	if (entry1->ui != NULL && entry2->ui != NULL &&
+		*entry1->ui ==  *entry2->ui) {
+		return true;
+	}
+
+	if (entry1->ss != NULL && entry2->ss != NULL &&
+		entry1->ss->byte_sz == entry2->ss->byte_sz &&
+		0 == strncmp(entry1->ss->bytes, entry2->ss->bytes, entry1->ss->byte_sz)) {
+		return true;
+	}
+
+	if (entry1->pw != NULL && entry2->pw != NULL &&
+		entry1->pw->byte_sz == entry2->pw->byte_sz &&
+		0 == strncmp(entry1->pw->bytes, entry2->pw->bytes, entry1->pw->byte_sz)) {
+		return true;
+	}
+
+	if (entry1->me != NULL && entry2->me != NULL &&
+		*entry1->me ==  *entry2->me) {
+		return true;
+	}
+
+	if (entry1->pr != NULL && entry2->pr != NULL &&
+		*entry1->pr ==  *entry2->pr) {
+		return true;
+	}
+
+	if (entry1->delaysec != NULL && entry2->delaysec != NULL &&
+		*entry1->delaysec ==  *entry2->delaysec) {
+		return true;
+	}
+
+	if (entry1->bypass != NULL && entry2->bypass != NULL &&
+		*entry1->bypass ==  *entry2->bypass) {
+		return true;
+	}
+
+	LOG(LOG_ERROR, "RendezvousInstr: Received invalid RVVariable to compare\n");
+	return false;
 }
 
 void fdo_log_block(fdo_block_t *fdob) {
