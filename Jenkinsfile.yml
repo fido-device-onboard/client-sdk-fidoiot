@@ -74,7 +74,6 @@ node('ccode'){
         mkdir -p sdo-test/binaries/pri-fidoiot
         mkdir -p sdo-test/binaries/client-sdk-fidoiot
         docker ps
-        docker stop $(docker ps -a -q)
         netstat -ltnp | grep 8040;../..
       '''
 
