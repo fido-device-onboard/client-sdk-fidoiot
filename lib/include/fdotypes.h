@@ -128,8 +128,8 @@ typedef struct _fdo_hash_t {
 bool fdo_siginfo_write(fdow_t *fdow);
 
 // 3.3.2, hashtype as defined in FDO spec
-#define FDO_CRYPTO_HASH_TYPE_SHA_256 8
-#define FDO_CRYPTO_HASH_TYPE_SHA_384 14
+#define FDO_CRYPTO_HASH_TYPE_SHA_256 -16
+#define FDO_CRYPTO_HASH_TYPE_SHA_384 -43
 #define FDO_CRYPTO_HMAC_TYPE_SHA_256 5
 #define FDO_CRYPTO_HMAC_TYPE_SHA_384 6
 

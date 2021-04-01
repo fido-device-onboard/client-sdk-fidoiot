@@ -18,7 +18,7 @@
  * be.
  *
  * [
- *   Nonce4,
+ *   NonceTO1Proof,
  *   eBSigInfo
  * ]
  */
@@ -40,9 +40,10 @@ int32_t msg31(fdo_prot_t *ps)
 		goto err;
 	}
 
-	ps->n4 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->n4 || !fdor_byte_string(&ps->fdor, ps->n4->bytes, ps->n4->byte_sz)) {
-		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to read Nonce4\n");
+	ps->nonce_to1proof = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->nonce_to1proof || !fdor_byte_string(&ps->fdor,
+		ps->nonce_to1proof->bytes, ps->nonce_to1proof->byte_sz)) {
+		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to read NonceTO1Proof\n");
 		goto err;
 	}
 

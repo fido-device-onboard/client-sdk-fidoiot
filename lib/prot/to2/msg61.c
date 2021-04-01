@@ -21,7 +21,7 @@
  * 
  * TO2.ProveOVHdr = CoseSignature, where
  * TO2ProveOVHdrUnprotectedHeaders = (
- *   CUPHNonce:       Nonce6, ;; nonce6 is used below in TO2.ProveDevice and TO2.Done
+ *   CUPHNonce:       NonceTO2ProveDv, ;; NonceTO2ProveDv is used below in TO2.ProveDevice and TO2.Done
  *   CUPHOwnerPubKey: PublicKey ;; Owner key, as hint
  * )
  * $COSEPayloads /= (
@@ -31,7 +31,7 @@
  *   OVHeader,     ;; Ownership Voucher header
  *   NumOVEntries, ;; number of ownership voucher entries
  *   HMac,         ;; Ownership Voucher "hmac" of hdr
- *   Nonce5,       ;; nonce from TO2.HelloDevice
+ *   NonceTO2ProveOV,       ;; nonce from TO2.HelloDevice
  *   eBSigInfo,    ;; Device attestation signature info
  *   xAKeyExchange ;; Key exchange first step
  * ]
@@ -75,20 +75,20 @@ int32_t msg61(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// get the Owner public key & Nonce6 from the COSE's Unprotected header and save it
+	// get the Owner public key & NonceTO2ProveDv from the COSE's Unprotected header and save it
 	ps->owner_public_key = fdo_public_key_clone(cose->cose_uph->cuphowner_public_key);
-	ps->n6 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->n6) {
-		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to alloc Nonce6\n");
+	ps->nonce_to2provedv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->nonce_to2provedv) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to alloc NonceTO2ProveDv\n");
 		goto err;
 	}
-	if (0 != memcpy_s(ps->n6->bytes, FDO_NONCE_BYTES,
+	if (0 != memcpy_s(ps->nonce_to2provedv->bytes, FDO_NONCE_BYTES,
 		&cose->cose_uph->cuphnonce, sizeof(cose->cose_uph->cuphnonce))) {
-		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy Nonce6\n");
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy NonceTO2ProveDv\n");
 		goto err;
 	}
 
-	/* The signature verification over TO2.ProveOPHdr.bo must verify */
+	/* The signature verification over TO2.ProveOVHdr.TO2ProveOVHdrPayload must verify */
 	if (!fdo_signature_verification(cose->cose_payload,
 					cose->cose_signature,
 					ps->owner_public_key)) {
@@ -189,31 +189,33 @@ int32_t msg61(fdo_prot_t *ps)
 	ret = -1; /* Reset to error */
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Valid Ownership Header received\n");
 
-	ps->n5r = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->n5r) {
+	ps->nonce_to2proveov_rcv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->nonce_to2proveov_rcv) {
 		goto err;
 	}
 	size_t nonce5_length = 0;
 	if (!fdor_string_length(&ps->fdor, &nonce5_length) || nonce5_length != FDO_NONCE_BYTES) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Invalid/Failed to read Nonce5 length\n");
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Invalid/Failed to read NonceTO2ProveOV length\n");
 		goto err;
 	}
-	if (!fdor_byte_string(&ps->fdor, ps->n5r->bytes, ps->n5r->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read Nonce5\n");
+	if (!fdor_byte_string(&ps->fdor, ps->nonce_to2proveov_rcv->bytes,
+		ps->nonce_to2proveov_rcv->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read NonceTO2ProveOV\n");
 		goto err;		
 	}
 
-	/* The nonces "n5" (msg40) and "n6" here must match */
-	if (!fdo_nonce_equal(ps->n5r, ps->n5)) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Received Nonce5 and Nonce5 do not match\n");
+	/* The nonces "NonceTO2ProveOV" from Type 60 and 61 must match */
+	if (!fdo_nonce_equal(ps->nonce_to2proveov_rcv, ps->nonce_to2proveov)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Received NonceTO2ProveOV and NonceTO2ProveOV"
+		"do not match\n");
 		goto err;
 	}
 
 	// clear them now since the Nonces have served their purpose
-	fdo_byte_array_free(ps->n5);
-	ps->n5 = NULL;
-	fdo_byte_array_free(ps->n5r);
-	ps->n5r = NULL;	
+	fdo_byte_array_free(ps->nonce_to2proveov);
+	ps->nonce_to2proveov = NULL;
+	fdo_byte_array_free(ps->nonce_to2proveov_rcv);
+	ps->nonce_to2proveov_rcv = NULL;
 
 	if (!fdo_siginfo_read(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read eBSigInfo\n");
@@ -274,8 +276,8 @@ int32_t msg61(fdo_prot_t *ps)
 	ps->ovoucher->ov_entries->pk = fdo_public_key_clone(ps->ovoucher->mfg_pub_key);
 
 	/*
-	 * If the TO2.ProveOPHdr.bo.sz > 0, get next Ownership Voucher (msg42),
-	 * else jump to msg44
+	 * If the TO2.ProveOVHdr.TO2ProveOVHdrPayload.NumOVEntries > 0,
+	 * get next Ownership Voucher in Type 62, else jump to Type 64
 	 */
 	if (ps->ovoucher->num_ov_entries > 0) {
 		ps->ov_entry_num = 0;
@@ -299,9 +301,9 @@ err:
 		fdo_cose_free(cose);
 		cose = NULL;
 	}
-	if (ps->n5r != NULL) {
-		fdo_byte_array_free(ps->n5r);
-		ps->n5r = NULL;
+	if (ps->nonce_to2proveov_rcv != NULL) {
+		fdo_byte_array_free(ps->nonce_to2proveov_rcv);
+		ps->nonce_to2proveov_rcv = NULL;
 	}
 	return ret;
 }

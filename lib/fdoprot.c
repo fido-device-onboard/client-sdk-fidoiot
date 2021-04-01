@@ -19,7 +19,7 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 
-/* This is a test mode to skip the CEC1702 signing and present a constant n4
+/* This is a test mode to skip the CEC1702 signing and present a constant nonce_to1proof
  * nonce and signature.  These were generated in the server.
  */
 //#define CONSTANT_N4
@@ -88,25 +88,25 @@ static void ps_free(fdo_prot_t *ps)
 		fdo_byte_array_free(ps->fdo_redirect.obsig);
 		ps->fdo_redirect.obsig = NULL;
 	}
-	if (ps->n5) {
-		fdo_byte_array_free(ps->n5);
-		ps->n5 = NULL;
+	if (ps->nonce_to2proveov) {
+		fdo_byte_array_free(ps->nonce_to2proveov);
+		ps->nonce_to2proveov = NULL;
 	}
-	if (ps->n5r) {
-		fdo_byte_array_free(ps->n5r);
-		ps->n5r = NULL;
+	if (ps->nonce_to2proveov_rcv) {
+		fdo_byte_array_free(ps->nonce_to2proveov_rcv);
+		ps->nonce_to2proveov_rcv = NULL;
 	}
 	if (ps->new_ov_hdr_hmac) {
 		fdo_hash_free(ps->new_ov_hdr_hmac);
 		ps->new_ov_hdr_hmac = NULL;
 	}
-	if (ps->n6) {
-		fdo_byte_array_free(ps->n6);
-		ps->n6 = NULL;
+	if (ps->nonce_to2provedv) {
+		fdo_byte_array_free(ps->nonce_to2provedv);
+		ps->nonce_to2provedv = NULL;
 	}
-	if (ps->n7r) {
-		fdo_byte_array_free(ps->n7r);
-		ps->n7r = NULL;
+	if (ps->nonce_to2setupdv_rcv) {
+		fdo_byte_array_free(ps->nonce_to2setupdv_rcv);
+		ps->nonce_to2setupdv_rcv = NULL;
 	}
 	if (ps->dsi_info) {
 		fdo_free(ps->dsi_info);

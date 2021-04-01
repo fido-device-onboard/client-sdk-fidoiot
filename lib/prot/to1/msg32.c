@@ -19,7 +19,7 @@
  *
  * TO1.ProveToRV = EAToken
  * EATPayloadBase //= (
-    EAT-NONCE: Nonce4
+    EAT-NONCE: NonceTO1Proof
  * )
  */
 int32_t msg32(fdo_prot_t *ps)
@@ -44,15 +44,15 @@ int32_t msg32(fdo_prot_t *ps)
 	eat->eat_ph->ph_sig_alg = FDO_CRYPTO_SIG_TYPE_ECSDAp384;
 #endif
 
-	if (!ps->n4) {
-		LOG(LOG_ERROR, "TO1.ProveToRV: Nonce4 not found\n");
+	if (!ps->nonce_to1proof) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: NonceTO1Proof not found\n");
 		goto err;
 	}
 
 	// copy nonce4 and GUID into the struct
 	if (0 != memcpy_s(&payloadbasemap.eatnonce, FDO_NONCE_BYTES,
-		ps->n4->bytes, ps->n4->byte_sz)) {
-		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy Nonce4\n");
+		ps->nonce_to1proof->bytes, ps->nonce_to1proof->byte_sz)) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy NonceTO1Proof\n");
 		goto err;
 	}
 	payloadbasemap.eatueid[0] = 1;
