@@ -1,4 +1,4 @@
-﻿# Introduction
+# Introduction
 sdo-client-sdk is a portable implementation of the Secure Device Onboarding (SDO) protocol. This component is portable across multiple environments, including to various microprocessors (MPUs) and microcontrollers (MCUs).
 
 At present, sdo-client-sdk is tested to following platforms showcasing SDO capabilities:
