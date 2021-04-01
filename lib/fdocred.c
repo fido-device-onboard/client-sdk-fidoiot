@@ -540,10 +540,12 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 	fdo_byte_array_t *enc_ovheader = NULL;
 	fdo_byte_array_t *enc_hmac = NULL;
 	uint8_t *hash_prev_entry = NULL;
+	// save the default buffer size, set it back at the end
+	size_t fdow_buff_default_sz = fdow->b.block_size;
 
 	// reset the block to write OVHeader
 	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = CBOR_BUFFER_LENGTH;
+	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto exit;
@@ -563,7 +565,7 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 
 	// reset the FDOW block to write HMac
 	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = CBOR_BUFFER_LENGTH;
+	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto exit;
@@ -617,7 +619,7 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 
 	// reset the given FDOW for the next encoding
 	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = CBOR_BUFFER_LENGTH;
+	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto exit;

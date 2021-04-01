@@ -95,6 +95,9 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_DI_SET_CREDENTIALS: /* type 11 */
 		if (prot_ctx->host_dns) {
+			if (prot_ctx->resolved_ip) {
+				fdo_free(prot_ctx->resolved_ip);
+			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
 					prot_ctx->host_port, NULL,
@@ -116,6 +119,9 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO1_RCV_HELLO_FDOACK: /* type 31 */
 		if (prot_ctx->host_dns) {
+			if (prot_ctx->resolved_ip) {
+				fdo_free(prot_ctx->resolved_ip);
+			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
 					prot_ctx->host_port,
@@ -134,10 +140,13 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		    prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
 		    (prot_ctx->tls ? &prot_ctx->ssl : NULL));
 		break;
-	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 40 */
+	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_RCV_PROVE_OVHDR: /* type 41 */
+	case FDO_STATE_TO2_RCV_PROVE_OVHDR: /* type 61 */
 		if (prot_ctx->host_dns) {
+			if (prot_ctx->resolved_ip) {
+				fdo_free(prot_ctx->resolved_ip);
+			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
 					prot_ctx->host_port,
@@ -149,25 +158,25 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY: /* type 42 */
+	case FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY: /* type 62 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_T02_RCV_OP_NEXT_ENTRY: /* type 43 */
+	case FDO_STATE_T02_RCV_OP_NEXT_ENTRY: /* type 63 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_SND_PROVE_DEVICE: /* type 44 */
+	case FDO_STATE_TO2_SND_PROVE_DEVICE: /* type 64 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO: /* type 45 */
+	case FDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO: /* type 65 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO: /* type 46 */
+	case FDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO: /* type 66 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_RCV_SETUP_DEVICE: /* type 47 */
+	case FDO_STATE_TO2_RCV_SETUP_DEVICE: /* type 67 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO: /* type 48 */
+	case FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO: /* type 68 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_T02_RCV_NEXT_OWNER_SERVICE_INFO: /* type 49 */
+	case FDO_STATE_T02_RCV_NEXT_OWNER_SERVICE_INFO: /* type 69 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_SND_DONE: /* type 50 */
+	case FDO_STATE_TO2_SND_DONE: /* type 70 */
 		ATTRIBUTE_FALLTHROUGH;
-	case FDO_STATE_TO2_RCV_DONE_2: /* type 51 */
+	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
 		ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
 				       &prot_ctx->sock_hdl, (prot_ctx->tls ? &prot_ctx->ssl : NULL));
 		break;
@@ -297,7 +306,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		// clear the block contents in preparation for the next FDOW write operation
 		fdo_block_reset(&fdow->b);
-		fdow->b.block_size = CBOR_BUFFER_LENGTH;
+		fdow->b.block_size = prot_ctx->protdata->prot_buff_sz;
 
 		/* ========================================================== */
 		/*  Receive response */
@@ -319,7 +328,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		// set the received msg length in the block
 		fdor->b.block_size = msglen;
 
-		if (msglen > 0) {
+		if (msglen > 0 && msglen <= prot_ctx->protdata->prot_buff_sz) {
 			retries = CONNECTION_RETRY;
 			n = 0;
 			do {
@@ -359,6 +368,12 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		if (fdo_con_disconnect(prot_ctx->sock_hdl, prot_ctx->ssl)) {
 			LOG(LOG_ERROR, "Error during socket close()\n");
+			ret = -1;
+			break;
+		}
+
+		if (msglen > prot_ctx->protdata->prot_buff_sz) {
+			LOG(LOG_ERROR, "Response body size is more than allocated memory\n");
 			ret = -1;
 			break;
 		}
