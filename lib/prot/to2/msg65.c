@@ -22,7 +22,7 @@
  * TO2SetupDevicePayload = [
  *   RendezvousInfo, ;; RendezvousInfo replacement
  *   Guid,           ;; GUID replacement
- *   Nonce7,         ;; proves freshness of signature
+ *   NonceTO2SetupDv,         ;; proves freshness of signature
  *   Owner2Key       ;; Replacement for Owner key
  * ]
  * $COSEPayloads /= (
@@ -131,23 +131,23 @@ int32_t msg65(fdo_prot_t *ps)
 	size_t nonce7_length = 0;
 	if (!fdor_string_length(&ps->fdor, &nonce7_length) ||
 		nonce7_length != FDO_NONCE_BYTES) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read Nonce7 length\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read NonceTO2SetupDv length\n");
 		goto err;
 	}
 
-	ps->n7r = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->n7r) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc Nonce7\n");
+	ps->nonce_to2setupdv_rcv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->nonce_to2setupdv_rcv) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc NonceTO2SetupDv\n");
 		goto err;
 	}
-	if (!fdor_byte_string(&ps->fdor, ps->n7r->bytes, FDO_NONCE_BYTES)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read rNonce7\n");
+	if (!fdor_byte_string(&ps->fdor, ps->nonce_to2setupdv_rcv->bytes, FDO_NONCE_BYTES)) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read NonceTO2SetupDv\n");
 		goto err;
 	}
 
-	if (!fdo_nonce_equal(ps->n7r, ps->n7)) {
+	if (!fdo_nonce_equal(ps->nonce_to2setupdv_rcv, ps->nonce_to2setupdv)) {
 		LOG(LOG_ERROR,
-			"TO2.SetupDevice: Received Nonce7 does not match with existing Nonce7\n");
+			"TO2.SetupDevice: Received NonceTO2SetupDv does not match with existing NonceTO2SetupDv\n");
 		goto err;
 	}
 

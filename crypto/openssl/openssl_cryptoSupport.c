@@ -244,7 +244,7 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 			 size_t buffer_length, uint8_t *output,
 			 size_t output_length)
 {
-	uint8_t hash_type = FDO_CRYPTO_HASH_TYPE_USED;
+	int hash_type = FDO_CRYPTO_HASH_TYPE_USED;
 
 	(void)_hash_type; /* Unused parameter */
 

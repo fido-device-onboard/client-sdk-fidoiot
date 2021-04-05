@@ -19,7 +19,7 @@
  *
  * TO2.HelloDevice = [
  *   Guid,
- *   Nonce5,
+ *   NonceTO2ProveOV,
  *   kexSuiteName,
  *   cipherSuiteName,
  *   eASigInfo
@@ -48,14 +48,14 @@ int32_t msg60(fdo_prot_t *ps)
 	}
 
 	/* Fill in the Nonce */
-	ps->n5 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->n5) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to allocate memory for Nonce5\n");
+	ps->nonce_to2proveov = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->nonce_to2proveov) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to allocate memory for NonceTO2ProveOV\n");
 		goto err;
 	}
-	fdo_nonce_init_rand(ps->n5);
-	if (!fdow_byte_string(&ps->fdow, ps->n5->bytes, ps->n5->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write Nonce5\n");
+	fdo_nonce_init_rand(ps->nonce_to2proveov);
+	if (!fdow_byte_string(&ps->fdow, ps->nonce_to2proveov->bytes, ps->nonce_to2proveov->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write NonceTO2ProveOV\n");
 		return false;
 	}
 

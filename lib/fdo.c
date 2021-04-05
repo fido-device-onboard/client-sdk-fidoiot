@@ -163,9 +163,9 @@ static void fdo_protTO1Exit(app_data_t *app_data)
 {
 	fdo_prot_t *ps = &app_data->prot;
 
-	if (ps->n4) {
-		fdo_byte_array_free(ps->n4);
-		ps->n4 = NULL;
+	if (ps->nonce_to1proof) {
+		fdo_byte_array_free(ps->nonce_to1proof);
+		ps->nonce_to1proof = NULL;
 	}
 	fdo_block_reset(&ps->fdor.b);
 	ps->fdor.have_block = false;
@@ -234,17 +234,17 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_free(ps->dns1);
 		ps->dns1 = NULL;
 	}
-	if (ps->n6 != NULL) {
-		fdo_byte_array_free(ps->n6);
-		ps->n7 = NULL;
+	if (ps->nonce_to2provedv != NULL) {
+		fdo_byte_array_free(ps->nonce_to2provedv);
+		ps->nonce_to2setupdv = NULL;
 	}
-	if (ps->n7 != NULL) {
-		fdo_byte_array_free(ps->n7);
-		ps->n7 = NULL;
+	if (ps->nonce_to2setupdv != NULL) {
+		fdo_byte_array_free(ps->nonce_to2setupdv);
+		ps->nonce_to2setupdv = NULL;
 	}
-	if (ps->n7r != NULL) {
-		fdo_byte_array_free(ps->n7r);
-		ps->n7r = NULL;
+	if (ps->nonce_to2setupdv_rcv != NULL) {
+		fdo_byte_array_free(ps->nonce_to2setupdv_rcv);
+		ps->nonce_to2setupdv_rcv = NULL;
 	}
 
 	/* clear Sv_info PSI/DSI/OSI related data */

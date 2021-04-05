@@ -214,12 +214,12 @@ typedef struct fdo_prot_s {
 	int owner_supplied_service_info_num;
 	int owner_supplied_service_info_rcv;
 	fdo_owner_supplied_credentials_t *osc;
-	fdo_byte_array_t *n4;
-	fdo_byte_array_t *n5;
-	fdo_byte_array_t *n7;
-	fdo_byte_array_t *n5r;
-	fdo_byte_array_t *n6;
-	fdo_byte_array_t *n7r;
+	fdo_byte_array_t *nonce_to1proof;
+	fdo_byte_array_t *nonce_to2proveov;
+	fdo_byte_array_t *nonce_to2proveov_rcv;
+	fdo_byte_array_t *nonce_to2provedv;
+	fdo_byte_array_t *nonce_to2setupdv;
+	fdo_byte_array_t *nonce_to2setupdv_rcv;
 	fdo_redirect_t fdo_redirect;
 	uint32_t round_trip_count;
 	//	void *key_ex_data;

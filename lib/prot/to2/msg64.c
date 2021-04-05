@@ -18,13 +18,13 @@
  * The device sends out data proving that it is authentic device.
  * TO2.ProveDevice = EAToken
  * $$EATPayloadBase //= (
- *   EAT-NONCE: Nonce6
+ *   EAT-NONCE: NonceTO2ProveDv
  * )
  * TO2ProveDevicePayload = [
  *   xBKeyExchange
  * ]
  * $EATUnprotectedHeaders /= (
- *   EUPHNonce: Nonce7 ;; Nonce7 is used in TO2.SetupDevice and TO2.Done2
+ *   EUPHNonce: NonceTO2SetupDv ;; NonceTO2SetupDv is used in TO2.SetupDevice and TO2.Done2
  * )
  * $EATPayloads /= (
  *   TO2ProveDevicePayload
@@ -53,15 +53,15 @@ int32_t msg64(fdo_prot_t *ps)
 	eat->eat_ph->ph_sig_alg = FDO_CRYPTO_SIG_TYPE_ECSDAp384;
 #endif
 
-	if (!ps->n6) {
-		LOG(LOG_ERROR, "TO2.ProveDevice: Nonce6 not found\n");
+	if (!ps->nonce_to2provedv) {
+		LOG(LOG_ERROR, "TO2.ProveDevice: NonceTO2ProveDv not found\n");
 		goto err;
 	}
 
-	// copy Nonce6 and GUID into the struct
+	// copy NonceTO2ProveDv and GUID into the struct
 	if (0 != memcpy_s(&payloadbasemap.eatnonce, FDO_NONCE_BYTES,
-		ps->n6->bytes, ps->n6->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy Nonce6\n");
+		ps->nonce_to2provedv->bytes, ps->nonce_to2provedv->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy NonceTO2ProveDv\n");
 		goto err;
 	}
 	payloadbasemap.eatueid[0] = 1;
@@ -130,17 +130,18 @@ int32_t msg64(fdo_prot_t *ps)
 	}
 
 	// Set the EAT.UnprotectedHeader contents
-	ps->n7 = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->n7) {
+	ps->nonce_to2setupdv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
+	if (!ps->nonce_to2setupdv) {
 		LOG(LOG_ERROR, "Alloc failed \n");
 		goto err;
 	}
-	fdo_nonce_init_rand(ps->n7);
+	fdo_nonce_init_rand(ps->nonce_to2setupdv);
 
-	// copy Nonce7 into the struct
-	eat->eat_uph->euphnonce = fdo_byte_array_alloc_with_byte_array(ps->n7->bytes, ps->n7->byte_sz);
+	// copy NonceTO2SetupDv into the struct
+	eat->eat_uph->euphnonce =fdo_byte_array_alloc_with_byte_array(
+		ps->nonce_to2setupdv->bytes, ps->nonce_to2setupdv->byte_sz);
 	if (!eat->eat_uph->euphnonce) {
-		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy Nonce7 into EUPHNonce\n");
+		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy NonceTO2SetupDv into EUPHNonce\n");
 		goto err;
 	}
 
