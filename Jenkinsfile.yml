@@ -76,9 +76,9 @@ node('ccode'){
       '''
 
       // Copying the contents to the folder
-      print "Copying PRI-FIDOIOT and CSDK-FIDO artifacts"
+      print "Copying PRI and Client-SDK artifacts"
       copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
-      print "Extracting PRI-FIDOIOT and Client-SDK-FIDO artifacts"
+      print "Extracting PRI and Client-SDK artifacts"
       sh '''
         tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* sdo-test/binaries/pri-fidoiot/
