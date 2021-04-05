@@ -94,6 +94,7 @@ node('ccode'){
       '''
       // Setting the TEST_DIR and executing smoke test
       sh'''
+        cd sdo-test/
         export TEST_DIR=`pwd`
         mvn clean test -Dgroups=fdo_clientsdk_smoketest
       '''
