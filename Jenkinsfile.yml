@@ -82,8 +82,8 @@ node('ccode'){
       sh '''
         tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* sdo-test/binaries/pri-fidoiot/
-        cp client-sdk/ecdsa384_c_sct_device_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
-        cp -r client-sdk/ecdsa384_c_sct_device_bin/data sdo-test/
+        cp client-sdk/ecdsa256_c_sct_device_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
+        cp -r client-sdk/ecdsa256_c_sct_device_bin/data sdo-test/
       '''
 
       // Updating the TO0 scheduling time interval
@@ -92,6 +92,7 @@ node('ccode'){
         sed -i 's/300/60/g' owner.env
         cd ../../
       '''
+      
       // Setting the TEST_DIR and executing smoke test
       sh'''
         cd sdo-test/
