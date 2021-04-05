@@ -90,7 +90,7 @@ node('ccode'){
       sh '''
         cd sdo-test/binaries/pri-fidoiot/owner
         sed -i 's/300/60/g' owner.env
-        cd ../../../
+        cd ../../
       '''
       // Setting the TEST_DIR and executing smoke test
       sh'''
