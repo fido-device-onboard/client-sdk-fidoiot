@@ -86,9 +86,14 @@ node('ccode'){
         cp -r client-sdk/ecdsa256_c_sct_device_bin/data sdo-test/
       '''
 
+      // Updating the TO0 scheduling time interval
+      sh '''
+        cd sdo-test/binaries/pri-fidoiot/owner
+        sed -i 's/300/60/g' owner.env
+        cd ../../../
+      '''
       // Setting the TEST_DIR and executing smoke test
       sh'''
-        cd sdo-test
         export TEST_DIR=`pwd`
         mvn clean test -Dgroups=fdo_clientsdk_smoketest
       '''
