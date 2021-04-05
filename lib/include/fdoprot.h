@@ -216,9 +216,9 @@ typedef struct fdo_prot_s {
 	fdo_owner_supplied_credentials_t *osc;
 	fdo_byte_array_t *nonce_to1proof;
 	fdo_byte_array_t *nonce_to2proveov;
-	fdo_byte_array_t *nonce_to2setupdv;
 	fdo_byte_array_t *nonce_to2proveov_rcv;
 	fdo_byte_array_t *nonce_to2provedv;
+	fdo_byte_array_t *nonce_to2setupdv;
 	fdo_byte_array_t *nonce_to2setupdv_rcv;
 	fdo_redirect_t fdo_redirect;
 	uint32_t round_trip_count;

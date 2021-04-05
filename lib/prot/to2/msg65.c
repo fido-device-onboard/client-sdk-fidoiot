@@ -141,7 +141,7 @@ int32_t msg65(fdo_prot_t *ps)
 		goto err;
 	}
 	if (!fdor_byte_string(&ps->fdor, ps->nonce_to2setupdv_rcv->bytes, FDO_NONCE_BYTES)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read rNonceTO2SetupDv\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read NonceTO2SetupDv\n");
 		goto err;
 	}
 

@@ -206,8 +206,8 @@ int32_t msg61(fdo_prot_t *ps)
 
 	/* The nonces "NonceTO2ProveOV" from Type 60 and 61 must match */
 	if (!fdo_nonce_equal(ps->nonce_to2proveov_rcv, ps->nonce_to2proveov)) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Received NonceTO2ProveOV and NonceTO2ProveOV"
-		"do not match\n");
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Received NonceTO2ProveOV does not match with"
+		"existing NonceTO2ProveOV \n");
 		goto err;
 	}
 
