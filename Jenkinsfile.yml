@@ -82,8 +82,8 @@ node('ccode'){
       sh '''
         tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* sdo-test/binaries/pri-fidoiot/
-        cp client-sdk/ecdsa256_c_sct_device_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
-        cp -r client-sdk/ecdsa256_c_sct_device_bin/data sdo-test/
+        cp client-sdk/ecdsa384_c_sct_device_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
+        cp -r client-sdk/ecdsa384_c_sct_device_bin/data sdo-test/
       '''
 
       // Updating the TO0 scheduling time interval
@@ -94,7 +94,6 @@ node('ccode'){
       '''
       // Setting the TEST_DIR and executing smoke test
       sh'''
-        cd sdo-test/;ls;cd data;ls;cd ../
         export TEST_DIR=`pwd`
         mvn clean test -Dgroups=fdo_clientsdk_smoketest
       '''
@@ -109,6 +108,7 @@ node('ccode'){
       rm -f sdo-test/linux64.sh
       rm -f sdo-test/payload.bin
       rm -f sdo-test/result.txt
+      rm -rf sdo-test/data
     '''
     print "Pruning docker containers"
     sh'''
