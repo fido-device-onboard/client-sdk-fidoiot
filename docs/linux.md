@@ -1,7 +1,7 @@
 # Linux* OS
-The development and execution OS used was `Ubuntu* OS version 20.04` on x86.. Follow these steps to compile and execute Secure Device Onboard (SDO).
+The development and execution OS used was `Ubuntu* OS version 20.04` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The SDO build and execution depend on OpenSSL* toolkit version 1.1.1g. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1g. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries (for Ubuntu OS version 20.04):
 
@@ -15,7 +15,7 @@ OpenSSL* toolkit version 1.1.1g
 GCC version > 7.5
 
 ## 3. Compiling Intel safestringlib
-SDO client-sdk uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
+FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
  $ mkdir obj
@@ -23,16 +23,24 @@ From the root of the safestringlib, do the following:
  ```
 After this step, `libsafestring.a` library will be created.
 
-## 4. Environment Variables
+## 4. Compiling Intel TinyCBOR
+SDO Client SDK uses tinycbor for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
+From the root of the TinyCBOR (named `tinycbor`), do the following:
+ ```shell
+ $ make
+ ```
+
+## 5. Environment Variables
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
-Provide safestringlib paths:
+Provide safestringlib and tinycbor paths:
 ```shell
 $ export SAFESTRING_ROOT=path/to/safestringlib
+$ export TINYCBOR_ROOT=path/to/tinycbor
 ```
 
-## 5. Compiling SDO
+## 6. Compiling FDO
 
-The  SDO client-sdk build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. SDO assumes that all the requirements are set up according to [ SDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the SDO client-sdk.
+The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. FDO assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md).
 
@@ -43,41 +51,34 @@ $ make
 ```
 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), public-key encoding (PK_ENC) type, and SSL support (TLS).
-Refer to the section. [SDO Build configurations](build_conf.md)
+Refer to the section. [FDO Build configurations](build_conf.md)
 
-<a name="run_linux_sdo"></a>
+<a name="run_linux_fdo"></a>
 
-## 6. Running the Application <!-- Ensuring generic updates are captured where applicable -->
-The SDO Linux device is compatible with SDO Supply Chain Toolkit (SCT), PRI rendezvous, and owner servers(OC).
+## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
+The FDO Client SDK Linux device is compatible with FDO PRI components namely: Manufacturer, Rendezvous, and Owner.
 
-To test the SDO Linux device against the SDO Java PRI implementation, obtain the SCT binaries along with PRI rendezvous and PRI owner binaries from their respective directories.
+To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
+[FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
+[FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
-After a successful compilation, the SDO Linux device executable can be found at `<path-to-sdo-client-sdk>/build/linux-client`.
+After a successful compilation, the FDO Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
 > ***Note:*** Built binary can be either `debug` or `release` based on the compilation step.
 
-- Before executing `linux-client`, prepare for Device Initialization (DI) using the
-  SCT. Refer to [ DI SCT Setup](DI_setup.md). After SCT is set up,
-  execute `linux-client`. The device is now initialized with the credentials and is ready for ownership transfer.
-To run the device against the SCT for the DI protocol, do the following:
+- Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer.
+  Refer to [ Device Initialization Setup ](DI_setup.md).
+  Then, execute `linux-client`. The device is now initialized with the credentials and is ready for ownership transfer.
+
   ```shell
   $ ./build/linux-client
   ```
 
-- To enable the device for ownership transfer, configure the rendezvous and owner containers.
-  Refer to [ Ownership Transfer Setup ](ownership_transfer.md). After these
-  are set up, execute `linux-client` again.
+- To enable the device for Transfer Ownership protocol (TO1 and TO2), configure the FDO PRI Rendezvous and Owner.
+  Refer to [ Ownership Transfer Setup ](ownership_transfer.md).
+  After these are set up, execute `linux-client` again.
   
   ```shell
   $ ./build/linux-client
-  ```
-
-## 7. Compiling and Running of Unit Tests for SDO
-  Unit-test framework is located inside tests folder.
-
-  Use following command to compile and running.
-
-  ```shell
-  $ make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa .; make
   ```
 
 

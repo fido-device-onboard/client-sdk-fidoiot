@@ -1,15 +1,16 @@
-# Device Initialization(DI) SCT Setup
-The process where the device obtains Secure Device Onboard (SDO) credentials from the supply chain toolkit(SCT) is known as Device Initialization (DI).
+# Device Initialization(DI) FDO PRI Manufacturer Setup
+The process where the device obtains FIDO Device Onboard (FDO) credentials from the FDO Manufacturer is known as Device Initialization (DI).
 
-Open a terminal and start the SCT. After this step, an ownership voucher
+Open a terminal and start the FDO PRI Manufacturer. After this step, an ownership voucher
 is generated so that the new owner can initiate the TO0 protocol.
 
-Detailed steps and configuration needed to start SDO supply chain toolkit are in the `<release-package-dir>/SupplyChainTools/README.md` document.
+Detailed steps and configuration needed to start FDO PRI Manufacturer are in
+[README](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md) document.
 
 # Device Initialization Device Setup
 
-During this time, the device does not have SDO credentials and therefore will obtain the SDO credentials from the SCT.
+During this time, the device does not have FDO Device Credentials and therefore will obtain the same from the FDO PRI IoT Manufacturer.
 
-> **Note:** If you are not running the default SDO Client-SDK binaries from the release package and have your own EC keys and certs, do the following:
+> **Note:** If you are not running the default FDO Client SDK binaries and have your own EC keys and certs, do the following:
 >
->   - If the device attestation method is Elliptic Curve Digital Signature Algorithm (ECDSA), place the ECDSA private key in the `data/` directory and name it `ecdsaXXXprivkey.dat`(`ecdsa256privkey.dat` for curve type `P-256` and `ecdsa384privkey.dat` for curve type `P-384`). For the Privacy-Enhanced Mail (PEM)-formatted private key, use `ecdsaXXXprivkey.pem` in a similar way (`ecdsa256privkey.pem` or `ecdsa384privkey.pem`).
+>   - Place the ECDSA private key in the `data/` directory and name it `ecdsaXXXprivkey.dat`(`ecdsa256privkey.dat` for curve type `P-256` and `ecdsa384privkey.dat` for curve type `P-384`). For the Privacy-Enhanced Mail (PEM)-formatted private key, use `ecdsaXXXprivkey.pem` in a similar way (`ecdsa256privkey.pem` or `ecdsa384privkey.pem`).

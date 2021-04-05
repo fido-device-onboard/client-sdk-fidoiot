@@ -12,12 +12,12 @@ There following are some of the options to choose when building the device:
 ```shell
   BUILD = debug #build mode
   TARGET_OS = linux #target OS. (`linux` denotes the Linux* OS.)
-  KEX = dh #key-exchange method
+  KEX = ecdh #key-exchange method
   AES_MODE = ctr #AES encryption type
   DA = ecdsa256 #device attestation method
-  PK_ENC = rsa #public key encoding (for owner attestation)
+  PK_ENC = ecdsa #public key encoding (for owner attestation)
   TLS = openssl #underlying cryptography library to use. (`openssl` denotes the OpenSSL* toolkit.)
-  MODULE = false #whether to use Secure Device Onboard (SDO) service-info functionality
+  MODULE = false #whether to use FIDO Device Onboard (FDO) service-info functionality
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
 
@@ -49,8 +49,8 @@ BOARD=NUCLEO_F767ZI   # (When building for STM32F767ZI MCU)
 BOARD=NUCLEO_F429ZI   # (When building for STM32F429ZI MCU)
 
 List of key exchange options:
-KEX=dh                # use Diffie-Hellman key exchange mechanism during TO2
-KEX=asym              # use Asymmetric key exchange mechanism during TO2
+KEX=dh                # use Diffie-Hellman key exchange mechanism during TO2 (Not supported)
+KEX=asym              # use Asymmetric key exchange mechanism during TO2 (Not supported)
 KEX=ecdh              # use Elliptic-curve Diffie–Hellman key exchange mechanism during TO2 (default)
 KEX=ecdh384           # use Elliptic-curve Diffie–Hellman 384 bit key exchange mechanism during TO2
 
@@ -77,7 +77,7 @@ HTTPPROXY=true        # http-proxy enabled (default)
 HTTPPROXY=false       # http-proxy disabled
 PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 
-Option to enable SDO service-info functionality:
+Option to enable FDO service-info functionality:
 MODULES=false         # Service info modules are not present (default)
 MODULES=true          # Service info modules are present
 
@@ -103,4 +103,4 @@ b. TARGET_OS=mbedos supports
 (`mbedos` denotes the Arm* Mbed* OS.
 `mbedTLS` denotes the Arm Mbed TLS.)
 
-
+> ***Note:*** Currently, only `TARGET_OS=linux` and its configurations is supported. The source will be updated to add support for `TARGET_OS=mbedos` in a future release.

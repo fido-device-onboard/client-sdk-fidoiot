@@ -1,7 +1,7 @@
 # For Secure Element based implementation
 
 The Secure Element(SE) is a trusted platform module which helps in secure
-authentication using ECDSA. This Secure Element in SDO is used to ensure that
+authentication using ECDSA. This Secure Element in FDO is used to ensure that
 the Elliptical Curve keys and AES keys are kept in a secure non volatile
 memory. This ensures secure access for any ECDSA or AES GCM related operations.
 Any operations that involve the ECDSA or AES key will have to be passed as a
@@ -10,9 +10,11 @@ inside the SE and gives us the sign or verify results.
 
 The Secure Element provides us with various other cryptographic operations.
 Among which Random number generator is a key crypto operation. The Secure element provides us
-with a truly random 32 byte number that is used as an iv or seed for many crypto operations inside SDO.
+with a truly random 32 byte number that is used as an iv or seed for many crypto operations inside FDO.
 
-SDO implementation for ARM devices uses Microchip AT608A as the secure element.
+FDO implementation for ARM devices uses Microchip AT608A as the secure element.
+
+***Note :*** The configurations mentioned in the document are not supported yet. This document will be updated in a future release when the source code implementation is updated to support the same.
 
 ## Setting up the SE for execution
 1. Pin Connections have to set as shown below.
@@ -66,7 +68,7 @@ SDO implementation for ARM devices uses Microchip AT608A as the secure element.
    $ export CRYPTOAUTHLIB_ROOT=~/cryptoauthlib
    ```
 
-7. Do a [regular build](./linux.md) of SDO with an additional parameter CRYPTO_HW=true.
+7. Do a [regular build](./linux.md) of FDO with an additional parameter CRYPTO_HW=true.
    Note: only ECDSA is supported from SE.
    ```bash
    $ cd <client-sdk folder>

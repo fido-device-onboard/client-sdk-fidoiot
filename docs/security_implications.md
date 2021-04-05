@@ -5,10 +5,12 @@ addressed before using the reference solution as is, because of the nature of th
 ## Linux* OS (OpenSSL* toolkit as the cryptography library)
 1. The random number needs to be seeded with an entropy source.
    Affected file(s):
-   - `hal/tls/openssl_cryptoSupport.c`
+   - `crypto/openssl/openssl_cryptoSupport.c`
+   - `crypto/mbedtls/mbedtls_cryptoSupport.c` (Not supported)
+   - `crypto/se/se_cryptoSupport.c` (Not supported)
 
 2. In the reference implementation, the device key and the keys that encrypt
-   or protect the integrity of the Secure Device Onboard (SDO) data are stored in clear text on the file system.
+   or protect the integrity of the FIDO Device Onboard (FDO) data are stored in clear text on the file system.
    In production systems, these keys must be stored in a secure storage such
    as a Secure Engine that can be a third-party application, library, or hardware.
    - `PLATFORM_HMAC_KEY`: The key is stored in the `data/platform_hmac_key.bin` file
@@ -27,7 +29,7 @@ addressed before using the reference solution as is, because of the nature of th
    [mbedTLS Hardware Entropy Source](#mbedtls_entropy) for more information.
 
 2. In the reference implementation, the device key and the keys that encrypt
-   or protect the integrity of the SDO data are stored in clear text on the file system.
+   or protect the integrity of the FDO data are stored in clear text on the file system.
    In production systems, these keys must be stored in a secure storage such
    as the Secure Engine.
    - `PLATFORM_HMAC_KEY`: The key is stored in the `data/platform_hmac_key.bin` file
@@ -40,7 +42,7 @@ addressed before using the reference solution as is, because of the nature of th
    Affected file(s): <br>
    - `base.mk`
 
-3. SDO recommends to switch on the following compilation options for mbedTLS:
+3. FDO recommends to switch on the following compilation options for mbedTLS:
    ```
    MBEDTLS_SSL_ENCRYPT_THEN_MAC
    MBEDTLS_SSL_EXTENDED_MASTER_SECRET
@@ -52,7 +54,7 @@ addressed before using the reference solution as is, because of the nature of th
    [mbedTLS Hardware Entropy Source](#mbedtls_entropy) for more information.
 
 2. In the reference implementation, the device key and the keys that encrypt
-   or protect the integrity of the SDO data are stored in clear text on the file system.
+   or protect the integrity of the FDO data are stored in clear text on the file system.
    In production systems, these keys must be stored in a secure storage such
    as the Secure Engine.
    - `PLATFORM_HMAC_KEY`: The key is stored in the `data/platform_hmac_key.bin` file
@@ -66,7 +68,7 @@ addressed before using the reference solution as is, because of the nature of th
 
    - `base.mk`
 
-3. SDO recommends to switch on the following compilation options for mbedTLS:
+3. FDO recommends to switch on the following compilation options for mbedTLS:
    ```
    MBEDTLS_SSL_ENCRYPT_THEN_MAC
    MBEDTLS_SSL_EXTENDED_MASTER_SECRET
@@ -78,7 +80,7 @@ addressed before using the reference solution as is, because of the nature of th
    [mbedTLS Hardware Entropy Source](#mbedtls_entropy) for more information.
 
 2. In the reference implementation, the device key and the keys that encrypt
-   or protect the integrity of the  SDO data are stored in clear text on the file system.
+   or protect the integrity of the  FDO data are stored in clear text on the file system.
    In production systems, these keys must be stored in a secure storage such
    as the Secure Engine.
    - `PLATFORM_HMAC_KEY`: The key is stored in the `data/platform_hmac_key.bin` file
@@ -91,21 +93,21 @@ addressed before using the reference solution as is, because of the nature of th
    Affected file(s): <br>
    - `base.mk`
 
-3.  SDO data must be protected by appropriate file system permissions as a defense
+3.  FDO data must be protected by appropriate file system permissions as a defense
    in depth. Read/write permissions must be provided only to the user running the
-   SDO application. The list of files is as follows:
+   FDO application. The list of files is as follows:
    - data/Normal.blob: The integrity of this file is protected using
                        `PLATFORM_HMAC_KEY`, with read/write permissions provided
-                       only to the  SDO user.
+                       only to the  FDO user.
    - data/Secure.blob: This file is encrypted using `PLATFORM_AES_KEY`, with
-                       read/write permissions provided only to the  SDO user
+                       read/write permissions provided only to the  FDO user
    - data/raw.blob: This file is not protected using cryptography but must have
-                    read/write permissions provided only to the  SDO user.
-   - data: This directory must be read or written only by the  SDO user. <br>
+                    read/write permissions provided only to the  FDO user.
+   - data: This directory must be read or written only by the  FDO user. <br>
    Affected file(s): <br>
    - `base.mk`
 
-4. SDO recommends to switch on the following compilation options for mbedTLS:
+4. FDO recommends to switch on the following compilation options for mbedTLS:
    ```
    MBEDTLS_SSL_ENCRYPT_THEN_MAC
    MBEDTLS_SSL_EXTENDED_MASTER_SECRET
