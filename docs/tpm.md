@@ -10,7 +10,7 @@ OpenSSL* toolkit version 1.1.1g. Follow the steps given in Section 10 to update 
 
 ## 2. TPM* Library Installation (for Ubuntu OS version 20.04):
 
-FDO TPM based Client SDK uses TPM-TSS 2.3.1, TPM2-ABRMD 2.2.0 and TPM2-TOOLS 4.0.1 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM enabled FDO Client SDK uses TPM-TSS 2.3.1, TPM2-ABRMD 2.2.0 and TPM2-TOOLS 4.0.1 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM enabled FDO Client SDK use one of the appropriate commands:
 
@@ -106,7 +106,7 @@ From the root of the safestringlib, do the following:
 After this step, `libsafestring.a` library will be created.
 
 ## 4. Compiling Intel TinyCBOR
-FDO Client SDK uses tinycbor for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
+FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
 From the root of the TinyCBOR (named `tinycbor`), do the following:
  ```shell
  $ make
@@ -129,7 +129,7 @@ $ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
 ```
 ServiceInfo device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, that is, required ServiceInfo device modules must be built prior to this step, otherwise the FDO Client SDK build will fail.
 
-## 7. Compiling FDO
+## 7. Compiling FDO Client SDK
 
 The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
@@ -137,7 +137,7 @@ Refer the TPM Library Setup steps given in Section 2 to compile TPM enabled FDO 
 
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md). 
 
-Example command to build FDO TPM Client SDK with the Resource Manager as TPM2-ABRMD (tabrmd)
+Example command to build TPM enabled FDO Client SDK with the Resource Manager as TPM2-ABRMD (tabrmd)
 
 ```shell
 make pristine
@@ -158,7 +158,7 @@ Refer to the section [FDO Build configurations](build_conf.md)
 <a name="run_linux_fdo"></a>
 
 ## 8. Running the Application <!-- Ensuring generic updates are captured where applicable -->
-The FDO Linux TPM device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
+The TPM enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
 To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
 [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
@@ -235,7 +235,7 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 ## 9. Troubleshooting Details
 
 - TPM Authorization Failure while Running tpm2-tools Command.<br />
-  Clear TPM from the BIOS. To run the TPM-based FDO implementation, the TPM on the device should not be owned.
+  Clear TPM from the BIOS. To run the TPM enabled FDO Client SDK implementation, the TPM on the device should not be owned.
   To reset the TPM, go to your device BIOS and clear the TPM. To find the location of the option in the BIOS of your 
   device, refer to your device manual.
 

@@ -9,7 +9,7 @@ Detailed steps and configuration needed to start FDO PRI Manufacturer are in
 
 # Device Initialization Device Setup
 
-During this time, the device does not have FDO Device Credentials and therefore will obtain the same from the FDO PRI IoT Manufacturer.
+During this time, the device does not have FDO Device Credentials and therefore will obtain the same from the FDO PRI Manufacturer.
 
 > **Note:** If you are not running the default FDO Client SDK binaries and have your own EC keys and certs, do the following:
 >

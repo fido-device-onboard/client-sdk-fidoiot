@@ -22,7 +22,7 @@
 
 ## 3. Compiling safestring
 
-You do not have to build the `safestringlib` library for the Arm Mbed OS-based implementation because this will be done by FDO.
+You do not have to build the `safestringlib` library for the Arm Mbed OS-based implementation because this will be done by FDO Client SDK build system.
 
 ## 4. Environment Variables
 
@@ -31,7 +31,7 @@ Provide the safestringlib path:
 $ export SAFESTRING_ROOT=path/to/safestringlib
 ```
 
-## 5. Compiling FDO
+## 5. Compiling FDO Client SDK
 The  FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU Make tool</a>. FDO assumes that all requirements are set up from [  FDO Compilation Setup ](setup.md). The application is built using `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported.
 
 - To build STM32F767ZI:
@@ -52,7 +52,7 @@ The  FDO Client SDK build system is based on <a href="https://www.gnu.org/softwa
 
 For an advanced build configuration, refer to [Advanced Build Configuration.](build_conf.md)
 
-## 6. Executing FDO
+## 6. Executing FDO Client SDK
 The  FDO for the Linux* device is compatible with the FDO PRI implementation of the Manufacturer, Rendezvous,
 and Owner. These implementations can be downloaded from their appropriate 
 directories.
@@ -106,7 +106,7 @@ $ umount /media/${user}/NODE_FXXXZI1/
   
   Boot up the board. The device will be flashed with the credentials and becomes ready for
   ownership transfer.
-On successful execution of the DI protocol, the device will be configured with the required  FDO credentials and the ownership coucher file will be generated.
+On successful execution of the DI protocol, the device will be configured with the required  FDO credentials and the ownership voucher file will be generated.
 
 - To enable the device for ownership transfer, you need to configure the FDO PRI Rendezvous and Owner.
   Refer to [Ownership Transfer Setup](ownership_transfer.md). After these

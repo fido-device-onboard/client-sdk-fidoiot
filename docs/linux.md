@@ -24,7 +24,7 @@ From the root of the safestringlib, do the following:
 After this step, `libsafestring.a` library will be created.
 
 ## 4. Compiling Intel TinyCBOR
-SDO Client SDK uses tinycbor for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
+FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
 From the root of the TinyCBOR (named `tinycbor`), do the following:
  ```shell
  $ make
@@ -38,9 +38,9 @@ $ export SAFESTRING_ROOT=path/to/safestringlib
 $ export TINYCBOR_ROOT=path/to/tinycbor
 ```
 
-## 6. Compiling FDO
+## 6. Compiling FDO Client SDK
 
-The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. FDO assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
+The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. It assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md).
 
@@ -62,7 +62,7 @@ To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https:
 [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
 [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
-After a successful compilation, the FDO Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
+After a successful compilation, the FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
 > ***Note:*** Built binary can be either `debug` or `release` based on the compilation step.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer.

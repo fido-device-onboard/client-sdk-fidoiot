@@ -17,7 +17,7 @@ There following are some of the options to choose when building the device:
   DA = ecdsa256 #device attestation method
   PK_ENC = ecdsa #public key encoding (for owner attestation)
   TLS = openssl #underlying cryptography library to use. (`openssl` denotes the OpenSSL* toolkit.)
-  MODULE = false #whether to use FIDO Device Onboard (FDO) service-info functionality
+  MODULES = false #whether to use FIDO Device Onboard (FDO) ServiceInfo functionality
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
 
@@ -77,9 +77,9 @@ HTTPPROXY=true        # http-proxy enabled (default)
 HTTPPROXY=false       # http-proxy disabled
 PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 
-Option to enable FDO service-info functionality:
-MODULES=false         # Service info modules are not present (default)
-MODULES=true          # Service info modules are present
+Option to enable FDO ServiceInfo functionality:
+MODULES=false         # ServiceInfo modules are not present (default)
+MODULES=true          # ServiceInfo modules are present
 
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)

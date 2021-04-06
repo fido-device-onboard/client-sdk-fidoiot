@@ -66,7 +66,7 @@ addressed before using the reference solution as is, because of the nature of th
                       implementation. <br>
    Affected file(s): <br>
 
-   - `base.mk`
+   - `cmake/blob_path.cmake`
 
 3. FDO recommends to switch on the following compilation options for mbedTLS:
    ```
@@ -91,7 +91,7 @@ addressed before using the reference solution as is, because of the nature of th
                       the`data/ecdsa256privkey.pem` file in the reference
                       implementation. <br>
    Affected file(s): <br>
-   - `base.mk`
+   - `cmake/blob_path.cmake`
 
 3.  FDO data must be protected by appropriate file system permissions as a defense
    in depth. Read/write permissions must be provided only to the user running the
@@ -105,7 +105,7 @@ addressed before using the reference solution as is, because of the nature of th
                     read/write permissions provided only to the  FDO user.
    - data: This directory must be read or written only by the  FDO user. <br>
    Affected file(s): <br>
-   - `base.mk`
+   - `cmake/blob_path.cmake`
 
 4. FDO recommends to switch on the following compilation options for mbedTLS:
    ```
