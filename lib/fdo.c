@@ -121,7 +121,10 @@ fdo_sdk_status fdo_sdk_run(void)
 			++error_count;
 			if (error_count == ERROR_RETRY_COUNT) {
 				LOG(LOG_INFO, "*********Retry(s) done*********\n");
-				g_fdo_data->state_fn = &_STATE_Shutdown;
+				g_fdo_data->state_fn = &_STATE_Shutdown_Error;
+			} else if (error_count > ERROR_RETRY_COUNT) {
+				// reach here when all retries have been completed
+				goto end;
 			} else {
 				LOG(LOG_INFO, "*********Retry count : %u*********\n", error_count);
 			}
@@ -301,7 +304,7 @@ static fdo_sdk_status app_initialize(void)
 {
 	int ret = FDO_ERROR;
 	int32_t fsize;
-	int max_serviceinfo_sz, prot_buff_sz = CBOR_BUFFER_LENGTH;
+	int max_serviceinfo_sz;
 	char *buffer = NULL;
 
 	if (!g_fdo_data)
@@ -341,6 +344,7 @@ static fdo_sdk_status app_initialize(void)
 	if (fsize == 0 || fsize == 1) {
 		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
+		g_fdo_data->prot.prot_buff_sz = MIN_SERVICEINFO_SZ + MSG_METADATA_SIZE;
 	} else if (fsize > 0) {
 		buffer = fdo_alloc(fsize + 1);
 		if (buffer == NULL) {
@@ -357,7 +361,7 @@ static fdo_sdk_status app_initialize(void)
 			else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MAX_SERVICEINFO_SZ;
 			}
-			prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
+			g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
 			g_fdo_data->prot.maxDeviceServiceInfoSz = max_serviceinfo_sz;
 			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
 		}
@@ -369,14 +373,16 @@ static fdo_sdk_status app_initialize(void)
 	/* 
 	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's 
 	* protocol execution. Reuse the allocated memory by emptying the contents.
-	*/ 
+	*/
 	if (!fdow_init(&g_fdo_data->prot.fdow) ||
-		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdow.b, prot_buff_sz)) {
+		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdow.b,
+			g_fdo_data->prot.prot_buff_sz)) {
 		LOG(LOG_ERROR, "fdow_init() failed!\n");
 		return FDO_ERROR;
 	}
 	if (!fdor_init(&g_fdo_data->prot.fdor) ||
-		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdor.b, prot_buff_sz)) {
+		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdor.b,
+			g_fdo_data->prot.prot_buff_sz)) {
 		LOG(LOG_ERROR, "fdor_init() failed!\n");
 		return FDO_ERROR;
 	}
@@ -1080,7 +1086,7 @@ static bool _STATE_TO1(void)
 
 		if (rvbypass) {
 			ret = true;
-			LOG(LOG_ERROR, "Found RVBYPASS in the RendezvousDirective. Skipping TO1...\n");
+			LOG(LOG_DEBUG, "Found RVBYPASS in the RendezvousDirective. Skipping TO1...\n");
 			g_fdo_data->state_fn = &_STATE_TO2;
 			goto end;
 		}

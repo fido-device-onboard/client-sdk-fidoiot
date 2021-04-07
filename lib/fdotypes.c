@@ -2729,6 +2729,8 @@ bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
 
 	fdo_block_t *fdob = &fdow->b;
 	bool ret = false;
+	// save the default buffer size, set it back at the end
+	size_t fdow_buff_default_sz = fdob->block_size;
 
 	// find the encoded cleartext length
 	size_t payload_length = 0;
@@ -2763,7 +2765,7 @@ bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
 	// reset the FDOW block to write COSE_Encrypt0 (ETMInnerBlock)
 	// This clears the unencrypted (clear text) as well
 	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = CBOR_BUFFER_LENGTH;
+	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR,
 			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
@@ -2793,7 +2795,7 @@ bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
 
 	// reset the FDOW block to prepare for writing COSE_Sign1 (ETMOuterBlock)
 	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = CBOR_BUFFER_LENGTH;
+	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR,
 			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");

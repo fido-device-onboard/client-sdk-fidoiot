@@ -83,7 +83,7 @@ int32_t msg64(fdo_prot_t *ps)
 	// reset the given FDOW for the next encoding
 	// This is done out of cycle here because FDOW object was used in Type 63
 	fdo_block_reset(&ps->fdow.b);
-	ps->fdow.b.block_size = CBOR_BUFFER_LENGTH;
+	ps->fdow.b.block_size = ps->prot_buff_sz;
 	if (!fdow_encoder_init(&ps->fdow)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto err;
@@ -115,7 +115,7 @@ int32_t msg64(fdo_prot_t *ps)
 
 	// reset the FDOW block to prepare for the next encoding.
 	fdo_block_reset(&ps->fdow.b);
-	ps->fdow.b.block_size = CBOR_BUFFER_LENGTH;
+	ps->fdow.b.block_size = ps->prot_buff_sz;
 	if (!fdow_encoder_init(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to initilize FDOW encoder\n");
 		goto err;

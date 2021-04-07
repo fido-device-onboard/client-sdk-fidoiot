@@ -211,6 +211,7 @@ typedef struct fdo_prot_s {
 	int maxOwnerServiceInfoSz;
 	int maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
+	size_t prot_buff_sz;
 	int owner_supplied_service_info_num;
 	int owner_supplied_service_info_rcv;
 	fdo_owner_supplied_credentials_t *osc;

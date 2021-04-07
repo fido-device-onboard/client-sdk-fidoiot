@@ -263,7 +263,7 @@ int32_t msg61(fdo_prot_t *ps)
 	}
 	// reset the FDOW block to prepare for OVEHashPrevEntry
 	fdo_block_reset(&ps->fdow.b);
-	ps->fdow.b.block_size = CBOR_BUFFER_LENGTH;
+	ps->fdow.b.block_size = ps->prot_buff_sz;
 	if (!fdow_encoder_init(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to initilize FDOW encoder\n");
 		goto err;
