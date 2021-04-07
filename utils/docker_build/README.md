@@ -1,6 +1,6 @@
 # About
 
-Docker Script for Building Client-SDK repository. Using this script you can build the local copy of the repository as well as the latest upstream of the repository.
+Docker Script for Building Client SDK repository. Using this script you can build the local copy of the repository as well as the latest upstream of the repository.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ You also have the option to change the remote repository address as well as the 
     REMOTE_BRANCH=branch-name
 
 ## Expected Outcome
-As the docker script finishes its execution successfully, the executable files of the Client-SDK will be present in ```<Client-SDK>/ {<build>/<ecdsa256_c_device_bin>/<tpm_ecdsa_c_device_bin>/<ecdsa384_c_sct_device_bin>}``` folders.
+As the docker script finishes its execution successfully, the executable files of the Client SDK will be present in ```<Client-SDK>/ {<build>/<ecdsa256_c_device_bin>/<tpm_ecdsa_c_device_bin>/<ecdsa384_c_sct_device_bin>}``` folders.
 
 ## Updating Proxy Info (Optional )
 If you are working behind a proxy network, ensure that both http and https proxy variables are set.
