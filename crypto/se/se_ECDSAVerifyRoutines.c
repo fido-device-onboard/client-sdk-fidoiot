@@ -33,7 +33,7 @@
  * @return 0 if true, else -1.
 
  */
-int32_t crypto_hal_sig_verify(uint8_t key_encoding, uint8_t key_algorithm,
+int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 			      const uint8_t *message, uint32_t message_length,
 			      const uint8_t *message_signature,
 			      uint32_t signature_length,
