@@ -186,8 +186,8 @@ typedef struct {
 #define FDO_PK_HASH_HMAC_SHA_384 114
 
 // 3.3.4, PublicKey types (pkType)
-#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 13
-#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384 14
+#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 -7
+#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384 -35
 
 // TO-DO: Legacy, Used in RSA-based crypto operations.
 // Remove when the classes themselves are removed.
