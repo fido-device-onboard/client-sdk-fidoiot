@@ -408,6 +408,16 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 bool fdo_cose_write_unprotected_header(fdow_t *fdow);
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose);
 
+/*
+ * This is a lookup on all possible TransportProtocol values (Section 3.3.12)
+ */
+#define PROTTCP 1
+#define PROTTLS 2
+#define PROTHTTP 3
+#define PROTCOAP 4
+#define PROTHTTPS 5
+#define PROTCOAPS 6
+
 typedef struct fdo_rvto2addr_entry_s {
 	fdo_byte_array_t *rvip;
 	fdo_string_t *rvdns;

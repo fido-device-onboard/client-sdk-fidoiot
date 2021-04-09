@@ -21,7 +21,8 @@
 
 #define HTTP_MAX_URL_SIZE 150
 #define REST_MAX_MSGHDR_SIZE 512
-#define REST_MAX_MSGBODY_SIZE 4096
+// maximum supported length is 8192 + 700. Rounding it to 9000
+#define REST_MAX_MSGBODY_SIZE 9000
 #define HTTP_SUCCESS_OK 200
 #define DEFAULT_DELAYSEC 120
 #define IP_TAG_LEN 16   // e.g. 192.168.111.111
