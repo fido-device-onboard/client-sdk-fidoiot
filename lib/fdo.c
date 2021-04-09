@@ -1241,8 +1241,8 @@ static bool _STATE_TO2(void)
 			}
 			dns = g_fdo_data->current_rvto2addrentry->rvdns;
 			port = g_fdo_data->current_rvto2addrentry->rvport;
-			if (g_fdo_data->current_rvto2addrentry->rvprotocol == RVPROTHTTPS ||
-				g_fdo_data->current_rvto2addrentry->rvprotocol == RVPROTTLS) {
+			if (g_fdo_data->current_rvto2addrentry->rvprotocol == PROTHTTPS ||
+				g_fdo_data->current_rvto2addrentry->rvprotocol == PROTTLS) {
 				tls = true;
 			}
 			// prepare for next iteration beforehand
