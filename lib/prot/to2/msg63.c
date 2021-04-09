@@ -273,6 +273,13 @@ int32_t msg63(fdo_prot_t *ps)
 	ps->ov_entry_num++;
 	if (ps->ov_entry_num < ps->ovoucher->num_ov_entries) {
 		ps->state = FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY;
+		// reset FDOW because it was used in this method, out of place
+		fdo_block_reset(&ps->fdow.b);
+		ps->fdor.b.block_size = ps->prot_buff_sz;
+		if (!fdow_encoder_init(&ps->fdow)) {
+			LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to initialize FDOW encoder\n");
+			goto err;
+		}
 	} else {
 		LOG(LOG_DEBUG,
 		    "TO2.OVNextEntry: All %d OVEntry(s) have been "
