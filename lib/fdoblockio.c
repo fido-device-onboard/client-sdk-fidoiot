@@ -473,7 +473,8 @@ bool fdor_start_map(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_array_length(fdor_t *fdor, size_t *length) {
-	if (cbor_value_get_array_length(&fdor->current->cbor_value,
+	if (!cbor_value_is_array(&fdor->current->cbor_value) ||
+		cbor_value_get_array_length(&fdor->current->cbor_value,
 		length) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to read length of Major Type 4 (array)\n");
 		return false;			
@@ -489,7 +490,9 @@ bool fdor_array_length(fdor_t *fdor, size_t *length) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_string_length(fdor_t *fdor, size_t *length) {
-	if (cbor_value_calculate_string_length(&fdor->current->cbor_value,
+	if ((!cbor_value_is_byte_string(&fdor->current->cbor_value) &&
+		!cbor_value_is_text_string(&fdor->current->cbor_value)) ||
+		cbor_value_calculate_string_length(&fdor->current->cbor_value,
 		length) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to read length of Major Type 2/3 (bstr/tstr)\n");
 		return false;
@@ -627,6 +630,7 @@ bool fdor_boolean(fdor_t *fdor, bool *result) {
  */
 bool fdor_end_array(fdor_t *fdor) {
 	if (!cbor_value_is_array(&fdor->current->previous->cbor_value) ||
+		!cbor_value_at_end(&fdor->current->cbor_value) ||
 		cbor_value_leave_container(&fdor->current->previous->cbor_value, 
 		&fdor->current->cbor_value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to end Major Type 4 (array)\n");
@@ -650,6 +654,7 @@ bool fdor_end_array(fdor_t *fdor) {
  */
 bool fdor_end_map(fdor_t *fdor) {
 	if (!cbor_value_is_map(&fdor->current->previous->cbor_value) ||
+		!cbor_value_at_end(&fdor->current->cbor_value) ||
 		cbor_value_leave_container(&fdor->current->previous->cbor_value, 
 		&fdor->current->cbor_value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to end Major Type 4 (array)\n");
