@@ -5645,8 +5645,8 @@ bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1, fdo_rendezvous_t *en
 void fdo_log_block(fdo_block_t *fdob) {
 	size_t i;
 	for (i = 0; i < fdob->block_size; i++) {
-		LOG(LOG_INFO, "%02x", fdob->block[i]);
+		LOG(LOG_DEBUGNTS, "%02x", fdob->block[i]);
 	}
-	LOG(LOG_INFO, "\n");
+	LOG(LOG_DEBUGNTS, "\n");
 }
 
