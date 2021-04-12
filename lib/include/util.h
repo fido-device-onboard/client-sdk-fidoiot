@@ -48,9 +48,10 @@ typedef enum log_level {
 	LOG_INFO,
 	LOG_DEBUG,
 	LOG_DEBUGNTS, /*Debug No Time Stamp*/
+	LOG_ALL
 } log_level_t;
 
-#define LOG_MAX_LEVEL 3 /* LOG_MAX_LEVEL = LOG_DEBUGNTS */
+#define LOG_MAX_LEVEL 4 /* LOG_MAX_LEVEL = LOG_ALL */
 
 #if defined(TARGET_OS_LINUX) || defined(TARGET_OS_FREERTOS) ||                 \
     defined(TARGET_OS_MBEDOS) || defined(TARGET_OS_OPTEE)

@@ -417,7 +417,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 #endif
 
 	temp = peer_rand_value;
+#if LOG_LEVEL == LOG_MAX_LEVEL
 	hexdump("Public A(bn)", temp, peer_rand_length);
+#endif
 	size = 0;
 	size_Ax = (temp[size] << 8) | temp[size + 1];
 	size += 2;
