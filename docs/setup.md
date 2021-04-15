@@ -28,7 +28,7 @@ $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <manufacturer server-ip> > data/manufacturer_ip.bin
 ```
 
-The default manufacturer port is 8039. If required, it can be configured by following instructions:
+The default manufacturer port is 8039. If required, it can be configured by the following instructions:
 
 ```shell
 # For setting manufacturer port
@@ -36,7 +36,7 @@ $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <manufacturer server-port> > data/manufacturer_port.bin
 ```
 
-> ***Note:*** By default, `manufacturer_dn.bin` is configured with "localhost". If both IP and domain name are set, the IP takes precedence over domain name.
+> ***NOTE***: By default, `manufacturer_dn.bin` is configured with "localhost". If both IP and domain name are set, the IP takes precedence over domain name.
 
 <a name="ecdsa_priv"></a>
 ## 4. Elliptic Curve Digital Signature Algorithm (ECDSA) Private Key File Generation
@@ -75,7 +75,7 @@ The following are steps to generate the private key file for ECDSA-based devices
 
 * **Option2:** To use the private key in PEM format, rename key.pem to ecdsaXXXprivkey.pem (`ecdsa256privkey.pem` for EC curve P-256 and `ecdsa384privkey.pem` for EC curve P-384). Use the compilation flag `DA_FILE=pem` during binary creation.
 
-## 5.  Setting the maximum ServiceInfo size
+## 5.  Setting the Maximum ServiceInfo Size
 
 The maximum permissible ServiceInfo size (both Device and Owner) that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The value must lie between 1300 and 8192 (both inclusive). If the set value is less than 1300, the value would default to 1300. Similarly, if the value is greater than 8192, the value would default to 8192.
 
@@ -103,7 +103,7 @@ Activating the device credentials will in turn, activate the FDO device and conf
 If REUSE flag is set to false, and the above mentioned conditions for credential REUSE are met, an error message will be thrown. This can be useful for a scenario where the device credentials should never be reused, once saved.
 
 <a name="http_proxy"></a>
-## 7. HTTP-proxy configuration (optional)
+## 7. HTTP-proxy Configuration (Optional)
 If the device is located behind a proxy server, the proxy server details must be provided to the device. For the same purpose, there are three files (each for the manufacturer, rendezvous, and owner servers) in which the proxy server details should be specified in the required format, before connecting to the respective server. These files can be created or removed as required.
 
 Each proxy file is located in the `data/` directory and named as follows:
@@ -116,8 +116,8 @@ The following is the format for proxy server network address:
 
     <Proxy Server IP>:<proxy Server Port>  e.g. 255.255.255.255:65535
 
-> ***Note:*** The files `rv_proxy.dat`,`mfg_proxy.dat`, and `owner_proxy.dat` must not contain any other information beyond the information mentioned above.
+> ***Note***: The files `rv_proxy.dat`,`mfg_proxy.dat`, and `owner_proxy.dat` must not contain any other information beyond the information mentioned above.
 
 The proxy server network address is optional if the device connects to an access point that connects the device through the proxy server.
 
-***Note :***  FDO clients that run on the Linux* OS also support network proxy discovery using the environment variable or the Web Proxy Auto-Discovery (WPAD) protocol based on the libproxy library. To use wpad protocol, use export http_proxy=’wpad:’.
+***Note***: FDO clients that run on the Linux* OS also support network proxy discovery using the environment variable or the Web Proxy Auto-Discovery (WPAD) protocol based on the libproxy library. To use wpad protocol, use export http_proxy=’wpad:’.
