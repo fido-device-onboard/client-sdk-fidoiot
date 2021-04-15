@@ -59,11 +59,11 @@ Refer to the section. [FDO Build configurations](build_conf.md)
 The FDO Client SDK Linux device is compatible with FDO PRI components namely: Manufacturer, Rendezvous, and Owner.
 
 To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
-[FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
+[FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md), and
 [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
 After a successful compilation, the FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
-> ***Note:*** Built binary can be either `debug` or `release` based on the compilation step.
+> ***NOTE***: Built binary can be either `debug` or `release` based on the compilation step.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer.
   Refer to [ Device Initialization Setup ](DI_setup.md).

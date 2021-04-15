@@ -103,4 +103,4 @@ b. TARGET_OS=mbedos supports
 (`mbedos` denotes the Arm* Mbed* OS.
 `mbedTLS` denotes the Arm Mbed TLS.)
 
-> ***Note:*** Currently, only `TARGET_OS=linux` and its configurations is supported. The source will be updated to add support for `TARGET_OS=mbedos` in a future release.
+> ***NOTE***: Currently, only `TARGET_OS=linux` and its configurations is supported. The source will be updated to add support for `TARGET_OS=mbedos` in a future release.
