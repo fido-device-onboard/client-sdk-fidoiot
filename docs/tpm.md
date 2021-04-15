@@ -2,15 +2,15 @@
 
 `Ubuntu* OS version 20.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO build and execution depend on OpenSSL* toolkit version 1.1.1g. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO build and execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM2.0 (on Ubuntu* OS version 20.04):
 
-OpenSSL* toolkit version 1.1.1g. Follow the steps given in Section 10 to update the openssl version to 1.1.1g.
+OpenSSL* toolkit version 1.1.1k. Follow the steps given in Section 10 to update the openssl version to 1.1.1k.
 
 ## 2. TPM* Library Installation (for Ubuntu OS version 20.04):
 
-TPM enabled FDO Client SDK uses TPM-TSS 2.3.1, TPM2-ABRMD 2.2.0 and TPM2-TOOLS 4.0.1 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0 and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM enabled FDO Client SDK use one of the appropriate commands:
 
@@ -45,43 +45,43 @@ $ ./install_tpm_libs.sh -u
 
 Following steps should be performed if FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup FDO TPM libraries. Install only tpm2-tss library to enable TPM enabled FDO Client SDK code compilation. To enable compilation and execution of TPM enabled FDO Client SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-tss-engine.
 
-#### 2.1.1 tpm2-tss-2.3.1
+#### 2.1.1 tpm2-tss-3.0.3
 
-This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM. It uses release version 2.3.1 of the library.
+This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM. It uses release version 3.0.3 of the library.
 
 ##### Source Code
 
-The library can be downloaded from [tpm2-tss-2.3.1-download](https://github.com/tpm2-software/tpm2-tss/releases/download/2.3.1/tpm2-tss-2.3.1.tar.gz)
+The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
 
 ##### Build and Install Process
 
-The build and installation process can be found at [tpm2-tss-2.3.1-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
+The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
 
-#### 2.1.2 tpm2-abrmd-2.2.0
+#### 2.1.2 tpm2-abrmd-2.4.0
 
-This is an optional but recommended library (daemon) to use TPM in the device. This daemon will act as a resource manager for the TPM, for all I/O calls that happen with the device. It uses release version 2.2.0 of the library.
+This is an optional but recommended library (daemon) to use TPM in the device. This daemon will act as a resource manager for the TPM, for all I/O calls that happen with the device. It uses release version 2.4.0 of the library.
 
 ##### Source Code
 
-The library can be downloaded from [tpm2-abrmd-2.2.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.2.0/tpm2-abrmd-2.2.0.tar.gz)
+The library can be downloaded from [tpm2-abrmd-2.4.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.4.0/tpm2-abrmd-2.4.0.tar.gz)
 
 Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see Section on Compiling FDO.
 
 ##### Build and Install Process
 
-The build and installation process found at [tpm2-abrmd-2.2.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
+The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
-#### 2.1.3 tpm2-tools-4.0.1
+#### 2.1.3 tpm2-tools-5.0
 
-This library provides the necessary tools to interact and perform operations using the TPM, to the users. It uses release version 4.0.1 of the library.
+This library provides the necessary tools to interact and perform operations using the TPM, to the users. It uses release version 5.0 of the library.
 
 ##### Source Code
 
-The library can be downloaded from [tpm2-tools-4.0.1-download](https://github.com/tpm2-software/tpm2-tools/releases/download/4.0.1/tpm2-tools-4.0.1.tar.gz)
+The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
 
 ##### Build and Install Process
 
-The build and installation process can be found at [tpm2-tools-4.0.1-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
+The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
 
 #### 2.1.4 tpm2-tss-engine-1.1.0
 
@@ -251,15 +251,15 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1g for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 1.1.1k for building and running the FDO Client SDK.
   Check the version of the OpenSSL toolkit installed in your machine with the command
 
   ```shell
   $ openssl version
   ```
-  If the OpenSSL toolkit version in your machine is earlier than version 1.1.1g, follow the steps given in Section10 to update the OpenSSL version to 1.1.1g.
+  If the OpenSSL toolkit version in your machine is earlier than version 1.1.1k, follow the steps given in Section10 to update the OpenSSL version to 1.1.1k.
 
-## Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1g
+## Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1k
 
 ```shell
 # 1. If libssl-dev is installed, remove it:
@@ -269,11 +269,11 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 
 # 2. Pull the tarball: 
 
-  $ wget https://www.openssl.org/source/openssl-1.1.1g.tar.gz
+  $ wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
 
 # 3. Unpack the tarball with 
 
-  $ tar -zxf openssl-1.1.1g.tar.gz && cd openssl-1.1.1g
+  $ tar -zxf openssl-1.1.1k.tar.gz && cd openssl-1.1.1k
 
 # 4. Issue the command 
 
@@ -311,5 +311,5 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 
   Your output should be as follows:
 
-  OpenSSL 1.1.1g  31 Mar 2020
+  OpenSSL 1.1.1k  25 Mar 2021
 ```

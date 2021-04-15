@@ -1,8 +1,8 @@
-TPM2_TSS_VER="2.3.1"
+TPM2_TSS_VER="3.0.3"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
-TPM2_ABRMD_VER="2.2.0"
+TPM2_ABRMD_VER="2.4.0"
 TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
-TPM2_TOOLS_VER="4.0.1"
+TPM2_TOOLS_VER="5.0"
 TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
 TPM2_TSS_ENGINE_VER=1.1.0
 TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v$TPM2_TSS_ENGINE_VER.zip"
@@ -18,6 +18,7 @@ install_dependencies()
         autoconf-archive \
         libcmocka0 \
         libcmocka-dev \
+        libjson-c-dev \
         procps \
         iproute2 \
         build-essential \
