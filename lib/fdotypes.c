@@ -4042,8 +4042,9 @@ bool fdo_cose_encrypt0_read_protected_header(fdor_t *fdor,
 end:
 	fdor_flush(&temp_fdor);
 	fdo_free(temp_fdor.b.block);
-	if (ph_as_bstr)
+	if (ph_as_bstr) {
 		fdo_byte_array_free(ph_as_bstr);
+	}
 	return ret;
 }
 
