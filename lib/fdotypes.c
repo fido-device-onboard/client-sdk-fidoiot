@@ -3196,6 +3196,10 @@ bool fdo_cose_free(fdo_cose_t *cose) {
 bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *cose_ph) {
 
 	fdor_t temp_fdor;
+	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
+		LOG(LOG_ERROR, "COSE Protected header: Failed to intialize temporary FDOR\n");
+		return false;
+	}
 
 	size_t var_length = 0;
 	if (!fdor_string_length(fdor, &var_length) ||
@@ -3585,6 +3589,10 @@ bool fdo_cose_mac0_read_protected_header(fdor_t *fdor,
 	fdo_cose_mac0_protected_header_t *protected_header) {
 
 	fdor_t temp_fdor;
+	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Failed to intialize temporary FDOR\n");
+		return false;
+	}
 
 	size_t var_length = 0;
 	if (!fdor_string_length(fdor, &var_length) ||
@@ -3973,6 +3981,10 @@ bool fdo_cose_encrypt0_read_protected_header(fdor_t *fdor,
 
 	bool ret = false;
 	fdor_t temp_fdor;
+	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0 Protected header: Failed to intialize temporary FDOR\n");
+		return false;
+	}
 
 	size_t var_length = 0;
 	if (!fdor_string_length(fdor, &var_length) ||
