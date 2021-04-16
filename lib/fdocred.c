@@ -605,7 +605,7 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 
 	ov->ov_entries->hp_hash = fdo_hash_alloc(
 	    FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
-	if (!ov->ov_entries->hc_hash) {
+	if (!ov->ov_entries->hp_hash) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to alloc for OVEHashPrevEntry in storage\n");
 		goto exit;
 	}

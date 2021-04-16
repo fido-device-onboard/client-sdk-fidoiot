@@ -116,8 +116,10 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 	}
 
 end:
-	fdow_flush(fdow);
-	fdo_free(fdow);
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
 #endif
 	return ret;
 }
@@ -174,8 +176,10 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 end:
-	fdow_flush(fdow);
-	fdo_free(fdow);
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
 #endif
 	return ret;
 }
@@ -318,8 +322,10 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 	ret = true;
 end:
-	fdor_flush(fdor);
-	fdo_free(fdor);
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
 	return ret;
 }
 
@@ -383,8 +389,10 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 
 end:
 	fdo_byte_array_free(secret);
-	fdor_flush(fdor);
-	fdo_free(fdor);
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
 	return ret;
 }
 
