@@ -237,9 +237,13 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_free(ps->dns1);
 		ps->dns1 = NULL;
 	}
+	if (ps->nonce_to2proveov != NULL) {
+		fdo_byte_array_free(ps->nonce_to2proveov);
+		ps->nonce_to2proveov = NULL;
+	}
 	if (ps->nonce_to2provedv != NULL) {
 		fdo_byte_array_free(ps->nonce_to2provedv);
-		ps->nonce_to2setupdv = NULL;
+		ps->nonce_to2provedv = NULL;
 	}
 	if (ps->nonce_to2setupdv != NULL) {
 		fdo_byte_array_free(ps->nonce_to2setupdv);
@@ -1123,9 +1127,13 @@ static bool _STATE_TO1(void)
 			}
 			// there are no more RV locations left, so check if retry is enabled.
 			// if yes, proceed with retrying all the RV locations
+			// if not, return immediately since there is nothing else left to do.
 			if (g_fdo_data->error_recovery) {
 				LOG(LOG_INFO, "Retrying.....\n");
 				g_fdo_data->state_fn = &_STATE_TO1;
+				return ret;
+			} else {
+				LOG(LOG_INFO, "Retry is diabled. Aborting.....\n");
 				return ret;
 			}
 		} else {
@@ -1251,7 +1259,7 @@ static bool _STATE_TO2(void)
 		}
 
 		prot_ctx = fdo_prot_ctx_alloc(
-			fdo_process_states, &g_fdo_data->prot, ip, dns->bytes, port, tls);
+			fdo_process_states, &g_fdo_data->prot, ip, dns ? dns->bytes : NULL, port, tls);
 		if (prot_ctx == NULL) {
 			ERROR();
 			fdo_prot_ctx_free(prot_ctx);

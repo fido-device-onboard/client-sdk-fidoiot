@@ -129,6 +129,9 @@ bool fdow_encoder_init(fdow_t *fdow)
 		fdo_free(fdow->current);
 	}
 	fdow->current = fdo_alloc(sizeof(fdow_cbor_encoder_t));
+	if (!fdow->current) {
+		return false;
+	}
 	fdow->current->next = NULL;
 	fdow->current->previous = NULL;
 
@@ -154,6 +157,9 @@ bool fdow_start_array(fdow_t *fdow, size_t array_items)
 {
 	// create next, create backlink and move forward.
 	fdow->current->next = fdo_alloc(sizeof(fdow_cbor_encoder_t));
+	if (!fdow->current->next) {
+		return false;
+	}
 	fdow->current->next->previous = fdow->current;
 	fdow->current = fdow->current->next;
 	if (cbor_encoder_create_array(&fdow->current->previous->cbor_encoder, 
@@ -182,6 +188,9 @@ bool fdow_start_map(fdow_t *fdow, size_t map_items)
 {
 	// create next, create backlink and move forward.
 	fdow->current->next = fdo_alloc(sizeof(fdow_cbor_encoder_t));
+	if (!fdow->current->next) {
+		return false;
+	}
 	fdow->current->next->previous = fdow->current;
 	fdow->current = fdow->current->next;
 	if (cbor_encoder_create_map(&fdow->current->previous->cbor_encoder, 
@@ -358,9 +367,13 @@ bool fdow_encoded_length(fdow_t *fdow, size_t *length) {
 void fdow_flush(fdow_t *fdow)
 {
 	fdo_block_t *fdob = &fdow->b;
-	fdo_block_reset(fdob);
-	fdo_free(fdob->block);
-	fdo_free(fdow->current);
+	if (fdob) {
+		fdo_block_reset(fdob);
+		fdo_free(fdob->block);
+	}
+	if (fdow->current) {
+		fdo_free(fdow->current);
+	}
 }
 
 //==============================================================================
@@ -402,6 +415,9 @@ bool fdor_parser_init(fdor_t *fdor) {
 		fdo_free(fdor->current);
 	}
 	fdor->current = fdo_alloc(sizeof(fdor_cbor_decoder_t));
+	if (!fdor->current) {
+		return false;
+	}
 	fdor->current->next = NULL;
 	fdor->current->previous = NULL;
 
@@ -428,6 +444,9 @@ bool fdor_parser_init(fdor_t *fdor) {
 bool fdor_start_array(fdor_t *fdor) {
 	// create next, create backlink and move forward.
 	fdor->current->next = fdo_alloc(sizeof(fdor_cbor_decoder_t));
+	if (!fdor->current->next) {
+		return false;
+	}
 	fdor->current->next->previous = fdor->current;
 	fdor->current = fdor->current->next;
 	if (!cbor_value_is_array(&fdor->current->previous->cbor_value) ||
@@ -454,6 +473,9 @@ bool fdor_start_array(fdor_t *fdor) {
 bool fdor_start_map(fdor_t *fdor) {
 	// create next, create backlink and move forward.
 	fdor->current->next = fdo_alloc(sizeof(fdor_cbor_decoder_t));
+	if (!fdor->current->next) {
+		return false;
+	}
 	fdor->current->next->previous = fdor->current;
 	fdor->current = fdor->current->next;
 	if (!cbor_value_is_map(&fdor->current->previous->cbor_value) ||
@@ -688,7 +710,11 @@ bool fdor_next(fdor_t *fdor) {
 void fdor_flush(fdor_t *fdor)
 {
 	fdo_block_t *fdob = &fdor->b;
-	fdo_block_reset(fdob);
-	fdo_free(fdob->block);
-	fdo_free(fdor->current);
+	if (fdob) {
+		fdo_block_reset(fdob);
+		fdo_free(fdob->block);
+	}
+	if (fdor->current) {
+		fdo_free(fdor->current);
+	}
 }

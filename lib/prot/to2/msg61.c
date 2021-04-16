@@ -145,6 +145,10 @@ int32_t msg61(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read OVHeader\n");
 		goto err;
 	}
+	if (!ps->new_ov_hdr_hmac) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to calculate OVHeader HMac\n");
+		goto err;
+	}
 
 	/*
 	 * Read the number of Ownership Vouchers present. The device does not
