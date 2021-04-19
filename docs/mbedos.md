@@ -1,6 +1,6 @@
 # For Arm* Mbed* (Arm Cortex*-M4 and Arm Cortex-M7) OS-Based Implementation
 
-***Note :*** The configurations mentioned in the document are not supported yet. This document will be updated in a future release when the source code implementation is updated to support the same.
+***Note***: The configurations mentioned in the document are not supported yet. This document will be updated in a future release when the source code implementation is updated to support the same.
 
 ## 1. Hardware Requirements:
 - STM32 Nucleo*-144 development board with [STM32F767ZI](https://os.mbed.com/platforms/ST-Nucleo-F767ZI/) or [STM32F429ZI](https://os.mbed.com/platforms/ST-Nucleo-F429ZI/) MCU.
@@ -48,7 +48,7 @@ The  FDO Client SDK build system is based on <a href="https://www.gnu.org/softwa
    $ make
    ```
 
-> ***Note:*** To build the Arm Mbed OS (STM32F767ZI or STM32F429ZI) platforms, only the microSD* card is used as a data-store to store FDO device credentials (device internal flash is not supported).
+> ***NOTE***: To build the Arm Mbed OS (STM32F767ZI or STM32F429ZI) platforms, only the microSD* card is used as a data-store to store FDO device credentials (device internal flash is not supported).
 
 For an advanced build configuration, refer to [Advanced Build Configuration.](build_conf.md)
 
@@ -60,7 +60,7 @@ directories.
 After a successful compilation, the FDO M4/M7 device executable can be found at
 `<path-to-client-sdk-fidoiot>/build/fdo.bin`.
 
-> ***Note:*** Build can be either `debug` or `release`, depending on the compilation step.
+> ***NOTE***: Build can be either `debug` or `release`, depending on the compilation step.
 >           Board can be either `NUCLEO_F767ZI` or `NUCLEO_F429ZI`, depending on the compilation step.
 
 To flash the M4/M7-based device executable `fdo.bin`, mount the `/media/${user}/NODE_FXXXZI1/` and then copy the compiled  FDO executable file to the respective device:
@@ -71,7 +71,7 @@ $ umount /media/${user}/NODE_FXXXZI1/
 ```
 
 
-> ***Note:*** Copy all  FDO device credentials (located under the `<path-to-client-sdk-fidoiot>/data` directory) 
+> ***NOTE***: Copy all FDO device credentials (located under the `<path-to-client-sdk-fidoiot>/data` directory) 
 > to the microSD* card attached to the M4/M7 device before onboarding is started.
 > The microSD card needs to be FAT formatted. When the device is ready to run the onboarding process,
 > the application will read the FDO device credentials from the microSD card and proceeds further for onboarding.
@@ -106,7 +106,7 @@ $ umount /media/${user}/NODE_FXXXZI1/
   
   Boot up the board. The device will be flashed with the credentials and becomes ready for
   ownership transfer.
-On successful execution of the DI protocol, the device will be configured with the required  FDO credentials and the ownership voucher file will be generated.
+On successful execution of the DI protocol, the device will be configured with the required FDO credentials and the ownership voucher file will be generated.
 
 - To enable the device for ownership transfer, you need to configure the FDO PRI Rendezvous and Owner.
   Refer to [Ownership Transfer Setup](ownership_transfer.md). After these
@@ -121,4 +121,4 @@ Using the following command, the serial port can be opened using a tool for Arm 
 $ mbed sterm --port /dev/ttyACMX -b 115200
 ```
 
-> ***Note:*** `/dev/ttyACMX` can be `/dev/ttyACM0`, `/dev/ttyACM1`, or `/dev/ttyACM2`, depending on the OS assignment.
+> ***NOTE***: `/dev/ttyACMX` can be `/dev/ttyACM0`, `/dev/ttyACM1`, or `/dev/ttyACM2`, depending on the OS assignment.
