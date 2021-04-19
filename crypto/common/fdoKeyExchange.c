@@ -39,7 +39,6 @@ int32_t fdo_kex_init(void)
 		goto err;
 	}
 
-	LOG(LOG_DEBUG, "kex name (%s) used\n", KEX);
 	/*
 	 * Set the Cipher Suit(cs) as follows
 	 *
