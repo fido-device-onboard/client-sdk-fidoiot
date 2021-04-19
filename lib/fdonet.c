@@ -93,6 +93,7 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 	char *pch = NULL;
 	uint8_t *proxy = NULL;
 	char proxy_url[40] = {0};
+	char *eptr = NULL;
 
 	ret =
 	    strstr_s((char *)proxydata, proxydatsize, "://", 3, (char **)&pch);
@@ -123,8 +124,15 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 		goto err;
 	}
 
-	if (proxy[i] == ':')
-		*proxy_port = atoi((char *)&proxy[i + 1]);
+	if (proxy[i] == ':') {
+		// set to 0 explicitly
+		errno = 0;
+		*proxy_port = strtol((char *)&proxy[i + 1], &eptr, 10);
+		if (!eptr || eptr == (char *)&proxy[i+1] || errno != 0) {
+			LOG(LOG_ERROR, "Proxy Port read failed\n");
+			goto err;
+		}
+	}
 	ret = 0;
 err:
 	if (ip_list)

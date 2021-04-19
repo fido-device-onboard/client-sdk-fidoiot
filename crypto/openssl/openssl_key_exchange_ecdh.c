@@ -157,8 +157,6 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	uint16_t tmp = 0;
 	bool ret = false;
 
-	LOG(LOG_DEBUG, "compute_publicB started\n");
-
 	if (!key_ex_data) {
 		LOG(LOG_ERROR, "invalid param\n");
 		return ret;
@@ -298,7 +296,6 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	}
 #endif
 	ret = true;
-	LOG(LOG_DEBUG, "compute_publicB complete\n");
 exit:
 	if (temp)
 		fdo_free(temp);

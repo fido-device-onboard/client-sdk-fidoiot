@@ -310,6 +310,7 @@ static fdo_sdk_status app_initialize(void)
 	int32_t fsize;
 	int max_serviceinfo_sz;
 	char *buffer = NULL;
+	char *eptr = NULL;
 
 	if (!g_fdo_data)
 		return FDO_ERROR;
@@ -358,7 +359,12 @@ static fdo_sdk_status app_initialize(void)
 					(uint8_t *)buffer, fsize) == -1) {
 				LOG(LOG_ERROR, "Failed to read Manufacture DN\n");
 			}
-			max_serviceinfo_sz = atoi(buffer);
+			// set to 0 explicitly
+			errno = 0;
+			max_serviceinfo_sz = strtol(buffer, &eptr, 10);
+			if (!eptr || eptr == buffer || errno != 0) {
+				LOG(LOG_ERROR, "Invalid value read for maximum ServiceInfo size.\n");
+			}
 			if (max_serviceinfo_sz <= MIN_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
 			}

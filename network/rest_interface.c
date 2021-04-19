@@ -399,6 +399,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	char *rem, *p1, *p2;
 	size_t remlen;
 	char tmp[512];
+	char *eptr = NULL;
 	size_t tmplen;
 	int rcode, result_strcmpcase;
 
@@ -440,7 +441,13 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			goto err;
 		}
 		*p1++ = 0;
-		rcode = atoi(p1);
+		// set to 0 explicitly
+		errno = 0;
+		rcode = strtol(p1, &eptr, 10);
+		if (!eptr || eptr == p1 || errno != 0) {
+			LOG(LOG_ERROR, "Invalid value read for Response Code\n");
+			goto err;
+		}
 		p2 = strchr(p1, ' ');
 		if (p2 == NULL) {
 			LOG(LOG_DEBUG, "Response code %03d\n", rcode);
@@ -490,7 +497,13 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		if ((strcasecmp_s(tmp, tmplen, "content-length",
 				  &result_strcmpcase) == 0) &&
 		    result_strcmpcase == 0) {
-			rest->content_length = atoi(p1);
+			// set to 0 explicitly
+			errno = 0;
+			rest->content_length = strtol(p1, &eptr, 10);
+			if (!eptr || eptr == p1 || errno != 0) {
+				LOG(LOG_ERROR, "Invalid value read for Content-length\n");
+				goto err;
+			}
 			LOG(LOG_DEBUG, "Content-length: %zu\n",
 			    rest->content_length);
 		} else if ((strcasecmp_s(tmp, tmplen, "content-type",
@@ -531,7 +544,13 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		} else if  (strcasecmp_s(tmp, tmplen, "message-type",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
-			rest->msg_type = atoi(p1);
+			// set to 0 explicitly
+			errno = 0;
+			rest->msg_type = strtol(p1, &eptr, 10);
+			if (!eptr || eptr == p1 || errno != 0) {
+				LOG(LOG_ERROR, "Invalid value read for Message-Type\n");
+				goto err;
+			}
 			LOG(LOG_DEBUG, "Message-Type: %"PRIu32"\n",
 				rest->msg_type);
 		} else {

@@ -1737,8 +1737,6 @@ bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv)
 		return false;
 	}
 
-	LOG(LOG_DEBUG, "%s RendezvousInstr read started\n", __func__);
-
 	if (!fdor_start_array(fdor)) {
 		LOG(LOG_ERROR, "RendezvousInstr start array not found\n");
 		return false;
@@ -2037,7 +2035,6 @@ bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv)
 		LOG(LOG_ERROR, "RendezvousInstr end array not found\n");
 		ret = false;
 	}
-	LOG(LOG_DEBUG, "%s RendezvousInstr read ended\n", __func__);
 
 	return ret;
 }
@@ -2097,8 +2094,6 @@ int fdo_rendezvous_directive_add(fdo_rendezvous_list_t *list,
 	if (list == NULL || directive == NULL)
 		return 0;
 
-	LOG(LOG_DEBUG, "Adding directive to rvlst\n");
-
 	if (list->num_rv_directives == 0) {
 		// List empty, add the first entry
 		list->rv_directives = directive;
@@ -2115,7 +2110,7 @@ int fdo_rendezvous_directive_add(fdo_rendezvous_list_t *list,
 		entry_ptr->next = directive;
 		list->num_rv_directives++;
 	}
-	LOG(LOG_DEBUG, "Added directive to rvlst, %d entries\n", list->num_rv_directives);
+	LOG(LOG_DEBUG, "Added RendezvousDirective entry %d\n", list->num_rv_directives);
 	return list->num_rv_directives;
 }
 
@@ -2129,8 +2124,6 @@ int fdo_rendezvous_list_add(fdo_rendezvous_directive_t *directives, fdo_rendezvo
 {
 	if (directives == NULL || rv == NULL)
 		return 0;
-
-	LOG(LOG_DEBUG, "Adding to rvlst\n");
 
 	if (directives->num_entries == 0) {
 		// List empty, add the first entry
@@ -2148,7 +2141,7 @@ int fdo_rendezvous_list_add(fdo_rendezvous_directive_t *directives, fdo_rendezvo
 		entry_ptr->next = rv;
 		directives->num_entries++;
 	}
-	LOG(LOG_DEBUG, "Added to rvlst, %d entries\n", directives->num_entries);
+	LOG(LOG_DEBUG, "Added RendezvousInstr entry %d\n", directives->num_entries);
 	return directives->num_entries;
 }
 
@@ -2282,8 +2275,6 @@ int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
 
 			fdo_rendezvous_t *rv_entry = fdo_rendezvous_alloc();
 
-			LOG(LOG_DEBUG, "New rv allocated %p\n", (void *)rv_entry);
-
 			if (fdo_rendezvous_read(fdor, rv_entry))
 				fdo_rendezvous_list_add(rv_directive, rv_entry);
 			else {
@@ -2305,7 +2296,7 @@ int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
 		return false;
 	}
 
-	LOG(LOG_DEBUG, "%s read\n", __func__);
+	LOG(LOG_DEBUG, "RendezvousInfo read completed\n");
 	return true;
 }
 
