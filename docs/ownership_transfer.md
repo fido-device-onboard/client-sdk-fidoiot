@@ -1,6 +1,6 @@
-# Ownership Transfer: TO1, TO2 protocols:
+# Ownership Transfer: TO1, TO2 Protocols:
 During this time, FDO Client SDK assumes that the Ownership Voucher is already transferred from the Manufacturer to the Owner, and the Owner has registered itself to the Rendezvous
-Server, i.e. TO0 is successful. FDO Client SDK, then connects to FDO PRI Rendezvous and PRI Owner subsequently.
+Server, that is, TO0 is successful. FDO Client SDK, then connects to FDO PRI Rendezvous and PRI Owner subsequently.
 
 If the RendezvousInfo in the Ownership Voucher contains RendezvousInstr `RVBYPASS`, then TO0 completion is not required. In such a scenario, FDO Client SDK connects directly to the FDO PRI Owner.
 
