@@ -36,7 +36,7 @@ $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <manufacturer server-port> > data/manufacturer_port.bin
 ```
 
-> ***Note:*** By default, `manufacturer_dn.bin` is configured with "localhost". If both IP and domain name are set, the IP takes precedence over domain name.
+> ***NOTE***: By default, `manufacturer_dn.bin` is configured with "localhost". If both IP and domain name are set, the IP takes precedence over domain name.
 
 <a name="ecdsa_priv"></a>
 ## 4. Elliptic Curve Digital Signature Algorithm (ECDSA) Private Key File Generation
@@ -116,8 +116,8 @@ The following is the format for proxy server network address:
 
     <Proxy Server IP>:<proxy Server Port>  e.g. 255.255.255.255:65535
 
-> ***Note:*** The files `rv_proxy.dat`,`mfg_proxy.dat`, and `owner_proxy.dat` must not contain any other information beyond the information mentioned above.
+> ***NOTE***: The files `rv_proxy.dat`,`mfg_proxy.dat`, and `owner_proxy.dat` must not contain any other information beyond the information mentioned above.
 
 The proxy server network address is optional if the device connects to an access point that connects the device through the proxy server.
 
-***Note :***  FDO clients that run on the Linux* OS also support network proxy discovery using the environment variable or the Web Proxy Auto-Discovery (WPAD) protocol based on the libproxy library. To use wpad protocol, use export http_proxy=’wpad:’.
+***NOTE***:  FDO clients that run on the Linux* OS also support network proxy discovery using the environment variable or the Web Proxy Auto-Discovery (WPAD) protocol based on the libproxy library. To use wpad protocol, use export http_proxy=’wpad:’.
