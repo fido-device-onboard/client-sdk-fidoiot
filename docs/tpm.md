@@ -6,11 +6,11 @@ The FDO build and execution depend on OpenSSL* toolkit version 1.1.1k. Users mus
 
 ## 1. Packages Requirements when Setting up TPM2.0 (on Ubuntu* OS version 20.04):
 
-OpenSSL* toolkit version 1.1.1k. Follow the steps given in Section 10 to update the openssl version to 1.1.1k.
+OpenSSL* toolkit version 1.1.1k. Follow the steps given in Section 10 to update the OpenSSL version to 1.1.1k.
 
 ## 2. TPM* Library Installation (for Ubuntu OS version 20.04):
 
-TPM enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0 and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM enabled FDO Client SDK use one of the appropriate commands:
 
@@ -39,7 +39,7 @@ $ ./install_tpm_libs.sh -i
 # Command to uninstall TPM libraries
 $ ./install_tpm_libs.sh -u
 ```
-> ***Note:*** Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
+> ***NOTE***: Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM)
 
@@ -195,7 +195,7 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
   $ ./build/linux-client
   ```
 
-> ***Note:*** If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
+> ***NOTE***: If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
 
 ### 8.1 Prepare FDO Client SDK Data Folder
 
