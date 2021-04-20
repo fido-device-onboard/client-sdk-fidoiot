@@ -121,15 +121,7 @@ $ export SAFESTRING_ROOT=path/to/safestringlib
 $ export TINYCBOR_ROOT=path/to/tinycbor
 ```
 
-## 6. Compiling ServiceInfo Modules (optional)
-
-Provide the ServiceInfo device module path to use the FDO ServiceInfo functionality:
-```shell
-$ export SERVICE_INFO_DEVICE_MODULE_ROOT=path/to/service_info_module_dir
-```
-ServiceInfo device module `*.a` must be present in the `SERVICE_INFO_DEVICE_MODULE_ROOT`, that is, required ServiceInfo device modules must be built prior to this step, otherwise the FDO Client SDK build will fail.
-
-## 7. Compiling FDO Client SDK
+## 6. Compiling FDO Client SDK
 
 The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
@@ -157,7 +149,7 @@ Refer to the section [FDO Build configurations](build_conf.md)
 
 <a name="run_linux_fdo"></a>
 
-## 8. Running the Application <!-- Ensuring generic updates are captured where applicable -->
+## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
 The TPM enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
 To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
@@ -197,7 +189,7 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
 
 > ***NOTE***: If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
 
-### 8.1 Prepare FDO Client SDK Data Folder
+### 7.1 Prepare FDO Client SDK Data Folder
 
 #### Persistent Storage Index in TPM
 
@@ -232,7 +224,7 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
   $ export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/; openssl req -new -engine tpm2tss -keyform engine -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
   ```
 
-## 9. Troubleshooting Details
+## 8. Troubleshooting Details
 
 - TPM Authorization Failure while Running tpm2-tools Command.<br />
   Clear TPM from the BIOS. To run the TPM enabled FDO Client SDK implementation, the TPM on the device should not be owned.
