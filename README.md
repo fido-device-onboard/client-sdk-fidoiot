@@ -1,3 +1,5 @@
+**NOTE**: This is a preliminary implementation of the [FIDO Device Onboard Spec](https://fidoalliance.org/specs/FDO/fido-device-onboard-v1.0-ps-20210323/) published by the FIDO Alliance. The implementation is experimental and incomplete, and is not ready for use in any production capacity. Some cryptographic algorithms and encoding formats have not been implemented, and any aspect of this implementation is subject to change.
+
 # FIDO Device Onboard (FDO) Client SDK
 
 [ Introduction ](docs/introduction.md) <br>
