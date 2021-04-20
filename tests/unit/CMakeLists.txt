@@ -26,7 +26,7 @@ client_sdk_get_compile_options(c_ops)
 # rules for per test file
 # note sequence needs to be maintained for proper execution.
 set (UNIT_TEST_SOURCES
-  test_ECDSAVerifyRoutines.c
+  # test_ECDSAVerifyRoutines.c
   # test_sample.c
   test_hal_os.c
   # test_fdoprot.c
