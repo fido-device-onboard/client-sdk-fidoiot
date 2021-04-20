@@ -31,7 +31,7 @@ void test_encode_decode(void) {
 	TEST_ASSERT_NOT_NULL(fdor);
 	
 	uint64_t key1 = 1, key2 = 2;
-	int val1 = 50, val2 = 0, val3 = 100;
+	int val1 = 50, val3 = 100;
 		
 	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
 	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
