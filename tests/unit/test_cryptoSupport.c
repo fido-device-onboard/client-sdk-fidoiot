@@ -1866,6 +1866,7 @@ void test_fdo_ov_verify(void)
 TEST_CASE("fdo_ov_verify", "[crypto_support][fdo]")
 #endif
 {
+#if 0
 	int ret;
 	uint8_t test_buff[] = {1, 2, 3, 4, 5};
 	uint8_t *message = test_buff;
@@ -2009,6 +2010,7 @@ TEST_CASE("fdo_ov_verify", "[crypto_support][fdo]")
 	}
 	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
+#endif
 }
 
 /* Test cases for fdo_ov_verify invalid message

@@ -55,6 +55,7 @@ void tear_down(void)
 }
 #endif
 
+#if 0
 static uint8_t *get_randomiv(void)
 {
 	uint8_t *iv = malloc(FDO_AES_IV_SIZE * sizeof(char));
@@ -63,6 +64,7 @@ static uint8_t *get_randomiv(void)
 	fdo_crypto_random_bytes(iv, FDO_AES_IV_SIZE);
 	return iv;
 }
+#endif
 
 #ifdef TARGET_OS_FREERTOS
 extern bool g_malloc_fail;
@@ -148,6 +150,7 @@ int __wrap_crypto_hal_hmac(uint8_t hmac_type, uint8_t *buffer,
  * @return ret
  *        Pointer to the string containing random text.
  */
+#if 0
 static fdo_byte_array_t *getcleartext(int length)
 {
 	fdo_byte_array_t *cleartext = fdo_byte_array_alloc(length);
@@ -164,6 +167,7 @@ while (i) {
 #endif
 	return cleartext;
 }
+#endif
 
 /**
  * Generate a random key of size provided in input.
@@ -173,6 +177,7 @@ while (i) {
  * @return ret
  *        Pointer to the Byte_array containing key.
  */
+#if 0
 static fdo_byte_array_t *getkey(int length)
 {
 	fdo_byte_array_t *cleartext = NULL;
@@ -186,6 +191,7 @@ static fdo_byte_array_t *getkey(int length)
 #endif
 	return cleartext;
 }
+#endif
 
 #ifdef TARGET_OS_FREERTOS
 TEST_CASE("aes_encrypt_packet", "[crypto_utils][fdo]")
@@ -193,6 +199,7 @@ TEST_CASE("aes_encrypt_packet", "[crypto_utils][fdo]")
 void test_aes_encrypt_packet(void)
 #endif
 {
+#if 0
 	int ret = 0;
 	fdo_encrypted_packet_t *cipher_txt =
 	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
@@ -304,6 +311,7 @@ void test_aes_encrypt_packet(void)
 	fdo_bits_free(keyset->sek);
 	fdo_byte_array_free(keyset->svk);
 	free(keyset);
+#endif
 }
 #ifdef TARGET_OS_FREERTOS
 TEST_CASE("aes_decrypt_packet", "[crypto_utils][fdo]")
@@ -311,6 +319,7 @@ TEST_CASE("aes_decrypt_packet", "[crypto_utils][fdo]")
 void test_aes_decrypt_packet(void)
 #endif
 {
+#if 0
 	int ret = 0;
 	fdo_encrypted_packet_t *last_pkt =
 	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
@@ -430,4 +439,5 @@ void test_aes_decrypt_packet(void)
 	free(cipher_txt);
 	free(keyset);
 	fdo_string_free(clear_txt);
+#endif
 }
