@@ -64,6 +64,14 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 				goto end;			
 			}
 
+			if (bin_len == 0) {
+#ifdef DEBUG_LOGS
+				printf("Empty value received for fdo_sys:filedesc\n");
+#endif
+				// received file name cannot be empty
+				return FDO_SI_CONTENT_ERROR;
+			}
+
 			bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
 			if (!bin_data) {
 #ifdef DEBUG_LOGS
@@ -109,7 +117,22 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 #endif
 				goto end;			
 			}
-			
+
+			if (bin_len == 0) {
+#ifdef DEBUG_LOGS
+				printf("Empty value received for fdo_sys:write\n");
+#endif
+				// received file content can be empty for an empty file
+				// do not allocate for the same and skip reading the entry
+				if (!fdor_next(fdor)) {
+#ifdef DEBUG_LOGS
+					printf("Failed to read fdo_sys:write\n");
+#endif
+					goto end;
+				}
+				return FDO_SI_SUCCESS;
+			}
+
 			bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
 			if (!bin_data) {
 #ifdef DEBUG_LOGS

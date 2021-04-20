@@ -29,7 +29,7 @@ static bool is_valid_filename(const char *fname)
 		goto end;
 	}
 
-	if (strlastchar_s(filenme_woextension, 10, '.', &substring)) {
+	if (strlastchar_s(filenme_woextension, FILE_NAME_LEN, '.', &substring)) {
 		goto end;
 	}
 
@@ -73,6 +73,9 @@ end:
 
 void *ModuleAlloc(int size)
 {
+	if (size <= 0) {
+		return NULL;
+	}
 	void *buf = malloc(size);
 	if (!buf) {
 		printf("fdoAlloc failed to allocate\n");
