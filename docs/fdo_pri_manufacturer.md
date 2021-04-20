@@ -21,8 +21,8 @@ make PK_ENC=ecdsa DA=ecdsa256
    As a reference:
    ```
    FILE: lib/m-string.c
-   DeviceMfgInfo Format: [<key type id>, <serial number>, <model number>, <CSR>]
-   key type id  : ECDSA256 = 13 and ECDSA384 = 14
+   DeviceMfgInfo Format: [<key type id>, <serial number>, <model number>, <csr>]
+   key type id  : ECDSA256 = -7 and ECDSA384 = -35
    serial number: To be filled
    model number : Can be an empty string
    csr          : ECC-based Certificate Signing Request

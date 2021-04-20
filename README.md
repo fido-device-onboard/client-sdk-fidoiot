@@ -6,6 +6,8 @@
 - [ TinyCBOR ](docs/setup.md#tinycbor) <br>
 - [ Manufacturer Network Address ](docs/setup.md#manuf_addr)
 - [ ECDSA Private Key Generation ](docs/setup.md#ecdsa_priv)
+- [ Setting the Maximum ServiceInfo Size](docs/setup.md#serviceinfo_mtu)
+- [ Configure Credential Reuse](docs/setup.md#cred_reuse)
 - [ HTTP_PROXY ](docs/setup.md#http_proxy)
 
 [ Linux* TPM* Reference Implementation ](docs/tpm.md) <br>

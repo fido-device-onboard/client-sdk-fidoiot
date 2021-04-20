@@ -75,6 +75,7 @@ The following are steps to generate the private key file for ECDSA-based devices
 
 * **Option2:** To use the private key in PEM format, rename key.pem to ecdsaXXXprivkey.pem (`ecdsa256privkey.pem` for EC curve P-256 and `ecdsa384privkey.pem` for EC curve P-384). Use the compilation flag `DA_FILE=pem` during binary creation.
 
+<a name="serviceinfo_mtu"></a>
 ## 5.  Setting the Maximum ServiceInfo Size
 
 The maximum permissible ServiceInfo size (both Device and Owner) that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The value must lie between 1300 and 8192 (both inclusive). If the set value is less than 1300, the value would default to 1300. Similarly, if the value is greater than 8192, the value would default to 8192.
@@ -82,11 +83,12 @@ The maximum permissible ServiceInfo size (both Device and Owner) that FDO Client
 This value is sent as TO2.DeviceServiceInfoReady.maxOwnerServiceInfoSz and is compared with the TO2.OwnerServiceInfoReady.maxDeviceServiceInfoSz.
 
 ```shell
-# To set the manufacturer DNS
+# To set the maximum ServiceInfo Size
 $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <integer size> > data/max_serviceinfo_sz.bin
 ```
 
+<a name="cred_reuse"></a>
 ## 6.  FDO Credentials REUSE Protocol
 
 The FDO credentials REUSE feature allows FDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
