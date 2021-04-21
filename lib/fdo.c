@@ -150,7 +150,13 @@ static void fdo_protDIExit(app_data_t *app_data)
 {
 	fdo_prot_t *ps = &app_data->prot;
 
-	fdor_flush(&ps->fdor);
+	// clear FDOR, FDOW and reset state to start of DI
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.have_block = false;
+	ps->fdor.b.block_size = ps->prot_buff_sz;
+	fdo_block_reset(&ps->fdow.b);
+	ps->fdow.b.block_size = ps->prot_buff_sz;
+	ps->state = FDO_STATE_DI_APP_START;
 	return;
 }
 
@@ -170,8 +176,13 @@ static void fdo_protTO1Exit(app_data_t *app_data)
 		fdo_byte_array_free(ps->nonce_to1proof);
 		ps->nonce_to1proof = NULL;
 	}
+	// clear FDOR, FDOW and reset state to start of TO1
 	fdo_block_reset(&ps->fdor.b);
 	ps->fdor.have_block = false;
+	ps->fdor.b.block_size = ps->prot_buff_sz;
+	fdo_block_reset(&ps->fdow.b);
+	ps->fdow.b.block_size = ps->prot_buff_sz;
+	ps->state = FDO_TO1_TYPE_HELLO_FDO;
 }
 
 /**
@@ -222,12 +233,9 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_free(ps->osc);
 		ps->osc = NULL;
 	}
-	if (ps->iv != NULL) {
-		fdo_iv_free(ps->iv);
-		ps->iv = NULL;
-	}
 	if (ps->owner_public_key) {
 		fdo_public_key_free(ps->owner_public_key);
+		ps->owner_public_key = NULL;
 	}
 	if (ps->new_pk != NULL) {
 		fdo_public_key_free(ps->new_pk);
@@ -261,8 +269,16 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	}
 	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
 	ps->total_dsi_rounds = 0;
-	fdo_kex_close();
+
+	// clear FDOR, FDOW and reset state to start of TO2
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.have_block = false;
+	ps->fdor.b.block_size = ps->prot_buff_sz;
+	fdo_block_reset(&ps->fdow.b);
+	ps->fdow.b.block_size = ps->prot_buff_sz;
+	ps->state = FDO_STATE_T02_SND_HELLO_DEVICE;
 }
+
 /**
  * Allocate memory to hold device credentials which includes owner credentials
  * and manufacturer credentials.
@@ -787,6 +803,10 @@ static void app_close(void)
 		g_fdo_data->devcred = NULL;
 	}
 
+	if (g_fdo_data->prot.iv != NULL) {
+		fdo_iv_free(g_fdo_data->prot.iv);
+		g_fdo_data->prot.iv = NULL;
+	}
 }
 
 static const uint16_t g_DI_PORT = 8039;
@@ -1062,6 +1082,7 @@ static bool _STATE_TO1(void)
 		dns = NULL;
 		rvbypass = false;
 		rvowner_only = false;
+		tls = false;
 		while (rv) {
 
 			if (rv->bypass && *rv->bypass == true) {
@@ -1215,6 +1236,7 @@ static bool _STATE_TO2(void)
 	// Run the TO2 protocol regardless.
 	while (rvbypass || g_fdo_data->current_rvto2addrentry) {
 
+		tls = false;
 		// if rvbypass is set by TO1, then pick the Owner's address from RendezvousInfo.
 		// otherwise, pick the address from RVTO2AddrEntry.
 		if (rvbypass) {
@@ -1388,6 +1410,7 @@ static bool _STATE_Shutdown(void)
 
 	/* Closing all crypto related functions.*/
 	(void)fdo_crypto_close();
+	fdo_kex_close();
 
 	return true;
 }
