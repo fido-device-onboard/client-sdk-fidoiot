@@ -252,6 +252,10 @@ static int32_t configure_blobs(void)
 		fclose(fp1);
 
 err:
+	if (fp1) {
+		fclose(fp1);
+		fp1 = NULL;
+	}
 	return -1;
 }
 
