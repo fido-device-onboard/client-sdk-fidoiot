@@ -191,36 +191,36 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
 
 ### 7.1 Prepare FDO Client SDK Data Folder
 
-#### Persistent Storage Index in TPM*
+- Persistent Storage Index in TPM*
 
-Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
+  Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
 
- ```shell
+  ```shell
   $ tpm2_getcap handles-persistent
   ```
 
 
-#### Primary Key Generation from Endorsement Hierarchy
+- Primary Key Generation from Endorsement Hierarchy
 
- ```shell
+  ```shell
   $ tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
   ```
 
-#### Load the Primary Key into TPM* Persistent Memory
+- Load the Primary Key into TPM* Persistent Memory
 
- ```shell
+  ```shell
   $ tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
   ```
 
-#### Device ECDSA Key-Pair Generation
+- Device ECDSA Key-Pair Generation
 
- ```shell
+  ```shell
   $ tpm2tss-genkey -a ecdsa -c nist_p256 data/tpm_ecdsa_priv_pub_blob.key -v -P 0x81000001
   ```
 
-#### Generate Device MString
+- Generate Device MString
 
- ```shell
+  ```shell
   $ export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/; openssl req -new -engine tpm2tss -keyform engine -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
   ```
 
