@@ -45,17 +45,17 @@ $ ./install_tpm_libs.sh -u
 
 Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup FDO TPM* libraries. Install only tpm2-tss library to enable TPM* enabled FDO Client SDK code compilation. To enable compilation and execution of TPM* enabled FDO Client SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-tss-engine.
 
-#### 2.1.1 tpm2-tss-3.0.3
+- tpm2-tss-3.0.3
 
-This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 3.0.3 of the library.
+  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 3.0.3 of the library.
 
-##### Source Code
+  - Source Code
 
-The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
+    The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
 
-##### Build and Install Process
+  - Build and Install Process
 
-The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
+    The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
 
 #### 2.1.2 tpm2-abrmd-2.4.0
 
