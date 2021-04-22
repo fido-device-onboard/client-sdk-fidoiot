@@ -57,43 +57,43 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
 
-#### 2.1.2 tpm2-abrmd-2.4.0
+- tpm2-abrmd-2.4.0
 
-This is an optional but recommended library (daemon) to use TPM* in the device. This daemon will act as a resource manager for the TPM*, for all I/O calls that happen with the device. It uses release version 2.4.0 of the library.
+  This is an optional but recommended library (daemon) to use TPM* in the device. This daemon will act as a resource manager for the TPM*, for all I/O calls that happen with the device. It uses release version 2.4.0 of the library.
 
-##### Source Code
+  - Source Code
 
-The library can be downloaded from [tpm2-abrmd-2.4.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.4.0/tpm2-abrmd-2.4.0.tar.gz)
+    The library can be downloaded from [tpm2-abrmd-2.4.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.4.0/tpm2-abrmd-2.4.0.tar.gz)
 
-Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see section on Compiling FDO.
+    Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see section on Compiling FDO.
 
-##### Build and Install Process
+  - Build and Install Process
 
-The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
+    The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
-#### 2.1.3 tpm2-tools-5.0
+- tpm2-tools-5.0
 
-This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.0 of the library.
+  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.0 of the library.
 
-##### Source Code
+  - Source Code
 
-The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
+    The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
 
-##### Build and Install Process
+  - Build and Install Process
 
-The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
+    The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
 
-#### 2.1.4 tpm2-tss-engine-1.1.0
+- tpm2-tss-engine-1.1.0
 
-This library provides the OpenSSL* engine, which performs the OpenSSL* cryptography operation using the keys inside the TPM*. It uses release version 1.1.0 of the library.
+  This library provides the OpenSSL* engine, which performs the OpenSSL* cryptography operation using the keys inside the TPM*. It uses release version 1.1.0 of the library.
 
-##### Source Code
+  - Source Code
 
-The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0.zip)
+    The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0.zip)
 
-##### Build and Install Process
+  - Build and Install Process
 
-The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0/INSTALL.md)
+    The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0/INSTALL.md)
 
 ## 3. Compiling Intel safestringlib
 
