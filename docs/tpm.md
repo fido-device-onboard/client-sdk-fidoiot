@@ -10,9 +10,9 @@ OpenSSL* toolkit version 1.1.1k. Follow the steps given in section 9 to update t
 
 ## 2. TPM* Library Installation (for Ubuntu* OS version 20.04)
 
-TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM libraries. Alternatively, perform steps listed in section 2.1 to setup TPM library without using the TPM [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
-To compile and execute TPM enabled FDO Client SDK use one of the appropriate commands:
+To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
 * Script usage command
 
@@ -20,7 +20,7 @@ To compile and execute TPM enabled FDO Client SDK use one of the appropriate com
 $ ./install_tpm_libs.sh -h
 ```
 
-* TPM-TSS library setup to enable TPM enabled FDO Client SDK code compilation
+* TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
 
 ```shell
 # Command to install tpm-tss library
