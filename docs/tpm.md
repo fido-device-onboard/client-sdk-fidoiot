@@ -251,7 +251,6 @@ Find a persistent storage index that is unused in the TPM* and note it down. It 
   ```
   If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1k, follow the steps given in section 9 to update the OpenSSL* version to 1.1.1k.
 
-<add symlink>
 ## 9. Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1k
 
 ```shell
