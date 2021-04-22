@@ -1,4 +1,4 @@
-# For Secure Element based implementation
+# For Secure Element Based Implementation
 
 The Secure Element(SE) is a trusted platform module which helps in secure
 authentication using ECDSA. This Secure Element in FDO is used to ensure that
@@ -14,10 +14,10 @@ with a truly random 32 byte number that is used as an iv or seed for many crypto
 
 FDO implementation for ARM devices uses Microchip AT608A as the secure element.
 
-***Note :*** The configurations mentioned in the document are not supported yet. This document will be updated in a future release when the source code implementation is updated to support the same.
+***NOTE***: The configurations mentioned in the document are not supported yet. This document will be updated in a future release when the source code implementation is updated to support the same.
 
-## Setting up the SE for execution
-1. Pin Connections have to set as shown below.
+## Setting up the SE for Execution
+1. Pin Connections has to be set as shown below.
 >                            ----------------------------                 ----------------------------
 >                           |         RPI Board         |                |      Microchip AT608A      |
 >                            ----------------------------                 ----------------------------
@@ -59,7 +59,7 @@ FDO implementation for ARM devices uses Microchip AT608A as the secure element.
    ```bash
    $ sudo i2cdetect -y 1
    ```
-   Note: i2cdetect is run on i2c bus 1. Therefore "-y 1", there maybe devices in which this
+   ***NOTE***: i2cdetect is run on i2c bus 1. Therefore "-y 1", there maybe devices in which this
    might not be true. Refer to the hardware spec for the correct bus number.
 
 6. Setting up the build Environment for SE.
@@ -69,7 +69,7 @@ FDO implementation for ARM devices uses Microchip AT608A as the secure element.
    ```
 
 7. Do a [regular build](./linux.md) of FDO with an additional parameter CRYPTO_HW=true.
-   Note: only ECDSA is supported from SE.
+   ***NOTE***: Only ECDSA is supported from SE.
    ```bash
    $ cd <client-sdk folder>
    $ cmake -DCRYPTO_HW=true -DPK_ENC=ecdsa -DKEX=ecdh .
@@ -77,7 +77,7 @@ FDO implementation for ARM devices uses Microchip AT608A as the secure element.
    $ ./build/linux/debug/linux-client
    ```
 
-8. Note that first time the provisioning will take place it will create a device.csr.pem file
+8. Note that the first time the provisioning takes place, it will create a device.csr.pem file
    in the current working directory which can be used to create a certificate if needed.
    Also during the first run, AES key and ECDSA public key are shown. The subsequent runs can
    not access the AES/ECDSA key related information.

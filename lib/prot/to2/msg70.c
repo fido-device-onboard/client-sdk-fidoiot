@@ -51,7 +51,7 @@ int32_t msg70(fdo_prot_t *ps)
 		// Reuse scenario, moving to post DI state
 		ps->dev_cred->ST = FDO_DEVICE_STATE_READY1;
 	} else if (resale_supported) {
-		// Done with Secure Device Onboard.
+		// Done with FIDO Device Onboard.
 		// As of now moving to done state for resale
 		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
 	}

@@ -92,7 +92,7 @@ void *__wrap_fdo_alloc(size_t size)
 #endif
 /*** Test functions. ***/
 
-/* Dummy test function to illustrate that the Intel Secure Device Onboard
+/* Dummy test function to illustrate that the FIDO Device Onboard
  * librarys are being linked correctly. */
 #ifndef TARGET_OS_FREERTOS
 void test_file_utils(void)

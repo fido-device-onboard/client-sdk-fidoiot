@@ -1354,9 +1354,9 @@ static bool _STATE_TO2(void)
 
 		LOG(LOG_DEBUG, "\n------------------------------------ TO2 Successful "
 				"--------------------------------------\n\n");
-		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-		LOG(LOG_INFO, "@Secure Device Onboarding Complete@\n");
-		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+		LOG(LOG_INFO, "@FIDO Device Onboard Complete@\n");
+		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 		TO2_done = 1;
 		ret = true;
 		break;
@@ -1373,7 +1373,7 @@ static bool _STATE_TO2(void)
 static bool _STATE_Error(void)
 {
 	LOG(LOG_ERROR, "err %d\n", g_fdo_data->err);
-	LOG(LOG_INFO, "Secure Device Onboarding Failed.\n");
+	LOG(LOG_INFO, "FIDO Device Onboard Failed.\n");
 	g_fdo_data->state_fn = &_STATE_Shutdown_Error;
 
 	return true;

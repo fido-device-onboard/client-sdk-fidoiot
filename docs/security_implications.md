@@ -23,6 +23,8 @@ addressed before using the reference solution as is, because of the nature of th
    Affected file(s): <br>
    - `base.mk`
 
+***NOTE***: The configurations mentioned for below platforms are not supported yet. They will be updated in a future release.
+
 ## NUCLEO-F429ZI board: Arm Cortex* -M4/Arm Mbed* OS (mbedTLS as the cryptography library)
 1. The mbedTLS library must use the True Random Number Generator (TRNG) hardware for
    the entropy source. Refer to
@@ -100,10 +102,10 @@ addressed before using the reference solution as is, because of the nature of th
                        `PLATFORM_HMAC_KEY`, with read/write permissions provided
                        only to the  FDO user.
    - data/Secure.blob: This file is encrypted using `PLATFORM_AES_KEY`, with
-                       read/write permissions provided only to the  FDO user
+                       read/write permissions provided only to the FDO user.
    - data/raw.blob: This file is not protected using cryptography but must have
-                    read/write permissions provided only to the  FDO user.
-   - data: This directory must be read or written only by the  FDO user. <br>
+                    read/write permissions provided only to the FDO user.
+   - data: This directory must be read or written only by the FDO user. <br>
    Affected file(s): <br>
    - `cmake/blob_path.cmake`
 

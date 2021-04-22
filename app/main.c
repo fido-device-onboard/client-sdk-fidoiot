@@ -247,7 +247,7 @@ int app_main(bool is_resale)
 	fdo_sdk_service_info_module *module_info;
 
 	bool do_resale = false;
-	LOG(LOG_DEBUG, "Starting Secure Device Onboard\n");
+	LOG(LOG_DEBUG, "Starting FIDO Device Onboard\n");
 
 #ifdef SECURE_ELEMENT
 	if (-1 == se_provisioning()) {
@@ -310,7 +310,7 @@ int app_main(bool is_resale)
 	print_device_status();
 
 	if (FDO_SUCCESS != fdo_sdk_run()) {
-		LOG(LOG_ERROR, "Secure device onboarding failed\n");
+		LOG(LOG_ERROR, "FIDO Device Onboard failed\n");
 		return -1;
 	}
 
