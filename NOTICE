@@ -4,7 +4,7 @@ used by the Secure Device Onboard Client SDK.
 -------------------------------------------------------------------------------
 The following components are used under Apache 2.0 License:
 
-embedTLS
+MbedTLS
 -------------------------------------------------------------------------------
                                 Apache License
                            Version 2.0, January 2004
@@ -272,8 +272,7 @@ SOFTWARE.
 The following components are used under The BSD 2-Clause License:
 
 tom2-software tpm2-tss
-tpm2-software tpm-abrmd
-
+tpm2-software tpm2-abrmd
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
