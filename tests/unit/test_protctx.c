@@ -94,7 +94,7 @@ int __wrap_fdo_read_string_sz(fdor_t *fdor)
 
 /*** Test functions. ***/
 
-/* Dummy test function to illustrate that the Intel Secure Device Onboard
+/* Dummy test function to illustrate that the FIDO Device Onboard
  * librarys are being linked correctly. */
 
 int __real_snprintf_s_si(char *dest, rsize_t dmax, const char *format, char *s,
