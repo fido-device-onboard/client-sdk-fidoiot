@@ -23,6 +23,8 @@ addressed before using the reference solution as is, because of the nature of th
    Affected file(s): <br>
    - `base.mk`
 
+***NOTE***: The configurations mentioned for below platforms are not supported yet. They will be updated in a future release.
+
 ## NUCLEO-F429ZI board: Arm Cortex* -M4/Arm Mbed* OS (mbedTLS as the cryptography library)
 1. The mbedTLS library must use the True Random Number Generator (TRNG) hardware for
    the entropy source. Refer to
