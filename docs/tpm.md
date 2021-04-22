@@ -150,19 +150,19 @@ Refer to the section [FDO Build configurations](build_conf.md)
 <a name="run_linux_fdo"></a>
 
 ## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
-The TPM enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
+The TPM* enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
 To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
 [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
 [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
-Refer the TPM Library Setup steps given in section 2 to compile and execute TPM enabled FDO Client SDK
+Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK
 
 After a successful compilation, the  FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer
   Refer to [ Device Initialization Setup ](DI_setup.md).
-  Then, execute the TPM make ready script. Refer to [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh).
+  Then, execute the TPM* make ready script. Refer to [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh).
   Alternatively, perform the steps listed in section 8.1 to initialise the device without using
   [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
 
@@ -172,7 +172,7 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
   $ ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
   ```
 
-- Once the TPM make ready script is executed successfully, the device is now initialized
+- Once the TPM* make ready script is executed successfully, the device is now initialized
   with the credentials and is ready for ownership transfer. To run the device against the
   FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
@@ -191,9 +191,9 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
 
 ### 7.1 Prepare FDO Client SDK Data Folder
 
-#### Persistent Storage Index in TPM
+#### Persistent Storage Index in TPM*
 
-Find a persistent storage index that is unused in the TPM and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
+Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
 
  ```shell
   $ tpm2_getcap handles-persistent
@@ -206,7 +206,7 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
   $ tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
   ```
 
-#### Load the Primary Key into TPM Persistent Memory
+#### Load the Primary Key into TPM* Persistent Memory
 
  ```shell
   $ tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
@@ -226,14 +226,14 @@ Find a persistent storage index that is unused in the TPM and note it down. It u
 
 ## 8. Troubleshooting Details
 
-- TPM Authorization Failure while Running tpm2-tools Command.<br />
-  Clear TPM from the BIOS. To run the TPM enabled FDO Client SDK implementation, the TPM on the device should not be owned.
-  To reset the TPM, go to your device BIOS and clear the TPM. To find the location of the option in the BIOS of your 
+- TPM* Authorization Failure while Running tpm2-tools Command.<br />
+  Clear TPM* from the BIOS. To run the TPM* enabled FDO Client SDK implementation, the TPM* on the device should not be owned.
+  To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your 
   device, refer to your device manual.
 
-- Clear the Used Persistent Index in TPM.<br />
-  Use the tpm2_evictcontrol command to delete the content or clear TPM from the BIOS. To run the TPM-based FDO 
-  implementation, the TPM on the device should not be owned. To reset the TPM, go to your device BIOS and clear the TPM.
+- Clear the Used Persistent Index in TPM*.<br />
+  Use the tpm2_evictcontrol command to delete the content or clear TPM* from the BIOS. To run the TPM* based FDO 
+  implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*.
   To find the location of the option in the BIOS of your device, refer to your device manual.
 
   Assuming that the index is 0x81000001, run the following command to delete the keys.
