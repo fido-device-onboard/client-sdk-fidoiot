@@ -26,15 +26,15 @@ client_sdk_get_compile_options(c_ops)
 # rules for per test file
 # note sequence needs to be maintained for proper execution.
 set (UNIT_TEST_SOURCES
-  test_ECDSAVerifyRoutines.c
+  # test_ECDSAVerifyRoutines.c
   # test_sample.c
   test_hal_os.c
-  # test_sdoprot.c
+  # test_fdoprot.c
   test_base64.c
-  # test_sdotypes.c
-  test_sdonet.c
+  # test_fdotypes.c
+  test_fdonet.c
   test_RSARoutines.c
-  # test_sdo.c
+  # test_fdo.c
   # test_credentials.c
   test_cryptoSupport.c
   test_bn_support.c
@@ -44,19 +44,19 @@ set (UNIT_TEST_SOURCES
   # test_protctx.c
   test_SSLRoutines.c
   test_ECDSASignRoutines.c
-  test_sdoblockio.c
+  test_fdoblockio.c
 )
 
-set (test_sample_flags -Wl,-wrap,sdo_read_string_sz)
+set (test_sample_flags -Wl,-wrap,fdo_read_string_sz)
 
 set (test_cryptosupport_flags -Wl,-wrap,crypto_init -Wl,-wrap,crypto_close
-  -Wl,-wrap,sdo_alloc -Wl,-wrap,sdo_string_alloc_with_str
+  -Wl,-wrap,fdo_alloc -Wl,-wrap,fdo_string_alloc_with_str
   -Wl,-wrap,crypto_hal_get_device_random -Wl,-wrap,crypto_init
-  -Wl,-wrap,crypto_close -Wl,-wrap,sdo_string_alloc_with_str
-  -Wl,-wrap,crypto_hal_set_peer_random -Wl,-wrap,sdo_byte_array_alloc
-  -Wl,-wrap,sdo_alloc -Wl,-wrap,strcmp_s -Wl,-wrap,memset_s
-  -Wl,-wrap,sdo_blob_read -Wl,-wrap,sdo_blob_size
-  -Wl,-wrap,crypto_hal_sig_verify -Wl,-wrap,sdo_crypto_ecdsa_sign
+  -Wl,-wrap,crypto_close -Wl,-wrap,fdo_string_alloc_with_str
+  -Wl,-wrap,crypto_hal_set_peer_random -Wl,-wrap,fdo_byte_array_alloc
+  -Wl,-wrap,fdo_alloc -Wl,-wrap,strcmp_s -Wl,-wrap,memset_s
+  -Wl,-wrap,fdo_blob_read -Wl,-wrap,fdo_blob_size
+  -Wl,-wrap,crypto_hal_sig_verify -Wl,-wrap,fdo_crypto_ecdsa_sign
   -Wl,-wrap,get_ec_key -Wl,-wrap,ECDSA_size -Wl,-wrap,memcpy_s
   -Wl,-wrap,convert2pkey)
       
@@ -64,18 +64,18 @@ set (test_hal_os_flags -Wl,-wrap,close -Wl,-wrap,recv -Wl,-wrap,send
   -Wl,-wrap,socket -Wl,-wrap,connect)
 
 set (test_utils_flags -Wl,-wrap,fopen -Wl,-wrap,fread -Wl,-wrap,fclose
-  -Wl,-wrap,ftell -Wl,-wrap,sdo_alloc)
+  -Wl,-wrap,ftell -Wl,-wrap,fdo_alloc)
 
-set (test_sdokeyexchangedh_flags -Wl,-wrap,sdo_crypto_init)
+set (test_fdokeyexchangedh_flags -Wl,-wrap,fdo_crypto_init)
 
-set (test_protctx_flags -Wl,-wrap,snprintf_s_si -Wl,-wrap,sdo_alloc
-  -Wl,-wrap,socket -Wl,-wrap,sdo_socket_read -Wl,-wrap,snprintf_s_i
+set (test_protctx_flags -Wl,-wrap,snprintf_s_si -Wl,-wrap,fdo_alloc
+  -Wl,-wrap,socket -Wl,-wrap,fdo_socket_read -Wl,-wrap,snprintf_s_i
   -Wl,-wrap,strncpy_s -Wl,-wrap,strcat_s)
 
-set (test_credentials_flags -Wl,-wrap,sdoDeviceCredentialRead
-  -Wl,-wrap,sdo_device_credential_write
+set (test_credentials_flags -Wl,-wrap,fdoDeviceCredentialRead
+  -Wl,-wrap,fdo_device_credential_write
   -Wl,-wrap,new_buffer_from_file
-  -Wl,-wrap,sdo_alloc)
+  -Wl,-wrap,fdo_alloc)
 
 set (test_sslroutines_flags -Wl,-wrap,TLS_method
   -Wl,-wrap,SSL_CTX_new -Wl,-wrap,SSL_new
@@ -85,32 +85,32 @@ set (test_sslroutines_flags -Wl,-wrap,TLS_method
 
 set (test_cryptoutils_flags -Wl,-wrap,malloc -Wl,-wrap,memset_s
   -Wl,-wrap,memcpy_s -Wl,-wrap,crypto_hal_hmac
-  -Wl,-wrap,sdo_hash_alloc
-  -Wl,-wrap,sdo_hash_free)
+  -Wl,-wrap,fdo_hash_alloc
+  -Wl,-wrap,fdo_hash_free)
 
-set (test_sdo_flags -Wl,-wrap,sdo_crypto_init -Wl,-wrap,sdor_init -Wl,-wrap,sdow_init 
+set (test_fdo_flags -Wl,-wrap,fdo_crypto_init -Wl,-wrap,fdor_init -Wl,-wrap,fdow_init 
   -Wl,-wrap,app_alloc_credentials -Wl,-wrap,key_exchange_init
-  -Wl,-wrap,sdo_null_ipaddress
-  -Wl,-wrap,store_credential -Wl,-wrap,sdo_socket_connect
-  -Wl,-wrap,memset_s -Wl,-wrap,sdo_alloc)
+  -Wl,-wrap,fdo_null_ipaddress
+  -Wl,-wrap,store_credential -Wl,-wrap,fdo_socket_connect
+  -Wl,-wrap,memset_s -Wl,-wrap,fdo_alloc)
 
-set (test_sdoprot_flags -Wl,-wrap,sdo_send_error_message -Wl,-wrap,sdo_prot_rcv_msg 
-  -Wl,-wrap,sdo_cred_mfg_alloc -Wl,-wrap,app_get_credentials
-  -Wl,-wrap,sdo_begin_write_signature 
-  -Wl,-wrap,sdo_byte_array_write_chars -Wl,-wrap,sdo_service_info_get)
+set (test_fdoprot_flags -Wl,-wrap,fdo_send_error_message -Wl,-wrap,fdo_prot_rcv_msg 
+  -Wl,-wrap,fdo_cred_mfg_alloc -Wl,-wrap,app_get_credentials
+  -Wl,-wrap,fdo_begin_write_signature 
+  -Wl,-wrap,fdo_byte_array_write_chars -Wl,-wrap,fdo_service_info_get)
 
-set (test_sdonet_flags -Wl,-wrap,cacheHostIP -Wl,-wrap,cacheHostDns
-  -Wl,-wrap,sdo_byte_array_alloc -Wl,-wrap,sdor_init -Wl,-wrap,cacheHostPort 
-  -Wl,-wrap,sdo_con_dns_lookup -Wl,-wrap,sdo_con_connect)
+set (test_fdonet_flags -Wl,-wrap,cacheHostIP -Wl,-wrap,cacheHostDns
+  -Wl,-wrap,fdo_byte_array_alloc -Wl,-wrap,fdor_init -Wl,-wrap,cacheHostPort 
+  -Wl,-wrap,fdo_con_dns_lookup -Wl,-wrap,fdo_con_connect)
 
 if (${TLS} MATCHES mbedtls)
-  set (test_bn_support_flags -Wl,-wrap,sdo_byte_array_alloc -Wl,-wrap,crypto_hal_random_bytes
+  set (test_bn_support_flags -Wl,-wrap,fdo_byte_array_alloc -Wl,-wrap,crypto_hal_random_bytes
     -Wl,-wrap,mbedtls_mpi_write_binary
     -Wl,-wrap,mbedtls_mpi_size -Wl,-wrap,mbedtls_mpi_read_binary
     -Wl,-wrap,mbedtls_mpi_exp_mod -Wl,-wrap,mbedtls_mpi_grow
     -Wl,-wrap,mbedtls_mpi_exp_mod)
 elseif (${TLS} MATCHES openssl)
-  set (test_bn_support_flags -Wl,-wrap,sdo_byte_array_alloc -Wl,-wrap,crypto_hal_random_bytes
+  set (test_bn_support_flags -Wl,-wrap,fdo_byte_array_alloc -Wl,-wrap,crypto_hal_random_bytes
     -Wl,-wrap,BN_num_bits -Wl,-wrap,BN_bin2bn
     -Wl,-wrap,BN_bn2bin -Wl,-wrap,BN_mod_exp -Wl,-wrap,BN_rand)
 endif()

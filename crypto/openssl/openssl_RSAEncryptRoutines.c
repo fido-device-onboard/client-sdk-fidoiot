@@ -16,12 +16,12 @@
 #include <openssl/engine.h>
 #include <openssl/ossl_typ.h>
 #include "BN_support.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "safe_lib.h"
 
 /* An Example Public Key
- * Formats are described in the SDO documentation, but here is a public key
+ * Formats are described in the FDO documentation, but here is a public key
 encoded with the RSAMODEXP format:
 
 ["0228", # length in bytes
@@ -46,12 +46,12 @@ encoded with the RSAMODEXP format:
 /* routines */
 /*  PURPOSE: Convert a public key into an OpenSSL key */
 
-/*  REQUIRE: An public key in SDOPublic_key structure */
+/*  REQUIRE: An public key in FDOPublic_key structure */
 /*           A pointer to a PKEY structure, which will be allocated by this */
 /* routine */
 /*           using OpenSSL's EVP_PKEY alloc and free functions */
 
-/*  PROMISE: if SDOPublic_key is a valid RSA public key in version 0.5  */
+/*  PROMISE: if FDOPublic_key is a valid RSA public key in version 0.5  */
 /* structure in RSAMODENC */
 /*           this routine will take the modulus and public key and format  */
 /* them into a PKEY structure */
@@ -167,7 +167,7 @@ err:
 /**
  * crypto_hal_rsa_encrypt -  Encrypt the block passed using the public key
  * passed, the key must be RSA
- * @param hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
+ * @param hash_type - Hash type (FDO_CRYPTO_HASH_TYPE_SHA_256)
  * @param key_encoding - RSA Key encoding typee.
  * @param key_algorithm - RSA public key algorithm.
  * @param clear_text - Input text to be encrypted.
@@ -206,8 +206,8 @@ int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
 	LOG(LOG_DEBUG, "rsa_encrypt starting.\n");
 
 	/* Make sure we have a correct type of key. */
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type.\n");
 		return -1;
 	}
@@ -253,7 +253,7 @@ int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
 	char err[130] = {0};
 
 	switch (hash_type) {
-	case SDO_PK_HASH_SHA1:
+	case FDO_PK_HASH_SHA1:
 		encrypt_len = RSA_public_encrypt(
 		    clear_text_length, (unsigned char *)clear_text, encrypt,
 		    rkey, RSA_PKCS1_OAEP_PADDING);
@@ -267,9 +267,9 @@ int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
 		}
 
 		break;
-	case SDO_PK_HASH_SHA384:
+	case FDO_PK_HASH_SHA384:
 		evp_md = EVP_sha384();
-	case SDO_PK_HASH_SHA256:
+	case FDO_PK_HASH_SHA256:
 		/*
 		 * if evp_md is initialized then its SHA284, proceed else if
 		 * evp_md is NULL then its SHA256, initialize with EVP_sha256

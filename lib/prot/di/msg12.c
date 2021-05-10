@@ -10,7 +10,7 @@
  */
 
 #include "util.h"
-#include "sdoprot.h"
+#include "fdoprot.h"
 
 /**
  * msg12() - DISetHMAC, Type 12
@@ -24,14 +24,14 @@
  *   Hmac
  * ]
  */
-int32_t msg12(sdo_prot_t *ps)
+int32_t msg12(fdo_prot_t *ps)
 {
 	int ret = -1;
 
 	/* Prepare the block for msg12 */
-	if (!sdow_next_block(&ps->sdow, SDO_DI_SET_HMAC))
+	if (!fdow_next_block(&ps->fdow, FDO_DI_SET_HMAC))
 		goto err;
-	if (!sdow_start_array(&ps->sdow, 1))
+	if (!fdow_start_array(&ps->fdow, 1))
 		goto err;
 
 	if (!ps->new_ov_hdr_hmac) {
@@ -40,14 +40,14 @@ int32_t msg12(sdo_prot_t *ps)
 	}
 
 	/* Write the HMAC and send it to manufacturer */
-	if (!sdo_hash_write(&ps->sdow, ps->new_ov_hdr_hmac))
+	if (!fdo_hash_write(&ps->fdow, ps->new_ov_hdr_hmac))
 		goto err;
-	sdo_hash_free(ps->new_ov_hdr_hmac);
-	if (!sdow_end_array(&ps->sdow))
+	fdo_hash_free(ps->new_ov_hdr_hmac);
+	if (!fdow_end_array(&ps->fdow))
 		goto err;
 
 	/* Mark as success and goto msg13 */
-	ps->state = SDO_STATE_DI_DONE;
+	ps->state = FDO_STATE_DI_DONE;
 	LOG(LOG_DEBUG, "DISetHMAC completed\n");
 	ret = 0;
 

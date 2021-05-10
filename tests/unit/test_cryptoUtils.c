@@ -4,19 +4,19 @@
 
 /*!
  * \file
- * \brief Unit tests for crypto utility APIs of SDO library.
+ * \brief Unit tests for crypto utility APIs of FDO library.
  */
 
 #include <stdbool.h>
 #include "safe_lib.h"
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "util.h"
 #include <stdlib.h>
 #include "unity.h"
 #include "safe_mem_lib.h"
 #include "crypto_utils.h"
-#include "sdoCryptoHal.h"
-#include "sdoCrypto.h"
+#include "fdoCryptoHal.h"
+#include "fdoCrypto.h"
 
 #ifdef TARGET_OS_LINUX
 /*
@@ -30,8 +30,8 @@ int __wrap_malloc(size_t size);
 errno_t __wrap_memset_s(void *dest, rsize_t len, uint8_t value);
 errno_t __wrap_memcpy_s(void *dest, rsize_t dmax, const void *src,
 			rsize_t smax);
-sdo_hash_t *__wrap_sdo_hash_alloc(int hash_type, int size);
-void __wrap_sdo_hash_free(sdo_hash_t *hp);
+fdo_hash_t *__wrap_fdo_hash_alloc(int hash_type, int size);
+void __wrap_fdo_hash_free(fdo_hash_t *hp);
 int __wrap_crypto_hal_hmac(uint8_t hmac_type, uint8_t *buffer,
 			   size_t buffer_length, uint8_t *output,
 			   size_t output_length, uint8_t *key,
@@ -55,14 +55,16 @@ void tear_down(void)
 }
 #endif
 
+#if 0
 static uint8_t *get_randomiv(void)
 {
-	uint8_t *iv = malloc(SDO_AES_IV_SIZE * sizeof(char));
+	uint8_t *iv = malloc(FDO_AES_IV_SIZE * sizeof(char));
 	if (!iv)
 		return NULL;
-	sdo_crypto_random_bytes(iv, SDO_AES_IV_SIZE);
+	fdo_crypto_random_bytes(iv, FDO_AES_IV_SIZE);
 	return iv;
 }
+#endif
 
 #ifdef TARGET_OS_FREERTOS
 extern bool g_malloc_fail;
@@ -103,23 +105,23 @@ errno_t __wrap_memcpy_s(void *dest, rsize_t dmax, const void *src, rsize_t smax)
 }
 
 bool hash_alloc_fail_case = false;
-sdo_hash_t *__real_sdo_hash_alloc(int hash_type, int size);
-sdo_hash_t *__wrap_sdo_hash_alloc(int hash_type, int size)
+fdo_hash_t *__real_fdo_hash_alloc(int hash_type, int size);
+fdo_hash_t *__wrap_fdo_hash_alloc(int hash_type, int size)
 {
 	if (hash_alloc_fail_case)
 		return NULL;
 	else
-		return __real_sdo_hash_alloc(hash_type, size);
+		return __real_fdo_hash_alloc(hash_type, size);
 }
 
 bool hash_free_fail_case = false;
-void __real_sdo_hash_free(sdo_hash_t *hp);
-void __wrap_sdo_hash_free(sdo_hash_t *hp)
+void __real_fdo_hash_free(fdo_hash_t *hp);
+void __wrap_fdo_hash_free(fdo_hash_t *hp)
 {
 	if (hash_free_fail_case)
 		return;
 	else
-		__real_sdo_hash_free(hp);
+		__real_fdo_hash_free(hp);
 }
 
 bool hmac_fail_case = false;
@@ -148,12 +150,13 @@ int __wrap_crypto_hal_hmac(uint8_t hmac_type, uint8_t *buffer,
  * @return ret
  *        Pointer to the string containing random text.
  */
-static sdo_byte_array_t *getcleartext(int length)
+#if 0
+static fdo_byte_array_t *getcleartext(int length)
 {
-	sdo_byte_array_t *cleartext = sdo_byte_array_alloc(length);
+	fdo_byte_array_t *cleartext = fdo_byte_array_alloc(length);
 	if (!cleartext)
 		return NULL;
-	sdo_crypto_random_bytes(cleartext->bytes, cleartext->byte_sz);
+	fdo_crypto_random_bytes(cleartext->bytes, cleartext->byte_sz);
 /*int i = length;
 while (i) {
 	i--;
@@ -164,6 +167,7 @@ while (i) {
 #endif
 	return cleartext;
 }
+#endif
 
 /**
  * Generate a random key of size provided in input.
@@ -173,33 +177,36 @@ while (i) {
  * @return ret
  *        Pointer to the Byte_array containing key.
  */
-static sdo_byte_array_t *getkey(int length)
+#if 0
+static fdo_byte_array_t *getkey(int length)
 {
-	sdo_byte_array_t *cleartext = NULL;
-	cleartext = sdo_byte_array_alloc(length);
+	fdo_byte_array_t *cleartext = NULL;
+	cleartext = fdo_byte_array_alloc(length);
 	if (!cleartext)
 		return NULL;
-	if (0 != sdo_crypto_random_bytes(cleartext->bytes, cleartext->byte_sz))
+	if (0 != fdo_crypto_random_bytes(cleartext->bytes, cleartext->byte_sz))
 		return NULL;
 #ifdef HEXDEBUG
 	hexdump("KEY", cleartext->bytes, cleartext->byte_sz);
 #endif
 	return cleartext;
 }
+#endif
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("aes_encrypt_packet", "[crypto_utils][sdo]")
+TEST_CASE("aes_encrypt_packet", "[crypto_utils][fdo]")
 #else
 void test_aes_encrypt_packet(void)
 #endif
 {
+#if 0
 	int ret = 0;
-	sdo_encrypted_packet_t *cipher_txt =
-	    sdo_alloc(sizeof(sdo_encrypted_packet_t));
-	sdo_aes_keyset_t *keyset = sdo_alloc(sizeof(sdo_aes_keyset_t));
-	sdo_encrypted_packet_t *last_pkt =
-	    sdo_alloc(sizeof(sdo_encrypted_packet_t));
-	sdo_byte_array_t *clear_txt = getcleartext(PLAIN_TEXT_SIZE);
+	fdo_encrypted_packet_t *cipher_txt =
+	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
+	fdo_aes_keyset_t *keyset = fdo_alloc(sizeof(fdo_aes_keyset_t));
+	fdo_encrypted_packet_t *last_pkt =
+	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
+	fdo_byte_array_t *clear_txt = getcleartext(PLAIN_TEXT_SIZE);
 
 	TEST_ASSERT_NOT_NULL(keyset);
 	TEST_ASSERT_NOT_NULL(last_pkt);
@@ -209,26 +216,26 @@ void test_aes_encrypt_packet(void)
 	ret = random_init();
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "Entropy setup Failed");
 
-	keyset->sek = getkey(SDO_AES_KEY_LENGTH);
+	keyset->sek = getkey(FDO_AES_KEY_LENGTH);
 	TEST_ASSERT_NOT_NULL(keyset->sek);
 
 	keyset->svk = getkey(HMAC_KEY_LENGTH);
 	TEST_ASSERT_NOT_NULL(keyset->svk);
 
 	/* Positive Test Case */
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 	TEST_ASSERT_NOT_NULL(cipher_txt->em_body);
-	sdo_byte_array_free(cipher_txt->em_body);
-	sdo_hash_free(cipher_txt->hmac);
+	fdo_byte_array_free(cipher_txt->em_body);
+	fdo_hash_free(cipher_txt->hmac);
 
 	/* Positive Test Case */
 	last_pkt->offset = 10;
 	last_pkt->hmac =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SIZE);
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SIZE);
 	TEST_ASSERT_NOT_NULL(last_pkt->hmac);
 	ret = crypto_hal_hmac(last_pkt->hmac->hash_type, clear_txt->bytes,
 			      PLAIN_TEXT_SIZE, last_pkt->hmac->hash->bytes,
@@ -241,15 +248,15 @@ void test_aes_encrypt_packet(void)
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 	last_pkt->offset = 0;
 	if (cipher_txt->hmac) {
-		sdo_hash_free(cipher_txt->hmac);
+		fdo_hash_free(cipher_txt->hmac);
 		cipher_txt->hmac = NULL;
 	}
 	if (cipher_txt->em_body) {
-		sdo_byte_array_free(cipher_txt->em_body);
+		fdo_byte_array_free(cipher_txt->em_body);
 		cipher_txt->em_body = NULL;
 	}
 	if (last_pkt->hmac) {
-		sdo_hash_free(last_pkt->hmac);
+		fdo_hash_free(last_pkt->hmac);
 		last_pkt->hmac = NULL;
 	}
 
@@ -293,32 +300,34 @@ void test_aes_encrypt_packet(void)
 	hash_free_fail_case = false;
 
 	if (last_pkt->hmac != NULL) {
-		sdo_hash_free(last_pkt->hmac);
+		fdo_hash_free(last_pkt->hmac);
 	}
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	free(last_pkt);
 	free(cipher_txt);
-	sdo_bits_free(clear_txt);
-	sdo_bits_free(keyset->sek);
-	sdo_byte_array_free(keyset->svk);
+	fdo_bits_free(clear_txt);
+	fdo_bits_free(keyset->sek);
+	fdo_byte_array_free(keyset->svk);
 	free(keyset);
+#endif
 }
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("aes_decrypt_packet", "[crypto_utils][sdo]")
+TEST_CASE("aes_decrypt_packet", "[crypto_utils][fdo]")
 #else
 void test_aes_decrypt_packet(void)
 #endif
 {
+#if 0
 	int ret = 0;
-	sdo_encrypted_packet_t *last_pkt =
-	    sdo_alloc(sizeof(sdo_encrypted_packet_t));
-	sdo_encrypted_packet_t *cipher_txt =
-	    sdo_alloc(sizeof(sdo_encrypted_packet_t));
-	sdo_aes_keyset_t *keyset = sdo_alloc(sizeof(sdo_aes_keyset_t));
-	sdo_string_t *clear_txt = sdo_string_alloc();
-	sdo_byte_array_t *cleartext = getcleartext(PLAIN_TEXT_SIZE);
+	fdo_encrypted_packet_t *last_pkt =
+	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
+	fdo_encrypted_packet_t *cipher_txt =
+	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
+	fdo_aes_keyset_t *keyset = fdo_alloc(sizeof(fdo_aes_keyset_t));
+	fdo_string_t *clear_txt = fdo_string_alloc();
+	fdo_byte_array_t *cleartext = getcleartext(PLAIN_TEXT_SIZE);
 
 	TEST_ASSERT_NOT_NULL(last_pkt);
 	TEST_ASSERT_NOT_NULL(cipher_txt);
@@ -329,18 +338,18 @@ void test_aes_decrypt_packet(void)
 	ret = random_init();
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "Entropy setup Failed");
 
-	keyset->sek = getkey(SDO_AES_KEY_LENGTH);
+	keyset->sek = getkey(FDO_AES_KEY_LENGTH);
 	TEST_ASSERT_NOT_NULL(keyset->sek);
 
 	keyset->svk = getkey(HMAC_KEY_LENGTH);
 	TEST_ASSERT_NOT_NULL(keyset->svk);
 
 	/* Positive Test Case */
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	uint8_t *iv1 = get_randomiv();
-	sdo_to2Sym_enc_ctx_t *to2sym_ctx = get_sdo_to2_ctx();
+	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
 	to2sym_ctx->initialization_vector = iv1;
 
 	last_pkt->offset = 0;
@@ -351,11 +360,11 @@ void test_aes_decrypt_packet(void)
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "AES Decryption Failed");
 
 	if (cipher_txt->em_body) {
-		sdo_byte_array_free(cipher_txt->em_body);
+		fdo_byte_array_free(cipher_txt->em_body);
 		cipher_txt->em_body = NULL;
 	}
 	if (cipher_txt->hmac) {
-		sdo_hash_free(cipher_txt->hmac);
+		fdo_hash_free(cipher_txt->hmac);
 		cipher_txt->hmac = NULL;
 	}
 
@@ -370,7 +379,7 @@ void test_aes_decrypt_packet(void)
 	ret = aes_decrypt_packet(NULL, clear_txt);
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "AES Decryption Failed");
 	if (cipher_txt->hmac) {
-		sdo_hash_free(cipher_txt->hmac);
+		fdo_hash_free(cipher_txt->hmac);
 		cipher_txt->hmac = NULL;
 	}
 
@@ -383,7 +392,7 @@ void test_aes_decrypt_packet(void)
 	/* Negative Test Case */
 	last_pkt->offset = 10;
 	last_pkt->hmac =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SIZE);
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SIZE);
 	TEST_ASSERT_NOT_NULL(last_pkt->hmac);
 	//	last_pkt->hmac->hash->bytes =	clear_txt;
 	ret = aes_decrypt_packet(cipher_txt, clear_txt);
@@ -416,18 +425,19 @@ void test_aes_decrypt_packet(void)
 	memcpy_fail_case = false;
 #endif
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	if (last_pkt->hmac)
-		sdo_hash_free(last_pkt->hmac);
-	sdo_free(last_pkt);
-	sdo_bits_free(keyset->sek);
-	sdo_byte_array_free(keyset->svk);
-	sdo_byte_array_free(cleartext);
+		fdo_hash_free(last_pkt->hmac);
+	fdo_free(last_pkt);
+	fdo_bits_free(keyset->sek);
+	fdo_byte_array_free(keyset->svk);
+	fdo_byte_array_free(cleartext);
 	if (cipher_txt->em_body)
-		sdo_byte_array_free(cipher_txt->em_body);
+		fdo_byte_array_free(cipher_txt->em_body);
 	free(cipher_txt);
 	free(keyset);
-	sdo_string_free(clear_txt);
+	fdo_string_free(clear_txt);
+#endif
 }

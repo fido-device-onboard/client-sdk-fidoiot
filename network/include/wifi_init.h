@@ -6,7 +6,7 @@
 #ifndef __WIFI_INIT_H__
 #define __WIFI_INIT_H__
 
-int sdo_wifi_init(void);
-int sdo_wifi_exit(void);
+int fdo_wifi_init(void);
+int fdo_wifi_exit(void);
 
 #endif

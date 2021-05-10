@@ -1,0 +1,5656 @@
+/*
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
+ */
+
+/*!
+ * \file
+ * \brief Implementation of FDO specific data structures parsing/creating APIs.
+ */
+
+#include "crypto_utils.h"
+#include "fdoprot.h"
+#include "base64.h"
+#include "fdotypes.h"
+#include "network_al.h"
+#include "fdoCrypto.h"
+#include "util.h"
+#include "fdo.h"
+#include <stdlib.h>
+#include <inttypes.h>
+#include <unistd.h>
+#include "safe_lib.h"
+#include "snprintf_s.h"
+#include "fdodeviceinfo.h"
+
+int keyfromstring(const char *key);
+
+/**
+ * Allocate and Initialize the bits
+ * @param b - pointer to initialized bits struct
+ * @param byte_sz - size of bytes to ve initialized
+ * @return bits if initialization in success
+ */
+fdo_bits_t *fdo_bits_init(fdo_bits_t *b, int byte_sz)
+{
+	if (!b)
+		return NULL;
+
+	if (byte_sz > 0) {
+		b->bytes = fdo_alloc(byte_sz * sizeof(uint8_t));
+		if (b->bytes == NULL)
+			return NULL;
+		b->byte_sz = byte_sz;
+		return b;
+	}
+
+	if (b->bytes) {
+		fdo_free(b->bytes);
+		b->bytes = NULL;
+	}
+	b->byte_sz = 0;
+
+	return b;
+}
+
+/**
+ * Allocote the bytes specified
+ * @param byte_sz - number of bytes to be initialized
+ * @return pointer to the bits allocated if success else NULL
+ */
+fdo_bits_t *fdo_bits_alloc(int byte_sz)
+{
+	fdo_bits_t *b = fdo_alloc(sizeof(fdo_bits_t));
+
+	if (b == NULL)
+		return NULL;
+
+	if (byte_sz > 0)
+		return fdo_bits_init(b, byte_sz);
+	else
+		return b;
+}
+
+/**
+ * Allocate the bits and assing with the data specified
+ * @param byte_sz - number of bytes to be allocated
+ * @param data - data to be written to the initialized bits
+ * @return pointer to bits if success else NULL
+ */
+fdo_bits_t *fdo_bits_alloc_with(int byte_sz, uint8_t *data)
+{
+	fdo_bits_t *b = fdo_bits_alloc(byte_sz);
+
+	if (b == NULL)
+		return NULL;
+	if (!fdo_bits_fill(&b)) {
+		fdo_bits_free(b);
+		return NULL;
+	}
+	if (memcpy_s(b->bytes, b->byte_sz, data, b->byte_sz) != 0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		fdo_bits_free(b);
+		return NULL;
+	}
+	return b;
+}
+
+/**
+ * Free the bits specified
+ * @param b - pointer to the struct bits that is to be deallocated
+ */
+void fdo_bits_free(fdo_bits_t *b)
+{
+	if (b) {
+		fdo_bits_empty(b);
+		fdo_free(b);
+	}
+}
+
+/**
+ * Free/Nullify the specified bits
+ * @param b - pointer to the struct bits
+ */
+void fdo_bits_empty(fdo_bits_t *b)
+{
+	if (!b)
+		return;
+	if (b->bytes) {
+		if (b->byte_sz && memset_s(b->bytes, b->byte_sz, 0))
+			LOG(LOG_ERROR, "Failed to clear memory\n");
+		fdo_free(b->bytes);
+		b->bytes = NULL;
+	}
+	b->byte_sz = 0;
+}
+
+/**
+ * Clone the bits to a new struct
+ * @param b - pointer to the struct bits which has to be cloned
+ * @return pointer to the cloned struct bits if success else NULL
+ */
+fdo_bits_t *fdo_bits_clone(fdo_bits_t *b)
+{
+	if (!b)
+		return NULL;
+	return fdo_bits_alloc_with(b->byte_sz, b->bytes);
+}
+
+/**
+ * Resize the struct bits with the specified size
+ * @param b - pointer to the struct bits
+ * @param byte_sz - resized value of bits
+ * @return true if resized else false
+ */
+bool fdo_bits_resize(fdo_bits_t *b, int byte_sz)
+{
+	fdo_bits_empty(b);
+	b->byte_sz = byte_sz;
+	return fdo_bits_fill(&b);
+}
+
+/**
+ * Initialize the struct bits with zero
+ * @param bits  - pointer to the struct bits that has to be initialized with
+ * zero
+ * @return true if set to 0, else false
+ */
+bool fdo_bits_fill(fdo_bits_t **bits)
+{
+	fdo_bits_t *b;
+
+	if (!bits || !*bits)
+		return false;
+
+	b = *bits;
+	if (b->bytes != NULL) {
+		fdo_free(b->bytes);
+		b->bytes = NULL;
+	}
+	b->bytes = fdo_alloc(b->byte_sz);
+	if (b->bytes == NULL)
+		return false;
+	return true;
+}
+
+#if 0
+/**
+ * Initialize the bits with the specified data
+ * @param b - pointer to the struct bits which has to be initialized
+ * @param data - data to be initialized
+ * @param data_len - length of the data
+ * @return true if initialized else false
+ */
+bool fdo_bits_fill_with(fdo_bits_t *b, uint8_t *data, uint32_t data_len)
+{
+	b->byte_sz = data_len;
+	if (!fdo_bits_fill(b))
+		return false;
+	if (data != NULL && data_len <= b->byte_sz) {
+		if (memcpy_s(b->bytes, data_len, data, data_len) != 0) {
+			LOG(LOG_ERROR, "Memcpy Failed\n");
+			return false;
+		}
+
+		return true;
+	} else
+		return false;
+}
+
+/**
+ * Resize and initialize with the specified data
+ * @param b - pointer to the struct bits
+ * @param new_byte_sz - resized value of struct bits
+ * @param data = data to be initialized
+ * @return true if success else false
+ */
+bool fdo_bits_resize_with(fdo_bits_t *b, int new_byte_sz, uint8_t *data)
+{
+	return fdo_bits_fill_with(b, data, new_byte_sz);
+}
+
+/**
+ * Check of the struct bits are equal
+ * @param b1 - pointer to the first struct bits
+ * @param b2 - pointer to the second struct bits
+ * @return true if success else false
+ */
+bool fdo_bits_equal(fdo_bits_t *b1, fdo_bits_t *b2)
+{
+	int result_memcmp = 0;
+
+	memcmp_s(b1->bytes, b1->byte_sz, b2->bytes, b2->byte_sz,
+		 &result_memcmp);
+	if ((b1->byte_sz == b2->byte_sz) && (result_memcmp == 0)) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Iniaialize the struct bits and fill some random data
+ * @param b - pointer to the struct bits which has to be initialized
+ * @return  0 if success else -1 on failure
+ */
+int fdo_bits_randomize(fdo_bits_t *b)
+{
+	if ((b->bytes == NULL) || !fdo_bits_fill(b))
+		return -1;
+
+	return fdo_crypto_random_bytes(b->bytes, b->byte_sz);
+}
+#endif
+
+#if 0
+/**
+ * Convert string to hexadecimal
+ * @param b - pointer to the struct bits
+ * @param buf - converted string
+ * @param buf_sz - size of the converted string
+ * return pointer to the converted string
+ */
+char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz)
+{
+	int i, n;
+	char *buf0 = buf;
+	char hbuf[5];
+
+	i = 0;
+	while (i < b->byte_sz && buf_sz > 1) {
+		// Do it this way to fill up the string completely
+		// else the truncated public key will be terminated below.
+
+		if (snprintf_s_i(hbuf, sizeof(hbuf), "%02X", b->bytes[i++]) <
+		    0) {
+			LOG(LOG_ERROR, "snprintf() failed!\n");
+			return NULL;
+		}
+
+		if (strncpy_s(buf, buf_sz, hbuf, buf_sz) != 0) {
+			LOG(LOG_ERROR, "strcpy() failed!\n");
+			return NULL;
+		}
+		n = strnlen_s(buf, buf_sz);
+
+		if (!n || n == buf_sz) {
+			LOG(LOG_ERROR, "strlen() failed!\n");
+			return NULL;
+		}
+
+		buf += n;
+		buf_sz -= n;
+	}
+	if (buf_sz > 1) {
+		*buf++ = 0;
+	}
+	return buf0;
+}
+
+#if 0 // Deprecated
+/**
+ * Internal API
+ */
+void fdo_bits_write(fdow_t *fdow, fdo_bits_t *b)
+{
+	fdo_write_big_num_field(fdow, b->bytes, b->byte_sz);
+	//    fdo_write_byte_array_field(fdow, b->bytes, b->byte_sz);
+}
+
+/**
+ * Internal API
+ */
+bool fdo_bits_read(fdor_t *fdor, fdo_bits_t *b)
+{
+	if (b->bytes == NULL)
+		if (!fdo_bits_fill(b))
+			return false;
+	return fdo_read_big_num_field(fdor, b->bytes, b->byte_sz) == b->byte_sz;
+}
+#endif
+//==============================================================================
+// Byte Array is FDOBits but read and written as base64
+
+/**
+ * Internal API
+ */
+fdo_byte_array_t *fdo_byte_array_init(fdo_byte_array_t *bn, int byte_sz)
+{
+	return fdo_bits_init(bn, byte_sz);
+}
+#endif
+
+/**
+ * Allocate the number of bytes specified
+ * @param byte_sz - size of the bytes to be allocated
+ * @return pointer to the struct bits that is allocated
+ */
+fdo_byte_array_t *fdo_byte_array_alloc(int byte_sz)
+{
+	return fdo_bits_alloc(byte_sz);
+}
+
+/**
+ * Allocate and initialize the bytes
+ * @param val - value to the initialized
+ * @return pointer to the struct of bits
+ */
+fdo_byte_array_t *fdo_byte_array_alloc_with_int(int val)
+{
+	return fdo_bits_alloc_with(sizeof(int), (uint8_t *)&val);
+}
+
+/**
+ * Allocate the bytes array and assign with the data specified
+ * @param ba - data to be assigned
+ * @param ba_len - size of the data to be assigned
+ * @return pointer to the struct of bytes that is allocated and assigned
+ */
+fdo_byte_array_t *fdo_byte_array_alloc_with_byte_array(uint8_t *ba, int ba_len)
+{
+	return fdo_bits_alloc_with(ba_len, ba);
+}
+
+/**
+ * Free the byte array
+ * @param ba - pointer to the byte array struct that has to be fdo_free
+ */
+void fdo_byte_array_free(fdo_byte_array_t *ba)
+{
+	if (ba)
+		fdo_bits_free(ba);
+}
+
+#if 0
+/**
+ * Internal API
+ */
+void fdo_byte_array_empty(fdo_byte_array_t *ba)
+{
+	fdo_bits_empty(ba);
+}
+
+/**
+ * Internal API
+ */
+bool fdo_byte_array_resize_with(fdo_byte_array_t *b, int new_byte_sz,
+				uint8_t *data)
+{
+	return fdo_bits_resize_with(b, new_byte_sz, data);
+}
+#endif
+
+/**
+ * Resize the byte array
+ * @param b - pointer to he struct of byte array that has to be resized
+ * @param byte_sz - value to be resized with
+ * @return pointer to the resized byte array struct
+ */
+bool fdo_byte_array_resize(fdo_byte_array_t *b, int byte_sz)
+{
+	return fdo_bits_resize(b, byte_sz);
+}
+
+/**
+ * Clone the byte array
+ * @param bn - byte array to be cloned
+ * @return pointet to the cloned byte array struct
+ */
+fdo_byte_array_t *fdo_byte_array_clone(fdo_byte_array_t *bn)
+{
+	return fdo_bits_clone(bn);
+}
+
+#if 0
+/**
+ * compare the byte array
+ * @param bn1 - pointer to the first byte array struct
+ * @param bn2 - pointer to the second byte array struct
+ * @return true if equal else false
+ */
+bool fdo_byte_array_equal(fdo_byte_array_t *bn1, fdo_byte_array_t *bn2)
+{
+	return fdo_bits_equal(bn1, bn2);
+}
+#endif
+
+/**
+ * Append one byte array onto another and return the resulting byte array
+ * @param baA - pointer to the first byte array object
+ * @param baB - pointer to the second
+ * @return a Byte Array "AB" with B appended after A
+ */
+fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
+					fdo_byte_array_t *baB)
+{
+	if (!baA || !baB)
+		return NULL;
+
+	int buf_szAB = baA->byte_sz + baB->byte_sz;
+	fdo_byte_array_t *baAB = fdo_byte_array_alloc(buf_szAB);
+
+	if (!baAB) {
+		LOG(LOG_ERROR,
+		    "failed to allocate memory for creating byte array\n");
+		return NULL;
+	}
+
+	if (memcpy_s(&baAB->bytes[0], baA->byte_sz, baA->bytes, baA->byte_sz) !=
+	    0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		fdo_byte_array_free(baAB);
+		return NULL;
+	}
+
+	if (memcpy_s(&baAB->bytes[baA->byte_sz], baB->byte_sz, baB->bytes,
+		     baB->byte_sz) != 0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		fdo_byte_array_free(baAB);
+		return NULL;
+	}
+
+	return baAB;
+}
+
+//------------------------------------------------------------------------------
+// Bignum Routines
+//
+
+#if 0
+/**
+ * Allocate the struct of type bignum
+ */
+fdo_bignum_t *fdo_big_num_alloc()
+{
+	fdo_bignum_t *bn = fdo_alloc(sizeof(fdo_bignum_t));
+
+	if (!bn)
+		return NULL;
+
+	bn->sign = BN_POSITIVE;
+	bn->value = NULL;
+	return bn;
+}
+
+/**
+ * Free the allocated struct of type bignum
+ * @param bn - pointer to the struct of type bignum
+ */
+void fdo_big_num_free(fdo_bignum_t *bn)
+{
+	fdo_bits_free(bn->value);
+	fdo_free(bn);
+}
+#endif
+
+#if 0
+/**
+ * Compare the struct of type bignum
+ * @param bn1 - pointer to struct of type bignum1
+ * @param bn2 - pointer to struct of type bignum2
+ * @return true if equal else false
+ */
+bool fdo_bignum_equal(fdo_bignum_t *bn1, fdo_bignum_t *bn2)
+{
+	if (bn1->sign != bn2->sign)
+		return false;
+	return fdo_bits_equal(bn1->value, bn2->value);
+}
+
+/**
+ * Convert bignum to string
+ * @param bn - pointer to struct of type bignum
+ * @param buf - pointer to the converted string
+ * @param buf_sz - size of the converted string
+ * @return pointer to the converted string
+ */
+char *fdo_bignum_to_string(fdo_bignum_t *bn, char *buf, int buf_sz)
+{
+	return fdo_bits_to_string_hex(bn->value, buf, buf_sz);
+}
+#endif
+
+//------------------------------------------------------------------------------
+// String handler Routines
+//
+
+/**
+ * Create an empty fdo_string_t object
+ * @return an allocated empty fdo_string_t object
+ */
+fdo_string_t *fdo_string_alloc(void)
+{
+	return (fdo_string_t *)fdo_alloc(sizeof(fdo_string_t));
+}
+
+/**
+ * Create fdo_string_t object by allocating memory for the inner buffer
+ * with the given size.
+ *
+ * @return an allocated fdo_string_t object
+ */
+fdo_string_t *fdo_string_alloc_size(size_t byte_sz) {
+
+	if (byte_sz == 0)
+		return NULL;
+
+	// Buffer would store NULL terminated string, adding +1 for '\0'
+	int total_size = byte_sz + 1;
+	fdo_string_t *s = (fdo_string_t *)fdo_alloc(sizeof(fdo_string_t));
+	if (!s)
+		return NULL;
+
+	s->bytes = fdo_alloc(total_size * sizeof(char));
+	if (!s->bytes) {
+		fdo_free(s);
+		return NULL;
+	}
+	// byte_sz contains the number of characters
+	s->byte_sz = byte_sz;
+	return s;
+}
+
+/**
+ * Create a fdo_string_t object from a non zero terminated string.
+ * @param data - a pointer to the string
+ * @param byte_sz - the number of characters in the string ( size 0 or more)
+ * @return an allocated fdo_string_t object containing the string
+ */
+fdo_string_t *fdo_string_alloc_with(const char *data, int byte_sz)
+{
+	fdo_string_t *temp_str = NULL;
+	// Buffer would store NULL terminated string, adding +1 for '\0'
+	int total_size = byte_sz + 1;
+
+	if (!data)
+		goto err1;
+
+	temp_str = fdo_string_alloc();
+	if (!temp_str)
+		goto err1;
+
+	temp_str->bytes = fdo_alloc(total_size * sizeof(char));
+	if (temp_str->bytes == NULL)
+		goto err2;
+
+	// byte_sz contains the number of characters
+	temp_str->byte_sz = byte_sz;
+	if (byte_sz) {
+		if (memcpy_s(temp_str->bytes, total_size, data, byte_sz) != 0) {
+			LOG(LOG_ERROR, "Memcpy Failed here\n");
+			goto err2;
+		}
+	}
+	temp_str->bytes[byte_sz] = '\0';
+
+	return temp_str;
+
+err2:
+	fdo_string_free(temp_str);
+err1:
+	return NULL;
+}
+
+/**
+ * Create a fdo_string_t object from a zero terminated string
+ * @param data - a pointer to a zero terminated string
+ * @return an allocated fdo_string_t object containing the string
+ */
+fdo_string_t *fdo_string_alloc_with_str(const char *data)
+{
+	if (!data)
+		return NULL;
+
+	int str_sz = strnlen_s(data, FDO_MAX_STR_SIZE);
+
+	if (str_sz == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "%s: data"
+		    " is either 'NULL' or 'isn't"
+		    " NULL-terminated'\n", __func__);
+		return NULL;
+	}
+	return fdo_string_alloc_with(data, str_sz);
+}
+
+/**
+ * Free an fdo_string_t object, fdo_free any contained buffer as well
+ * @param b - the fdo_string_t object to be fdo_freed
+ * @return none
+ */
+void fdo_string_free(fdo_string_t *b)
+{
+	if (b) {
+		fdo_string_init(b);
+		fdo_free(b);
+	}
+}
+
+/**
+ * The same as FDOString_empty
+ * @param b - the object to have its buffers fdo_freed
+ * @return pointer to the empty FDOString object
+ */
+void fdo_string_init(fdo_string_t *b)
+{
+	if (b->bytes) {
+		fdo_free(b->bytes);
+		b->bytes = NULL;
+	}
+	b->byte_sz = 0;
+}
+
+/**
+ * Resize the buffer in a fdo_string_t to the new size and
+ * return the space filled with zeros
+ * fdo_free any already present buffers
+ * @param b - the fdo_string_t object to be resized
+ * @param byte_sz - the number of bytes to allocate for the new buffer
+ * @return true if successful, false otherwise
+ */
+bool fdo_string_resize(fdo_string_t *b, int byte_sz)
+{
+	if (!b)
+		return false;
+
+	fdo_string_init(b);
+	if (byte_sz > 0) {
+		b->byte_sz = byte_sz;
+		b->bytes = fdo_alloc(byte_sz * sizeof(char));
+		if (b->bytes)
+			return true;
+		else
+			return false;
+	}
+	return true;
+}
+
+/**
+ * Resize the buffer in a fdo_string_t to the new size and
+ * return the space filled with zeros
+ * fdo_free any already present buffers
+ * @param b - the fdo_string_t object to be resized
+ * @param new_byte_sz - the number of bytes to allocate for the new buffer
+ * @param data - the non zero terminated string to copy
+ * @return true if successful, false otherwise
+ */
+bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data)
+{
+	if (!b || !data)
+		return NULL;
+
+	if (fdo_string_resize(b, new_byte_sz + 1)) {
+		if (new_byte_sz > 0)
+			if (memcpy_s(b->bytes, new_byte_sz, data,
+				     new_byte_sz) != 0) {
+				LOG(LOG_ERROR, "Memcpy Failed\n");
+				fdo_free(b->bytes);
+				return false;
+			}
+
+		return true;
+	} else
+		return false;
+}
+
+/**
+ * Write the SigInfo of the form:
+ * SigInfo = [
+ *   sgType: DeviceSgType,
+ *   Info: bstr
+ * ]
+ * @param fdow - pointer to the struct where the GID is to be written.
+ * @return true if write is successfull. false, otherwise.
+ */
+bool fdo_siginfo_write(fdow_t *fdow)
+{
+	bool ret = false;
+	if (!fdow_start_array(fdow, 2)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
+		return ret;
+	}
+	if (!fdow_unsigned_int(fdow, FDO_PK_ALGO)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to write sgType\n");
+		return ret;
+	}
+
+	fdo_byte_array_t *empty_byte_array = fdo_byte_array_alloc(0);
+	if (!empty_byte_array) {
+		LOG(LOG_ERROR, "SigInfo: Byte Array Alloc failed\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to write Info\n");
+		goto end;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to end array\n");
+		goto end;
+	}
+	LOG(LOG_DEBUG, "eASigInfo write successfull\n");
+	ret = true;
+end:
+	fdo_byte_array_free(empty_byte_array);
+	empty_byte_array = NULL;
+	return ret;
+}
+
+/**
+ * Read the SigInfo of the form:
+ * SigInfo = [
+ *   sgType: DeviceSgType,
+ *   Info: bstr
+ * ]
+ * @param fdor - pointer to the struct containing GID
+ * @return true if write is successfull. false, otherwise.
+ */
+bool fdo_siginfo_read(fdor_t *fdor)
+{
+	bool ret = false;
+	int type = 0;
+	int exptype = 0;
+	uint8_t *buf = {0};
+
+	if (!fdor)
+		goto end;
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
+		goto end;
+	}
+
+	exptype = FDO_PK_ALGO;
+
+	if (!fdor_signed_int(fdor, &type)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to read sgType\n");
+		goto end;
+	}
+
+	if (type != exptype) {
+		LOG(LOG_ERROR,
+		    "SigInfo: Invalid sgType. Expected %d, Received %d\n", exptype,
+		    type);
+		goto end;
+	}
+
+	size_t info_length = 1;
+	if (!fdor_string_length(fdor, &info_length) || info_length != 0) {
+		LOG(LOG_ERROR,
+		    "SigInfo: Invalid Info length. Expected %d, Received %zu\n", 0,
+		    info_length);
+		goto end;
+	}
+
+	if (!fdor_byte_string(fdor, buf, info_length)) {
+		LOG(LOG_ERROR, "SigInfo: Failed to read Info\n");
+		goto end;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "No End Array\n");
+		goto end;
+	}
+	LOG(LOG_DEBUG, "eBSigInfo read successfull\n");
+	ret = true;
+end:
+	fdo_free(buf);
+	return ret;
+}
+
+/* -----------------------------------------------------------------------------
+ * Nonce routines
+ */
+/**
+ * Initialize Nonce with random data
+ * @param n - pointer to the byte array
+ * @return none
+ */
+void fdo_nonce_init_rand(fdo_byte_array_t *n)
+{
+	fdo_crypto_random_bytes((uint8_t *)n->bytes, n->byte_sz);
+}
+
+/**
+ * compare the two nonce
+ * @param n1 - pointer to the first byte array
+ * @param n2 - pointer to the second byte array
+ * @return true if equal else false
+ */
+bool fdo_nonce_equal(fdo_byte_array_t *n1, fdo_byte_array_t *n2)
+{
+	int result_memcmp = 0;
+
+	if (!n1 || !n2)
+		return false;
+
+	if (!memcmp_s(n1->bytes, FDO_NONCE_BYTES, n2->bytes, FDO_NONCE_BYTES,
+		      &result_memcmp) &&
+	    !result_memcmp)
+		return true;
+	else
+		return false;
+}
+
+/**
+ * convert nonce to string
+ * @param n - pointer to the input nonce
+ * @param buf - pointer to the converted string
+ * @param buf_sz - size of the converted string
+ * @return pointer to the converted string
+ */
+char *fdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz)
+{
+	int i = 0;
+	char *a = (char *)n;
+
+	(void)buf_sz; /* FIXME: Change the signature as its unused */
+
+	if (!n || !buf)
+		return NULL;
+
+	while (i < FDO_NONCE_BYTES) {
+		buf[i] = INT2HEX(((*a >> 4) & 0xf));
+		buf[++i] = INT2HEX((*a & 0xf));
+		++i;
+		++a;
+	}
+	return buf;
+}
+
+//------------------------------------------------------------------------------
+// Hash/HMAC Routines
+//
+
+/**
+ * Allocate and empty hash type
+ */
+fdo_hash_t *fdo_hash_alloc_empty(void)
+{
+	fdo_hash_t *hp = fdo_alloc(sizeof(fdo_hash_t));
+
+	if (hp == NULL)
+		return NULL;
+	hp->hash_type = FDO_CRYPTO_HASH_TYPE_NONE;
+	return hp;
+}
+
+/**
+ * Allocate byte array of hash type specified
+ * @param hash_type - type of the hash
+ * @param size - size of the byte array to be allocated
+ * @return pointer to the allocated hash struct
+ */
+fdo_hash_t *fdo_hash_alloc(int hash_type, int size)
+{
+	fdo_hash_t *hp = fdo_alloc(sizeof(fdo_hash_t));
+
+	if (hp == NULL)
+		return NULL;
+	hp->hash_type = hash_type;
+	hp->hash = fdo_byte_array_alloc(size);
+	if (hp->hash == NULL) {
+		fdo_free(hp);
+		return NULL;
+	}
+	return hp;
+}
+
+/**
+ * Free the allocated struct of type hash type
+ * @param hp - pointer to the struct of type hash that is to be fdo_free
+ */
+void fdo_hash_free(fdo_hash_t *hp)
+{
+	if (NULL == hp) {
+		return;
+	}
+	if (hp->hash != NULL) {
+		fdo_byte_array_free(hp->hash);
+		hp->hash = NULL;
+	}
+	fdo_free(hp);
+}
+
+/**
+ * Read the hash of the form:
+ * Hash = [
+ *   hashtype: uint8,
+ *   hash: bstr
+ * ]
+ * @param fdor - input data in JSON format
+ * @param hp - pointer to the struct of type hash
+ * @return number of bytes read , 0 if read failed
+ */
+int fdo_hash_read(fdor_t *fdor, fdo_hash_t *hp)
+{
+
+	if (!fdor || !hp)
+		return 0;
+
+	size_t num_hash_items = 0;
+	if (!fdor_array_length(fdor, &num_hash_items) || num_hash_items != 2) {
+		LOG(LOG_ERROR, "Invalid Hash: Invalid number of items\n");
+		return 0;
+	}
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "Invalid Hash: Start array not found\n");
+		return 0;
+	}
+
+	// Read the hash type value
+	if (!fdor_signed_int(fdor, &hp->hash_type)) {
+		LOG(LOG_ERROR, "Invalid Hash: Unable to decode hashtype\n");
+		return 0;
+	}
+
+	// Read the bin character length
+	size_t mbin_len_reported;
+	if (!fdor_string_length(fdor, &mbin_len_reported) || mbin_len_reported <= 0) {
+		LOG(LOG_ERROR, "Invalid Hash: Unable to decode length of hash!\n");
+		return 0;
+	}
+
+	// Make sure we have a byte array to resize
+	if (hp->hash == NULL) {
+		hp->hash = fdo_byte_array_alloc(mbin_len_reported);
+		if (!hp->hash) {
+			LOG(LOG_ERROR, "Alloc failed\n");
+			return 0;
+		}
+	}
+
+	if (!fdor_byte_string(fdor, hp->hash->bytes, mbin_len_reported)) {
+		LOG(LOG_ERROR, "Invalid Hash: Unable to decode hash!\n");
+		return 0;
+	}
+	hp->hash->byte_sz = mbin_len_reported;
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "Invalid Hash: End array not found\n");
+		return 0;
+	}
+	return hp->hash->byte_sz;
+}
+
+/**
+ * Read the hash of the form:
+ * Hash = [
+ *   hashtype: uint8,
+ *   hash: bstr
+ * ]
+ * @param fdow - pointer to the output struct of type JSON message
+ * @param hp - pointer to the struct of type hash
+ * @return bool true if write was successful, false otherwise
+ */
+bool fdo_hash_write(fdow_t *fdow, fdo_hash_t *hp)
+{
+	bool ret = false;
+	if (!fdow || !hp) {
+		return ret;
+	}
+	if (!fdow_start_array(fdow, 2)) {
+		LOG(LOG_ERROR, "Hash write: Failed to start array\n");
+		return ret;
+	}
+	if (!fdow_signed_int(fdow, hp->hash_type)) {
+		LOG(LOG_ERROR, "Hash write: Failed to write hashtype\n");
+		return ret;
+	}
+	if (!fdow_byte_string(fdow, hp->hash->bytes, hp->hash->byte_sz)) {
+		LOG(LOG_ERROR, "Hash write: Failed to write hash\n");
+		return ret;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Hash write: Failed to end array\n");
+		return ret;
+	}
+	LOG(LOG_DEBUG, "Hash write completed\n");
+	ret = true;
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Key Exchange Routines
+//
+
+#if 0
+/**
+ * Internal API
+ */
+fdo_key_exchange_t *FDOKey_ex_alloc()
+{
+	return (fdo_key_exchange_t *)fdo_byte_array_alloc(8);
+}
+
+/**
+ * Internal API
+ */
+fdo_key_exchange_t *FDOKey_ex_alloc_with(int size, uint8_t *content)
+{
+	return fdo_byte_array_alloc_with_byte_array(content, size);
+}
+#endif
+
+//------------------------------------------------------------------------------
+// IP Address Routines
+//
+
+/**
+ * Allocate the struct of type IP address
+ */
+fdo_ip_address_t *fdo_ipaddress_alloc(void)
+{
+	fdo_ip_address_t *fdoip = fdo_alloc(sizeof(fdo_ip_address_t));
+
+	if (fdoip == NULL) {
+		return NULL;
+	}
+	if (fdo_null_ipaddress(fdoip)) {
+		return fdoip;
+	}
+
+	fdo_free(fdoip);
+	return NULL;
+
+}
+
+/**
+ * Initialize the struct of type IP with the ipv4 details provided
+ * @param fdoip - pointer to the struct if type IP
+ * @param ipv4 - ipv4 details that has to be initialized with
+ */
+void fdo_init_ipv4_address(fdo_ip_address_t *fdoip, uint8_t *ipv4)
+{
+	if (!fdoip || !ipv4)
+		return;
+
+	fdoip->length = 4;
+	if (memset_s(&fdoip->addr[0], sizeof(fdoip->addr), 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		return;
+	}
+
+	if (memcpy_s(&fdoip->addr[0], fdoip->length, ipv4, fdoip->length) !=
+	    0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		return;
+	}
+}
+
+#if 0
+/**
+ * Internal API
+ */
+void fdo_init_ipv6_address(fdo_ip_address_t *fdoip, uint8_t *ipv6)
+{
+	fdoip->length = 16;
+	memcpy(fdoip->addr, ipv6, fdoip->length);
+	// memset(&fdoip->addr, 0, sizeof fdoip->addr - fdoip->length);
+}
+
+/**
+ * Internal API
+ */
+int fdo_ipaddress_to_mem(fdo_ip_address_t *fdoip, uint8_t *copyto)
+{
+	memcpy(copyto, &fdoip->addr[0], fdoip->length);
+	return fdoip->length;
+}
+#endif
+
+/**
+ * Reset the IP address
+ * @param fdoip - pointer to the struct of type IP address which has to be set
+ * to
+ * '0'
+ */
+bool fdo_null_ipaddress(fdo_ip_address_t *fdoip)
+{
+	fdoip->length = 0;
+	if (memset_s(&fdoip->addr[0], sizeof(fdoip->addr), 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		return false;
+	} else
+		return true;
+}
+
+/**
+ * Conver the IP address to string
+ * @param fdoip - pointer to the struct which holds the IP address
+ * @param buf - pointer to the converted string
+ * @param buf_sz - size of the converted string
+ * @return pointer to the converted string
+ */
+char *fdo_ipaddress_to_string(fdo_ip_address_t *fdoip, char *buf, int buf_sz)
+{
+	int n;
+	char *buf0 = buf;
+
+	if (!fdoip || !buf)
+		return NULL;
+
+	if (fdoip->length == 4) {
+		int temp;
+
+		temp = snprintf_s_i(buf, buf_sz, "[IPv4:%u", fdoip->addr[0]);
+
+		if (temp < 0) {
+			LOG(LOG_ERROR, "snprintf() failed!\n");
+			return NULL;
+		}
+		n = temp;
+
+		temp = snprintf_s_i(buf + strnlen_s(buf, buf_sz), buf_sz, ".%u",
+				    fdoip->addr[1]);
+		if (temp < 0) {
+			LOG(LOG_ERROR, "snprintf() failed!\n");
+			return NULL;
+		}
+		n += temp;
+
+		temp = snprintf_s_i(buf + strnlen_s(buf, buf_sz), buf_sz, ".%u",
+				    fdoip->addr[2]);
+		if (temp < 0) {
+			LOG(LOG_ERROR, "snprintf() failed!\n");
+			return NULL;
+		}
+		n += temp;
+
+		temp = snprintf_s_i(buf + strnlen_s(buf, buf_sz), buf_sz,
+				    ".%u]", fdoip->addr[3]);
+		if (temp < 0) {
+			LOG(LOG_ERROR, "snprintf() failed!\n");
+			return NULL;
+		}
+		n += temp;
+
+		buf += n;
+		buf_sz -= n;
+	} else if (fdoip->length == 16) {
+		if (strncpy_s(buf, buf_sz, "[IPv6", buf_sz) != 0) {
+			LOG(LOG_ERROR, "strcpy() failed!\n");
+			return NULL;
+		}
+		n = strnlen_s(buf, buf_sz);
+
+		if (!n || n == buf_sz) {
+			LOG(LOG_ERROR, "strlen() failed!\n");
+			return NULL;
+		}
+
+		buf += n;
+		buf_sz -= n;
+		while (n + 7 < buf_sz) {
+			int temp;
+
+			temp =
+			    snprintf_s_i(buf, buf_sz, ":%02X", fdoip->addr[n]);
+
+			if (temp < 0) {
+				LOG(LOG_ERROR, "snprintf() failed!\n");
+				return NULL;
+			}
+			n = temp;
+			temp = snprintf_s_i(buf, buf_sz, "%02X",
+					    fdoip->addr[n + 1]);
+
+			if (temp < 0) {
+				LOG(LOG_ERROR, "snprintf() failed!\n");
+				return NULL;
+			}
+
+			n += temp;
+
+			buf += n;
+			buf_sz -= n;
+		}
+	} else {
+		if (snprintf_s_i(buf, buf_sz, "[IP?? len:%u]", fdoip->length) <
+		    0) {
+			LOG(LOG_ERROR, "snprintf() failed!\n");
+			return NULL;
+		}
+	}
+	return buf0;
+}
+
+/**
+ * read the IP address
+ * @param fdor - read IP address
+ * @param fdoip - pointer to the struct which holds the IP information
+ * @return true if success else false
+ */
+bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip)
+{
+	fdo_byte_array_t *IP;
+
+	if (!fdor || !fdoip)
+		return false;
+
+	IP = fdo_byte_array_alloc_with_int(0);
+	if (!IP)
+		return false;
+
+	size_t ip_length;
+	if (!fdor_string_length(fdor, &ip_length) || ip_length != IPV4_ADDR_LEN) {
+		LOG(LOG_ERROR, "Invalid IP Address length\n");
+		fdo_byte_array_free(IP);
+		return false;
+	}
+
+	if (!fdor_byte_string(fdor, IP->bytes, ip_length)) {
+		fdo_byte_array_free(IP);
+		return false;
+	}
+
+	fdoip->length = ip_length;
+	if (memcpy_s(&fdoip->addr[0], fdoip->length, IP->bytes, ip_length) !=
+	    0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		return false;
+	}
+
+	fdo_byte_array_free(IP);
+	return true;
+}
+
+/**
+ * Copy the IP Address contents stored in the input fdo_byte_array_t, into
+ * the pre-initialized fdo_ip_address_t struct.
+ * 
+ * @param ip_bytes source byte array containing IP Address and its length to copy
+ * @param fdoip pre-initialized IP Address struct as destination
+ * @return true if the operation was a success, false otherwise
+ */
+bool fdo_convert_to_ipaddress(fdo_byte_array_t *ip_bytes, fdo_ip_address_t *fdoip)
+{
+	if (!ip_bytes || !fdoip)
+		return false;
+
+	fdoip->length = ip_bytes->byte_sz;
+	if (memcpy_s(&fdoip->addr[0], fdoip->length, ip_bytes->bytes, ip_bytes->byte_sz) !=
+	    0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		return false;
+	}
+
+	return true;
+}
+
+//------------------------------------------------------------------------------
+// Public Key Routines
+//
+
+/**
+ * Allocate an empty public key
+ */
+fdo_public_key_t *fdo_public_key_alloc_empty(void)
+{
+	return fdo_alloc(sizeof(fdo_public_key_t));
+}
+
+/**
+ * Allocate public key and initialize
+ * @param pkalg - algorithm to be used for public key
+ * @param pkenc - public key encoding type
+ * @param pklen - publick key length
+ * @param pkey - pointer to the public key
+ * @return pointer to the public key
+ */
+fdo_public_key_t *fdo_public_key_alloc(int pkalg, int pkenc, int pklen,
+				       uint8_t *pkey)
+{
+	fdo_public_key_t *pk = fdo_public_key_alloc_empty();
+
+	if (!pk) {
+		LOG(LOG_ERROR, "failed to allocate public key structure\n");
+		return NULL;
+	}
+	pk->pkalg = pkalg;
+	pk->pkenc = pkenc;
+	pk->key1 = fdo_byte_array_alloc_with_byte_array(pkey, pklen);
+	return pk;
+}
+
+/**
+ * Clone the public key
+ * @param pk 0 pointer to the public key that is to be cloned
+ * @return pointer to the cloned public key
+ */
+fdo_public_key_t *fdo_public_key_clone(fdo_public_key_t *pk)
+{
+	if (pk == NULL)
+		return NULL;
+
+	if (!pk->key1 || !pk->pkenc || !pk->pkalg)
+		return NULL;
+
+	fdo_public_key_t *npk = fdo_public_key_alloc(
+	    pk->pkalg, pk->pkenc, pk->key1->byte_sz, pk->key1->bytes);
+	if (!npk) {
+		LOG(LOG_ERROR, "failed to alloc public key struct\n");
+		return NULL;
+	}
+	if (pk->key2 != NULL) {
+		npk->key2 = fdo_byte_array_alloc_with_byte_array(
+		    pk->key2->bytes, pk->key2->byte_sz);
+	}
+	return npk;
+}
+
+/**
+ * Compares two public keys
+ *
+ * @param pk1: poniter to input publickey 1
+ * @param pk2: poniter to input publickey 2
+ * @return
+ *        true if both public keys are same else false.
+ */
+bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2)
+{
+	int result_memcmp = 0;
+
+	if (!pk1 || !pk2)
+		return false;
+
+	if (!pk1->key1 || !pk2->key1 || !pk1->pkenc || !pk2->pkenc ||
+	    !pk1->pkalg || !pk2->pkalg)
+		return false;
+
+	if (pk1->pkalg != pk2->pkalg)
+		return false;
+
+	if (pk1->pkenc != pk2->pkenc)
+		return false;
+
+	if (memcmp_s(pk1->key1->bytes, pk1->key1->byte_sz, pk2->key1->bytes,
+		     pk2->key1->byte_sz, &result_memcmp) ||
+	    result_memcmp)
+		return false;
+
+	/* X.509 encoded pubkeys only have key1 parameter */
+	if (pk1->key2 && pk2->key2) {
+		if (memcmp_s(pk1->key2->bytes, pk1->key2->byte_sz,
+			     pk2->key2->bytes, pk2->key2->byte_sz,
+			     &result_memcmp) ||
+		    result_memcmp)
+			return false;
+	}
+	return true;
+}
+
+/**
+ * Free the allocated public key
+ * @param pk - pointer to the public key that is to be fdo_freed
+ */
+void fdo_public_key_free(fdo_public_key_t *pk)
+{
+	if (!pk)
+		return;
+	fdo_byte_array_free(pk->key1);
+	if (pk->key2) {
+		fdo_byte_array_free(pk->key2);
+	}
+	fdo_free(pk);
+}
+
+/**
+ * Write a full public key to the output buffer
+ * PublicKey = [
+ *	pkType,
+ *	pkEnc,
+ *	pkBody
+ * ]
+ *
+ * @param fdow - output buffer to hold CBOR representation
+ * @param pk - pointer to the fdo_public_key_t object
+ * @return none
+ */
+bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
+{
+	if (!fdow)
+		return false;
+
+	if (!fdow_start_array(fdow, 3)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to start array.\n");
+		return false;
+	}
+	if (!fdow_signed_int(fdow, pk->pkalg)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkType.\n");
+		return false;
+	}
+	if (!fdow_signed_int(fdow, pk->pkenc)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkEnc.\n");
+		return false;
+	}
+	if (!fdow_byte_string(fdow, pk->key1->bytes, pk->key1->byte_sz)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to write pkBody.\n");
+		return false;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "PublicKey write: Failed to end array.\n");
+		return false;
+	}
+	// Write successfull. Return true.
+	return true;
+}
+
+/**
+ * Read the public key information of the form:
+ * PublicKey = [
+ *	pkType,
+ *	pkEnc,
+ *	pkBody
+ * ]
+ * 
+ * @param fdor - read public key info
+ * return pointer to the struct of type public key if success else error code
+ */
+fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
+{
+	if (!fdor)
+		return NULL;
+
+	size_t num_public_key_items, public_key_length = 0;
+	fdo_public_key_t *pk = fdo_public_key_alloc_empty(); // Create a Public Key
+	if (!pk) {
+		goto err;
+	}
+
+	if (!fdor_array_length(fdor, &num_public_key_items) || num_public_key_items != 3) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Array length\n", __func__);
+		goto err;
+	}
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Start array not found\n", __func__);
+		goto err;
+	}
+	if (!fdor_signed_int(fdor, &pk->pkalg)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkType\n", __func__);
+		goto err;
+	}
+	if (!fdor_signed_int(fdor, &pk->pkenc)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkEnc\n", __func__);
+		goto err;
+	}
+
+	if (!fdor_string_length(fdor, &public_key_length) || public_key_length <= 0) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkBody length\n", __func__);
+	}
+	LOG(LOG_DEBUG, "PublicKey.pkBody length: %zu bytes\n", public_key_length);
+	pk->key1 = fdo_byte_array_alloc(public_key_length);
+
+	if (!pk->key1 || !fdor_byte_string(fdor, pk->key1->bytes, public_key_length)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkBody\n", __func__);
+		fdo_byte_array_free(pk->key1);
+		goto err;
+	}
+	pk->key1->byte_sz = public_key_length;
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "%s Invalid PublicKey: End array not found\n", __func__);
+		goto err;
+	}
+	return pk;
+err:
+	return NULL;
+}
+
+//------------------------------------------------------------------------------
+// Rendezvous Routines
+//
+
+/**
+ * Allocate struct of type Rendezvous
+ */
+fdo_rendezvous_t *fdo_rendezvous_alloc(void)
+{
+	return fdo_alloc(sizeof(fdo_rendezvous_t));
+}
+
+/**
+ * Free the allocated rendezvous struct
+ * @param rv - pointer to the struct of type rendezvous
+ */
+void fdo_rendezvous_free(fdo_rendezvous_t *rv)
+{
+	if (!rv)
+		return;
+
+	if (rv->dev_only != NULL)
+		fdo_free(rv->dev_only);
+
+	if (rv->owner_only != NULL)
+		fdo_free(rv->owner_only);
+
+	if (rv->ip != NULL)
+		fdo_free(rv->ip);
+
+	if (rv->po != NULL)
+		fdo_free(rv->po);
+
+	if (rv->pow != NULL)
+		fdo_free(rv->pow);
+
+	if (rv->dn != NULL)
+		fdo_string_free(rv->dn);
+
+	if (rv->sch != NULL)
+		fdo_hash_free(rv->sch);
+
+	if (rv->cch != NULL)
+		fdo_hash_free(rv->cch);
+
+	if (rv->ui != NULL)
+		fdo_free(rv->ui);
+
+	if (rv->ss != NULL)
+		fdo_string_free(rv->ss);
+
+	if (rv->pw != NULL)
+		fdo_string_free(rv->pw);
+
+	if (rv->wsp != NULL)
+		fdo_string_free(rv->wsp);
+
+	if (rv->me != NULL)
+		fdo_free(rv->me);
+
+	if (rv->pr != NULL)
+		fdo_free(rv->pr);
+
+	if (rv->delaysec != NULL)
+		fdo_free(rv->delaysec);
+
+	if (rv->bypass != NULL)
+		fdo_free(rv->bypass);
+
+	fdo_free(rv);
+}
+
+/** 
+ * Write a RendezvousInstr object to the output buffer
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
+ *
+ * @param fdow - the buffer pointer
+ * @param rv - pointer to the RendezvousInstr object to write
+ * @return true if written successfully, otherwise false
+ */
+bool fdo_rendezvous_write(fdow_t *fdow, fdo_rendezvous_t *rv)
+{
+	if (!fdow || !rv)
+		return false;
+	
+	if (!fdow_start_array(fdow, rv->num_params)) {
+		LOG(LOG_ERROR, "RendezvousInstr: Failed to start array\n");
+		return false;
+	}
+
+	if (rv->dev_only != NULL && *rv->dev_only == true) {
+		if (!fdow_signed_int(fdow, RVDEVONLY)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDevOnly\n");
+			return false;
+		}
+	}
+
+	if (rv->owner_only != NULL && *rv->owner_only == true) {
+		if (!fdow_signed_int(fdow, RVOWNERONLY)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVOwnerOnly\n");
+			return false;
+		}
+	}
+
+	if (rv->ip != NULL) {
+		if (!fdow_signed_int(fdow, RVIPADDRESS) ||
+			!fdow_byte_string(fdow, (uint8_t *) &rv->ip->addr, rv->ip->length)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVIPAddress\n");
+			return false;
+		}
+	}
+
+	if (rv->po != NULL) {
+		if (!fdow_signed_int(fdow, RVDEVPORT) ||
+			!fdow_signed_int(fdow, *rv->po)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDevPort\n");
+			return false;
+		}
+	}
+
+	if (rv->pow != NULL) {
+		if (!fdow_unsigned_int(fdow, RVOWNERPORT) ||
+			!fdow_signed_int(fdow, *rv->pow)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVOwnerPort\n");
+			return false;
+		}
+	}
+
+	if (rv->dn != NULL) {
+		if (!fdow_signed_int(fdow, RVDNS) ||
+			!fdow_text_string(fdow, rv->dn->bytes, rv->dn->byte_sz)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDns\n");
+			return false;
+		}
+	}
+
+	if (rv->sch != NULL) {
+		if (!fdow_signed_int(fdow, RVSVCERTHASH) ||
+			!fdo_hash_write(fdow, rv->sch)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVSvCertHash\n");
+			return false;
+		}
+	}
+
+	if (rv->cch != NULL) {
+		if (!fdow_signed_int(fdow, RVCLCERTHASH) ||
+			!fdo_hash_write(fdow, rv->cch)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVClCertHash\n");
+			return false;
+		}
+	}
+
+	if (rv->ui != NULL) {
+		if (!fdow_signed_int(fdow, RVUSERINPUT) ||
+			!fdow_boolean(fdow, *rv->ui)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVUserInput\n");
+			return false;
+		}
+	}
+
+	if (rv->ss != NULL) {
+		if (!fdow_signed_int(fdow, RVWIFISSID) ||
+			!fdow_text_string(fdow, rv->ss->bytes, rv->ss->byte_sz)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVWiFiSsid\n");
+			return false;
+		}
+	}
+
+	if (rv->pw != NULL) {
+		if (!fdow_signed_int(fdow, RVWIFIPW) ||
+			!fdow_text_string(fdow, rv->pw->bytes, rv->pw->byte_sz)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVWifiPw\n");
+			return false;
+		}
+	}
+
+	if (rv->me != NULL) {
+		if (!fdow_signed_int(fdow, RVMEDIUM) ||
+			!fdow_unsigned_int(fdow, *rv->me)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVMedium\n");
+			return false;
+		}
+	}
+
+	if (rv->pr != NULL) {
+		if (!fdow_signed_int(fdow, RVPROTOCOL) ||
+			!fdow_unsigned_int(fdow, *rv->pr)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVProtocol\n");
+			return false;
+		}
+	}
+
+	if (rv->delaysec != NULL) {
+		if (!fdow_signed_int(fdow, RVDELAYSEC) ||
+			!fdow_unsigned_int(fdow, *rv->delaysec)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVDelaysec\n");
+			return false;
+		}
+	}
+
+	if (rv->bypass != NULL && *rv->bypass == true) {
+		if (!fdow_signed_int(fdow, RVBYPASS)) {
+			LOG(LOG_ERROR, "RendezvousInstr: Failed to write RVBypass\n");
+			return false;
+		}
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "RendezvousInstr: Failed to end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read the RendezvousInstr from the input buffer
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
+ *
+ * @param fdor - the input buffer object
+ * @param rv - pointer to the RendezvousInstr object to fill
+ * @return true of read correctly, false otherwise
+ */
+bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv)
+{
+	int ret = true;
+
+	if (!fdor || !rv)
+		return false;
+
+	size_t num_rv_instr_items = 0;
+	if (!fdor_array_length(fdor, &num_rv_instr_items) || num_rv_instr_items <= 0) {
+		LOG(LOG_ERROR, "RendezvousInstr is empty\n");
+		return false;
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "RendezvousInstr start array not found\n");
+		return false;
+	}
+	
+	// size_t index;
+	size_t key_buf_sz = 24;
+	char key_buf[key_buf_sz];
+	size_t str_buf_sz = 80;
+	char str_buf[str_buf_sz];
+
+	rv->num_params = 0;
+
+	if (memset_s(key_buf, key_buf_sz, 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		return false;
+	}
+	if (memset_s(str_buf, str_buf_sz, 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		return false;
+	}
+	int key;
+	if (!fdor_signed_int(fdor, &key)) {
+		LOG(LOG_ERROR, "RendezvousInstr key read error\n");
+		ret = false;
+	}
+	// Parse the values found
+	switch (key) {
+	case RVDEVONLY:
+		rv->dev_only = fdo_alloc(sizeof(bool));
+		if (!rv->dev_only) {
+			LOG(LOG_ERROR, "RVDEVONLY alloc failed\n");
+			ret = false;
+			break;
+		}
+		*rv->dev_only = true;
+		rv->num_params = 1;
+		break;
+
+	case RVOWNERONLY:
+		rv->owner_only = fdo_alloc(sizeof(bool));
+		if (!rv->owner_only) {
+			LOG(LOG_ERROR, "RVOWNERONLY alloc failed\n");
+			ret = false;
+			break;
+		}
+		*rv->owner_only = true;
+		rv->num_params = 1;
+		break;
+
+	case RVIPADDRESS:
+		if (rv->ip) {
+			fdo_free(rv->ip);
+		}
+
+		rv->ip = fdo_ipaddress_alloc();
+		if (!rv->ip) {
+			LOG(LOG_ERROR, "RVIPADDRESS alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (fdo_read_ipaddress(fdor, rv->ip) != true) {
+			LOG(LOG_ERROR, "RVIPADDRESS read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVDEVPORT:
+
+		if (rv->po) {
+			fdo_free(rv->po);
+		}
+
+		rv->po = fdo_alloc(sizeof(int)); // Allocate an integer
+		if (!rv->po) {
+			LOG(LOG_ERROR, "RVDEVPORT alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!fdor_signed_int(fdor, rv->po)) {
+			LOG(LOG_ERROR, "RVDEVPORT read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	// valid only for OWNER. parse for validation.
+	case RVOWNERPORT:
+
+		if (rv->pow) {
+			fdo_free(rv->pow);
+		}
+
+		rv->pow = fdo_alloc(sizeof(int));
+		if (!rv->pow) {
+			LOG(LOG_ERROR, "RVOWNERPORT alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!fdor_signed_int(fdor, rv->pow)) {
+			LOG(LOG_ERROR, "RVOWNERPORT read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVDNS:
+
+		if (!fdor_string_length(fdor, &str_buf_sz)) {
+			LOG(LOG_ERROR, "RVDNS length read failed\n");
+			return false;
+		}
+
+		if (!fdor_text_string(fdor, str_buf, str_buf_sz)) {
+			LOG(LOG_ERROR, "RVDNS read failed\n");
+			return false;
+		}
+
+		if (rv->dn) {
+			fdo_string_free(rv->dn);
+		}
+
+		rv->dn = fdo_string_alloc_with(str_buf, str_buf_sz);
+		if (!rv->dn) {
+			LOG(LOG_ERROR, "RVDNS alloc failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVSVCERTHASH:
+
+		if (rv->sch) {
+			fdo_hash_free(rv->sch);
+		}
+		rv->sch = fdo_hash_alloc_empty();
+		if (!rv->sch) {
+			LOG(LOG_ERROR, "RVSVCERTHASH alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!fdo_hash_read(fdor, rv->sch)) {
+			LOG(LOG_ERROR, "RVSVCERTHASH read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVCLCERTHASH:
+
+		if (rv->cch) {
+			fdo_hash_free(rv->cch);
+		}
+
+		rv->cch = fdo_hash_alloc_empty();
+		if (!rv->cch) {
+			LOG(LOG_ERROR, "RVCLCERTHASH alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!fdo_hash_read(fdor, rv->cch)) {
+			LOG(LOG_ERROR, "RVSVCERTHASH read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVUSERINPUT:
+
+		rv->ui = fdo_alloc(sizeof(bool));
+		if (!rv->ui) {
+			LOG(LOG_ERROR, "RVUSERINPUT alloc failed\n");
+			ret = false;
+			break;
+		}
+		if (!fdor_boolean(fdor, rv->ui)) {
+			LOG(LOG_ERROR, "RVUSERINPUT read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVWIFISSID:
+
+		if (!fdor_string_length(fdor, &str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFISSID length read failed\n");
+			ret = false;
+		}
+
+		if (fdor_text_string(fdor, str_buf, str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFISSID length read failed\n");
+			return false;
+		}
+
+		if (rv->ss) {
+			fdo_string_free(rv->ss);
+		}
+		rv->ss = fdo_string_alloc_with(str_buf, str_buf_sz);
+		if (!rv->ss) {
+			LOG(LOG_ERROR, "RVWIFISSID alloc failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVWIFIPW:
+
+		if (!fdor_string_length(fdor, &str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFIPW length read failed\n");
+			ret = false;
+		}
+
+		if (!fdor_text_string(fdor, str_buf, str_buf_sz)) {
+			LOG(LOG_ERROR, "RVWIFIPW read failed\n");
+			ret = false;
+		}
+
+		if (rv->pw) {
+			fdo_string_free(rv->pw);
+		}
+
+		rv->pw = fdo_string_alloc_with(str_buf, str_buf_sz);
+		if (!rv->pw) {
+			LOG(LOG_ERROR, "RVWIFIPW alloc failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVMEDIUM:
+
+		rv->me = fdo_alloc(sizeof(uint64_t));
+		if (!fdor_unsigned_int(fdor, rv->me)) {
+			LOG(LOG_ERROR, "RVMEDIUM read failed\n");
+			ret = false;
+		}
+		// TO-DO : Parse all possible RVMedium values.
+		rv->num_params = 2;
+		break;
+
+	case RVPROTOCOL:
+
+		rv->pr = fdo_alloc(sizeof(uint64_t));
+		if (!fdor_unsigned_int(fdor, rv->pr)) {
+			LOG(LOG_ERROR, "RVPROTOCOL read failed\n");
+			ret = false;
+		}
+		// TO-DO : Parse all possible RVProtocol values.
+		rv->num_params = 2;
+		break;
+
+	case RVDELAYSEC:
+
+		if (rv->delaysec) {
+			fdo_free(rv->delaysec);
+		}
+
+		rv->delaysec = fdo_alloc(sizeof(uint64_t));
+		if (!rv->delaysec) {
+			LOG(LOG_ERROR, "RVDELAYSEC Alloc failed\n");
+			return false;
+		}
+		if (!fdor_unsigned_int(fdor, rv->delaysec) || !rv->delaysec) {
+			LOG(LOG_ERROR, "RVDELAYSEC read failed\n");
+			ret = false;
+		}
+		rv->num_params = 2;
+		break;
+
+	case RVBYPASS:
+
+		rv->bypass = fdo_alloc(sizeof(bool));
+		if (!rv->bypass) {
+			LOG(LOG_ERROR, "RVBYPASS alloc failed\n");
+			ret = false;
+			break;
+		}
+		*rv->bypass = true;
+		rv->num_params = 1;
+		break;
+
+	case RVEXTRV:
+		// TO-DO: Parse as an array. Implementation is open for now.
+		break;
+
+	default:
+		LOG(LOG_ERROR,
+		    "%s : Invalid RendezvousInstr Entry Type %s\n",
+			    __func__, key_buf);
+		ret = false; // Abort due to unexpected value for key
+		break;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "RendezvousInstr end array not found\n");
+		ret = false;
+	}
+
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Rendezvous_list Routines
+//
+
+/**
+ * Allocate an empty FDORendezvous_list object to the list.
+ * @return an allocated FDORendezvous_list object.
+ */
+fdo_rendezvous_list_t *fdo_rendezvous_list_alloc(void)
+{
+	return fdo_alloc(sizeof(fdo_rendezvous_list_t));
+}
+
+/**
+ * Free all entries in the list.
+ * @param list - the list to fdo_free.
+ * @return none
+ */
+void fdo_rendezvous_list_free(fdo_rendezvous_list_t *list)
+{
+	fdo_rendezvous_t *entry, *next;
+	fdo_rendezvous_directive_t *directive_entry, *directive_next;
+
+	if (list == NULL) {
+		return;
+	}
+
+	/* Delete all entries. */
+	directive_entry = directive_next = list->rv_directives;
+	while (directive_entry) {
+		next = entry = directive_entry->rv_entries;
+		while (entry) {
+			next = entry->next;
+			fdo_rendezvous_free(entry);
+			entry = next;
+		};
+		directive_next = directive_entry->next;
+		fdo_free(directive_entry);
+		directive_entry = directive_next;
+	}
+	list->num_rv_directives = 0;
+	fdo_free(list);
+}
+
+/**
+ * Add the RendezvousDirective to the RendezvousInfo list
+ * @param list - pointer to the RendezvousInfo list
+ * @param rv - pointer to the RendezvousDirective to be added to the list
+ * @return number of entries added if success else error code
+ */
+int fdo_rendezvous_directive_add(fdo_rendezvous_list_t *list,
+	fdo_rendezvous_directive_t *directive) {
+	if (list == NULL || directive == NULL)
+		return 0;
+
+	if (list->num_rv_directives == 0) {
+		// List empty, add the first entry
+		list->rv_directives = directive;
+		list->num_rv_directives++;
+	} else {
+		// already has entries, find the last entry
+		fdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
+		// Find the last entry
+		while (entry_ptr->next != NULL) {
+			entry_ptr = (fdo_rendezvous_directive_t *)entry_ptr->next;
+		}
+		// Now the enty_ptr is pointing to the last entry
+		// Add the directive entry onto the end
+		entry_ptr->next = directive;
+		list->num_rv_directives++;
+	}
+	LOG(LOG_DEBUG, "Added RendezvousDirective entry %d\n", list->num_rv_directives);
+	return list->num_rv_directives;
+}
+
+/**
+ * Add the RendezvousInstr to the RendezvousDirective struct
+ * @param list - pointer to the RendezvousDirective list
+ * @param rv - pointer to the RendezvousInstr to be added to the list
+ * @return number of entries added if success else error code
+ */
+int fdo_rendezvous_list_add(fdo_rendezvous_directive_t *directives, fdo_rendezvous_t *rv)
+{
+	if (directives == NULL || rv == NULL)
+		return 0;
+
+	if (directives->num_entries == 0) {
+		// List empty, add the first entry
+		directives->rv_entries = rv;
+		directives->num_entries++;
+	} else {
+		// already has entries, find the last entry
+		fdo_rendezvous_t *entry_ptr = directives->rv_entries;
+		// Find the last entry
+		while (entry_ptr->next != NULL) {
+			entry_ptr = (fdo_rendezvous_t *)entry_ptr->next;
+		}
+		// Now the enty_ptr is pointing to the last entry
+		// Add the r entry onto the end
+		entry_ptr->next = rv;
+		directives->num_entries++;
+	}
+	LOG(LOG_DEBUG, "Added RendezvousInstr entry %d\n", directives->num_entries);
+	return directives->num_entries;
+}
+
+/**
+ * Function will return the RendezvousDirective as per the num passed.
+ * @param list - Pointer to the list for the entries.
+ * @param num - index of which entry (RendezvousDirective) to return.
+ * @return fdo_rendezvous_directive_t object.
+ */
+fdo_rendezvous_directive_t *fdo_rendezvous_directive_get(fdo_rendezvous_list_t *list, int num)
+{
+	int index;
+
+	if (list == NULL || list->rv_directives == NULL)
+		return NULL;
+
+	fdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
+
+	for (index = 0; index < num; index++) {
+		if (entry_ptr->next != NULL)
+			entry_ptr = entry_ptr->next;
+		else {
+			// this should ideally no happen since for 'num' times,
+			// there should be a directive present.
+			LOG(LOG_DEBUG, "RendezvousDirective not found for index %d\n", index);
+			return NULL;
+		}
+	}
+	return entry_ptr;
+}
+
+/**
+ * Function will return the RendezvousInstr as per the num passed.
+ * @param list - Pointer to the list for the entries.
+ * @param num - index of which entry (RendezvousInstr) to return.
+ * @return fdo_rendezvous_t object.
+ */
+fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *directive, int num)
+{
+	int index;
+
+	if (directive == NULL || directive->rv_entries == NULL)
+		return NULL;
+
+	fdo_rendezvous_t *entry_ptr = directive->rv_entries;
+
+	for (index = 0; index < num; index++) {
+		if (entry_ptr->next != NULL)
+			entry_ptr = entry_ptr->next;
+		else {
+			// this should ideally no happen since for 'num' times,
+			// there should be a directive present.
+			LOG(LOG_DEBUG, "RendezvousInstr not found for index %d\n", index);
+			return NULL;
+		}
+	}
+	return entry_ptr;
+}
+
+/**
+ * Reads the RendezvousInfo from the fdor w.r.t the number of entries.
+ * RendezvousInfo = [
+ *   + RendezvousDirective
+ * ]
+ * RendezvousDirective = [
+ *   + RendezvousInstr
+ * ]
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
+ * @param fdor - Pointer of type fdor_t as input.
+ * @param list- Pointer to the fdo_rendezvous_list_t list to be filled.
+ * @return true if reads correctly ,else false
+ */
+
+int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
+{
+	if (!fdor || !list)
+		return false;
+
+	// Find out the number of RendezvousDirective(s)
+	size_t num_rv_directives = 0;
+	if (!fdor_array_length(fdor, &num_rv_directives) || num_rv_directives <= 0) {
+		LOG(LOG_ERROR,
+		    "%s : No RendezvousDirective(s) found\n", __func__);
+		return false;
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR,
+		    "%s : RendezvousInfo start array not found\n", __func__);
+		return false;
+	}
+
+	LOG(LOG_DEBUG, "There are %zu RendezvousDirective(s) in the RendezvousInfo\n",
+		num_rv_directives);
+
+	size_t rv_directive_index;
+
+	for (rv_directive_index = 0; rv_directive_index < num_rv_directives; rv_directive_index++) {
+		LOG(LOG_DEBUG, "Processing RendezvousDirective Index %zu\n", rv_directive_index);
+		// Find out the number of RendezvousInstr(s)
+		size_t num_rv_instr = 0;
+		if (!fdor_array_length(fdor, &num_rv_instr) || num_rv_instr <= 0) {
+			LOG(LOG_ERROR,
+		    	"%s : No RendezvousInstr(s) found\n", __func__);
+			return false;
+		}
+
+		LOG(LOG_DEBUG, "There are %zu RendezvousInstr(s)\n",
+			num_rv_instr);
+
+		if (!fdor_start_array(fdor)) {
+			LOG(LOG_ERROR,
+		    "%s : RendezvousDirective start array not found\n", __func__);
+			return false;
+		}
+
+		fdo_rendezvous_directive_t *rv_directive =
+			fdo_alloc(sizeof(fdo_rendezvous_directive_t));
+		if (!rv_directive) {
+			LOG(LOG_ERROR,
+		    "%s : RendezvousDirective alloc failed\n", __func__);
+			return false;			
+		}
+		size_t rv_instr_index;
+		for (rv_instr_index = 0; rv_instr_index < num_rv_instr; rv_instr_index++) {
+			// Read each rv entry and add to the rv list
+			LOG(LOG_DEBUG, "Processing RendezvousInstr Index %zu\n", rv_instr_index);
+
+			fdo_rendezvous_t *rv_entry = fdo_rendezvous_alloc();
+
+			if (fdo_rendezvous_read(fdor, rv_entry))
+				fdo_rendezvous_list_add(rv_directive, rv_entry);
+			else {
+				fdo_rendezvous_free(rv_entry);
+				// TO-DO: free directive here?
+				return false;
+			}
+		}
+		if (!fdor_end_array(fdor)) {
+			LOG(LOG_ERROR,
+		    	"%s : RendezvousDirective end array not found\n", __func__);
+		return false;
+		}
+		fdo_rendezvous_directive_add(list, rv_directive);
+	}
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR,
+		    "%s : RendezvousInfo end array not found\n", __func__);
+		return false;
+	}
+
+	LOG(LOG_DEBUG, "RendezvousInfo read completed\n");
+	return true;
+}
+
+/**
+ * Writes out the entire RendezvousInfo list as sequences inside a sequence.
+ * RendezvousInfo = [
+ *   + RendezvousDirective
+ * ]
+ * RendezvousDirective = [
+ *   + RendezvousInstr
+ * ]
+ * RendezvousInstr = [
+ *   RVVariable,
+ *   RVValue
+ * ]
+ * @param fdow - Pointer of type fdow to be filled.
+ * @param list- Pointer to the fdo_rendezvous_list_t list from which fdow will
+ * be filled w.r.t num_entries specified in the list.
+ * @return true if writes correctly ,else false
+ */
+bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list)
+{
+	if (!fdow || !list)
+		return false;
+
+	fdow_start_array(fdow, list->num_rv_directives);
+
+	int rv_directive_index;
+	for (rv_directive_index = 0; rv_directive_index < list->num_rv_directives;
+		rv_directive_index++) {
+		fdo_rendezvous_directive_t *directive = fdo_rendezvous_directive_get(list, rv_directive_index);
+		if (!directive) {
+			continue;
+		}
+		fdow_start_array(fdow, directive->num_entries);
+		int rv_instr_index;
+		for (rv_instr_index = 0; rv_instr_index < directive->num_entries; rv_instr_index++) {
+			fdo_rendezvous_t *entry_Ptr = fdo_rendezvous_list_get(directive, rv_instr_index);
+			if (entry_Ptr == NULL) {
+				continue;
+			}
+			fdo_rendezvous_write(fdow, entry_Ptr);
+		}
+		fdow_end_array(fdow);
+	}
+	fdow_end_array(fdow);
+
+	return true;
+}
+
+//------------------------------------------------------------------------------
+// AES Encrypted Message Body Routines
+//
+
+/**
+ * Allocate an empty AES encrypted Message Body object
+ * @return an allocated AES Encrypted Message Body object
+ */
+fdo_encrypted_packet_t *fdo_encrypted_packet_alloc(void)
+{
+	return fdo_alloc(sizeof(fdo_encrypted_packet_t));
+}
+
+/**
+ * Free an AES Encrypted Message Body object
+ * @param pkt - the object to fdo_free
+ * @return none
+ */
+void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt)
+{
+	if (pkt == NULL) {
+		return;
+	}
+	if (pkt->em_body)
+		fdo_byte_array_free(pkt->em_body);
+	if (pkt->hmac)
+		fdo_hash_free(pkt->hmac);
+	if (pkt->ct_string)
+		fdo_byte_array_free(pkt->ct_string);
+	fdo_free(pkt);
+}
+
+/**
+ * Read an Encrypted Message Body object from the FDOR buffer.
+ * Currently, this parses EncryptedMessage of Composed Type (EncThenMacMessage),
+ * that contains an COSE_Encrypt0 (ETMInnerBlock) wrapped by COSE_Mac0 (ETMOuterBlock)
+ * ETMOuterBlock = [
+ *   protected:   { 1:ETMMacType },		// bstr
+ *   unprotected: { }					// empty map
+ *   payload:     ETMInnerBlock			// COSE_Encrypt0
+ *   hmac:   hmac						// bstr
+ * ]
+ * ETMInnerBlock = [
+ *   protected:   { 1:AESPlainType },	// bstr
+ *   unprotected: { 5:AESIV }
+ *   payload:     ProtocolMessage
+ * ]
+ * TO-DO : To be updated later to parse Simple Type.
+ * @param fdor - pointer to the character buffer to parse
+ * @return a newly allocated FDOEcnrypted_packet object if successful, otherwise
+ * NULL
+ */
+fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
+{
+	fdo_encrypted_packet_t *pkt = NULL;
+	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
+	fdo_cose_mac0_t *cose_mac0 = NULL;
+
+	if (!fdor){
+		LOG(LOG_ERROR, "Encrypted Message Read: Invalid FDOR\n");
+		goto error;
+	}
+
+	pkt = fdo_encrypted_packet_alloc();
+	if (!pkt) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted structure\n");
+		goto error;
+	}
+
+	cose_mac0 = fdo_alloc(sizeof(fdo_cose_mac0_t));
+	if (!cose_mac0) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc COSE_Mac0\n");
+		goto error;
+	}
+	if (!fdo_cose_mac0_read(fdor, cose_mac0)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to read COSE_Mac0\n");
+		goto error;
+	}
+
+	// copy the COSE_Mac0 payload which will be verified against the
+	// COSE_Mac0 hmac later
+	pkt->ct_string = fdo_byte_array_alloc_with_byte_array(
+		cose_mac0->payload->bytes, cose_mac0->payload->byte_sz);
+	if (!pkt->ct_string) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy Encrypted Payload structure\n");
+		goto error;
+	}
+
+	// Verify hash/hmac type
+	// TO-DO: When implementing Simple Encrypted Message,
+	// use the key to differentiate Simple/Composed types.
+	int expected_hmac_type = FDO_CRYPTO_HMAC_TYPE_USED;
+	if (cose_mac0->protected_header->mac_type != expected_hmac_type) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected HMac Type\n");
+		goto error;	
+	}
+	pkt->hmac = fdo_hash_alloc(cose_mac0->protected_header->mac_type,
+		cose_mac0->hmac->byte_sz);	
+	if (!pkt->hmac) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted Hmac structure\n");
+		goto error;
+	}
+	if (0 != memcpy_s(pkt->hmac->hash->bytes, pkt->hmac->hash->byte_sz,
+		cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Mac0.hmac\n");
+		goto error;
+	}
+
+	// clear the FDOR buffer and push COSE payload into it, essentially reusing the FDOR object.
+	fdo_block_reset(&fdor->b);
+	fdor->b.block_size = cose_mac0->payload->byte_sz;
+	if (0 != memcpy_s(fdor->b.block, fdor->b.block_size,
+		cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Mac0.payload into FDOR\n");
+		goto error;
+	}
+	fdo_cose_mac0_free(cose_mac0);
+	cose_mac0 = NULL;
+
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!fdor_parser_init(fdor)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to initialize FDOR parser\n");
+		goto error;
+	}
+
+	cose_encrypt0 = fdo_alloc(sizeof(fdo_cose_encrypt0_t));
+	if (!cose_encrypt0) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc COSE_Encrypt0\n");
+		goto error;
+	}
+	if (!fdo_cose_encrypt0_read(fdor, cose_encrypt0)) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to read COSE_Encrypt0\n");
+		goto error;
+	}
+
+	// copy Encrypted payload that will be decrypted later.
+	pkt->em_body = fdo_byte_array_alloc_with_byte_array(
+		cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz);
+	if (!pkt->em_body) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Payload\n");
+		goto error;
+	}
+
+	// copy IV that is used to decrypt the encrypted payload
+	if (0 != memcpy_s(&pkt->iv, sizeof(pkt->iv),
+		&cose_encrypt0->unprotected_header->aes_iv, sizeof(cose_encrypt0->unprotected_header->aes_iv))) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Unprotected.AESIV\n");
+		goto error;
+	}
+
+	// verify and copy AESPlainType value
+	int expected_aes_plain_type = AES_PLAIN_TYPE;
+	if (cose_encrypt0->protected_header->aes_plain_type != expected_aes_plain_type) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected AESPlainType\n");
+		goto error;
+	}
+	pkt->aes_plain_type = cose_encrypt0->protected_header->aes_plain_type;
+
+	fdo_cose_encrypt0_free(cose_encrypt0);
+	cose_encrypt0 = NULL;
+	LOG(LOG_DEBUG, "Encrypted Message Read: Encrypted Message parsed successfully\n");
+	return pkt;
+error:
+	fdo_encrypted_packet_free(pkt);
+	if (cose_mac0) {
+		fdo_cose_mac0_free(cose_mac0);
+		cose_mac0 = NULL;
+	}
+	if (cose_encrypt0) {
+		fdo_cose_encrypt0_free(cose_encrypt0);
+		cose_encrypt0 = NULL;
+	}
+	return NULL;
+}
+
+/**
+ * Write the ETMInnerBlock stucture (COSE_Encrypt0) in the FDOW buffer using the contents
+ * of fdo_encrypted_packet_t.
+ * ETMInnerBlock = [
+ *   protected:   { 1:AESPlainType },
+ *   unprotected: { 5:AESIV }
+ *   payload:     ProtocolMessage
+ *   signature:   bstr
+ *]
+ * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
+ * @param pkt - fdo_encrypted_packet_t object
+ * @return true if write is successfull, false otherwise.
+ */
+bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
+{
+	if (!fdow || !pkt)
+		return false;
+
+	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
+
+	cose_encrypt0 = fdo_cose_encrypt0_alloc();
+	if (!cose_encrypt0) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Encrypt0 (ETMInnerBlock)\n");
+		goto err;
+	}
+
+	// copy the required data into COSE_Encrypt0 object
+	cose_encrypt0->protected_header->aes_plain_type = pkt->aes_plain_type;
+
+	if (0 != memcpy_s(&cose_encrypt0->unprotected_header->aes_iv,
+		sizeof(cose_encrypt0->unprotected_header->aes_iv),
+		&pkt->iv, sizeof(pkt->iv))) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to copy IV\n");
+		goto err;
+	}
+	cose_encrypt0->payload = fdo_byte_array_alloc_with_byte_array(
+		pkt->em_body->bytes, pkt->em_body->byte_sz);
+
+	if (!fdo_cose_encrypt0_write(fdow, cose_encrypt0)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to write COSE_Encrypt0 (ETMInnerBlock)\n");
+		goto err;
+	}
+
+	// free immediately once used
+	fdo_cose_encrypt0_free(cose_encrypt0);
+	cose_encrypt0 = NULL;
+	return true;
+err:
+	if (cose_encrypt0) {
+		fdo_cose_encrypt0_free(cose_encrypt0);
+		cose_encrypt0 = NULL;
+	}
+	return false;
+}
+
+/**
+ * Write the ETMOuterBlock stucture (COSE_Mac0) in the FDOW buffer using the contents
+ * of fdo_encrypted_packet_t.
+ * ETMOuterBlock = [
+ *   protected:   bstr .cbor ETMMacType,
+ *   unprotected: {},
+ *   payload:     bstr .cbor ETMPayloadTag,
+ *   hmac:        bstr 
+ * ]
+ * ETMPayloadTag = ETMInnerBlock
+ * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
+ * @param pkt - fdo_encrypted_packet_t object
+ * @return  true if write is successfull, false otherwise.
+ */
+bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
+{
+	if (!fdow || !pkt)
+		return false;
+
+	fdo_cose_mac0_t *cose_mac0 = fdo_alloc(sizeof(fdo_cose_mac0_t));
+	if (!cose_mac0) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Sign1 (ETMOuterBlock)\n");
+		goto err;
+	}
+	cose_mac0->protected_header = fdo_alloc(sizeof(fdo_cose_mac0_protected_header_t));
+	if (!cose_mac0->protected_header) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Mac0 Protected (ETMOuterBlock)\n");
+		goto err;
+	}
+	cose_mac0->protected_header->mac_type = pkt->hmac->hash_type;
+
+	// set the encoded ETMInnerBlock (COSE_Encrypt0) as payload and its HMac into COSE_Mac0
+	cose_mac0->payload = fdo_byte_array_alloc_with_byte_array(
+		pkt->ct_string->bytes, pkt->ct_string->byte_sz);
+	cose_mac0->hmac = fdo_byte_array_alloc_with_byte_array(
+		pkt->hmac->hash->bytes, pkt->hmac->hash->byte_sz);
+
+	if (!fdo_cose_mac0_write(fdow, cose_mac0)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to write COSE_Sign1 (ETMOuterBlock)\n");
+		goto err;
+	}
+	fdo_cose_mac0_free(cose_mac0);
+	cose_mac0 = NULL;
+	return true;
+err:
+	if (cose_mac0) {
+		fdo_cose_mac0_free(cose_mac0);
+		cose_mac0 = NULL;
+	}
+	return false;
+}
+
+/**
+ * Take in encrypted data object and end up with it represented
+ * cleartext in the fdor buffer.  This will allow the data to be parsed
+ * for its content.
+ * @param fdor - pointer to the fdor object to fill
+ * @param pkt - Pointer to the Encrypted packet pkt that has to be processed.
+ * @param iv - pointer to the IV struct
+ * @return true if all goes well, otherwise false
+ */
+bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
+				 fdo_iv_t *iv)
+{
+	bool ret = false;
+	fdo_byte_array_t *cleartext = NULL;
+
+	// Decrypt the Encrypted Body
+	if (!fdor || !pkt || !iv) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Invalid params\n");
+		goto err;
+	}
+
+	cleartext = fdo_byte_array_alloc(0);
+	if (cleartext == NULL) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to alloc clear data\n");
+		goto err;
+	}
+
+	/* New iv is used for each new decryption which comes from pkt*/
+	if (0 != aes_decrypt_packet(pkt, cleartext)) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to decrypt\n");
+		goto err;
+	}
+
+	// clear the FDOR buffer and push decrypted payload into it
+	fdo_block_reset(&fdor->b);
+	fdor->b.block_size = cleartext->byte_sz;
+	if (0 != memcpy_s(fdor->b.block, cleartext->byte_sz,
+		cleartext->bytes, cleartext->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to copy\n");
+		goto err;
+	}
+
+	// initialize the parser once the buffer contains COSE payload to be decoded.
+	if (!fdor_parser_init(fdor)) {
+		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to initialize FDOR parser\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decrytion done\n");
+	ret = true;
+err:
+	if (pkt)
+		fdo_encrypted_packet_free(pkt);
+	if (cleartext)
+		fdo_byte_array_free(cleartext);
+	return ret;
+}
+
+/**
+ * Take the cleartext packet contained in the fdow buffer and convert it
+ * to an Encrypted Message Body of Composed Type (EncThenMacMessage) in the fdow buffer.
+ * It contains an COSE_Encrypt0 (ETMInnerBlock) wrapped by COSE_Mac0 (ETMOuterBlock)
+ * ETMOuterBlock = [
+ *   protected:   { 1:ETMMacType },		// bstr
+ *   unprotected: { }					// empty map
+ *   payload:     ETMInnerBlock			// COSE_Encrypt0
+ *   hmac:   hmac						// bstr
+ * ]
+ * ETMInnerBlock = [
+ *   protected:   { 1:AESPlainType },	// bstr
+ *   unprotected: { 5:AESIV }
+ *   payload:     ProtocolMessage
+ * ]
+ * TO-DO : To be updated later to write Simple Type.
+ * @param fdow - pointer to the message buffer
+ * @param type - message type
+ * @param iv - Pointer to the iv to fill Encrypted Packet pkt.
+ * @return true if all goes well, otherwise false
+ */
+bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
+{
+	if (!fdow || !iv)
+		return false;
+
+	fdo_block_t *fdob = &fdow->b;
+	bool ret = false;
+	// save the default buffer size, set it back at the end
+	size_t fdow_buff_default_sz = fdob->block_size;
+
+	// find the encoded cleartext length
+	size_t payload_length = 0;
+	if (!fdow_encoded_length(fdow, &payload_length) || payload_length == 0) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to read encoded message length\n");
+		return ret;
+	}
+	fdow->b.block_size = payload_length;
+
+	fdo_encrypted_packet_t *pkt = fdo_encrypted_packet_alloc();
+	if (!pkt) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to alloc for Encrypted message struct\n");
+		return ret;
+	}
+
+	if (0 != aes_encrypt_packet(pkt, fdob->block, payload_length)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to encrypt\n");
+		goto exit;
+	}
+
+#if defined AES_PLAIN_TYPE
+	pkt->aes_plain_type = AES_PLAIN_TYPE;
+#elif
+	LOG(LOG_ERROR,
+		"Encrypted Message (encrypt): AES_PLAIN_TYPE is undefined\n");
+	goto exit;
+#endif
+
+	// reset the FDOW block to write COSE_Encrypt0 (ETMInnerBlock)
+	// This clears the unencrypted (clear text) as well
+	fdo_block_reset(&fdow->b);
+	fdow->b.block_size = fdow_buff_default_sz;
+	if (!fdow_encoder_init(fdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
+		goto exit;
+	}
+	// write the ETMInnerBlock containing the cipher text as payload
+	if (!fdo_etminnerblock_write(fdow, pkt)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to write COSE_Encrypt0 (ETMInnerBlock)\n");
+		goto exit;
+	}
+
+	// update the final encoded length in FDOW
+	if (!fdow_encoded_length(fdow, &fdow->b.block_size)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to read COSE_Encrypt0 ((ETMInnerBlock)) length\n");
+		goto exit;		
+	}
+
+	// initialize the cipher text array to hold the payload over which HMac will be generated.
+	pkt->ct_string = fdo_byte_array_alloc_with_byte_array(fdow->b.block, fdow->b.block_size);
+	if (!pkt->ct_string) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to alloc for Encrypted CT structure\n");
+		goto exit;
+	}
+
+	// reset the FDOW block to prepare for writing COSE_Sign1 (ETMOuterBlock)
+	fdo_block_reset(&fdow->b);
+	fdow->b.block_size = fdow_buff_default_sz;
+	if (!fdow_encoder_init(fdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
+		goto exit;
+	}
+
+	// prepare to calculate the HMac over encoded ETMInnerBlock
+	pkt->hmac =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+
+	if (!pkt->hmac || !pkt->hmac->hash){
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to alloc for HMac\n");
+		goto exit;
+	}
+	if (0 != fdo_to2_hmac(pkt->ct_string->bytes, pkt->ct_string->byte_sz,
+			      pkt->hmac->hash->bytes,
+			      pkt->hmac->hash->byte_sz)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to generate HMac\n");
+		goto exit;
+	}
+
+	// write the final ETMOuetrBlock and the message type
+	// This is the message that goes over the network/channel
+	fdow_next_block(fdow, type);
+	if (!fdo_etmouterblock_write(fdow, pkt)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to write COSE_Sign1 (ETMOuterBlock)\n");
+		goto exit;
+	}
+	ret = true;
+exit:
+	if (pkt)
+		fdo_encrypted_packet_free(pkt);
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+// Write Signature Routines
+//
+
+/**
+ * Create an EAT object with memory allocated for Protected header,
+ * Unprotected header and Payload.
+ * Signature alongwith EATMAROEPREFIX and EATNonce are set to NULL initally, which
+ * should be initialized when needed.
+ */
+fdo_eat_t* fdo_eat_alloc(void) {
+
+	fdo_eat_t *eat = fdo_alloc(sizeof(fdo_eat_t));
+	if (!eat) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc\n");
+		goto err;
+	}
+	eat->eat_ph = fdo_alloc(sizeof(fdo_eat_protected_header_t));
+	if (!eat->eat_ph) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc Protected Header\n");
+		goto err;
+	}
+
+	eat->eat_uph = fdo_alloc(sizeof(fdo_eat_unprotected_header_t));
+	if (!eat->eat_uph) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to alloc Unprotected header\n");
+		goto err;
+	}
+	eat->eat_uph->eatmaroeprefix = NULL;
+	eat->eat_uph->euphnonce = NULL;
+
+	// set the payload and signature to NULL, since there's no use to allocate for them here.
+	eat->eat_payload = NULL;
+	eat->eat_signature = NULL;
+	return eat;
+err:
+	if (eat)
+		fdo_eat_free(eat);
+	return NULL;
+}
+
+/**
+ * Free an EAT object for which memory has been allocated previously.
+ */
+void fdo_eat_free(fdo_eat_t *eat) {
+
+	if (eat->eat_ph) {
+		fdo_free(eat->eat_ph);
+	}
+	if (eat->eat_uph) {
+		if (eat->eat_uph->eatmaroeprefix)
+			fdo_byte_array_free(eat->eat_uph->eatmaroeprefix);
+		if (eat->eat_uph->euphnonce)
+			fdo_byte_array_free(eat->eat_uph->euphnonce);
+		fdo_free(eat->eat_uph);
+	}
+	if (eat->eat_payload) {
+		fdo_byte_array_free(eat->eat_payload);
+	}
+	if (eat->eat_signature) {
+		fdo_byte_array_free(eat->eat_signature);
+	}
+	fdo_free(eat);
+	eat = NULL;
+}
+
+/**
+ * Write an Entity Attestation Token by CBOR encoding the contents of the given EAT object.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * signature			// bstr
+ * ]
+ * @param fdow - fdow_t object holding the buffer where CBOR data will be written to
+ * @param eat - fdo_eat_t object that holds the EAT parameters
+ * @return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat) {
+
+	if (!fdow_start_array(fdow, 4)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_eat_write_protected_header(fdow, eat->eat_ph)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_eat_write_unprotected_header(fdow, eat->eat_uph)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, eat->eat_payload->bytes, eat->eat_payload->byte_sz)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write payload\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, eat->eat_signature->bytes, eat->eat_signature->byte_sz)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write signature\n");
+		return false;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Create EAT.EATProtectedHeaders (CBOR map) as CBOR bytes using the given contents.
+ * {
+ * keyAlg:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *eat_ph) {
+
+	bool ret = false;
+	fdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary FDOW, use it to create Protected header map and then clear it.
+	fdow_t temp_fdow;
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_map(&temp_fdow, 1)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, FDO_COSE_ALG_KEY)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write CoseAlg Key\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, eat_ph->ph_sig_alg)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write CoseAlg Value\n");
+		goto end;
+	}
+
+	if (!fdow_end_map(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "Entity Attestation Token Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_fdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, temp_fdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!fdow_byte_string(fdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	fdow_flush(&temp_fdow);
+	fdo_free(temp_fdow.b.block);
+	if (enc_ph)
+		fdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Create EAT.EATUnprotectedHeaders (CBOR Map) as CBOR bytes using the given contents.
+ * {
+ * EATMAROEPrefix:<maroe-prefix>,	// optional element
+ * EUPHNonce:<nonce>				// optional element
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t *eat_uph) {
+	// calculate the size of map.
+	int num_uph_elements = 0;
+	if (eat_uph->euphnonce) {
+		num_uph_elements++;
+	}
+	if (eat_uph->eatmaroeprefix) {
+		num_uph_elements++;
+	}
+	if (!fdow_start_map(fdow, num_uph_elements)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	// Write EATMAROEPrefix only when its present.
+	if (eat_uph->eatmaroeprefix) {
+		if (!fdow_signed_int(fdow, FDO_EAT_MAROE_PREFIX_KEY)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EATMAROEPrefix Key\n");
+			return false;
+		}
+
+		if (!fdow_byte_string(fdow, eat_uph->eatmaroeprefix->bytes, eat_uph->eatmaroeprefix->byte_sz)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EATMAROEPrefix value\n");
+			return false;
+		}
+	}
+
+	// Write EUPHNonce only when its present.
+	if (eat_uph->euphnonce) {
+		if (!fdow_signed_int(fdow, FDO_EAT_EUPHNONCE_KEY)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EUPHNonce Key\n");
+			return false;
+		}
+
+		if (!fdow_byte_string(fdow, eat_uph->euphnonce->bytes, eat_uph->euphnonce->byte_sz)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token Unprotected header: Failed to write EUPHNonce Value\n");
+			return false;
+		}
+	}
+
+	if (!fdow_end_map(fdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Create EAT.EATPayloadBaseMap (CBOR Map) as CBOR bytes using the given contents.
+ * Before sending it across, the resulting encoded contents need to be CBOR encoded again
+ * into a bstr CBOR type.
+ * {
+ * EAT-UEID:<ueid>,
+ * EAT-NONCE:<nonce>,
+ * EAT-FDO:<EATPayloads> // optional element
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_eat_write_payloadbasemap(fdow_t *fdow, fdo_eat_payload_base_map_t *eat_payload) {
+	size_t num_payload_elements = 2;
+	if (eat_payload->eatpayloads) {
+		LOG(LOG_DEBUG,
+			"Entity Attestation Token PayloadBaseMap: EATPayload to be written\n");
+		num_payload_elements = 3;
+	}
+	if (!fdow_start_map(fdow, num_payload_elements)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write start map\n");
+		return false;
+	}
+
+	if (!fdow_signed_int(fdow, FDO_EATUEID_KEY)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-UEID Key\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, eat_payload->eatueid, sizeof(eat_payload->eatueid))) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-UEID value\n");
+		return false;
+	}
+
+	if (!fdow_signed_int(fdow, FDO_EATNONCE_KEY)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-NONCE Key\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, eat_payload->eatnonce, sizeof(eat_payload->eatnonce))) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write EAT-NONCE value\n");
+		return false;
+	}
+
+	if (num_payload_elements == 3) {
+		if (!fdow_signed_int(fdow, FDO_EATFDO)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write EAT-FDO Key\n");
+			return false;
+		}
+
+		// EATPayloads is an array of size 1 as per the usage in the FDO specification.
+		if (!fdow_start_array(fdow, 1)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write start array\n");
+			return false;
+		}
+		if (!fdow_byte_string(fdow,
+				eat_payload->eatpayloads->bytes, eat_payload->eatpayloads->byte_sz)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write EAT-FDO value\n");
+			return false;
+		}
+		if (!fdow_end_array(fdow)) {
+			LOG(LOG_ERROR,
+				"Entity Attestation Token PayloadBaseMap: Failed to write end array\n");
+			return false;
+		}
+	}
+
+	if (!fdow_end_map(fdow)) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given COSE_Sign1 object for which memory has been allocated previously.
+ */
+bool fdo_cose_free(fdo_cose_t *cose) {
+	if (cose->cose_ph) {
+		cose->cose_ph->ph_sig_alg = 0;
+		fdo_free(cose->cose_ph);
+	}
+	if (cose->cose_uph) {
+		fdo_public_key_free(cose->cose_uph->cuphowner_public_key);
+		fdo_free(cose->cose_uph);
+	}
+	if (cose->cose_payload) {
+		fdo_byte_array_free(cose->cose_payload);
+	}
+	if (cose->cose_signature) {
+		fdo_byte_array_free(cose->cose_signature);
+	}
+	fdo_free(cose);
+	return true;
+}
+
+/**
+ * Read CoseSignature.COSEProtectedHeaders (CBOR map) into the given fdo_cose_protected_header_t object.
+ * {
+ * keyAlg:<key-alg>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *cose_ph) {
+
+	fdor_t temp_fdor;
+	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
+		LOG(LOG_ERROR, "COSE Protected header: Failed to intialize temporary FDOR\n");
+		return false;
+	}
+
+	size_t var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE Protected header: Failed to read payload length\n");
+		return false;	
+	}
+	fdo_byte_array_t *ph_as_bstr = fdo_byte_array_alloc(var_length);
+	if (!ph_as_bstr) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to alloc for COSE Protected Header as bstr\n");
+		return false;
+	}
+	if (!fdor_byte_string(fdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read COSE Protected Header as bstr\n");
+		goto end;
+	}
+
+	// create a temporary FDOR to read (unwrap) the header contents as map
+	if (!fdor_init(&temp_fdor) ||
+		!fdo_block_alloc_with_size(&temp_fdor.b, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to setup temporary FDOR\n");
+		goto end;
+	}
+
+	if (0 != memcpy_s(temp_fdor.b.block, temp_fdor.b.block_size,
+		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to copy temporary unwrapped Header content\n");
+		goto end;
+	}
+
+	if (!fdor_parser_init(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to init temporary FDOR parser\n");
+		goto end;
+	}
+
+	if (!fdor_start_map(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read start map\n");
+		goto end;
+	}
+
+	int cose_alg_key = 1;
+	if (!fdor_signed_int(&temp_fdor, &cose_alg_key) || cose_alg_key != 1) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read CoseAlg Key\n");
+		goto end;
+	}
+
+	if (!fdor_signed_int(&temp_fdor, &cose_ph->ph_sig_alg)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read CoseAlg Value\n");
+		goto end;
+	}
+
+	if (!fdor_end_map(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to read end map\n");
+		goto end;
+	}
+end:
+	fdor_flush(&temp_fdor);
+	fdo_free(temp_fdor.b.block);
+	if (ph_as_bstr)
+		fdo_byte_array_free(ph_as_bstr);
+	return true;
+}
+
+/**
+ * Read CoseSignature.COSEUnprotectedHeaders.
+ * Reads an empty map if cose_uph is NULL.
+ * Reads and pushes the fields CUPHOWNER and CUPHNONCE otherwise.
+ * Return true, if read was a success. False otherwise.
+ * 
+ * TO-DO : Update when Simple Encrypted Message is implemented to parse COSEUnProtFields
+ */
+bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_t *cose_uph) {
+
+	if (!fdor_start_map(fdor)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to read start map\n");
+		return false;
+	}
+
+	if (cose_uph) {
+		int result = 0;
+		if (!fdor_signed_int(fdor, &result) || result != FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY) {
+			LOG(LOG_ERROR,
+				"COSE Unprotected header: Failed to read CUPHOWNERPUBKEY key\n");
+			return false;
+		}
+		cose_uph->cuphowner_public_key = fdo_public_key_read(fdor);
+		if (!cose_uph->cuphowner_public_key) {
+			LOG(LOG_ERROR, "COSE: Failed to read CUPHOWNERPUBKEY value\n");
+			return false;
+		}
+
+		result = 0;
+		if (!fdor_signed_int(fdor, &result) || result != FDO_COSE_SIGN1_CUPHNONCE_KEY) {
+			LOG(LOG_ERROR,
+				"COSE Unprotected header: Failed to read CUPHNONCE key\n");
+			return false;
+		}
+		if (!fdor_byte_string(fdor, cose_uph->cuphnonce, sizeof(cose_uph->cuphnonce))) {
+			LOG(LOG_ERROR,
+				"COSE Unprotected header: Failed to read CUPHNONCE value\n");
+			return false;			
+		}
+	}
+
+	if (!fdor_end_map(fdor)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to read end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read the given COSE into the fdo_cose_t parameter.
+ * The fdo_cose_t parameter should have memory pre-allocated.
+ * However, the internal elements must be un-allocated.
+ * The memory allocation for the same would be done in the method.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * signature			// bstr
+ * ]
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param cose - fdo_cose_t object that will hold the read COSE_Sign1 parameters
+ * @param empty_uph - true if the unprotected header is expected to be empty, false otherwise
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph) {
+
+	size_t num_cose_items = 4;
+	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 4) {
+		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
+		return false;		
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "COSE: Failed to read start array\n");
+		return false;
+	}
+
+	cose->cose_ph = fdo_alloc(sizeof(fdo_cose_protected_header_t));
+	if (!cose->cose_ph) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc Protected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_read_protected_header(fdor, cose->cose_ph)) {
+		LOG(LOG_ERROR, "COSE: Failed to read protected header\n");
+		goto end;
+	}
+
+	// this is a special case used only for message received from Type 61,
+	// since it contains CUPHNONCE and CUPHOWNERPUBKEY
+	if (!empty_uph) {
+		cose->cose_uph = fdo_alloc(sizeof(fdo_cose_unprotected_header_t));
+		if (!cose->cose_uph) {
+			LOG(LOG_ERROR, "COSE: Failed to alloc unprotected Header\n");
+			goto end;
+		}
+	}
+	if (!fdo_cose_read_unprotected_header(fdor, cose->cose_uph)) {
+		LOG(LOG_ERROR, "COSE: Failed to read unprotected header\n");
+		goto end;
+	}
+
+	size_t var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE: Failed to read payload length\n");
+		goto end;	
+	}
+	cose->cose_payload = fdo_byte_array_alloc(var_length);
+	if (!cose->cose_payload) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc EATPayload\n");
+		goto end;
+	}
+	if (!fdor_byte_string(fdor, cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to read payload\n");
+		goto end;
+	}
+
+	var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE: Failed to read signature length\n");
+		goto end;	
+	}
+	cose->cose_signature = fdo_byte_array_alloc(var_length);
+	if (!cose->cose_signature) {
+		LOG(LOG_ERROR, "COSE: Failed to alloc Signature\n");
+		goto end;
+	}
+	if (!fdor_byte_string(fdor, cose->cose_signature->bytes, cose->cose_signature->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to read signature\n");
+		goto end;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "COSE: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_cose_free(cose);
+	return false;
+}
+
+/**
+ * Create COSESignature.COSEProtectedHeaders (CBOR map) as CBOR bytes using the given contents.
+ * This is wrapped in bstr.
+ * {
+ * keyAlg:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *cose_ph) {
+
+	bool ret = false;
+	fdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary FDOW, use it to create Protected header map and then clear it.
+	fdow_t temp_fdow;
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_map(&temp_fdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, FDO_COSE_ALG_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write CoseAlg Key\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, cose_ph->ph_sig_alg)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write CoseAlg Value\n");
+		goto end;
+	}
+
+	if (!fdow_end_map(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "COSE Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_fdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, temp_fdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR, "COSE Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!fdow_byte_string(fdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	fdow_flush(&temp_fdow);
+	fdo_free(temp_fdow.b.block);
+	if (enc_ph)
+		fdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Create COSESignature.COSEUnprotectedHeaders (CBOR empty Map)
+ * as CBOR bytes using the given contents.
+ *
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_write_unprotected_header(fdow_t *fdow) {
+	// empty map for now
+	if (!fdow_start_map(fdow, 0)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!fdow_end_map(fdow)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Write a COSESignature (COSE_Sign1) object by CBOR encoding the contents of the given cose object.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * signature			// bstr
+ * ]
+ * @param fdow - fdow_t object containing the buffer where CBOR data will be written
+ * @param cose - fdo_cose_t object that holds the COSE_Sign1 parameters to encode
+ * @return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose) {
+	if (!fdow_start_array(fdow, 4)) {
+		LOG(LOG_ERROR, "COSE: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_cose_write_protected_header(fdow, cose->cose_ph)) {
+		LOG(LOG_ERROR, "COSE: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_cose_write_unprotected_header(fdow)) {
+		LOG(LOG_ERROR, "COSE: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to write payload\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, cose->cose_signature->bytes, cose->cose_signature->byte_sz)) {
+		LOG(LOG_ERROR, "COSE: Failed to write signature\n");
+		return false;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "COSE: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given COSE_Mac0 object for which memory has been allocated previously.
+ */
+bool fdo_cose_mac0_free(fdo_cose_mac0_t *cose_mac0) {
+	if (cose_mac0->protected_header) {
+		cose_mac0->protected_header->mac_type = 0;
+		fdo_free(cose_mac0->protected_header);
+	}
+	if (cose_mac0->payload) {
+		fdo_byte_array_free(cose_mac0->payload);
+	}
+	if (cose_mac0->hmac) {
+		fdo_byte_array_free(cose_mac0->hmac);
+	}
+	fdo_free(cose_mac0);
+	return true;
+}
+
+/**
+ * Read Cose_Mac0.protected (CBOR map) into the given fdo_cose_mac0_protected_header_t object.
+ * This is wrapped in a bstr.
+ * {
+ * mac_type:<key-alg>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_mac0_read_protected_header(fdor_t *fdor,
+	fdo_cose_mac0_protected_header_t *protected_header) {
+
+	fdor_t temp_fdor;
+	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Failed to intialize temporary FDOR\n");
+		return false;
+	}
+
+	size_t var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Failed to read payload length\n");
+		return false;	
+	}
+	fdo_byte_array_t *ph_as_bstr = fdo_byte_array_alloc(var_length);
+	if (!ph_as_bstr) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to alloc for COSE_Mac0 Protected Header as bstr\n");
+		return false;
+	}
+	if (!fdor_byte_string(fdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read COSE_Mac0 Protected Header as bstr\n");
+		goto end;
+	}
+
+	// create a temporary FDOR to read (unwrap) the header contents as map
+	if (!fdor_init(&temp_fdor) ||
+		!fdo_block_alloc_with_size(&temp_fdor.b, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to setup temporary FDOR\n");
+		goto end;
+	}
+
+	if (0 != memcpy_s(temp_fdor.b.block, temp_fdor.b.block_size,
+		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to copy temporary unwrapped Header content\n");
+		goto end;
+	}
+
+	if (!fdor_parser_init(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to init temporary FDOR parser\n");
+		goto end;
+	}
+
+	if (!fdor_start_map(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read start map\n");
+		goto end;
+	}
+
+	int mac_type_key = 1;
+	if (!fdor_signed_int(&temp_fdor, &mac_type_key) || mac_type_key != 1) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read ETMMacType Key\n");
+		goto end;
+	}
+
+	if (!fdor_signed_int(&temp_fdor, &protected_header->mac_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read ETMMacType Value\n");
+		goto end;
+	}
+
+	if (!fdor_end_map(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to read end map\n");
+		goto end;
+	}
+end:
+	fdor_flush(&temp_fdor);
+	fdo_free(temp_fdor.b.block);
+	if (ph_as_bstr)
+		fdo_byte_array_free(ph_as_bstr);
+	return true;
+}
+
+/**
+ * Read Cose_Mac0.unprotected that is an empty map.
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_mac0_read_unprotected_header(fdor_t *fdor) {
+
+	if (!fdor_start_map(fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to read start map\n");
+		return false;
+	}
+
+	if (!fdor_end_map(fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to read end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read the given COSE_Mac0 into the fdo_cose_mac0_t parameter.
+ * The fdo_cose_mac0_t parameter should have memory pre-allocated.
+ * However, the internal elements must be un-allocated.
+ * The memory allocation for the same would be done in the method.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * hmac					// bstr
+ * ]
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param cose_mac0 - fdo_cose_mac0_t object that will hold the read COSE_Mac0 parameters
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_mac0_read(fdor_t *fdor, fdo_cose_mac0_t *cose_mac0) {
+
+	size_t num_items = 4;
+	if (!fdor_array_length(fdor, &num_items) || num_items != 4) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read/Invalid array length\n");
+		return false;		
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read start array\n");
+		return false;
+	}
+
+	cose_mac0->protected_header = fdo_alloc(sizeof(fdo_cose_mac0_protected_header_t));
+	if (!cose_mac0->protected_header) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc Protected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_mac0_read_protected_header(fdor, cose_mac0->protected_header)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read protected header\n");
+		goto end;
+	}
+
+	if (!fdo_cose_mac0_read_unprotected_header(fdor)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read unprotected header\n");
+		goto end;
+	}
+
+	size_t var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read payload length\n");
+		goto end;	
+	}
+	cose_mac0->payload = fdo_byte_array_alloc(var_length);
+	if (!cose_mac0->payload) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc ETMPayloadTag\n");
+		goto end;
+	}
+	if (!fdor_byte_string(fdor, cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read payload\n");
+		goto end;
+	}
+
+	var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read hmac bstr length\n");
+		goto end;	
+	}
+	cose_mac0->hmac = fdo_byte_array_alloc(var_length);
+	if (!cose_mac0->hmac) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc hmac\n");
+		goto end;
+	}
+	if (!fdor_byte_string(fdor, cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read signature\n");
+		goto end;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_cose_mac0_free(cose_mac0);
+	return false;
+}
+
+/**
+ * Write Cose_Mac0.protected (CBOR map) as given in the fdo_cose_mac0_protected_header_t object.
+ * This is wrapped in a bstr.
+ * {
+ * mac_type:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
+	fdo_cose_mac0_protected_header_t *protected_header) {
+
+	bool ret = false;
+	fdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary FDOW, use it to create Protected header map and then clear it.
+	fdow_t temp_fdow;
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_map(&temp_fdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, FDO_COSE_ALG_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write CoseAlg Key\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, protected_header->mac_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write ETMMacType Value\n");
+		goto end;
+	}
+
+	if (!fdow_end_map(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_fdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, temp_fdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!fdow_byte_string(fdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	fdow_flush(&temp_fdow);
+	fdo_free(temp_fdow.b.block);
+	if (enc_ph)
+		fdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Write Cose_Mac0.unprotected that is an empty map.
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_mac0_write_unprotected_header(fdow_t *fdow) {
+	// empty map
+	if (!fdow_start_map(fdow, 0)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!fdow_end_map(fdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Mac0 Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Write the given fdo_cose_mac0_t parameter into COSE_Mac0 structure
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * hmac					// bstr
+ * ]
+ * @param fdow - fdow_t object containing the buffer where CBOR data will be written
+ * @param cose_mac0 - fdo_cose_mac0_t object that holds the COSE_Mac0 parameters to encode
+ * @return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_mac0_write(fdow_t *fdow, fdo_cose_mac0_t *cose_mac0) {
+	if (!fdow_start_array(fdow, 4)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_cose_mac0_write_protected_header(fdow, cose_mac0->protected_header)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_cose_mac0_write_unprotected_header(fdow)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write payload\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Mac0: Failed to write hmac\n");
+		return false;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "COSE: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given COSE_Encrypt0 object for which memory has been allocated previously.
+ */
+bool fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0) {
+	if (cose_encrypt0->protected_header) {
+		cose_encrypt0->protected_header->aes_plain_type = 0;
+		fdo_free(cose_encrypt0->protected_header);
+	}
+	if (cose_encrypt0->unprotected_header) {
+		// do memset to 0 here.
+		fdo_free(cose_encrypt0->unprotected_header);
+	}
+	if (cose_encrypt0->payload) {
+		fdo_byte_array_free(cose_encrypt0->payload);
+	}
+
+	fdo_free(cose_encrypt0);
+	cose_encrypt0 = NULL;
+	return true;
+}
+
+/**
+ * Allocate memory and return an object of fdo_cose_encrypt0_t type.
+ * Memory is only allocated for protected and unprotected headers.
+ * Payload is set to NULL, and should be allocated when needed.
+ * 
+ * return allocated fdo_cose_encrypt0_t object.
+ */
+fdo_cose_encrypt0_t* fdo_cose_encrypt0_alloc(void) {
+	fdo_cose_encrypt0_t *cose_encrypt0 = fdo_alloc(sizeof(fdo_cose_encrypt0_t));
+	if (!cose_encrypt0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc\n");
+		goto err;
+	}
+	cose_encrypt0->protected_header = fdo_alloc(sizeof(fdo_cose_encrypt0_protected_header_t));
+	if (!cose_encrypt0->protected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Protected Header\n");
+		goto err;
+	}
+
+	cose_encrypt0->unprotected_header = fdo_alloc(sizeof(fdo_cose_encrypt0_unprotected_header_t));
+	if (!cose_encrypt0->unprotected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Unprotected header\n");
+		goto err;
+	}
+
+	// set the payload to NULL because of the way we use it.
+	cose_encrypt0->payload = NULL;
+
+	return cose_encrypt0;
+err:
+	if (cose_encrypt0)
+		fdo_cose_encrypt0_free(cose_encrypt0);
+	return NULL;
+}
+
+/**
+ * Read Cose_Encrypt0.protected (CBOR map) into the given
+ * fdo_cose_encrypt0_protected_header_t object. This is wrapped in a bstr.
+ * {
+ * aes_plain_type:<key-alg>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_read_protected_header(fdor_t *fdor,
+	fdo_cose_encrypt0_protected_header_t *protected_header) {
+
+	bool ret = false;
+	fdor_t temp_fdor;
+	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0 Protected header: Failed to intialize temporary FDOR\n");
+		return false;
+	}
+
+	size_t var_length = 0;
+	if (!fdor_string_length(fdor, &var_length) ||
+		var_length == 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0 Protected header: Failed to read length\n");
+		return false;	
+	}
+	fdo_byte_array_t *ph_as_bstr = fdo_byte_array_alloc(var_length);
+	if (!ph_as_bstr) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to alloc for bstr\n");
+		return false;
+	}
+	if (!fdor_byte_string(fdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read as bstr\n");
+		goto end;
+	}
+
+	// create a temporary FDOR to read (unwrap) the header contents as map
+	if (!fdor_init(&temp_fdor) ||
+		!fdo_block_alloc_with_size(&temp_fdor.b, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to setup temporary FDOR\n");
+		goto end;
+	}
+
+	if (0 != memcpy_s(temp_fdor.b.block, temp_fdor.b.block_size,
+		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to copy temporary unwrapped Header content\n");
+		goto end;
+	}
+
+	if (!fdor_parser_init(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to init temporary FDOR parser\n");
+		goto end;
+	}
+
+	if (!fdor_start_map(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read start map\n");
+		goto end;
+	}
+
+	int cose_aesplaintype_key = 0;
+	if (!fdor_signed_int(&temp_fdor, &cose_aesplaintype_key) ||
+		cose_aesplaintype_key != FDO_COSE_ENCRYPT0_AESPLAINTYPE_KEY) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read AESPlainType Key\n");
+		goto end;
+	}
+
+	if (!fdor_signed_int(&temp_fdor, &protected_header->aes_plain_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read AESPlainType Value\n");
+		goto end;
+	}
+
+	if (!fdor_end_map(&temp_fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to read end map\n");
+		goto end;
+	}
+	ret = true;
+end:
+	fdor_flush(&temp_fdor);
+	fdo_free(temp_fdor.b.block);
+	if (ph_as_bstr) {
+		fdo_byte_array_free(ph_as_bstr);
+	}
+	return ret;
+}
+
+/**
+ * Read Cose_Encrypt0.unprotected (CBOR map) into the given
+ * fdo_cose_encrypt0_unprotected_header_t object.
+ * {
+ * aes_iv:<IV-16-bytes>
+ * }
+ * Return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_read_unprotected_header(fdor_t *fdor,
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header) {
+	if (!fdor_start_map(fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read start map\n");
+		return false;
+	}
+
+	int cose_aesiv_key = 0;
+	if (!fdor_signed_int(fdor, &cose_aesiv_key) ||
+		cose_aesiv_key != FDO_COSE_ENCRYPT0_AESIV_KEY) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read AESIV Key\n");
+		return false;
+	}
+
+	size_t cose_aesiv_value_length = 0;
+	if (!fdor_string_length(fdor, &cose_aesiv_value_length) ||
+		cose_aesiv_value_length != sizeof(unprotected_header->aes_iv)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read AESIV Value\n");
+		return false;
+	}
+	if (!fdor_byte_string(fdor, unprotected_header->aes_iv,
+		sizeof(unprotected_header->aes_iv))) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read AESIV Value\n");
+		return false;
+	}
+
+	if (!fdor_end_map(fdor)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to read end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read the given COSE_Encrypt0 into the fdo_cose_encrypt0_t parameter.
+ * The fdo_cose_encrypt0_t parameter should have memory pre-allocated.
+ * However, the internal elements must be un-allocated.
+ * The memory allocation for the same would be done in the method.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * ]
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param cose_encrypt0 - fdo_cose_encrypt0_t object that will hold the read COSE_Encrypt0
+ * parameters
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0) {
+	size_t num_cose_items = 3;
+	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 3) {
+		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
+		return false;		
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read start array\n");
+		return false;
+	}
+
+	cose_encrypt0->protected_header = fdo_alloc(sizeof(fdo_cose_encrypt0_protected_header_t));
+	if (!cose_encrypt0->protected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Protected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_encrypt0_read_protected_header(fdor, cose_encrypt0->protected_header)) {
+		LOG(LOG_ERROR, "COSE: Failed to read protected header\n");
+		goto end;
+	}
+
+	cose_encrypt0->unprotected_header = fdo_alloc(sizeof(fdo_cose_encrypt0_unprotected_header_t));
+	if (!cose_encrypt0->unprotected_header) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc Unprotected Header\n");
+		goto end;
+	}
+	if (!fdo_cose_encrypt0_read_unprotected_header(fdor, cose_encrypt0->unprotected_header)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read Unprotected header\n");
+		goto end;
+	}
+
+	size_t payload_length = 0;
+	if (!fdor_string_length(fdor, &payload_length) ||
+		payload_length == 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read EATpayload length\n");
+		goto end;	
+	}
+	cose_encrypt0->payload = fdo_byte_array_alloc(payload_length);
+	if (!cose_encrypt0->payload) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to alloc EATPayload\n");
+		goto end;
+	}
+	if (!fdor_byte_string(fdor, cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read EATpayload\n");
+		goto end;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_cose_encrypt0_free(cose_encrypt0);
+	return false;
+}
+
+/**
+ * Write the given fdo_cose_encrypt0_protected_header_t object into CBOR encoded
+ * Cose_Encrypt0.protected (CBOR map), wrapped in a bstr.
+ * {
+ * aes_plain_type:<key-alg>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
+	fdo_cose_encrypt0_protected_header_t *protected_header) {
+
+	bool ret = false;
+	fdo_byte_array_t *enc_ph = NULL;
+
+	// create temporary FDOW, use it to create Protected header map and then clear it.
+	fdow_t temp_fdow;
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_map(&temp_fdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write start map\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, FDO_COSE_ENCRYPT0_AESPLAINTYPE_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write AESPlainType Key\n");
+		goto end;
+	}
+
+	if (!fdow_signed_int(&temp_fdow, protected_header->aes_plain_type)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write AESPlainType Value\n");
+		goto end;
+	}
+
+	if (!fdow_end_map(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write end map\n");
+		goto end;
+	}
+
+	size_t enc_ph_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_ph_length) || enc_ph_length == 0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0 Protected header:: Failed to find encoded length\n");
+		goto end;
+	}
+	temp_fdow.b.block_size = enc_ph_length;
+	// Set the encoded payload into buffer
+	enc_ph =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, temp_fdow.b.block_size);
+	if (!enc_ph) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to alloc for encoded Protected header\n");
+		goto end;
+	}
+
+	// finally, wrap the protected header into a bstr
+	if (!fdow_byte_string(fdow, enc_ph->bytes, enc_ph->byte_sz)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Protected header: Failed to write Protected header as bstr\n");
+		goto end;
+	}
+	ret = true;
+end:
+	fdow_flush(&temp_fdow);
+	fdo_free(temp_fdow.b.block);
+	if (enc_ph)
+		fdo_byte_array_free(enc_ph);
+	return ret;
+}
+
+/**
+ * Write the given fdo_cose_encrypt0_unprotected_header_t object into
+ * CBOR encoded Cose_Encrypt0.unprotected (CBOR map).
+ * {
+ * aes_iv:<IV-16-bytes>
+ * }
+ * Return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_write_unprotected_header(fdow_t *fdow,
+	fdo_cose_encrypt0_unprotected_header_t *unprotected_header) {
+	if (!fdow_start_map(fdow, 1)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write start map\n");
+		return false;
+	}
+
+	if (!fdow_signed_int(fdow, FDO_COSE_ENCRYPT0_AESIV_KEY)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write AESIV Key\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, unprotected_header->aes_iv,
+		sizeof(unprotected_header->aes_iv))) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write AESIV Value\n");
+		return false;
+	}
+
+	if (!fdow_end_map(fdow)) {
+		LOG(LOG_ERROR,
+			"COSE_Encrypt0 Unprotected header: Failed to write end map\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Write the given fdo_cose_encrypt0_t parameter into CBOR encoded COSE_Encrypt0.
+ * [
+ * protected header,
+ * unprotected header,
+ * payload,				// bstr
+ * ]
+ * @param fdow - fdow_t object holding the buffer where CBOR data will be written to
+ * @param cose_encrypt0 - fdo_cose_encrypt0_t object that holds the COSE_Encrypt0 parameters to
+ * encode
+ * @return true, if write was a success. False otherwise.
+ */
+bool fdo_cose_encrypt0_write(fdow_t *fdow, fdo_cose_encrypt0_t *cose_encrypt0) {
+	if (!fdow_start_array(fdow, 3)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdo_cose_encrypt0_write_protected_header(fdow, cose_encrypt0->protected_header)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write protected header\n");
+		return false;
+	}
+
+	if (!fdo_cose_encrypt0_write_unprotected_header(fdow, cose_encrypt0->unprotected_header)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write unprotected header\n");
+		return false;
+	}
+
+	if (!fdow_byte_string(fdow, cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write payload\n");
+		return false;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write end array\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Free the given RVTO2AddrEntry object for which memory has been allocated previously.
+ */
+void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry) {
+	if (rvto2addr_entry->rvip)
+		fdo_byte_array_free(rvto2addr_entry->rvip);
+	if (rvto2addr_entry->rvdns)
+		fdo_string_free(rvto2addr_entry->rvdns);
+	fdo_free(rvto2addr_entry);	
+}
+
+/**
+ * Free the given RVTO2Addr object for which memory has been allocated previously.
+ */
+void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr) {
+	if (rvto2addr) {
+		while (rvto2addr->rv_to2addr_entry) {
+			fdo_rvto2addr_entry_t *rv_to2addr_entry = rvto2addr->rv_to2addr_entry;
+			rvto2addr->rv_to2addr_entry =
+				(fdo_rvto2addr_entry_t *) rvto2addr->rv_to2addr_entry->next;
+			fdo_rvto2addr_entry_free(rv_to2addr_entry);
+		}
+		fdo_free(rvto2addr);
+	}
+}
+
+/**
+ * Read RVTO2AddrEntry into the given fdo_rvto2addr_entry_t object.
+ * Memory allocation for the internal elements of fdo_rvto2addr_entry_t object
+ * will be done in this method.
+ * However, the memory must be allocated for fdo_rvto2addr_entry_t object and
+ * given to this method.
+ * [
+ * RVIP,
+ * RVDNS,
+ * RVPort,
+ * RVProtocol
+ * ]
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param rvto2addr_entry - fdo_rvto2addr_entry_t object that will hold the read RVTO2AddrEntry
+ * parameters
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_entry) {
+	size_t num_rvto2addr_entry_items = 0;
+	if (!fdor_array_length(fdor, &num_rvto2addr_entry_items) ||
+		num_rvto2addr_entry_items != 4) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read/Invalid array length\n");
+		return false;
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read start array\n");
+		return false;		
+	}
+	size_t rvip_length = 0;
+	if (!fdor_string_length(fdor, &rvip_length) || rvip_length == 0) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP length\n");
+		return false;
+	}
+	rvto2addr_entry->rvip = fdo_byte_array_alloc(rvip_length);
+	if (!rvto2addr_entry->rvip) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVIP\n");
+		return false;
+	}
+	if (!fdor_byte_string(fdor, rvto2addr_entry->rvip->bytes, rvto2addr_entry->rvip->byte_sz)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP\n");
+		return false;
+	}
+
+	size_t rvdns_length = 0;
+	if (!fdor_string_length(fdor, &rvdns_length) || rvdns_length == 0) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS length\n");
+		return false;
+	}
+	rvto2addr_entry->rvdns = fdo_string_alloc_size(rvdns_length);
+	if (!rvto2addr_entry->rvdns) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVDNS\n");
+		return false;
+	}
+	
+	if (!fdor_text_string(fdor, rvto2addr_entry->rvdns->bytes, rvdns_length)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS\n");
+		return false;
+	}
+	rvto2addr_entry->rvdns->bytes[rvdns_length] = '\0';
+
+	rvto2addr_entry->rvport = -1;
+	if (!fdor_signed_int(fdor, &rvto2addr_entry->rvport) ||
+		rvto2addr_entry->rvport == -1) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVPort\n");
+		return false;
+	}
+
+	rvto2addr_entry->rvprotocol = -1;
+	if (!fdor_signed_int(fdor, &rvto2addr_entry->rvprotocol) ||
+		rvto2addr_entry->rvprotocol == -1) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVProtocol\n");
+		return false;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+end:
+	fdo_rvto2addr_entry_free(rvto2addr_entry);
+	return false;
+}
+
+/**
+ * Read RVTO2Addr into the given fdo_rvto2addr_t object.
+ * Memory allocation for the internal elements of fdo_rvto2addr_t object
+ * will be done in this method.
+ * However, the memory must be allocated for fdo_rvto2addr_y_t object and
+ * given to this method.
+ * [
+ * +RVTO2AddrEntry 		// one or more RVTO2AddrEntry
+ * ]
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param rvto2addr - fdo_rvto2addr_t object that will hold the read RVTO2Addr parameters
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_rvto2addr_read(fdor_t *fdor, fdo_rvto2addr_t *rvto2addr) {
+	size_t num_rvto2addr_items = 0;
+	if (!fdor_array_length(fdor, &num_rvto2addr_items) || num_rvto2addr_items == 0) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to read/Invalid array length\n");
+		return false;
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to read/Invalid array length\n");
+		return false;
+	}
+
+	LOG(LOG_DEBUG, "RVTO2Addr: There are %zu RVTO2AddrEntry(s)\n", num_rvto2addr_items);
+
+	rvto2addr->num_rvto2addr = num_rvto2addr_items;
+	rvto2addr->rv_to2addr_entry = fdo_alloc(sizeof(fdo_rvto2addr_entry_t));
+	if (!rvto2addr->rv_to2addr_entry) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to alloc RVTO2AddrEntry\n");
+		return false;	
+	}
+	fdo_rvto2addr_entry_t *entry = rvto2addr->rv_to2addr_entry;
+	size_t i = 0;
+	for (;;) {
+
+		i++;
+		if (!fdo_rvto2addr_entry_read(fdor, entry)) {
+			LOG(LOG_ERROR, "RVTO2Addr: Failed to read RVTO2AddrEntry\n");
+			goto end;
+		}
+		if (i < num_rvto2addr_items) {
+			entry->next = fdo_alloc(sizeof(fdo_rvto2addr_entry_t));
+			if (!entry->next) {
+				LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read/Invalid array length\n");
+				goto end;
+			}
+			entry = entry->next;
+		} else {
+			break;
+		}
+	}
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "RVTO2Addr: Failed to read end array\n");
+		goto end;
+	}
+	return true;
+
+end:
+	fdo_rvto2addr_free(rvto2addr);
+	return false;
+}
+
+/**
+ * Verifies the ECDSA Signature using provided public key pk.
+ * @param plain_text - Pointer of type fdo_byte_array_t, for generating hash,
+ * @param sg - Pointer of type fdo_byte_array_t, as signature.
+ * @param pk - Pointer of type fdo_public_key_t, holds the public-key used for
+ * verification.
+ * @return true if success, else false
+ */
+
+bool fdo_signature_verification(fdo_byte_array_t *plain_text,
+				fdo_byte_array_t *sg, fdo_public_key_t *pk)
+{
+	int ret;
+	bool signature_verify = false;
+
+	if (!plain_text || !sg || !pk || !pk->key1)
+		return false;
+	if (!plain_text->bytes || !sg->bytes)
+		return false;
+
+	ret = fdo_ov_verify(plain_text->bytes, plain_text->byte_sz, sg->bytes,
+			    sg->byte_sz, pk, &signature_verify);
+
+	if ((ret == 0) && (true == signature_verify)) {
+		LOG(LOG_DEBUG, "Signature verifies OK.\n");
+		return true;
+	}
+
+	LOG(LOG_ERROR, "Signature internal failure, or signature does "
+	    "not verify.\n");
+	return false;
+}
+
+//--------------------------------------------------------------------------
+// Key Value Pairs
+//
+
+/**
+ * Allocate the key value
+ */
+fdo_key_value_t *fdo_kv_alloc(void)
+{
+	return fdo_alloc(sizeof(fdo_key_value_t));
+}
+
+/**
+ * Allocate the key vlaue and initialize with the value provided
+ * @param key - pointer to the key
+ * @param val - pointer to the input value
+ * @return pointer to the allocated key value if success else NULL.
+ */
+fdo_key_value_t *fdo_kv_alloc_with_str(const char *key, const char *val)
+{
+	if (!key || !val)
+		return NULL;
+
+	fdo_key_value_t *kv = fdo_kv_alloc();
+
+	if (kv != NULL) {
+		int key_len = strnlen_s(key, FDO_MAX_STR_SIZE);
+
+		if (!key_len || key_len == FDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR, "%s(): key is either "
+			    "'NULL' or 'isn't "
+			    "NULL terminated'\n", __func__);
+			fdo_kv_free(kv);
+			return NULL;
+		}
+
+		kv->key = fdo_string_alloc_with(key, key_len);
+
+		int val_len = strnlen_s(val, FDO_MAX_STR_SIZE);
+
+		if (val_len == FDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR,
+			    "%s(): value is either "
+			    "'NULL' or 'isn't NULL terminated'\n", __func__);
+			printf("vallen:%d\t, buf:%s\n", val_len, val);
+			fdo_kv_free(kv);
+			return NULL;
+		}
+
+		kv->str_val = fdo_string_alloc_with(val, val_len);
+		if (kv->key == NULL || kv->str_val == NULL) {
+			fdo_kv_free(kv);
+			kv = NULL;
+		}
+	}
+	return kv;
+}
+
+/**
+ * Allocate and initialize the key
+ * @param key - pointer to the key
+ * @return pointer to the allocated key if success else NULL.
+ */
+fdo_key_value_t *fdo_kv_alloc_key_only(const char *key)
+{
+	if (!key)
+		return NULL;
+
+	fdo_key_value_t *kv = fdo_kv_alloc();
+
+	if (kv != NULL) {
+		int key_len = strnlen_s(key, FDO_MAX_STR_SIZE);
+
+		if (!key_len || key_len == FDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR, "%s(): key is either "
+			    "'NULL' or 'isn't "
+			    "NULL terminated'\n", __func__);
+			fdo_kv_free(kv);
+			return NULL;
+		}
+
+		kv->key = fdo_string_alloc_with(key, key_len);
+		if (kv->key == NULL) {
+			fdo_kv_free(kv);
+			kv = NULL;
+		}
+	}
+	return kv;
+}
+
+/**
+ * Free the allcated strutc of type key value
+ * @param kv - pointer to the struct of type key value that is to be fdo_free
+ */
+void fdo_kv_free(fdo_key_value_t *kv)
+{
+	if (kv->key != NULL)
+		fdo_string_free(kv->key);
+	if (kv->str_val != NULL)
+		fdo_string_free(kv->str_val);
+	if (kv->bin_val != NULL)
+		fdo_byte_array_free(kv->bin_val);
+	if (kv->bool_val != NULL)
+		fdo_free(kv->bool_val);
+	if (kv->int_val != NULL)
+		fdo_free(kv->int_val);
+	fdo_free(kv);
+}
+
+//----------------------------------------------------------------------
+// Service_info handling
+//
+
+/**
+ * Read the CBOR encoded ServiceInfo struct.
+ * ServiceInfo = [
+ *   *ServiceInfoKeyVal		// one or more ServiceInfoKeyVal
+ * ]
+ * ServiceInfoKeyVal = [
+ *   *ServiceInfoKV			// one or more ServiceInfoKV
+ * ]
+ * ServiceInfoKV = [
+ *   ServiceInfoKey: tstr,
+ *   ServiceInfoVal: cborSimpleType
+ * ]
+ * ServiceInfoKey = moduleName:messageName
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param module_list - Owner ServiceInfo module list
+ * @param cb_return_val - out value to hold the return value from the registered modules.
+ * @return true if read was a success, false otherwise
+ */
+bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
+		int *cb_return_val) {
+
+	char *serviceinfokey = NULL;
+	char module_name[FDO_MODULE_NAME_LEN];
+	char module_message[FDO_MODULE_MSG_LEN];
+
+	size_t num_serviceinfo = 0;
+	if (!fdor_array_length(fdor, &num_serviceinfo)) {
+		LOG(LOG_ERROR, "ServiceInfo read: Failed to find number of items\n");
+		goto exit;
+	}
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR, "ServiceInfo read: Failed to start array\n");
+		goto exit;
+	}
+	size_t i;
+	for (i = 0; i < num_serviceinfo; i++) {
+		size_t num_serviceinfokeyval = 0;
+		if (!fdor_array_length(fdor, &num_serviceinfokeyval)) {
+				LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to find number of items\n");
+				goto exit;
+		}
+		if (!fdor_start_array(fdor)) {
+			LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to start array\n");
+			return false;
+		}
+		size_t j;
+		for (j = 0; j < num_serviceinfokeyval; j++) {
+			size_t num_serviceinfokv = 0;
+			if (!fdor_array_length(fdor, &num_serviceinfokv) &&
+				num_serviceinfokv != 2) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to find number of items\n");
+				goto exit;
+			}
+			if (!fdor_start_array(fdor)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to start array\n");
+				goto exit;
+			}
+
+			size_t serviceinfokey_length = 0;
+			if (!fdor_string_length(fdor, &serviceinfokey_length)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKey length\n");
+				goto exit;
+			}
+			serviceinfokey = fdo_alloc(sizeof(char) * serviceinfokey_length);
+			if (!serviceinfokey) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc ServiceInfoKey\n");
+				goto exit;
+			}
+			if (!fdor_text_string(fdor, serviceinfokey, serviceinfokey_length)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKV\n");
+				goto exit;
+			}
+
+			if (0 != memset_s(&module_name, sizeof(module_name), 0)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to clear modulename\n");
+				goto exit;
+			}
+			if (0 != memset_s(&module_message, sizeof(module_message), 0)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to clear modulename\n");
+				goto exit;
+			}
+
+			// find the index of separator ':' in ServiceInfoKey format of 'moduleName:messageName'
+			// copy moduleName:messageName and moduleName:messageName
+			size_t index = 0;
+			while (':' != serviceinfokey[index]) {
+				if (index >= serviceinfokey_length) {
+					*cb_return_val = MESSAGE_BODY_ERROR;
+					goto exit;
+				}
+
+				module_name[index] = serviceinfokey[index];
+				++index;
+			}
+			++index;
+			size_t module_name_index = 0;
+			while (index < serviceinfokey_length) {
+				module_message[module_name_index] = serviceinfokey[index];
+				++module_name_index;
+				++index;
+			}
+
+			if (!fdo_supply_serviceinfoval(fdor, &module_name[0], &module_message[0],
+					module_list, cb_return_val)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoVal\n");
+				goto exit;
+			}
+
+			if (!fdor_end_array(fdor)) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to end array\n");
+				goto exit;
+			}
+			// free the entries for reuse
+			fdo_free(serviceinfokey);
+		}
+		if (!fdor_end_array(fdor)) {
+			LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to end array\n");
+			goto exit;
+		}
+	}
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "ServiceInfo read: Failed to end array\n");
+		goto exit;
+	}
+	return true;
+exit:
+	if (serviceinfokey) {
+		fdo_free(serviceinfokey);
+	}
+	return false;
+}
+
+/**
+ * Traverse the Module list to check if the module name is supported and active.
+ * If yes, call the registered callback method that processes the ServiceInfoVal
+ * within FDOR and return true/false depending on callback's execution.
+ * If the module name is not supported, or is not active, skip the ServiceInfoVal
+ * and return true.
+ * 
+ * @param fdor - fdor_t object containing the buffer to read
+ * @param module_name - moduleName as received in Owner ServiceInfo
+ * @param module_message - messageName as received in Owner ServiceInfo
+ * @param module_list - Owner ServiceInfo module list
+ * @param cb_return_val - out value to hold the return value from the registered modules.
+ * @return true if the operation was a success, false otherwise
+ */
+bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_message,
+	fdo_sdk_service_info_module_list_t *module_list, int *cb_return_val)
+{
+	int strcmp_result = 1;
+	bool retval = false;
+	bool module_name_found = false;
+	bool active = false;
+	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
+
+	if (!cb_return_val)
+		return retval;
+
+	if (!fdor || !module_name || !module_message) {
+		*cb_return_val = FDO_SI_INTERNAL_ERROR;
+		return retval;
+	}
+
+	while (module_list) {
+		strcmp_s(module_list->module.module_name, FDO_MODULE_NAME_LEN,
+			 module_name, &strcmp_result);
+		if (strcmp_result == 0) {
+			// found the module, now check if the message is 'active'
+			// if yes, read the value and activate/deactivate the module and return.
+			module_name_found = true;
+			strcmp_s(module_message, FDO_MODULE_MSG_LEN,
+				FDO_MODULE_MESSAGE_ACTIVE, &strcmp_result);
+			if (strcmp_result == 0) {
+				if (!fdor_boolean(fdor, &active)) {
+					LOG(LOG_ERROR, "ServiceInfoKey: Failed to read module message active %s\n",
+				    	module_list->module.module_name);
+					return retval;					
+				}
+
+				if (active) {
+					// traverse the list to deactivate every module
+					while (traverse_list) {
+						traverse_list->module.active = false;
+						traverse_list = traverse_list->next;
+					}
+					// now activate the current module
+					module_list->module.active = active;
+					LOG(LOG_DEBUG, "ServiceInfo: Activated module %s\n",
+						module_list->module.module_name);
+				}
+
+				retval = true;
+				break;
+			}
+			// if the module is activated by the Owner, only then proceed with processing
+			// ServiceInfoVal via callback method
+			if (module_list->module.active) {
+				// check if module callback is successful
+				*cb_return_val = module_list->module.service_info_callback(
+					FDO_SI_SET_OSI, fdor, module_message);
+
+				if (*cb_return_val != FDO_SI_SUCCESS) {
+					LOG(LOG_ERROR,
+						"ServiceInfo: %s's CB Failed for type:%d\n",
+						module_list->module.module_name,
+						FDO_SI_SET_OSI);
+					break;
+				}
+				retval = true;
+			} else {
+				LOG(LOG_ERROR, "ServiceInfo: Received ServiceInfo for an inactive module %s\n",
+				    module_list->module.module_name);
+				// module is present, but is not the active module. skip this ServiceInfoVal
+				// TO-DO : Should we throw an error instead?
+				fdor_next(fdor);
+				retval = true;
+			}
+			break;
+		}
+		module_list = module_list->next;
+	}
+	if (!module_name_found) {
+			// module is not present. skip this ServiceInfoVal
+			// TO-DO : Should we throw an error instead?
+			LOG(LOG_ERROR,
+				"ServiceInfo: Received ServiceInfo for an unsupported module %s\n",
+			    module_name);
+			fdor_next(fdor);
+			retval = true;
+	}
+
+	return retval;
+}
+
+/**
+ * Allocate an empty fdo_service_info_t object.
+ * @return an allocated fdo_service_info_t object.
+ */
+fdo_service_info_t *fdo_service_info_alloc(void)
+{
+	return fdo_alloc(sizeof(fdo_service_info_t));
+}
+
+/**
+ * Free an fdo_service_info_t object
+ * @param si - the object to fdo_free
+ * @return none
+ */
+void fdo_service_info_free(fdo_service_info_t *si)
+{
+	fdo_key_value_t *kv = NULL;
+
+	if (!si)
+		return;
+	while ((kv = si->kv) != NULL) {
+		si->kv = kv->next;
+		fdo_kv_free(kv);
+	}
+	fdo_free(si);
+}
+
+/**
+ * Compares the kv member of si with key parameter and
+ * if there is match, return the matched pointer,
+ * else last entry in the list.
+ * @param si  - Pointer to the fdo_service_info_t object si,
+ * @param key - Pointer to the char buffer key,
+ * @return pointer to fdo_key_value_t.
+ */
+fdo_key_value_t **fdo_service_info_fetch(fdo_service_info_t *si,
+					 const char *key)
+{
+	fdo_key_value_t **kvp, *kv;
+	int res = 1;
+
+	for (kvp = &si->kv; (kv = *kvp) != NULL; kvp = &kv->next) {
+		int keylen = strnlen_s(key, FDO_MAX_STR_SIZE);
+
+		if (!keylen || keylen == FDO_MAX_STR_SIZE) {
+			LOG(LOG_DEBUG, "strlen() failed!\n");
+			continue;
+		}
+
+		if ((strcasecmp_s(key, keylen, (char *)(kv->key->bytes),
+				  &res) == 0) &&
+		    res == 0)
+			break;
+	}
+	return kvp;
+}
+/**
+ * Compares the corresponding index associated with kv member of si
+ * & key_num parameter, if there is match, return the matched pointer,
+ * else last entry in the list.
+ * @param si  - Pointer to the fdo_service_info_t object si,
+ * @param key_num - Integer variable determines service request Info number,
+ * @return pointer to fdo_key_value_t.
+ */
+fdo_key_value_t **fdo_service_info_get(fdo_service_info_t *si, int key_num)
+{
+	fdo_key_value_t **kvp, *kv;
+	int index;
+
+	for (kvp = &si->kv, index = 0; (kv = *kvp) != NULL;
+	     kvp = &kv->next, index++) {
+		if (index == key_num)
+			break;
+	}
+	return kvp;
+}
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with string val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the fdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the char buffer val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool fdo_service_info_add_kv_str(fdo_service_info_t *si, const char *key,
+				 const char *val)
+{
+	fdo_key_value_t **kvp, *kv;
+
+	if (!si || !key || !val)
+		return false;
+
+	kvp = fdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = fdo_kv_alloc_with_str(key, val);
+		if (kv == NULL)
+			return false;
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+
+	 /* Found, update value */
+	if (kv->str_val == NULL) {
+		 /* No allocated string present for value, make a new one */
+		kv->str_val = fdo_string_alloc_with_str(val);
+	} else {
+		int val_len = strnlen_s(val, FDO_MAX_STR_SIZE);
+
+		if (!val_len || val_len == FDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR,
+			    "%s(): val "
+			    "is either 'NULL' or"
+			    "'isn't 'NULL-terminating'\n", __func__);
+			fdo_string_free(kv->str_val);
+			return false;
+		}
+
+		 /* Update the string */
+		fdo_string_resize_with(kv->str_val, val_len, val);
+	}
+	// free other values of other type
+	if (kv->bin_val)
+		fdo_byte_array_free(kv->bin_val);
+	if (kv->int_val)
+		fdo_free(kv->int_val);
+	if (kv->bool_val)
+		fdo_free(kv->bool_val);
+
+
+	return true;
+}
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with byte array val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the fdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the byte array val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool fdo_service_info_add_kv_bin(fdo_service_info_t *si, const char *key,
+				 const fdo_byte_array_t *val)
+{
+	fdo_key_value_t **kvp, *kv;
+
+	if (!si || !key || !val)
+		return false;
+
+	kvp = fdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = fdo_kv_alloc_key_only(key);
+		if (kv == NULL)
+			return false;
+		kv->bin_val = fdo_byte_array_alloc_with_byte_array(val->bytes, val->byte_sz);
+
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+
+	 /* Found, free the current and update value */
+	if (kv->bin_val) {
+		fdo_byte_array_free(kv->bin_val);
+	}
+	kv->bin_val = fdo_byte_array_alloc_with_byte_array(val->bytes, val->byte_sz);
+
+	// free other values of other type
+	if (kv->str_val)
+		fdo_string_free(kv->str_val);
+	if (kv->int_val)
+		fdo_free(kv->int_val);
+	if (kv->bool_val)
+		fdo_free(kv->bool_val);
+
+	return true;
+}
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with boolean val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the fdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the boolean val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool fdo_service_info_add_kv_bool(fdo_service_info_t *si, const char *key,
+				 bool val)
+{
+	fdo_key_value_t **kvp, *kv;
+
+	if (!si || !key)
+		return false;
+
+	kvp = fdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = fdo_kv_alloc_key_only(key);
+		if (kv == NULL)
+			return false;
+		kv->bool_val = fdo_alloc(sizeof(bool));
+		if (!kv->bool_val) {
+			LOG(LOG_ERROR, "Failed to alloc bool Device ServiceInfoVal");
+			return false;
+		}
+		*kv->bool_val = val;
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+
+	kv->bool_val = fdo_alloc(sizeof(bool));
+	if (!kv->bool_val) {
+		LOG(LOG_ERROR, "Failed to alloc bool Device ServiceInfoVal");
+		return false;
+	}
+	*kv->bool_val = val;
+
+	// free any other type of value, if present
+	if (kv->str_val)
+		fdo_string_free(kv->str_val);
+	if (kv->bin_val)
+		fdo_byte_array_free(kv->bin_val);
+	if (kv->int_val)
+		fdo_free(kv->int_val);
+
+	return true;
+}
+
+/**
+ * si & key are input to the function, it looks for the matching
+ * (key, value):
+ * if found, update the corresponding si member with integer val, if memory
+ * is not allocated, allocate it.
+ * if no matching entry is found, it will add a new entry at the end.
+ * @param si  - Pointer to the fdo_service_info_t,
+ * @param key - Pointer to the char buffer key,
+ * @param val - Pointer to the integer val, to be updated,
+ * @return true if updated correctly else false.
+ */
+bool fdo_service_info_add_kv_int(fdo_service_info_t *si, const char *key,
+				 int val)
+{
+	fdo_key_value_t **kvp, *kv;
+
+	if (!si || !key)
+		return false;
+
+	kvp = fdo_service_info_fetch(si, key);
+	kv = *kvp;
+	if (kv == NULL) {
+		 /* Not found, at end of linked list, add a new entry */
+		kv = fdo_kv_alloc_key_only(key);
+		if (kv == NULL)
+			return false;
+		kv->int_val = fdo_alloc(sizeof(int));
+		if (!kv->int_val) {
+			LOG(LOG_ERROR, "Failed to alloc int Device ServiceInfoVal");
+			return false;
+		}
+		*kv->int_val = val;
+		*kvp = kv;  /* Use this pointer to update the next value */
+		si->numKV++;
+		return true;
+	}
+
+	kv->int_val = fdo_alloc(sizeof(int));
+	if (!kv->int_val) {
+		LOG(LOG_ERROR, "Failed to alloc int Device ServiceInfoVal");
+		return false;
+	}
+	*kv->int_val = val;
+
+	// free any other type of value, if present
+	if (kv->str_val)
+		fdo_string_free(kv->str_val);
+	if (kv->bin_val)
+		fdo_byte_array_free(kv->bin_val);
+	if (kv->bool_val)
+		fdo_free(kv->bool_val);
+
+	return true;
+}
+
+/**
+ * Add kvs object of type fdo_key_value_t to the end of the list(si) if
+ * not empty else add it to the head.
+ * @param si  - Pointer to the fdo_service_info_t list,
+ * @param kvs - Pointer to the fdo_key_value_t kvs, to be added,
+ * @return true if updated correctly else false.
+ */
+bool fdo_service_info_add_kv(fdo_service_info_t *si, fdo_key_value_t *kvs)
+{
+	fdo_key_value_t *kv = NULL;
+
+	if (!si || !kvs)
+		return false;
+
+	// Is the list empty?  If it is, add this to the head of the list
+	if (si->kv == NULL) {
+		si->kv = kvs;
+		si->numKV = 1;
+		kvs->next = NULL;
+	} else {
+		// Find the last entry
+		for (kv = si->kv; kv->next != NULL; kv = kv->next)
+			;
+		kv->next = kvs;
+		si->numKV++;
+		kvs->next = NULL;
+	}
+	return true;
+}
+
+/**
+ * Write the given ServiceInfo struct contents as CBOR.
+ * Currently, only used to write 'devmod' Device ServiceInfo module.
+ * ServiceInfo = [
+ *   *ServiceInfoKeyVal		// one or more ServiceInfoKeyVal
+ * ]
+ * ServiceInfoKeyVal = [
+ *   *ServiceInfoKV			// one or more ServiceInfoKV
+ * ]
+ * ServiceInfoKV = [
+ *   ServiceInfoKey: tstr,
+ *   ServiceInfoVal: cborSimpleType
+ * ]
+ * ServiceInfoKey = moduleName:messageName
+ * return true if read was a success, false otherwise
+ * 
+ * @param fdow - Pointer to the writer.
+ * @param si - Pointer to the fdo_service_info_t list containing all platform
+ * Device ServiceInfos (only 'devmod' for now).
+ * @return true if the opration was a success, false otherwise
+ */
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
+{
+	int num = 0;
+	fdo_key_value_t **kvp = NULL;
+	fdo_key_value_t *kv = NULL;
+
+	bool ret = false;
+
+	if (!fdow || !si)
+		goto end;
+
+	if (!fdow_start_array(fdow, 1)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write start array\n");
+		goto end;
+	}
+
+	// +1 for writing "devmod:modules" at the end
+	if (!fdow_start_array(fdow, si->numKV + 1)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write start array\n");
+		goto end;
+	}
+	// fetch all platfrom Device ServiceInfo's one-by-one
+	while (num != si->numKV) {
+		kvp = fdo_service_info_get(si, num);
+
+		kv = *kvp;
+		if (!kv || !kv->key) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfo: Key/Value not found\n");
+			goto end;
+		}
+
+		if (!fdow_start_array(fdow, 2)) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write start array\n");
+			goto end;
+		}
+		// Write KV pair
+		if (!fdow_text_string(fdow, kv->key->bytes, kv->key->byte_sz)) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
+			goto end;
+		}
+		if (kv->str_val) {
+			if (!fdow_text_string(fdow, kv->str_val->bytes, kv->str_val->byte_sz)) {
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Text ServiceInfoVal\n");
+				goto end;
+			}
+		}
+		else if (kv->bin_val) {
+			if (!fdow_byte_string(fdow, kv->bin_val->bytes, kv->bin_val->byte_sz)) {
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Binary ServiceInfoVal\n");
+				goto end;
+			}
+		}
+		else if (kv->bool_val) {
+			if (!fdow_boolean(fdow, *kv->bool_val)) {
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Bool ServiceInfoVal\n");
+				goto end;
+			}
+		}
+		else if (kv->int_val) {
+			if (!fdow_signed_int(fdow, *kv->int_val)) {
+				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Int ServiceInfoVal\n");
+				goto end;
+			}
+		} else {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: No ServiceInfoVal found\n");
+			goto end;	
+		}
+
+		if (!fdow_end_array(fdow)) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write end array\n");
+			goto end;
+		}
+		num++;
+	}
+	// write the "devmod:modules" with value "[1,1,"fdo_sys"]"
+	// TO-DO: Update this when multi-module support is added.
+	if (!fdo_serviceinfo_modules_list_write(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write modules\n");
+		goto end;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write end array\n");
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write end array\n");
+		goto end;
+	}
+	ret = true;
+end:
+	return ret;
+}
+
+/**
+ * Write the key 'devmod:modules' with value of form [int, int, text,....]
+ * into the given FDOW object. Currently, it only writes 1 ServiceInfo module name
+ * 'fdo_sys', i.e [1,1,"fdo_sys"].
+ * @param fdow - Pointer to the writer.
+ */
+bool fdo_serviceinfo_modules_list_write(fdow_t *fdow) {
+
+	bool ret = false;
+	char module_key[15] = "devmod:modules";
+	char module_value[8] = "fdo_sys";
+
+	if (!fdow_start_array(fdow, 2)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to start array\n");
+		goto end;
+	}
+	if (!fdow_text_string(fdow, module_key,
+		strnlen_s(module_key, FDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
+		goto end;
+	}
+	if (!fdow_start_array(fdow, 3)) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to start ServiceInfoVal (modules) array\n");
+		goto end;
+	}
+	if (!fdow_signed_int(fdow, 1)) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to write ServiceInfoVal (modules) nummodules\n");
+		goto end;
+	}
+	if (!fdow_signed_int(fdow, 1)) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to write ServiceInfoVal (modules) return count\n");
+		goto end;
+	}
+	if (!fdow_text_string(fdow, module_value, strnlen_s(module_value, FDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR,
+			"Platform Device ServiceInfoKV: Failed to write ServiceInfoVal (modules) module name\n");
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to end array\n");
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to end array\n");
+		goto end;
+	}
+	ret = true;
+end:
+	return ret;
+}
+
+/**
+ * Execute Sv_info Module's callback with the provided svinfo type,
+ * @param module_list - Global Module List Head Pointer.
+ * @param type - a valid Sv_info type.
+ * @return true if success, false otherwise
+ */
+bool fdo_mod_exec_sv_infotype(fdo_sdk_service_info_module_list_t *module_list,
+			      fdo_sdk_si_type type)
+{
+	while (module_list) {
+		if (module_list->module.service_info_callback(
+			type, NULL, NULL) != FDO_SI_SUCCESS) {
+			LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
+			    module_list->module.module_name, type);
+			return false;
+		}
+		module_list = module_list->next;
+	}
+	return true;
+}
+
+/**
+ * Sv_info: Clear the Module PSI and OSI Index for next rounds.
+ * @param module_list - Global Module List Head Pointer.
+ * @return none
+ */
+void fdo_sv_info_clear_module_psi_osi_index(fdo_sdk_service_info_module_list_t
+					    *module_list)
+{
+	if (module_list) {
+		while (module_list) {
+			module_list->module_psi_index = 0;
+			module_list->module_osi_index = 0;
+			module_list = module_list->next;
+		}
+	}
+}
+
+/**
+ * Compares two hashes
+ *
+ * @param hash1: poniter to input hash 1
+ * @param hash2: poniter to input hash 2
+ * @return
+ *        true if both hashes are same else false.
+ */
+bool fdo_compare_hashes(fdo_hash_t *hash1, fdo_hash_t *hash2)
+{
+	bool retval = false;
+	int result = 1;
+
+	if (!hash1 || !hash2 || !hash1->hash || !hash2->hash ||
+	    !hash1->hash->byte_sz || !hash1->hash->bytes ||
+	    !hash2->hash->byte_sz || !hash2->hash->bytes) {
+		LOG(LOG_ERROR, "Null arguments!\n");
+		goto end;
+	}
+
+	if (hash1->hash_type != hash2->hash_type) {
+		LOG(LOG_DEBUG, "Hash types are not same!\n");
+		goto end;
+	}
+	if (memcmp_s(hash1->hash->bytes, hash1->hash->byte_sz,
+		     hash2->hash->bytes, hash2->hash->byte_sz, &result) ||
+	    result) {
+		LOG(LOG_DEBUG, "Hash contents are not same!\n");
+		goto end;
+	}
+
+	retval = true;
+
+end:
+	return retval;
+}
+
+/**
+ * Compares two byte_arrays
+ *
+ * @param ba1: poniter to input byte_array 1
+ * @param ba2: poniter to input byte_array 2
+ * @return
+ *        true if both byte_arrays are same else false.
+ */
+bool fdo_compare_byte_arrays(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2)
+{
+	bool retval = false;
+	int result = 1;
+
+	if (!ba1 || !ba2 || !ba1->byte_sz || !ba1->bytes || !ba2->byte_sz ||
+	    !ba2->bytes) {
+		LOG(LOG_ERROR, "Null arguments!\n");
+		goto end;
+	}
+
+	if (memcmp_s(ba1->bytes, ba1->byte_sz, ba2->bytes, ba2->byte_sz,
+		     &result) ||
+	    result) {
+		LOG(LOG_DEBUG, "Byte_array contents are not same!\n");
+		goto end;
+	}
+
+	retval = true;
+
+end:
+	return retval;
+}
+
+/**
+ * Compares two Rendezvous lists
+ *
+ * @param rv_list1: poniter to input rv_list 1
+ * @param rv_list2: poniter to input rv_list 2
+ * @return
+ *        true if both rv_lists are same else false.
+ */
+bool fdo_compare_rv_lists(fdo_rendezvous_list_t *rv_list1,
+			  fdo_rendezvous_list_t *rv_list2)
+{
+	bool retval = false;
+	int rv_directive_index = 0;
+	int rv_instr_index = 0;
+	fdo_rendezvous_list_t *rv_list1_traverse = rv_list1;
+	fdo_rendezvous_list_t *rv_list2_traverse = rv_list2;
+
+	if (!rv_list1_traverse || !rv_list2_traverse) {
+		LOG(LOG_ERROR, "Received NULL arguments\n");
+		goto end;
+	}
+
+	if (rv_list1_traverse->num_rv_directives != rv_list2_traverse->num_rv_directives) {
+		LOG(LOG_ERROR, "Number of RendezvousDirective(s) do not match\n");
+		goto end;
+	}
+	while (rv_directive_index < rv_list1_traverse->num_rv_directives &&
+		rv_directive_index < rv_list2_traverse->num_rv_directives) {
+		fdo_rendezvous_directive_t *directive1 =
+			fdo_rendezvous_directive_get(rv_list1_traverse, rv_directive_index);
+		fdo_rendezvous_directive_t *directive2 =
+			fdo_rendezvous_directive_get(rv_list2_traverse, rv_directive_index);
+		if (!directive1 || !directive2) {
+			LOG(LOG_ERROR, "One of the RendezvousDirective(s) is empty\n");
+			goto end;
+		}
+		rv_instr_index = 0;
+		while (rv_instr_index < directive1->num_entries &&
+			rv_instr_index < directive2->num_entries) {
+			fdo_rendezvous_t *entry_ptr1 =
+				fdo_rendezvous_list_get(directive1, rv_instr_index);
+			fdo_rendezvous_t *entry_ptr2 =
+				fdo_rendezvous_list_get(directive2, rv_instr_index);
+			if ((!entry_ptr1 || !entry_ptr2)) {
+				LOG(LOG_ERROR, "One of the RendezvousInstr(s) is empty\n");
+				goto end;
+			}
+			if (!fdo_rendezvous_instr_compare(entry_ptr1, entry_ptr2)) {
+				LOG(LOG_ERROR, "One of the RendezvousInstr(s) is empty\n");
+				goto end;				
+			}
+			rv_instr_index++;
+		}
+		rv_directive_index++;
+	}
+	retval = true;
+end:
+	return retval;
+}
+
+/**
+ * Compare the given RendezvousInstr(s) represented by the two fdo_rendezvous_t, with one another.
+ * 
+ * @param entry1: pointer to input first fdo_rendezvous_t object
+ * @param entry2: pointer to input second fdo_rendezvous_t object
+ * @return
+ *        true if both RendexvousInstr(s) are same else false.
+ */
+bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1, fdo_rendezvous_t *entry2) {
+
+	int memcmp_diff = -1;
+
+	if (!entry1 || !entry2) {
+		LOG(LOG_ERROR, "Received NULL arguments\n");
+		return false;
+	}
+
+	if (entry1->dev_only != NULL && entry2->dev_only != NULL &&
+		*entry1->dev_only ==  *entry2->dev_only) {
+		return true;
+	}
+
+	if (entry1->owner_only != NULL && entry2->owner_only != NULL &&
+		*entry1->owner_only ==  *entry2->owner_only) {
+		return true;
+	}
+
+	if (entry1->ip != NULL && entry2->ip != NULL) {
+		memcmp_s(entry1->ip->addr, entry1->ip->length,
+			entry2->ip->addr,entry1->ip->length, &memcmp_diff);
+		if (memcmp_diff == 0) {
+			return true;
+		}
+	}
+
+	if (entry1->po != NULL && entry2->po != NULL &&
+		*entry1->po ==  *entry2->po) {
+		return true;
+	}
+
+	if (entry1->pow != NULL && entry2->pow != NULL &&
+		*entry1->pow ==  *entry2->pow) {
+		return true;
+	}
+
+	if (entry1->dn != NULL && entry2->dn != NULL &&
+		entry1->dn->byte_sz == entry2->dn->byte_sz &&
+		0 == strncmp(entry1->dn->bytes, entry2->dn->bytes, entry1->dn->byte_sz)) {
+		return true;
+	}
+
+	if (entry1->sch != NULL && entry2->sch != NULL &&
+		fdo_compare_hashes(entry1->sch, entry2->sch)) {
+		return true;
+	}
+
+	if (entry1->cch != NULL && entry2->cch != NULL &&
+		fdo_compare_hashes(entry1->cch, entry2->cch)) {
+		return true;
+	}
+
+	if (entry1->ui != NULL && entry2->ui != NULL &&
+		*entry1->ui ==  *entry2->ui) {
+		return true;
+	}
+
+	if (entry1->ss != NULL && entry2->ss != NULL &&
+		entry1->ss->byte_sz == entry2->ss->byte_sz &&
+		0 == strncmp(entry1->ss->bytes, entry2->ss->bytes, entry1->ss->byte_sz)) {
+		return true;
+	}
+
+	if (entry1->pw != NULL && entry2->pw != NULL &&
+		entry1->pw->byte_sz == entry2->pw->byte_sz &&
+		0 == strncmp(entry1->pw->bytes, entry2->pw->bytes, entry1->pw->byte_sz)) {
+		return true;
+	}
+
+	if (entry1->me != NULL && entry2->me != NULL &&
+		*entry1->me ==  *entry2->me) {
+		return true;
+	}
+
+	if (entry1->pr != NULL && entry2->pr != NULL &&
+		*entry1->pr ==  *entry2->pr) {
+		return true;
+	}
+
+	if (entry1->delaysec != NULL && entry2->delaysec != NULL &&
+		*entry1->delaysec ==  *entry2->delaysec) {
+		return true;
+	}
+
+	if (entry1->bypass != NULL && entry2->bypass != NULL &&
+		*entry1->bypass ==  *entry2->bypass) {
+		return true;
+	}
+
+	LOG(LOG_ERROR, "RendezvousInstr: Received invalid RVVariable to compare\n");
+	return false;
+}
+
+void fdo_log_block(fdo_block_t *fdob) {
+	size_t i;
+	for (i = 0; i < fdob->block_size; i++) {
+		LOG(LOG_DEBUGNTS, "%02x", fdob->block[i]);
+	}
+	LOG(LOG_DEBUGNTS, "\n");
+}
+

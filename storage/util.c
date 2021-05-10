@@ -99,7 +99,7 @@ void *new_buffer_from_file(const char *filename, size_t *size)
 		return NULL;
 	}
 
-	buffer = sdo_alloc(len);
+	buffer = fdo_alloc(len);
 	if (!buffer) {
 		LOG(LOG_ERROR, "Failed to allocate memory\n");
 		return NULL;
@@ -109,7 +109,7 @@ void *new_buffer_from_file(const char *filename, size_t *size)
 
 	if (0 != read_buffer_from_file(filename, buffer, len)) {
 		LOG(LOG_ERROR, "Failed to read from `%s`\n", filename);
-		sdo_free(buffer);
+		fdo_free(buffer);
 		return NULL;
 	}
 
@@ -248,7 +248,7 @@ void hexdump(const char *message, const void *buffer, size_t size)
 /**
  * Internal API
  */
-void *sdo_alloc(int size)
+void *fdo_alloc(int size)
 {
 	void *buf = malloc(size);
 
@@ -259,7 +259,7 @@ void *sdo_alloc(int size)
 
 	if (memset_s(buf, size, 0) != 0) {
 		LOG(LOG_ERROR, "Memset Failed\n");
-		sdo_free(buf);
+		fdo_free(buf);
 		goto end;
 	}
 

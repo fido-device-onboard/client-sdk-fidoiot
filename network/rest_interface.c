@@ -6,15 +6,15 @@
 /*
  * REST Layer
  *
- * The file implements REST layer for SDO.
+ * The file implements REST layer for FDO.
  */
 
 #include "util.h"
 #include "network_al.h"
-#include "sdoCryptoHal.h"
-#include "sdoprotctx.h"
+#include "fdoCryptoHal.h"
+#include "fdoprotctx.h"
 #include <stdlib.h>
-#include "sdonet.h"
+#include "fdonet.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "rest_interface.h"
@@ -36,7 +36,7 @@ bool init_rest_context(void)
 		LOG(LOG_ERROR, "rest context is already active\n");
 		return false;
 	} else {
-		return (rest = sdo_alloc(sizeof(rest_ctx_t))) ? true : false;
+		return (rest = fdo_alloc(sizeof(rest_ctx_t))) ? true : false;
 	}
 }
 
@@ -53,7 +53,7 @@ rest_ctx_t *get_rest_context(void)
 }
 
 /**
- * Cache HOST DNS from NW hal/SDO. This info will be used during POST URL
+ * Cache HOST DNS from NW hal/FDO. This info will be used during POST URL
  * construction.
  *
  * @param dns - HOST's domain URL.
@@ -66,9 +66,9 @@ bool cache_host_dns(const char *dns)
 	if (!dns)
 		goto err;
 
-	size_t len = strnlen_s(dns, SDO_MAX_STR_SIZE);
+	size_t len = strnlen_s(dns, FDO_MAX_STR_SIZE);
 
-	if (!len || len == SDO_MAX_STR_SIZE)
+	if (!len || len == FDO_MAX_STR_SIZE)
 		goto err;
 
 	if (!isRESTContext_active()) {
@@ -77,10 +77,10 @@ bool cache_host_dns(const char *dns)
 	}
 
 	if (rest->host_dns) {
-		sdo_free(rest->host_dns);
+		fdo_free(rest->host_dns);
 	}
 
-	rest->host_dns = sdo_alloc(len + 1);
+	rest->host_dns = fdo_alloc(len + 1);
 	if (!rest->host_dns) {
 		goto err;
 	}
@@ -95,13 +95,13 @@ err:
 }
 
 /**
- * Cache HOST IP from NW hal/SDO. This info will be used while POST URL
+ * Cache HOST IP from NW hal/FDO. This info will be used while POST URL
  * construction.
  *
  * @param ip - HOST's IP address.
  * @retval true if caching was successful, false otherwise.
  */
-bool cache_host_ip(sdo_ip_address_t *ip)
+bool cache_host_ip(fdo_ip_address_t *ip)
 {
 	bool ret = false;
 
@@ -114,17 +114,17 @@ bool cache_host_ip(sdo_ip_address_t *ip)
 	}
 
 	if (rest->host_ip) {
-		sdo_free(rest->host_ip);
+		fdo_free(rest->host_ip);
 	}
 
-	rest->host_ip = sdo_alloc(sizeof(sdo_ip_address_t));
+	rest->host_ip = fdo_alloc(sizeof(fdo_ip_address_t));
 	if (!rest->host_ip) {
 		goto err;
 	}
 
-	if (memcpy_s(rest->host_ip, sizeof(sdo_ip_address_t), ip,
-		     sizeof(sdo_ip_address_t)) != 0) {
-		sdo_free(rest->host_ip);
+	if (memcpy_s(rest->host_ip, sizeof(fdo_ip_address_t), ip,
+		     sizeof(fdo_ip_address_t)) != 0) {
+		fdo_free(rest->host_ip);
 		goto err;
 	}
 	ret = true;
@@ -133,7 +133,7 @@ err:
 }
 
 /**
- * Cache HOST port from NW hal/SDO. This info will be used while POST URL
+ * Cache HOST port from NW hal/FDO. This info will be used while POST URL
  * construction.
  *
  * @param port - HOST's port no.
@@ -182,7 +182,7 @@ err:
  * @param ip_ascii - IP address output in string format.
  * @retval true if conversion was successful, false otherwise.
  */
-static bool ip_bin_to_ascii(sdo_ip_address_t *ip, char *ip_ascii)
+static bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
 {
 	char temp[IP_TAG_LEN] = {0};
 	uint8_t octlet_size = 4; // e.g 192.168.0.100, max 3char +1 null/oct.
@@ -235,7 +235,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	}
 
 	if (rest_ctx->host_ip) {
-		ip_ascii = sdo_alloc(IP_TAG_LEN);
+		ip_ascii = fdo_alloc(IP_TAG_LEN);
 
 		if (!ip_ascii)
 			goto err;
@@ -379,7 +379,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 
 err:
 	if (ip_ascii)
-		sdo_free(ip_ascii);
+		fdo_free(ip_ascii);
 	return ret;
 }
 
@@ -399,6 +399,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	char *rem, *p1, *p2;
 	size_t remlen;
 	char tmp[512];
+	char *eptr = NULL;
 	size_t tmplen;
 	int rcode, result_strcmpcase;
 
@@ -414,9 +415,9 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	rem = strchr(hdr, '\n');
 
 	if (rem) {
-		remlen = strnlen_s(rem, SDO_MAX_STR_SIZE);
+		remlen = strnlen_s(rem, FDO_MAX_STR_SIZE);
 
-		if (!remlen || remlen == SDO_MAX_STR_SIZE) {
+		if (!remlen || remlen == FDO_MAX_STR_SIZE) {
 			LOG(LOG_ERROR, "Strlen() failed!\n");
 			goto err;
 		}
@@ -436,11 +437,17 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		p1 = strchr(tmp, ' ');
 		if (p1 == NULL) {
 			LOG(LOG_ERROR,
-			    "sdo_rest_run: Response line parse error\n");
+			    "fdo_rest_run: Response line parse error\n");
 			goto err;
 		}
 		*p1++ = 0;
-		rcode = atoi(p1);
+		// set to 0 explicitly
+		errno = 0;
+		rcode = strtol(p1, &eptr, 10);
+		if (!eptr || eptr == p1 || errno != 0) {
+			LOG(LOG_ERROR, "Invalid value read for Response Code\n");
+			goto err;
+		}
 		p2 = strchr(p1, ' ');
 		if (p2 == NULL) {
 			LOG(LOG_DEBUG, "Response code %03d\n", rcode);
@@ -452,7 +459,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 
 		if (rcode != HTTP_SUCCESS_OK) {
 			LOG(LOG_ERROR, "HTTP reponse is not 200(OK)!\n");
-			rest->msg_type = SDO_TYPE_ERROR;
+			rest->msg_type = FDO_TYPE_ERROR;
 		}
 		// consume \n
 		++hdr;
@@ -461,9 +468,9 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 
 	// parse and process other header elements
 	while ((rem = strchr(hdr, '\n')) != NULL) {
-		remlen = strnlen_s(rem, SDO_MAX_STR_SIZE);
+		remlen = strnlen_s(rem, FDO_MAX_STR_SIZE);
 
-		if (!remlen || remlen == SDO_MAX_STR_SIZE) {
+		if (!remlen || remlen == FDO_MAX_STR_SIZE) {
 			LOG(LOG_ERROR, "Strlen() failed!\n");
 			goto err;
 		}
@@ -490,7 +497,13 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		if ((strcasecmp_s(tmp, tmplen, "content-length",
 				  &result_strcmpcase) == 0) &&
 		    result_strcmpcase == 0) {
-			rest->content_length = atoi(p1);
+			// set to 0 explicitly
+			errno = 0;
+			rest->content_length = strtol(p1, &eptr, 10);
+			if (!eptr || eptr == p1 || errno != 0) {
+				LOG(LOG_ERROR, "Invalid value read for Content-length\n");
+				goto err;
+			}
 			LOG(LOG_DEBUG, "Content-length: %zu\n",
 			    rest->content_length);
 		} else if ((strcasecmp_s(tmp, tmplen, "content-type",
@@ -500,7 +513,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		} else if ((strcasecmp_s(tmp, tmplen, "connection",
 					 &result_strcmpcase) == 0) &&
 			   result_strcmpcase == 0) {
-			if ((strcasecmp_s(p1, strnlen_s(p1, SDO_MAX_STR_SIZE),
+			if ((strcasecmp_s(p1, strnlen_s(p1, FDO_MAX_STR_SIZE),
 					  "keep-alive",
 					  &result_strcmpcase) == 0) &&
 			    result_strcmpcase == 0) {
@@ -513,7 +526,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
 			if (rest->authorization)
-				sdo_free(rest->authorization);
+				fdo_free(rest->authorization);
 			rest->authorization = strdup(p1);
 			if (rest->authorization) {
 				LOG(LOG_DEBUG, "Authorization: %s\n",
@@ -531,21 +544,27 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		} else if  (strcasecmp_s(tmp, tmplen, "message-type",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
-			rest->msg_type = atoi(p1);
+			// set to 0 explicitly
+			errno = 0;
+			rest->msg_type = strtol(p1, &eptr, 10);
+			if (!eptr || eptr == p1 || errno != 0) {
+				LOG(LOG_ERROR, "Invalid value read for Message-Type\n");
+				goto err;
+			}
 			LOG(LOG_DEBUG, "Message-Type: %"PRIu32"\n",
 				rest->msg_type);
 		} else {
 			/* TODO: This looks like dead code, remove this
 			 */
 			/*
-			 * If in protocol error sdo_rest_free is not
+			 * If in protocol error fdo_rest_free is not
 			 * called
-			 * this can lead to memory leak, hence sdo_free
+			 * this can lead to memory leak, hence fdo_free
 			 * if
 			 * allocated
 			 */
 			if (rest->x_token_authorization)
-				sdo_free(rest->x_token_authorization);
+				fdo_free(rest->x_token_authorization);
 			rest->x_token_authorization = strdup(p1);
 			LOG(LOG_DEBUG, "Body: %s\n", tmp);
 		}
@@ -584,13 +603,13 @@ void exit_rest_context(void)
 {
 	if (rest) {
 		if (rest->authorization)
-			sdo_free(rest->authorization);
+			fdo_free(rest->authorization);
 		if (rest->x_token_authorization)
-			sdo_free(rest->x_token_authorization);
+			fdo_free(rest->x_token_authorization);
 		if (rest->host_ip)
-			sdo_free(rest->host_ip);
+			fdo_free(rest->host_ip);
 		if (rest->host_dns)
-			sdo_free(rest->host_dns);
-		sdo_free(rest);
+			fdo_free(rest->host_dns);
+		fdo_free(rest);
 	}
 }

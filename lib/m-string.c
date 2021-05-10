@@ -8,13 +8,13 @@
  * \brief Implementation of m-string for Device Initialize protocol
  */
 
-#include "sdotypes.h"
-#include "sdoprot.h"
+#include "fdotypes.h"
+#include "fdoprot.h"
 #include "util.h"
 #include "safe_lib.h"
-#include "sdoCrypto.h"
+#include "fdoCrypto.h"
 #include "snprintf_s.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "storage_al.h"
 
 /*
@@ -56,10 +56,10 @@ static int read_fill_modelserial(void)
 	uint8_t def_model_sz = 0;
 	int32_t fsize = 0;
 
-	fsize = sdo_blob_size((const char *)SERIAL_FILE, SDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_DEV_SERIAL_SZ)) {
 
-		if (sdo_blob_read((const char *)SERIAL_FILE, SDO_SDK_RAW_DATA,
+		if (fdo_blob_read((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA,
 				  (uint8_t *)device_serial, fsize) <= 0) {
 
 			LOG(LOG_ERROR, "Failed to get serial no\n");
@@ -77,9 +77,9 @@ static int read_fill_modelserial(void)
 		}
 	}
 
-	fsize = sdo_blob_size((const char *)MODEL_FILE, SDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((const char *)MODEL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_MODEL_NO_SZ)) {
-		if (sdo_blob_read((const char *)MODEL_FILE, SDO_SDK_RAW_DATA,
+		if (fdo_blob_read((const char *)MODEL_FILE, FDO_SDK_RAW_DATA,
 				  (uint8_t *)model_number, fsize) <= 0) {
 			LOG(LOG_ERROR, "Failed to get serial no\n");
 			goto err;
@@ -103,16 +103,16 @@ err:
 /**
  * Internal API
  */
-int ps_get_m_string(sdo_prot_t *ps)
+int ps_get_m_string(fdo_prot_t *ps)
 {
 	int ret = -1;
-	sdo_byte_array_t *csr = NULL;
+	fdo_byte_array_t *csr = NULL;
 
 	/* Fill in the key id */
 #if defined(ECDSA256_DA)
-	key_id = SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256;
+	key_id = FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256;
 #else
-	key_id = SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384;
+	key_id = FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384;
 #endif
 
 	if (read_fill_modelserial()) {
@@ -126,7 +126,7 @@ int ps_get_m_string(sdo_prot_t *ps)
 #if defined(DEVICE_TPM20_ENABLED)
 	size_t m_string_sz = get_file_size(TPM_DEVICE_CSR);
 
-	csr = sdo_byte_array_alloc(m_string_sz);
+	csr = fdo_byte_array_alloc(m_string_sz);
 	if (!csr) {
 		LOG(LOG_ERROR,
 		    "Failed to allocate memory for device mstring.\n");
@@ -141,27 +141,27 @@ int ps_get_m_string(sdo_prot_t *ps)
 	}
 
 #else
-	ret = sdo_get_device_csr(&csr);
+	ret = fdo_get_device_csr(&csr);
 	if (0 != ret) {
 		LOG(LOG_ERROR, "Unable to get device CSR\n");
 		goto err;
 	}
 #endif
-	if (!sdow_start_array(&ps->sdow, DEVICE_MFG_STRING_ARRAY_SZ))
+	if (!fdow_start_array(&ps->fdow, DEVICE_MFG_STRING_ARRAY_SZ))
 		goto err;
-	if (!sdow_signed_int(&ps->sdow, key_id))
+	if (!fdow_signed_int(&ps->fdow, key_id))
 		goto err;
-	if (!sdow_text_string(&ps->sdow, (char *) device_serial, device_serial_len))
+	if (!fdow_text_string(&ps->fdow, (char *) device_serial, device_serial_len))
 		goto err;
-	if (!sdow_text_string(&ps->sdow, (char *) model_number, model_number_len))
+	if (!fdow_text_string(&ps->fdow, (char *) model_number, model_number_len))
 		goto err;
-	if (!sdow_byte_string(&ps->sdow, csr->bytes, csr->byte_sz))
+	if (!fdow_byte_string(&ps->fdow, csr->bytes, csr->byte_sz))
 		goto err;
-	if (!sdow_end_array(&ps->sdow))
+	if (!fdow_end_array(&ps->fdow))
 		goto err;
 	LOG(LOG_DEBUG, "Generated device CSR successfully\n");
 err:
 	if (csr)
-		sdo_byte_array_free(csr);
+		fdo_byte_array_free(csr);
 	return ret;
 }

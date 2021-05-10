@@ -4,7 +4,7 @@
 
 /*!
  * \file
- * \brief Unit tests for base64 encoding/decoding routines of SDO library.
+ * \brief Unit tests for base64 encoding/decoding routines of FDO library.
  */
 
 #include "base64.h"
@@ -45,7 +45,7 @@ void tear_down(void)
 #endif
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("bin_toB64Length", "[base64][sdo]")
+TEST_CASE("bin_toB64Length", "[base64][fdo]")
 #else
 void test_bin_toB64Length(void)
 #endif
@@ -61,7 +61,7 @@ void test_bin_toB64Length(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("b64To_bin_length", "[base64][sdo]")
+TEST_CASE("b64To_bin_length", "[base64][fdo]")
 #else
 void test_b64To_bin_length(void)
 #endif
@@ -101,7 +101,7 @@ void test_b64To_bin_length(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("bin_toB64", "[base64][sdo]")
+TEST_CASE("bin_toB64", "[base64][fdo]")
 #else
 void test_bin_toB64(void)
 #endif
@@ -158,7 +158,7 @@ void test_bin_toB64(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("b64To_bin", "[base64][sdo]")
+TEST_CASE("b64To_bin", "[base64][fdo]")
 #else
 void test_b64To_bin(void)
 #endif

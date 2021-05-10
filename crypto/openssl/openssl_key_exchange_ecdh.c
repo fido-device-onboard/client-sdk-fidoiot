@@ -10,7 +10,7 @@
  */
 
 #include "util.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "crypto_utils.h"
 #include "BN_support.h"
 #include "openssl/ec.h"
@@ -20,10 +20,10 @@
 
 #ifdef KEX_ECDH384_ENABLED
 #define KEY_CURVE NID_secp384r1
-#define BN_RANDOM_SIZE SDO_ECDH384_DEV_RANDOM
+#define BN_RANDOM_SIZE FDO_ECDH384_DEV_RANDOM
 #else
 #define KEY_CURVE NID_X9_62_prime256v1
-#define BN_RANDOM_SIZE SDO_ECDH256_DEV_RANDOM
+#define BN_RANDOM_SIZE FDO_ECDH256_DEV_RANDOM
 #endif /* KEX_ECDH384_ENABLED */
 
 typedef struct {
@@ -56,7 +56,7 @@ int32_t crypto_hal_kex_init(void **context)
 		return -1;
 	}
 
-	key_ex_data = sdo_alloc(sizeof(ecdh_context_t));
+	key_ex_data = fdo_alloc(sizeof(ecdh_context_t));
 	if (!key_ex_data) {
 		LOG(LOG_ERROR, "Memalloc failed\n");
 		goto error;
@@ -64,7 +64,7 @@ int32_t crypto_hal_kex_init(void **context)
 
 	/*
 	 * Start by memory allocation so then all pointers will be initialized
-	 * in case of sdo_crypto_init error.
+	 * in case of fdo_crypto_init error.
 	 */
 	key_ex_data->_publicB = BN_new();
 	key_ex_data->_publicA = BN_new();
@@ -130,9 +130,9 @@ int32_t crypto_hal_kex_close(void **context)
 		key_ex_data->_key = NULL;
 	}
 	if (key_ex_data->_pubB) {
-		sdo_free(key_ex_data->_pubB);
+		fdo_free(key_ex_data->_pubB);
 	}
-	sdo_free(key_ex_data);
+	fdo_free(key_ex_data);
 	return 0;
 }
 
@@ -156,8 +156,6 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	int allocbytes = 0;
 	uint16_t tmp = 0;
 	bool ret = false;
-
-	LOG(LOG_DEBUG, "compute_publicB started\n");
 
 	if (!key_ex_data) {
 		LOG(LOG_ERROR, "invalid param\n");
@@ -240,7 +238,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	/* 2byte for each blen 3x2 =6 */
 	allocbytes = (bn_num_bytes(x) + bn_num_bytes(y) +
 		      bn_num_bytes(key_ex_data->_Device_random) + 6);
-	temp = sdo_alloc(allocbytes);
+	temp = fdo_alloc(allocbytes);
 	if (!temp) {
 		LOG(LOG_ERROR, "Mem alloc failed\n");
 		goto exit;
@@ -272,14 +270,14 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	size += BN_bn2bin(key_ex_data->_Device_random, &temp[size]);
 
 	BN_bin2bn(temp, size, key_ex_data->_publicB);
-	key_ex_data->_pubB = sdo_alloc(allocbytes);
+	key_ex_data->_pubB = fdo_alloc(allocbytes);
 	if (!key_ex_data->_pubB) {
 		LOG(LOG_ERROR, "Memclloc failed\n");
 		goto exit;
 	}
 	if (memcpy_s(key_ex_data->_pubB, allocbytes, temp, allocbytes) != 0) {
 		LOG(LOG_ERROR, "Memcpy failed\n");
-		sdo_free(key_ex_data->_pubB);
+		fdo_free(key_ex_data->_pubB);
 		goto exit;
 	}
 
@@ -298,10 +296,9 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	}
 #endif
 	ret = true;
-	LOG(LOG_DEBUG, "compute_publicB complete\n");
 exit:
 	if (temp)
-		sdo_free(temp);
+		fdo_free(temp);
 	if (x)
 		BN_clear(x);
 	if (y)
@@ -417,7 +414,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 #endif
 
 	temp = peer_rand_value;
+#if LOG_LEVEL == LOG_MAX_LEVEL
 	hexdump("Public A(bn)", temp, peer_rand_length);
+#endif
 	size = 0;
 	size_Ax = (temp[size] << 8) | temp[size + 1];
 	size += 2;
@@ -465,7 +464,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto error;
 	}
 	EC_POINT_set_affine_coordinates_GFp(group, point, Ax_bn, Ay_bn, ctx);
-	shx = sdo_alloc(bn_num_bytes(Ax_bn));
+	shx = fdo_alloc(bn_num_bytes(Ax_bn));
 	if (!shx)
 		goto error;
 #if defined OPENSSL_2_0_1
@@ -473,9 +472,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 		LOG(LOG_ERROR, "ECDH compute key failed\n");
 		goto error;
 	}
-	size_t shx_len = strlen_s(shx, SDO_MAX_STR_SIZE);
+	size_t shx_len = strlen_s(shx, FDO_MAX_STR_SIZE);
 
-	if (!shx_len || shx_len == SDO_MAX_STR_SIZE)
+	if (!shx_len || shx_len == FDO_MAX_STR_SIZE)
 		goto error;
 	if (BN_bin2bn(shx, shx_len, Shx_bn) == NULL) {
 		LOG(LOG_ERROR, "BN bin to bn conversion failed\n");
@@ -504,7 +503,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 
 	EC_POINT_free(Sh_se_point);
 #endif
-	shse = sdo_alloc(bn_num_bytes(key_ex_data->_Device_random) +
+	shse = fdo_alloc(bn_num_bytes(key_ex_data->_Device_random) +
 			 size_owner_random + bn_num_bytes(Shx_bn));
 	if (!shse) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
@@ -538,7 +537,7 @@ error:
 	if (point)
 		EC_POINT_free(point);
 	if (shse)
-		sdo_free(shse);
+		fdo_free(shse);
 	if (Ax_bn)
 		BN_clear_free(Ax_bn);
 	if (Ay_bn)
@@ -552,7 +551,7 @@ error:
 	if (ctx)
 		BN_CTX_free(ctx);
 	if (shx)
-		sdo_free(shx);
+		fdo_free(shx);
 
 	return ret;
 }

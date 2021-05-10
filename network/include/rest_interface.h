@@ -14,14 +14,15 @@
 #ifndef __REST_INTERFACE_H__
 #define __REST_INTERFACE_H__
 
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 
 #define HTTP_MAX_URL_SIZE 150
 #define REST_MAX_MSGHDR_SIZE 512
-#define REST_MAX_MSGBODY_SIZE 4096
+// maximum supported length is 8192 + 700. Rounding it to 9000
+#define REST_MAX_MSGBODY_SIZE 9000
 #define HTTP_SUCCESS_OK 200
 #define DEFAULT_DELAYSEC 120
 #define IP_TAG_LEN 16   // e.g. 192.168.111.111
@@ -36,14 +37,14 @@ typedef struct Rest_ctx_s {
 	bool keep_alive;
 	char *authorization;
 	char *x_token_authorization;
-	sdo_ip_address_t *host_ip;
+	fdo_ip_address_t *host_ip;
 	uint16_t portno;
 	char *host_dns;
 	bool is_dns;
 } rest_ctx_t;
 
 bool cache_host_dns(const char *dns);
-bool cache_host_ip(sdo_ip_address_t *ip);
+bool cache_host_ip(fdo_ip_address_t *ip);
 bool cache_host_port(uint16_t port);
 bool cache_tls_connection(void);
 bool init_rest_context(void);

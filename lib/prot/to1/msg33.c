@@ -10,7 +10,7 @@
 
 #include "safe_lib.h"
 #include "util.h"
-#include "sdoprot.h"
+#include "fdoprot.h"
 
 /**
  * msg33() - TO1.RVRedirect, Type 33
@@ -31,14 +31,14 @@
  *	]
  *
  */
-int32_t msg33(sdo_prot_t *ps)
+int32_t msg33(fdo_prot_t *ps)
 {
 	int ret = -1;
-	sdo_hash_t *ob_hash = NULL;
-	char prot[] = "SDOProtTO1";
+	fdo_hash_t *ob_hash = NULL;
+	char prot[] = "FDOProtTO1";
 
 	/* Try to read from internal buffer */
-	if (!sdo_prot_rcv_msg(&ps->sdor, &ps->sdow, prot, &ps->state)) {
+	if (!fdo_prot_rcv_msg(&ps->fdor, &ps->fdow, prot, &ps->state)) {
 		ret = 0; /*Mark for retry */
 		goto err;
 	}
@@ -49,40 +49,40 @@ int32_t msg33(sdo_prot_t *ps)
 	if (ps->to1d_cose) {
 		fdo_cose_free(ps->to1d_cose);
 	}
-	ps->to1d_cose = sdo_alloc(sizeof(fdo_cose_t));
+	ps->to1d_cose = fdo_alloc(sizeof(fdo_cose_t));
 	if (!ps->to1d_cose) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc COSE\n");
 		goto err;
 	}
 
-	if (!fdo_cose_read(&ps->sdor, ps->to1d_cose, true)) {
+	if (!fdo_cose_read(&ps->fdor, ps->to1d_cose, true)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read COSE\n");
 		goto err;
 	}
 
-	// clear the SDOR buffer and push COSE payload into it, essentially reusing the SDOR object.
-	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.b.block_size = ps->to1d_cose->cose_payload->byte_sz;
-	if (0 != memcpy_s(ps->sdor.b.block, ps->sdor.b.block_size,
+	// clear the FDOR buffer and push COSE payload into it, essentially reusing the FDOR object.
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.b.block_size = ps->to1d_cose->cose_payload->byte_sz;
+	if (0 != memcpy_s(ps->fdor.b.block, ps->fdor.b.block_size,
 		ps->to1d_cose->cose_payload->bytes, ps->to1d_cose->cose_payload->byte_sz)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to copy Nonce4\n");
 		goto err;
 	}
 
 	// initialize the parser once the buffer contains COSE payload to be decoded.
-	if (!sdor_parser_init(&ps->sdor)) {
-		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initialize SDOR parser\n");
+	if (!fdor_parser_init(&ps->fdor)) {
+		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initialize FDOR parser\n");
 		goto err;
 	}
 
 	size_t num_payloadbasemap_items = 0;
-	if (!sdor_array_length(&ps->sdor, &num_payloadbasemap_items) ||
+	if (!fdor_array_length(&ps->fdor, &num_payloadbasemap_items) ||
 		num_payloadbasemap_items != 2) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read array length\n");
 		goto err;
 	}
 
-	if (!sdor_start_array(&ps->sdor)) {
+	if (!fdor_start_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to start array\n");
 		goto err;
 	}
@@ -90,38 +90,38 @@ int32_t msg33(sdo_prot_t *ps)
 	if (ps->rvto2addr) {
 		fdo_rvto2addr_free(ps->rvto2addr);
 	}
-	ps->rvto2addr = sdo_alloc(sizeof(fdo_rvto2addr_t));
+	ps->rvto2addr = fdo_alloc(sizeof(fdo_rvto2addr_t));
 	if (!ps->rvto2addr) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to alloc to1dRV\n");
 		goto err;
 	}
-	if (!fdo_rvto2addr_read(&ps->sdor, ps->rvto2addr)) {
+	if (!fdo_rvto2addr_read(&ps->fdor, ps->rvto2addr)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read to1dRV\n");
 		goto err;
 	}
 
 	// read hash now.
-	ob_hash = sdo_hash_alloc_empty();
-	if (!ob_hash || !sdo_hash_read(&ps->sdor, ob_hash)) {
+	ob_hash = fdo_hash_alloc_empty();
+	if (!ob_hash || !fdo_hash_read(&ps->fdor, ob_hash)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read to1dTo0dHash\n");
 		goto err;
 	}
 
-	if (!sdor_end_array(&ps->sdor)) {
+	if (!fdor_end_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to end array\n");
 		goto err;
 	}
 
 	/* Mark as success and ready for TO2 */
-	ps->state = SDO_STATE_DONE;
-	sdo_block_reset(&ps->sdor.b);
-	ps->sdor.have_block = false;
+	ps->state = FDO_STATE_DONE;
+	fdo_block_reset(&ps->fdor.b);
+	ps->fdor.have_block = false;
 	ret = 0;
 	LOG(LOG_DEBUG, "TO1.RVRedirect completed successfully\n");
 
 err:
 	if (ob_hash) {
-		sdo_hash_free(ob_hash);
+		fdo_hash_free(ob_hash);
 		ob_hash = NULL;
 	}
 	return ret;

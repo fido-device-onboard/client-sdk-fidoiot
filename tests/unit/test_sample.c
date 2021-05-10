@@ -4,11 +4,11 @@
 
 /*!
  * \file
- * \brief This is a stub file to demonstrate unity library integration into SDO
+ * \brief This is a stub file to demonstrate unity library integration into FDO
  * library.
  */
 
-#include "sdoblockio.h"
+#include "fdoblockio.h"
 #include "unity.h"
 #include <stdlib.h>
 #include "util.h"
@@ -19,8 +19,8 @@
 /*** Unity Declarations. ***/
 void set_up(void);
 void tear_down(void);
-void test_sample_sdoblockinit(void);
-int __wrap_sdo_read_string_sz(sdor_t *sdor);
+void test_sample_fdoblockinit(void);
+int __wrap_fdo_read_string_sz(fdor_t *fdor);
 
 /*** Unity functions. ***/
 /**
@@ -39,31 +39,31 @@ void tear_down(void)
 
 /*** Wrapper functions (function stubbing). ***/
 
-/* If a '-wrap=sdo_resize_block' flag is used at link time, all calls to
- * sdo_resize_block will be directed to this function. */
-int __wrap_sdo_read_string_sz(sdor_t *sdor)
+/* If a '-wrap=fdo_resize_block' flag is used at link time, all calls to
+ * fdo_resize_block will be directed to this function. */
+int __wrap_fdo_read_string_sz(fdor_t *fdor)
 {
-	(void)sdor;
+	(void)fdor;
 	return WRAPPER_FN_TEST_VAR;
 }
 #endif
 
 /*** Test functions. ***/
 
-/* Dummy test function to illustrate that the Intel Secure Device Onboard
+/* Dummy test function to illustrate that the FIDO Device Onboard
  * librarys are being linked correctly. */
-void test_sample_sdoblockinit(void)
+void test_sample_fdoblockinit(void)
 {
-	sdor_t sdor;
+	fdor_t fdor;
 	int return_val = 0;
-	sdo_block_t *sdob = sdo_alloc(sizeof(sdo_block_t));
-	TEST_ASSERT_NOT_NULL(sdob);
-	sdo_block_init(sdob);
-	sdo_free(sdob);
+	fdo_block_t *fdob = fdo_alloc(sizeof(fdo_block_t));
+	TEST_ASSERT_NOT_NULL(fdob);
+	fdo_block_init(fdob);
+	fdo_free(fdob);
 
-	sdor.need_comma = 0;
-	sdor.b.cursor = 0;
-	return_val = sdo_read_string_sz(&sdor);
+	fdor.need_comma = 0;
+	fdor.b.cursor = 0;
+	return_val = fdo_read_string_sz(&fdor);
 	/* The return value should be the one from the wrapper function, not the
 	 * real function. */
 	TEST_ASSERT_EQUAL_INT(WRAPPER_FN_TEST_VAR, return_val);

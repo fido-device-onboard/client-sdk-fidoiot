@@ -10,7 +10,7 @@
  */
 
 #include "util.h"
-#include "sdoprot.h"
+#include "fdoprot.h"
 
 /* TODO: Move m-string generation here */
 
@@ -27,12 +27,12 @@
  *   DeviceMfgInfo
  * ]
  */
-int32_t msg10(sdo_prot_t *ps)
+int32_t msg10(fdo_prot_t *ps)
 {
 	int ret = -1;
 
-	sdow_next_block(&ps->sdow, SDO_DI_APP_START);
-	if (!sdow_start_array(&ps->sdow, 1))
+	fdow_next_block(&ps->fdow, FDO_DI_APP_START);
+	if (!fdow_start_array(&ps->fdow, 1))
 		goto err;
 
 	/* Get the DeviceMfgInfo in the ps object */
@@ -42,11 +42,11 @@ int32_t msg10(sdo_prot_t *ps)
 		goto err;
 	}
 	/* End the object */
-	if (!sdow_end_array(&ps->sdow))
+	if (!fdow_end_array(&ps->fdow))
 		goto err;
 
 	/* This state manages the transition to the next protocol message */
-	ps->state = SDO_STATE_DI_SET_CREDENTIALS;
+	ps->state = FDO_STATE_DI_SET_CREDENTIALS;
 	LOG(LOG_DEBUG, "DIAppStart completed\n");
 	ret = 0;
 

@@ -2,14 +2,14 @@
  * Copyright (C) 2017 Intel Corporation All Rights Reserved
  */
 
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "util.h"
 #include "unity.h"
 #include <stdbool.h>
 #include <string.h>
 
 #include "BN_support.h"
-#include <sdoCryptoHal.h>
+#include <fdoCryptoHal.h>
 #include "stdlib.h"
 
 #ifdef USE_OPENSSL

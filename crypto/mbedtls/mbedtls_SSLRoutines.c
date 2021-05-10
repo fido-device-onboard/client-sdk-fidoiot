@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "mbedtls/net_sockets.h"
@@ -67,7 +67,7 @@ static int mbed_ssl_rawread(void *sock, unsigned char *buf, size_t num)
 	}
 
 	ret =
-	    mos_socket_recv((sdo_con_handle)sock, (unsigned char *)buf, num, 0);
+	    mos_socket_recv((fdo_con_handle)sock, (unsigned char *)buf, num, 0);
 	if (ret < 0) {
 		LOG(LOG_ERROR, "!mbed rawread returned %d\n\n", ret);
 		return -1;
@@ -86,7 +86,7 @@ int mbed_ssl_rawwrite(void *sock, const unsigned char *buf, size_t num)
 	/* At a time maximum length can be written is 16384(Maximum fragmented
 	 * length defined by mbedtls api) bytes of num.
 	 */
-	while ((ret = mos_socket_send((sdo_con_handle)sock, (char *)buf, num,
+	while ((ret = mos_socket_send((fdo_con_handle)sock, (char *)buf, num,
 				      0)) <= 0) {
 		if (ret != MBEDTLS_ERR_SSL_WANT_READ &&
 		    ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
@@ -96,7 +96,7 @@ int mbed_ssl_rawwrite(void *sock, const unsigned char *buf, size_t num)
 	}
 	return ret;
 }
-sdo_con_handle get_ssl_socket(void)
+fdo_con_handle get_ssl_socket(void)
 {
 	return ssl_info_var.socket;
 }
@@ -111,7 +111,7 @@ sdo_con_handle get_ssl_socket(void)
  * @return ssl
  *        return pointer to ssl structure on success. NULL on failure.
  */
-void *sdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
+void *fdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
 {
 	int ret = 0;
 	const char *DRBG_PERSONALIZED_STR = "Mbed TLS client";
@@ -145,7 +145,7 @@ void *sdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
 		goto exit;
 	}
 #else
-	sdo_con_handle *socket = mos_socket_open();
+	fdo_con_handle *socket = mos_socket_open();
 
 	if (!socket) {
 		LOG(LOG_ERROR, "mos_socket_open() failed!\n");
@@ -212,9 +212,9 @@ void *sdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
 #endif
 
 #if defined(TARGET_OS_MBEDOS)
-	sdo_ip_address_t binip = {0};
+	fdo_ip_address_t binip = {0};
 
-	if (sdo_printable_to_net(SERVER_NAME, (void *)&binip.addr) != 1) {
+	if (fdo_printable_to_net(SERVER_NAME, (void *)&binip.addr) != 1) {
 		LOG(LOG_ERROR, "ip ascii to net format conversion fail.\n");
 		goto exit;
 	}
@@ -262,7 +262,7 @@ exit:
  * @return
  *        return 0 on success. -1 on failure.
  */
-int sdo_ssl_close(void *ssl)
+int fdo_ssl_close(void *ssl)
 {
 
 	if (!ssl) {
@@ -295,7 +295,7 @@ int sdo_ssl_close(void *ssl)
  * @return ret
  *        return number of bytes read on success. -1 on failure.
  */
-int sdo_ssl_read(void *ssl, void *buf, int num)
+int fdo_ssl_read(void *ssl, void *buf, int num)
 {
 
 	int ret = -1;
@@ -328,7 +328,7 @@ int sdo_ssl_read(void *ssl, void *buf, int num)
  * @return ret
  *        return number of bytes written on success. -1 on failure.
  */
-int sdo_ssl_write(void *ssl, const void *buf, int num)
+int fdo_ssl_write(void *ssl, const void *buf, int num)
 {
 	int ret = -1;
 

@@ -4,7 +4,7 @@
 
 /*!
  * \file
- * \brief Unit tests for AES abstraction routines of SDO library.
+ * \brief Unit tests for AES abstraction routines of FDO library.
  */
 
 #include "test_AESRoutines.h"
@@ -89,10 +89,10 @@ uint8_t *getkey(int length)
 }
 static uint8_t *get_randomiv(void)
 {
-	uint8_t *iv = malloc(SDO_AES_IV_SIZE * sizeof(char));
+	uint8_t *iv = malloc(FDO_AES_IV_SIZE * sizeof(char));
 	if (!iv)
 		return NULL;
-	crypto_hal_random_bytes(iv, SDO_AES_IV_SIZE);
+	crypto_hal_random_bytes(iv, FDO_AES_IV_SIZE);
 #ifdef HEXDEBUG
 	hexdump("IV", iv, length);
 #endif
@@ -102,7 +102,7 @@ static uint8_t *get_randomiv(void)
 #ifndef TARGET_OS_FREERTOS
 void test_aes_encrypt(void)
 #else
-TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
+TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 #endif
 {
 #ifdef AES_MODE_CTR_ENABLED
@@ -152,7 +152,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 
 	/* Get cypher text length required by sending NULL as cypher_text */
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, NULL,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, cypher_length,
 				      "Cypher size get failed");
@@ -161,13 +161,13 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	TEST_ASSERT_NOT_NULL(cypher_text);
 
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cypher_text,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 
 	/* Get the decrypted text size */
 	ret = crypto_hal_aes_decrypt(NULL, &decrypthed_length, cypher_text,
-				     cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, decrypthed_length,
@@ -179,7 +179,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	/* Do a decryption */
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -190,7 +190,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	/* Do a decryption with wrong key */
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key2, key2Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key2, key2Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	/* Should not get the original text */
@@ -204,13 +204,13 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "Memcpy Failed");
 
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cypher_text,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -224,7 +224,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -291,7 +291,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 
 	/* Get cypher text length required by sending NULL as cypher_text */
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, NULL,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, cypher_length,
 				      "Cypher size get failed");
@@ -300,13 +300,13 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	TEST_ASSERT_NOT_NULL(cypher_text);
 
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cypher_text,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 
 	/* Get the decrypted text size */
 	ret = crypto_hal_aes_decrypt(NULL, &decrypthed_length, cypher_text,
-				     cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, decrypthed_length,
@@ -318,7 +318,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	/* Do a decryption */
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -328,27 +328,27 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 
 	/* negative test, NULL cleartxt */
 	ret = crypto_hal_aes_encrypt(NULL, clear_txt_size, cypher_text,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(
 	    0, ret, "AES Encryption passed with Clear text NULL");
 
 	/* Negative test, expected return +ve value */
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, NULL,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key1, key1Length);
 	TEST_ASSERT_EQUAL_MESSAGE(
 	    0, ret, "AES Encryption passed with Cipher text NULL");
 
 	/* negative test, 0 cleartextsize */
 	ret = crypto_hal_aes_encrypt(clear_txt, 0, cypher_text, &cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(
 	    0, ret, "AES Encryption passed with Clear text of size 0");
 
 	/* negative test, NULL key */
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cypher_text,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     NULL, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, ret,
 				      "AES Encryption passed with Key NULL");
@@ -370,7 +370,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 
 	/* Get cypher text length required by sending NULL as cypher_text */
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, NULL,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key2, key2Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, cypher_length,
 				      "Cypher size get failed");
@@ -379,13 +379,13 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	TEST_ASSERT_NOT_NULL(cypher_text);
 
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cypher_text,
-				     &cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     &cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key2, key2Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 
 	/* Get the decrypted text size */
 	ret = crypto_hal_aes_decrypt(NULL, &decrypthed_length, cypher_text,
-				     cypher_length, SDO_AES_BLOCK_SIZE, iv1,
+				     cypher_length, FDO_AES_BLOCK_SIZE, iv1,
 				     key2, key2Length);
 
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, decrypthed_length,
@@ -397,7 +397,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	/* Do a decryption */
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key2, key2Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key2, key2Length);
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -412,7 +412,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	/* Do a decryption with wrong key */
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -426,7 +426,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][sdo]")
 	/* Do a decryption with wrong key */
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypthed_length,
 				     cypher_text, cypher_length,
-				     SDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
+				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length);
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 #endif
 

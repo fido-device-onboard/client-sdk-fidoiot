@@ -21,7 +21,7 @@ extern "C" {
 
 #ifdef TARGET_OS_OPTEE
 #include <tee_api.h>
-#define sdo_free(x)                                                            \
+#define fdo_free(x)                                                            \
 	{                                                                      \
 		TEE_Free(x);                                                   \
 		x = NULL;                                                      \
@@ -30,7 +30,7 @@ extern "C" {
 int atoi(char *ptr);
 int isalnum(int c);
 #else
-#define sdo_free(x)                                                            \
+#define fdo_free(x)                                                            \
 	{                                                                      \
 		free(x);                                                       \
 		x = NULL;                                                      \
@@ -48,9 +48,10 @@ typedef enum log_level {
 	LOG_INFO,
 	LOG_DEBUG,
 	LOG_DEBUGNTS, /*Debug No Time Stamp*/
+	LOG_ALL
 } log_level_t;
 
-#define LOG_MAX_LEVEL 3 /* LOG_MAX_LEVEL = LOG_DEBUGNTS */
+#define LOG_MAX_LEVEL 4 /* LOG_MAX_LEVEL = LOG_ALL */
 
 #if defined(TARGET_OS_LINUX) || defined(TARGET_OS_FREERTOS) ||                 \
     defined(TARGET_OS_MBEDOS) || defined(TARGET_OS_OPTEE)
@@ -101,8 +102,8 @@ typedef enum log_level {
    - to be used in strnlen_s()/strcat_s()
    - as a replacement for strlen()/strcat()
 */
-#define SDO_MAX_STR_SIZE BUFF_SIZE_512_BYTES
-#define SDO_DEBUG_BUF_SIZE BUFF_SIZE_2K_BYTES
+#define FDO_MAX_STR_SIZE BUFF_SIZE_512_BYTES
+#define FDO_DEBUG_BUF_SIZE BUFF_SIZE_2K_BYTES
 #define BIT7_MASK 0x80
 /// Test if file exists
 /*!
@@ -169,7 +170,7 @@ int read_buffer_from_file(const char *filename, void *buffer, size_t size);
 /*
  * Allocate a buffer and set its contents to 0 before using it.
  */
-void *sdo_alloc(int size);
+void *fdo_alloc(int size);
 
 /* Print timestamp */
 int print_timestamp(void);

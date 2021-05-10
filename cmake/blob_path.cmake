@@ -17,10 +17,11 @@ if(TARGET_OS MATCHES linux)
     -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
     -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
     -DEPID_PRIVKEY=\"${BLOB_PATH}/data/epidprivkey.dat\"
-    -DSDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
+    -DFDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
     -DMANUFACTURER_IP=\"${BLOB_PATH}/data/manufacturer_ip.bin\"
     -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
     -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
+    -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
     )
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
@@ -48,12 +49,12 @@ if(TARGET_OS MATCHES linux)
           )
       endif()
       client_sdk_compile_definitions(
-        -DSDO_CACERT=\"${BLOB_PATH}/data/test_cacert.bin\"
-        -DSDO_PUBKEY=\"${BLOB_PATH}/data/test_pubkey.dat\"
-        -DSDO_SIGRL=\"${BLOB_PATH}/data/test_sigrl.dat\"
-        -DSDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
-        -DSDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
-        -DSDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
+        -DFDO_CACERT=\"${BLOB_PATH}/data/test_cacert.bin\"
+        -DFDO_PUBKEY=\"${BLOB_PATH}/data/test_pubkey.dat\"
+        -DFDO_SIGRL=\"${BLOB_PATH}/data/test_sigrl.dat\"
+        -DFDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
+        -DFDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
+        -DFDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
         -DRAW_BLOB=\"${BLOB_PATH}/data/raw.blob\"
         )
     else() 				#Not unit tests
@@ -75,12 +76,12 @@ if(TARGET_OS MATCHES linux)
 	endif()
       endif()
       client_sdk_compile_definitions(
-	-DSDO_CACERT=\"${BLOB_PATH}/data/cacert.bin\"
-	-DSDO_PUBKEY=\"${BLOB_PATH}/data/pubkey.dat\"
-	-DSDO_SIGRL=\"${BLOB_PATH}/data/sigrl.dat\"
-	-DSDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
-	-DSDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
-	-DSDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
+	-DFDO_CACERT=\"${BLOB_PATH}/data/cacert.bin\"
+	-DFDO_PUBKEY=\"${BLOB_PATH}/data/pubkey.dat\"
+	-DFDO_SIGRL=\"${BLOB_PATH}/data/sigrl.dat\"
+	-DFDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
+	-DFDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
+	-DFDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
 	-DRAW_BLOB=\"${BLOB_PATH}/data/raw.blob\"
 	)
     endif()
@@ -101,19 +102,20 @@ if(TARGET_OS MATCHES linux)
       -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
       -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
       -DEPID_PRIVKEY=\"${BLOB_PATH}/data/epidprivkey.dat\"
-      -DSDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
+      -DFDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
       -DMANUFACTURER_IP=\"${BLOB_PATH}/data/manufacturer_ip.bin\"
       -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
       -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
+      -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
       )
     if (${unit-test} MATCHES true)
       client_sdk_compile_definitions(
-	-DSDO_CACERT=\"${BLOB_PATH}/data/test_cacert.bin\"
-	-DSDO_PUBKEY=\"${BLOB_PATH}/data/test_pubkey.dat\"
-	-DSDO_SIGRL=\"${BLOB_PATH}/data/test_sigrl.dat\"
-	-DSDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
-	-DSDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
-	-DSDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
+	-DFDO_CACERT=\"${BLOB_PATH}/data/test_cacert.bin\"
+	-DFDO_PUBKEY=\"${BLOB_PATH}/data/test_pubkey.dat\"
+	-DFDO_SIGRL=\"${BLOB_PATH}/data/test_sigrl.dat\"
+	-DFDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
+	-DFDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
+	-DFDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
 	-DRAW_BLOB=\"${BLOB_PATH}/data/raw.blob\"
 	)
       if (${DA_FILE} MATCHES pem)
@@ -126,12 +128,12 @@ if(TARGET_OS MATCHES linux)
   
     else()
       client_sdk_compile_definitions(
-	-DSDO_CACERT=\"${BLOB_PATH}/data/cacert.bin\"
-	-DSDO_PUBKEY=\"${BLOB_PATH}/data/pubkey.dat\"
-	-DSDO_SIGRL=\"${BLOB_PATH}/data/sigrl.dat\"
-	-DSDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
-	-DSDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
-	-DSDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
+	-DFDO_CACERT=\"${BLOB_PATH}/data/cacert.bin\"
+	-DFDO_PUBKEY=\"${BLOB_PATH}/data/pubkey.dat\"
+	-DFDO_SIGRL=\"${BLOB_PATH}/data/sigrl.dat\"
+	-DFDO_CRED_SECURE=\"${BLOB_PATH}/data/Secure.blob\"
+	-DFDO_CRED_MFG=\"${BLOB_PATH}/data/Mfg.blob\"
+	-DFDO_CRED_NORMAL=\"${BLOB_PATH}/data/Normal.blob\"
 	-DRAW_BLOB=\"${BLOB_PATH}/data/raw.blob\")
 
       if (${DA} MATCHES ecdsa256)
@@ -174,4 +176,4 @@ file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
 file(WRITE ${BLOB_PATH}/data/Normal.blob "")
 file(WRITE ${BLOB_PATH}/data/Secure.blob "")
 file(WRITE ${BLOB_PATH}/data/raw.blob "")
-
+file(WRITE ${BLOB_PATH}/data/max_serviceinfo_sz.bin "")

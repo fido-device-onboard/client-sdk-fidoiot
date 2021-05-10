@@ -12,12 +12,12 @@
 #include <mbedtls/x509_csr.h>
 
 #include "util.h"
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "mbedtls_random.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "safe_lib.h"
 #include "ecdsa_privkey.h"
-#include "sdocred.h"
+#include "fdocred.h"
 
 #define CSR_BUFFER_SIZE (4 * 1024)
 
@@ -33,13 +33,13 @@ static int f_rng(void *ctx, unsigned char *buf, size_t size)
  * Device Attestation to RV/OWN server).
  * @return pointer to a byte_array holding a valid device CSR.
  */
-int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
+int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 {
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
 	uint8_t *csr_buf = NULL;
-	sdo_byte_array_t *pem_byte_arr = NULL;
+	fdo_byte_array_t *pem_byte_arr = NULL;
 	size_t pem_buf_size = 0;
 	mbedtls_pk_context pk_ctx;
 	mbedtls_x509write_csr csr_ctx;
@@ -52,7 +52,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	 * The below data should be unique for each CSR.
 	 * What are the mandatory parameters for CSR? Check with credtool team
 	 */
-	const char *attr_list = "C=IN, CN=sdo, L=Blr, O=Intel";
+	const char *attr_list = "C=IN, CN=fdo, L=Blr, O=Intel";
 
 	/* Initialize the key context for CSR */
 	mbedtls_pk_init(&pk_ctx);
@@ -117,7 +117,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	/* Initialize the mbedTLS CSR context */
 	mbedtls_x509write_csr_init(&csr_ctx);
 
-	/* Set the subject name (sdo) and other information (C=xx, ...) */
+	/* Set the subject name (fdo) and other information (C=xx, ...) */
 	ret = mbedtls_x509write_csr_set_subject_name(&csr_ctx, attr_list);
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to parse certificate attribute list\n");
@@ -129,7 +129,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 	mbedtls_x509write_csr_set_md_alg(&csr_ctx, md_algo);
 
 	/* TODO: What should be the max size of buf */
-	csr_buf = sdo_alloc(CSR_BUFFER_SIZE);
+	csr_buf = fdo_alloc(CSR_BUFFER_SIZE);
 	if (!csr_buf) {
 		LOG(LOG_ERROR, "Failed to allocate memory for CSR\n");
 		goto csr_err;
@@ -145,7 +145,7 @@ int32_t crypto_hal_get_device_csr(sdo_byte_array_t **csr)
 
 	/* Allocate CSR byte array */
 	pem_buf_size = strnlen_s((const char *)csr_buf, CSR_BUFFER_SIZE);
-	pem_byte_arr = sdo_byte_array_alloc(pem_buf_size);
+	pem_byte_arr = fdo_byte_array_alloc(pem_buf_size);
 	if (!pem_byte_arr) {
 		LOG(LOG_ERROR, "Out of memory for CSR byte array\n");
 		goto csr_err;
@@ -166,14 +166,14 @@ csr_err:
 			LOG(LOG_ERROR, "Failed to clear ecdsa privkey\n");
 			ret = -1;
 		}
-		sdo_free(privkey);
+		fdo_free(privkey);
 	}
 	if (pem_byte_arr && ret) {
-		sdo_byte_array_free(pem_byte_arr);
+		fdo_byte_array_free(pem_byte_arr);
 		pem_byte_arr = NULL;
 	}
 	if (csr_buf)
-		sdo_free(csr_buf);
+		fdo_free(csr_buf);
 	mbedtls_x509write_csr_free(&csr_ctx);
 key_err:
 	mbedtls_pk_free(&pk_ctx);

@@ -9,7 +9,7 @@
  * openssl library.
  */
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "platform_utils.h"
@@ -19,7 +19,7 @@
 #include "safe_lib.h"
 
 /**
- * sdo_crypto_aes_gcm_encrypt -  Perform Authenticated AES encryption on the
+ * fdo_crypto_aes_gcm_encrypt -  Perform Authenticated AES encryption on the
  * input plain text.
  *
  * @param plain_text
@@ -45,7 +45,7 @@
  * @return ret
  *        return cipher_length in bytes during success and -1 during any error.
  */
-int32_t sdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
+int32_t fdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
 				   uint32_t plain_text_length,
 				   uint8_t *cipher_text,
 				   uint32_t cipher_text_length,
@@ -139,7 +139,7 @@ end:
 }
 
 /**
- * sdo_crypto_aes_gcm_decrypt -  Perform Authenticated AES decryption on the
+ * fdo_crypto_aes_gcm_decrypt -  Perform Authenticated AES decryption on the
  * input cipher text.
  *
  * @param clear_text
@@ -166,7 +166,7 @@ end:
  *        return clear_text_length in bytes during success and -1 during any
  * error.
  */
-int32_t sdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
+int32_t fdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
 				   uint32_t clear_text_length,
 				   const uint8_t *cipher_text,
 				   uint32_t cipher_text_length,

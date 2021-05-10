@@ -19,7 +19,7 @@
 #include "mbedtls/rsa.h"
 #include "safe_lib.h"
 
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "util.h"
 #include "stdlib.h"
 
@@ -28,7 +28,7 @@
 /**
  * crypto_hal_rsa_encrypt -  Encrypt the block passed using the public key
  * passed, the key must be RSA
- * @param hash_type - Hash type (SDO_CRYPTO_HASH_TYPE_SHA_256)
+ * @param hash_type - Hash type (FDO_CRYPTO_HASH_TYPE_SHA_256)
  * @param key_encoding - RSA Key encoding typee.
  * @param key_algorithm - RSA public key algorithm.
  * @param clear_text - Input text to be encrypted.
@@ -66,8 +66,8 @@ int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
 	LOG(LOG_DEBUG, "rsa_encrypt starting.\n");
 
 	/* Make sure we have a correct type of key. */
-	if (key_encoding != SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
-	    key_algorithm != SDO_CRYPTO_PUB_KEY_ALGO_RSA) {
+	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP ||
+	    key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_RSA) {
 		LOG(LOG_ERROR, "Incorrect key type.\n");
 		return -1;
 	}
@@ -121,15 +121,15 @@ int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
 	// by default OEAP is selcted for PKCS_V21
 	mbedtls_rsa_init(&rsa, MBEDTLS_RSA_PKCS_V21, 0);
 	switch (hash_type) {
-	case SDO_PK_HASH_SHA1:
+	case FDO_PK_HASH_SHA1:
 		mbedtls_rsa_set_padding(&rsa, MBEDTLS_RSA_PKCS_V21,
 					MBEDTLS_MD_SHA1);
 		break;
-	case SDO_PK_HASH_SHA256:
+	case FDO_PK_HASH_SHA256:
 		mbedtls_rsa_set_padding(&rsa, MBEDTLS_RSA_PKCS_V21,
 					MBEDTLS_MD_SHA256);
 		break;
-	case SDO_PK_HASH_SHA384:
+	case FDO_PK_HASH_SHA384:
 		mbedtls_rsa_set_padding(&rsa, MBEDTLS_RSA_PKCS_V21,
 					MBEDTLS_MD_SHA384);
 		break;

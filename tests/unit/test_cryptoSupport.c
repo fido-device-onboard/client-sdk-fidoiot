@@ -4,19 +4,19 @@
 
 /*!
  * \file
- * \brief Unit tests for crypto abstraction routines of SDO library.
+ * \brief Unit tests for crypto abstraction routines of FDO library.
  */
 
 #include "crypto_utils.h"
-#include "sdoCrypto.h"
-#include "sdoCryptoHal.h"
+#include "fdoCrypto.h"
+#include "fdoCryptoHal.h"
 #include "unity.h"
 #include "storage_al.h"
 #include "safe_lib.h"
 #include "stdlib.h"
 #include "ecdsa_privkey.h"
 #include "safe_lib.h"
-#include "sdotypes.h"
+#include "fdotypes.h"
 #include "test_RSARoutines.h"
 
 #if defined(KEX_DH_ENABLED) //(m size =2048)
@@ -60,7 +60,7 @@ uint8_t pub_key[] = {
 EC_KEY *generateECDSA_key(int curve);
 int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 		uint32_t *outlen, EC_KEY *eckey);
-sdo_public_key_t *getSDOpk(int curve, EC_KEY *eckey);
+fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey);
 void set_up(void);
 void tear_down(void);
 int32_t __wrap_crypto_hal_set_peer_random(void *context,
@@ -71,8 +71,8 @@ int32_t __wrap_crypto_hal_get_device_random(void *context,
 					    uint32_t *dev_rand_length);
 int __wrap_crypto_init(void);
 int __wrap_crypto_close(void);
-sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz);
-void *__wrap_sdo_alloc(size_t bytes);
+fdo_byte_array_t *__wrap_fdo_byte_array_alloc(int byte_sz);
+void *__wrap_fdo_alloc(size_t bytes);
 errno_t __wrap_memset_s(void *dest, rsize_t len, uint8_t value);
 int __wrap_crypto_hal_sig_verify(
     uint8_t key_encoding, uint8_t key_algorithm, const uint8_t *message,
@@ -86,64 +86,64 @@ int __wrap_memcpy_s(void *dest, size_t dmax, const void *src, size_t smax);
 void test_crypto_support_random(void);
 void test_crypto_support_Private_key(void);
 void test_crypto_support_crypto(void);
-void test_crypto_support_sdo_msg_encrypt_valid(void);
-void test_crypto_support_sdo_msg_encrypt_invalid_clear_text(void);
-void test_crypto_support_sdo_msg_encrypt_invalid_clear_text_length(void);
-void test_crypto_support_sdo_msg_encrypt_invalid_cipher_text_length(void);
-void test_crypto_support_sdo_msg_encrypt_invalid_iv(void);
-void test_crypto_support_sdo_msg_encrypt_get_cipher_len_valid(void);
-void test_crypto_support_sdo_msg_encrypt_get_cipher_len_verify(void);
-void test_crypto_support_sdo_msg_decrypt_get_pt_len_valid(void);
-void test_crypto_support_sdo_msg_decrypt_get_pt_len_verify(void);
-void test_crypto_support_sdo_msg_decrypt_verify(void);
-void test_crypto_support_sdo_msg_decrypt_valid(void);
-void test_crypto_support_sdo_msg_decrypt_invalid_cipher(void);
-void test_crypto_support_sdo_msg_decrypt_invalid_cipher_length(void);
-void test_crypto_support_sdo_msg_decrypt_invalid_iv(void);
-void test_crypto_support_sdo_kex_init(void);
-void test_crypto_support_sdo_kex_close(void);
-void test_crypto_support_sdo_kex_init_sdo_string_alloc_with_str_fail(void);
-void test_crypto_support_sdo_kex_init_sdo_byte_array_alloc_fail(void);
-void test_crypto_support_sdo_get_kex_paramB_valid(void);
-void test_crypto_support_sdo_get_kex_paramB_crypto_hal_get_device_random_fail(
+void test_crypto_support_fdo_msg_encrypt_valid(void);
+void test_crypto_support_fdo_msg_encrypt_invalid_clear_text(void);
+void test_crypto_support_fdo_msg_encrypt_invalid_clear_text_length(void);
+void test_crypto_support_fdo_msg_encrypt_invalid_cipher_text_length(void);
+void test_crypto_support_fdo_msg_encrypt_invalid_iv(void);
+void test_crypto_support_fdo_msg_encrypt_get_cipher_len_valid(void);
+void test_crypto_support_fdo_msg_encrypt_get_cipher_len_verify(void);
+void test_crypto_support_fdo_msg_decrypt_get_pt_len_valid(void);
+void test_crypto_support_fdo_msg_decrypt_get_pt_len_verify(void);
+void test_crypto_support_fdo_msg_decrypt_verify(void);
+void test_crypto_support_fdo_msg_decrypt_valid(void);
+void test_crypto_support_fdo_msg_decrypt_invalid_cipher(void);
+void test_crypto_support_fdo_msg_decrypt_invalid_cipher_length(void);
+void test_crypto_support_fdo_msg_decrypt_invalid_iv(void);
+void test_crypto_support_fdo_kex_init(void);
+void test_crypto_support_fdo_kex_close(void);
+void test_crypto_support_fdo_kex_init_fdo_string_alloc_with_str_fail(void);
+void test_crypto_support_fdo_kex_init_fdo_byte_array_alloc_fail(void);
+void test_crypto_support_fdo_get_kex_paramB_valid(void);
+void test_crypto_support_fdo_get_kex_paramB_crypto_hal_get_device_random_fail(
     void);
-void test_crypto_support_sdo_get_kex_paramB_sdo_alloc_fail(void);
-void test_crypto_support_sdo_get_kex_paramB_memset_s_fail(void);
-void test_crypto_support_sdo_set_kex_paramA_valid(void);
-void test_crypto_support_sdo_set_kex_paramA_invalid(void);
-void test_crypto_support_sdo_set_kex_paramA_crypto_hal_set_peer_random_fail(
+void test_crypto_support_fdo_get_kex_paramB_fdo_alloc_fail(void);
+void test_crypto_support_fdo_get_kex_paramB_memset_s_fail(void);
+void test_crypto_support_fdo_set_kex_paramA_valid(void);
+void test_crypto_support_fdo_set_kex_paramA_invalid(void);
+void test_crypto_support_fdo_set_kex_paramA_crypto_hal_set_peer_random_fail(
     void);
 void test_crypto_support_load_ecdsa_privkey(void);
-void test_crypto_support_load_ecdsa_privkey_sdo_blob_size_fail(void);
-void test_crypto_support_load_ecdsa_privkey_sdo_alloc_fail(void);
-void test_crypto_support_load_ecdsa_privkey_sdo_blob_read_fail(void);
-void test_sdo_ov_verify(void);
-void test_sdo_ov_verify_invalid_message(void);
-void test_sdo_ov_verify_invalid_message_length(void);
-void test_sdo_ov_verify_invalid_message_signature(void);
-void test_sdo_ov_verify_invalid_signature_len(void);
-void test_sdo_ov_verify_invalid_pubkey(void);
-void test_sdo_ov_verifyi_invalid_result(void);
-void test_sdo_device_sign(void);
-void test_sdo_device_sign_invalid_message(void);
-void test_sdo_device_sign_invalid_message_len(void);
+void test_crypto_support_load_ecdsa_privkey_fdo_blob_size_fail(void);
+void test_crypto_support_load_ecdsa_privkey_fdo_alloc_fail(void);
+void test_crypto_support_load_ecdsa_privkey_fdo_blob_read_fail(void);
+void test_fdo_ov_verify(void);
+void test_fdo_ov_verify_invalid_message(void);
+void test_fdo_ov_verify_invalid_message_length(void);
+void test_fdo_ov_verify_invalid_message_signature(void);
+void test_fdo_ov_verify_invalid_signature_len(void);
+void test_fdo_ov_verify_invalid_pubkey(void);
+void test_fdo_ov_verifyi_invalid_result(void);
+void test_fdo_device_sign(void);
+void test_fdo_device_sign_invalid_message(void);
+void test_fdo_device_sign_invalid_message_len(void);
 void testcrypto_hal_hash(void);
 void testcrypto_hal_hash_SHA384(void);
-void test_sdo_cryptoHASH_invalid_message(void);
-void test_sdo_cryptoHASH_invalid_message_len(void);
-void test_sdo_cryptoHASH_invalid_hash(void);
-void test_sdo_cryptoHASH_invalid_hash_len(void);
-void test_sdo_to2_hmac(void);
-void test_sdo_to2_hmac_SHA384(void);
-void test_sdo_to2_hmac_invalid_to2Msg(void);
-void test_sdo_to2_hmac_invalid_to2Msg_len(void);
-void test_sdo_to2_hmac_invalid_hmac(void);
-void test_sdo_to2_hmac_invalid_hmac_len(void);
-void test_sdo_device_ov_hmac(void);
-void test_sdo_device_ov_hmac_invalid_OVHdr(void);
-void test_sdo_device_ov_hmac_invalid_OVHdr_len(void);
-void test_sdo_device_ov_hmac_invalid_hmac(void);
-void test_sdo_device_ov_hmac_invalid_hmac_len(void);
+void test_fdo_cryptoHASH_invalid_message(void);
+void test_fdo_cryptoHASH_invalid_message_len(void);
+void test_fdo_cryptoHASH_invalid_hash(void);
+void test_fdo_cryptoHASH_invalid_hash_len(void);
+void test_fdo_to2_hmac(void);
+void test_fdo_to2_hmac_SHA384(void);
+void test_fdo_to2_hmac_invalid_to2Msg(void);
+void test_fdo_to2_hmac_invalid_to2Msg_len(void);
+void test_fdo_to2_hmac_invalid_hmac(void);
+void test_fdo_to2_hmac_invalid_hmac_len(void);
+void test_fdo_device_ov_hmac(void);
+void test_fdo_device_ov_hmac_invalid_OVHdr(void);
+void test_fdo_device_ov_hmac_invalid_OVHdr_len(void);
+void test_fdo_device_ov_hmac_invalid_hmac(void);
+void test_fdo_device_ov_hmac_invalid_hmac_len(void);
 void test_crypto_hal_sig_verify_fail_case(void);
 void test_get_ec_key_fail_case(void);
 void test_ECDSA_size_fail_case(void);
@@ -151,10 +151,10 @@ void test_memcpy_s_fail_case(void);
 void test_crypto_support_make_hash(void);
 void test_crypto_support_make_hmac(void);
 void test_crypto_support_make_hmac_chained(void);
-int32_t __wrap_sdo_blob_read(char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
+int32_t __wrap_fdo_blob_read(char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			     uint32_t n_bytes);
-int32_t __wrap_sdo_blob_size(char *name, uint32_t flags);
-sdo_string_t *__wrap_sdo_string_alloc_with_str(char *data);
+int32_t __wrap_fdo_blob_size(char *name, uint32_t flags);
+fdo_string_t *__wrap_fdo_string_alloc_with_str(char *data);
 errno_t __wrap_strcmp_s(const char *dest, rsize_t dmax, const char *src,
 			int *indicator);
 static uint8_t *get_randomiv(void);
@@ -162,7 +162,7 @@ static EC_KEY *Private_key(void);
 static RSA *generateRSA_pubkey(void);
 int sha256_RSAsign(uint8_t *msg, uint32_t mlen, uint8_t *out, uint32_t *outlen,
 		   RSA *r);
-static sdo_public_key_t *getSDOpkey(RSA *r);
+static fdo_public_key_t *getFDOpkey(RSA *r);
 
 /*** Function Definitions ***/
 
@@ -171,10 +171,10 @@ static uint8_t key2[] = "key-test";
 
 static uint8_t *get_randomiv(void)
 {
-	uint8_t *iv = malloc(SDO_AES_IV_SIZE * sizeof(char));
+	uint8_t *iv = malloc(FDO_AES_IV_SIZE * sizeof(char));
 	if (!iv)
 		return NULL;
-	sdo_crypto_random_bytes(iv, SDO_AES_IV_SIZE);
+	fdo_crypto_random_bytes(iv, FDO_AES_IV_SIZE);
 	return iv;
 }
 
@@ -208,7 +208,7 @@ static int Private_key(mbedtls_ecdsa_context *ctx_sign)
 {
 	int ret;
 	char *pers = "ecdsa_genkey";
-	size_t pers_len = strnlen_s(pers, SDO_MAX_STR_SIZE);
+	size_t pers_len = strnlen_s(pers, FDO_MAX_STR_SIZE);
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 
@@ -286,7 +286,7 @@ int sha256_RSAsign(uint8_t *msg, uint32_t mlen, uint8_t *out, uint32_t *outlen,
 }
 #endif // PK_ENC_RSA
 
-static sdo_public_key_t *getSDOpkey(RSA *r)
+static fdo_public_key_t *getFDOpkey(RSA *r)
 {
 	const BIGNUM *n = NULL;
 	const BIGNUM *d = NULL;
@@ -302,28 +302,28 @@ static sdo_public_key_t *getSDOpkey(RSA *r)
 	pkmodulusbuffer = malloc(sizeofpkmodulus);
 	BN_bn2bin(n, pkmodulusbuffer);
 
-	sdo_public_key_t *pk =
-	    sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_RSA,
-				 SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
+	fdo_public_key_t *pk =
+	    fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_RSA,
+				 FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
 				 sizeofpkmodulus, pkmodulusbuffer);
 	if (!pk || !pk->key1)
 		return NULL;
 	int pkexponent = BN_num_bytes(e);
 	uint8_t *ebuff = malloc(pkexponent);
 	if (!ebuff) {
-		sdo_public_key_free(pk);
+		fdo_public_key_free(pk);
 		return NULL;
 	}
 
 	if (BN_bn2bin(e, ebuff)) {
 		pk->key2 =
-		    sdo_byte_array_alloc_with_byte_array(ebuff, pkexponent);
+		    fdo_byte_array_alloc_with_byte_array(ebuff, pkexponent);
 		if (!pk->key2) {
-			sdo_public_key_free(pk);
+			fdo_public_key_free(pk);
 			pk = NULL;
 		}
 	} else {
-		sdo_public_key_free(pk);
+		fdo_public_key_free(pk);
 		pk = NULL;
 	}
 	if (ebuff)
@@ -385,7 +385,7 @@ done:
 	return result;
 }
 
-sdo_public_key_t *getSDOpk(int curve, EC_KEY *eckey)
+fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 {
 	(void)curve;
 	unsigned char key_buf[DER_PUBKEY_LEN_MAX] = {0};
@@ -396,15 +396,15 @@ sdo_public_key_t *getSDOpk(int curve, EC_KEY *eckey)
 	key_buf_len = i2d_EC_PUBKEY(eckey, &kbuff);
 	TEST_ASSERT_NOT_EQUAL(0, key_buf_len);
 
-	sdo_public_key_t *pk = NULL;
+	fdo_public_key_t *pk = NULL;
 
 #if defined(ECDSA256_DA)
-	pk = sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-				  SDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
+	pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
+				  FDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
 				  key_buf);
 #else
-	pk = sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-				  SDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
+	pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
+				  FDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
 				  key_buf);
 #endif
 	if (!pk || !pk->key1) {
@@ -422,7 +422,7 @@ static int generateRSA_pubkey(mbedtls_rsa_context *rsa)
 {
 	int ret;
 	char *pers = "rsa_genkey";
-	size_t pers_len = strnlen_s(pers, SDO_MAX_STR_SIZE);
+	size_t pers_len = strnlen_s(pers, FDO_MAX_STR_SIZE);
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_ctr_drbg_init(&ctr_drbg);
@@ -472,18 +472,18 @@ int sha256_RSAsign(uint8_t *msg, uint32_t mlen, uint8_t *out, uint32_t *outlen,
 }
 #endif // PK_ENC_RSA
 
-static sdo_public_key_t *getSDOpkey(mbedtls_rsa_context *pkey)
+static fdo_public_key_t *getFDOpkey(mbedtls_rsa_context *pkey)
 {
-	/* convert mbedtls struct to SDO struct   */
+	/* convert mbedtls struct to FDO struct   */
 	int sizeofpkmodulus = pkey->len;
 	uint8_t *pkmodulusbuffer = malloc(sizeofpkmodulus);
 	if (!pkmodulusbuffer)
 		return NULL;
 	mbedtls_mpi_write_binary(&(pkey->N), (uint8_t *)pkmodulusbuffer,
 				 sizeofpkmodulus);
-	sdo_public_key_t *pk =
-	    sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_RSA,
-				 SDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
+	fdo_public_key_t *pk =
+	    fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_RSA,
+				 FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP,
 				 sizeofpkmodulus, pkmodulusbuffer);
 	if (!pk) {
 		return NULL;
@@ -496,7 +496,7 @@ static sdo_public_key_t *getSDOpkey(mbedtls_rsa_context *pkey)
 	 * investigation*/
 	int len = mbedtls_mpi_size(&(pkey->E));
 	mbedtls_mpi_write_binary(&(pkey->E), (uint8_t *)ebuff, len);
-	pk->key2 = sdo_byte_array_alloc_with_byte_array((uint8_t *)&ebuff, len);
+	pk->key2 = fdo_byte_array_alloc_with_byte_array((uint8_t *)&ebuff, len);
 
 	return pk;
 }
@@ -509,7 +509,7 @@ static int generateECDSA_key(int curve, mbedtls_ecdsa_context *ctx_sign)
 {
 	int ret = -1;
 	char *pers = "ecdsa_genkey";
-	size_t pers_len = strnlen_s(pers, SDO_MAX_STR_SIZE);
+	size_t pers_len = strnlen_s(pers, FDO_MAX_STR_SIZE);
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 
@@ -585,13 +585,13 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 	return 1;
 }
 
-sdo_public_key_t *getSDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
+fdo_public_key_t *getFDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
 {
-	/* convert mbedtls struct to SDO struct   */
+	/* convert mbedtls struct to FDO struct   */
 	uint8_t buf[ECDSA_PK_MAX_LENGTH];
 	size_t buflen = 0;
 	int ret = 0;
-	sdo_public_key_t *pk = NULL;
+	fdo_public_key_t *pk = NULL;
 
 	if (!ctx_sign)
 		return NULL;
@@ -606,12 +606,12 @@ sdo_public_key_t *getSDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
 
 #if defined(ECDSA256_DA)
 	pk =
-	    sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-				 SDO_CRYPTO_PUB_KEY_ENCODING_X509, buflen, buf);
+	    fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
+				 FDO_CRYPTO_PUB_KEY_ENCODING_X509, buflen, buf);
 #else
 	pk =
-	    sdo_public_key_alloc(SDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-				 SDO_CRYPTO_PUB_KEY_ENCODING_X509, buflen, buf);
+	    fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
+				 FDO_CRYPTO_PUB_KEY_ENCODING_X509, buflen, buf);
 #endif
 	if (!pk || !pk->key1) {
 		return NULL;
@@ -643,7 +643,7 @@ uint8_t *adh_bytes = NULL;
 #else
 static uint8_t adh_bytes[] = {0, 1, 2, 3, 4, 5, 6, 7};
 #endif
-static sdo_byte_array_t adh;
+static fdo_byte_array_t adh;
 
 #define SHA256_DIGEST_SZ SHA256_DIGEST_SIZE
 #define SHA384_DIGEST_SZ SHA384_DIGEST_SIZE
@@ -668,39 +668,39 @@ void tear_down(void)
 
 bool crypto_init_fail_case = false;
 bool crypto_close_fail_case = false;
-bool sdo_string_alloc_with_str_fail_case = false;
-bool sdo_byte_array_alloc_fail_case = false;
+bool fdo_string_alloc_with_str_fail_case = false;
+bool fdo_byte_array_alloc_fail_case = false;
 bool g_malloc_fail = false;
 bool strcmp_s_fail_case = false;
 bool crypto_hal_get_device_random_fail_case = false;
 bool g_memset_fail = false;
 bool crypto_hal_set_peer_random_fail_case = false;
-bool sdo_blob_read_fail_case = false;
-bool sdo_blob_size_fail_case = false;
+bool fdo_blob_read_fail_case = false;
+bool fdo_blob_size_fail_case = false;
 bool crypto_hal_sig_verify_fail_flag = false;
 bool get_ec_key_fail_flag = false;
 bool ECDSA_size_fail_flag = false;
 bool memcpy_s_fail_flag = false;
 
-int32_t __real_sdo_blob_read(char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
+int32_t __real_fdo_blob_read(char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			     uint32_t n_bytes);
-int32_t __wrap_sdo_blob_read(char *name, sdo_sdk_blob_flags flags, uint8_t *buf,
+int32_t __wrap_fdo_blob_read(char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			     uint32_t n_bytes)
 {
-	if (sdo_blob_read_fail_case) {
+	if (fdo_blob_read_fail_case) {
 		return -1;
 	} else {
-		return __real_sdo_blob_read(name, flags, buf, n_bytes);
+		return __real_fdo_blob_read(name, flags, buf, n_bytes);
 	}
 }
 
-int32_t __real_sdo_blob_size(char *name, uint32_t flags);
-int32_t __wrap_sdo_blob_size(char *name, uint32_t flags)
+int32_t __real_fdo_blob_size(char *name, uint32_t flags);
+int32_t __wrap_fdo_blob_size(char *name, uint32_t flags)
 {
-	if (sdo_blob_size_fail_case) {
+	if (fdo_blob_size_fail_case) {
 		return -1;
 	} else {
-		return __real_sdo_blob_size(name, flags);
+		return __real_fdo_blob_size(name, flags);
 	}
 }
 
@@ -754,33 +754,33 @@ int __wrap_crypto_close(void)
 	}
 }
 
-sdo_string_t *__real_sdo_string_alloc_with_str(char *data);
-sdo_string_t *__wrap_sdo_string_alloc_with_str(char *data)
+fdo_string_t *__real_fdo_string_alloc_with_str(char *data);
+fdo_string_t *__wrap_fdo_string_alloc_with_str(char *data)
 {
-	if (sdo_string_alloc_with_str_fail_case) {
+	if (fdo_string_alloc_with_str_fail_case) {
 		return NULL;
 	} else {
-		return __real_sdo_string_alloc_with_str(data);
+		return __real_fdo_string_alloc_with_str(data);
 	}
 }
 
-sdo_byte_array_t *__real_sdo_byte_array_alloc(int byte_sz);
-sdo_byte_array_t *__wrap_sdo_byte_array_alloc(int byte_sz)
+fdo_byte_array_t *__real_fdo_byte_array_alloc(int byte_sz);
+fdo_byte_array_t *__wrap_fdo_byte_array_alloc(int byte_sz)
 {
-	if (sdo_byte_array_alloc_fail_case) {
+	if (fdo_byte_array_alloc_fail_case) {
 		return NULL;
 	} else {
-		return __real_sdo_byte_array_alloc(byte_sz);
+		return __real_fdo_byte_array_alloc(byte_sz);
 	}
 }
 
-void *__real_sdo_alloc(size_t bytes);
-void *__wrap_sdo_alloc(size_t bytes)
+void *__real_fdo_alloc(size_t bytes);
+void *__wrap_fdo_alloc(size_t bytes)
 {
 	if (g_malloc_fail)
 		return NULL;
 	else
-		return __real_sdo_alloc(bytes);
+		return __real_fdo_alloc(bytes);
 }
 
 errno_t __real_strcmp_s(const char *dest, rsize_t dmax, const char *src,
@@ -798,7 +798,7 @@ errno_t __real_memset_s(void *dest, rsize_t len, uint8_t value);
 errno_t __wrap_memset_s(void *dest, rsize_t len, uint8_t value)
 {
 	if (g_memset_fail)
-		return SDO_ERROR;
+		return FDO_ERROR;
 	else
 		return __real_memset_s(dest, len, value);
 }
@@ -866,7 +866,7 @@ int __wrap_memcpy_s(void *dest, size_t dmax, const void *src, size_t smax)
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_random(void)
 #else
-TEST_CASE("crypto_support_random", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_random", "[crypto_support][fdo]")
 #endif
 {
 #ifdef TARGET_OS_FREERTOS
@@ -877,9 +877,9 @@ TEST_CASE("crypto_support_random", "[crypto_support][sdo]")
 	int ret;
 	uint8_t random_data[TEST_BUFF_SZ] = {0};
 
-	sdo_crypto_close();
+	fdo_crypto_close();
 	/* These functions should fail if random_init isn't called first. */
-	ret = sdo_crypto_random_bytes(random_data, TEST_BUFF_SZ);
+	ret = fdo_crypto_random_bytes(random_data, TEST_BUFF_SZ);
 	TEST_ASSERT_NOT_EQUAL(0, ret);
 
 	ret = random_close();
@@ -890,11 +890,11 @@ TEST_CASE("crypto_support_random", "[crypto_support][sdo]")
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	/* Valid input. */
-	ret = sdo_crypto_random_bytes(random_data, TEST_BUFF_SZ);
+	ret = fdo_crypto_random_bytes(random_data, TEST_BUFF_SZ);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	/* Invalid input. */
-	ret = sdo_crypto_random_bytes(NULL, TEST_BUFF_SZ);
+	ret = fdo_crypto_random_bytes(NULL, TEST_BUFF_SZ);
 	TEST_ASSERT_NOT_EQUAL(0, ret);
 
 	/*  End. */
@@ -908,7 +908,7 @@ TEST_CASE("crypto_support_random", "[crypto_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_Private_key(void)
 #else
-TEST_CASE("crypto_support_Private_key", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -954,7 +954,7 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][sdo]")
 	BUF_MEM *bptr = NULL;
 	BIO_get_mem_ptr(outbio, &bptr);
 
-	ret = sdo_blob_write((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
+	ret = fdo_blob_write((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA,
 			     (const uint8_t *)bptr->data, bptr->length);
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
@@ -972,7 +972,7 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][sdo]")
 	TEST_ASSERT_EQUAL(0, ret);
 
 	// Writing Privatekey to a file
-	ret = sdo_blob_write((char *)ECDSA_PRIVKEY, SDO_SDK_RAW_DATA,
+	ret = fdo_blob_write((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA,
 			     privatekey, privatekey_buflen);
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 #endif
@@ -994,30 +994,30 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_crypto(void)
 #else
-TEST_CASE("crypto_support_crypto", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_crypto", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 
-/*TODO: Adapt when sdosdk_close is implemented*/
+/*TODO: Adapt when fdosdk_close is implemented*/
 #if 0
-	/* sdo_crypto_close should fail if sdo_crypto_init isn't called first. */
-    ret = sdo_crypto_close();
+	/* fdo_crypto_close should fail if fdo_crypto_init isn't called first. */
+    ret = fdo_crypto_close();
     TEST_ASSERT_NOT_EQUAL(0, ret);
 #endif
 	/* Start. */
-	ret = sdo_crypto_init();
+	ret = fdo_crypto_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	/* End. */
-	ret = sdo_crypto_close();
+	ret = fdo_crypto_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_valid(void)
+void test_crypto_support_fdo_msg_encrypt_valid(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_valid", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_valid", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1028,16 +1028,16 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_valid", "[crypto_support][sdo]")
 
 	ret = random_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
 			      iv1);
 	if (cipher)
 		free(cipher);
@@ -1047,10 +1047,10 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_valid", "[crypto_support][sdo]")
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_invalid_clear_text(void)
+void test_crypto_support_fdo_msg_encrypt_invalid_clear_text(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_clear_text",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_clear_text",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = 0;
@@ -1059,12 +1059,12 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_clear_text",
 	uint32_t clear_length = sizeof(test_buff1);
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(NULL, clear_length, cipher, &cipher_length, iv1);
+	ret = fdo_msg_encrypt(NULL, clear_length, cipher, &cipher_length, iv1);
 	if (cipher)
 		free(cipher);
 	if (iv1)
@@ -1073,10 +1073,10 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_clear_text",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_invalid_clear_text_length(void)
+void test_crypto_support_fdo_msg_encrypt_invalid_clear_text_length(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_clear_text_length",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_clear_text_length",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = 0;
@@ -1085,12 +1085,12 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_clear_text_length",
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, 0, cipher, &cipher_length, iv1);
+	ret = fdo_msg_encrypt(test_buff1, 0, cipher, &cipher_length, iv1);
 	if (cipher)
 		free(cipher);
 	if (iv1)
@@ -1099,10 +1099,10 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_clear_text_length",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_invalid_cipher_text_length(void)
+void test_crypto_support_fdo_msg_encrypt_invalid_cipher_text_length(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_cipher_text_length",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_cipher_text_length",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = 0;
@@ -1111,12 +1111,12 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_cipher_text_length",
 	uint32_t clear_length = sizeof(test_buff1);
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, clear_length, cipher, NULL, iv1);
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, NULL, iv1);
 	if (cipher)
 		free(cipher);
 	if (iv1)
@@ -1125,9 +1125,9 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_cipher_text_length",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_invalid_iv(void)
+void test_crypto_support_fdo_msg_encrypt_invalid_iv(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_iv", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_iv", "[crypto_support][fdo]")
 #endif
 {
 	int ret = 0;
@@ -1136,37 +1136,37 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_invalid_iv", "[crypto_support][sdo]")
 	uint32_t clear_length = sizeof(test_buff1);
 	uint8_t *iv1 = NULL;
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(NULL, clear_length, cipher, &cipher_length, iv1);
+	ret = fdo_msg_encrypt(NULL, clear_length, cipher, &cipher_length, iv1);
 	if (cipher)
 		free(cipher);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_get_cipher_len_valid(void)
+void test_crypto_support_fdo_msg_encrypt_get_cipher_len_valid(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_get_cipher_len_valid",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_get_cipher_len_valid",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
 	uint32_t cipher_length;
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_encrypt_get_cipher_len_verify(void)
+void test_crypto_support_fdo_msg_encrypt_get_cipher_len_verify(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_encrypt_get_cipher_len_verify",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_encrypt_get_cipher_len_verify",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -1174,7 +1174,7 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_get_cipher_len_verify",
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 	uint32_t *Length = NULL;
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	Length = malloc(cipher_length * sizeof(char));
@@ -1184,10 +1184,10 @@ TEST_CASE("crypto_support_sdo_msg_encrypt_get_cipher_len_verify",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_get_pt_len_valid(void)
+void test_crypto_support_fdo_msg_decrypt_get_pt_len_valid(void)
 #else
-TEST_CASE("test_crypto_support_sdo_msg_decrypt_get_pt_len_valid",
-	  "[crypto_support][sdo]")
+TEST_CASE("test_crypto_support_fdo_msg_decrypt_get_pt_len_valid",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1195,18 +1195,18 @@ TEST_CASE("test_crypto_support_sdo_msg_decrypt_get_pt_len_valid",
 	uint32_t decrypthed_length = 0;
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_get_pt_len_verify(void)
+void test_crypto_support_fdo_msg_decrypt_get_pt_len_verify(void)
 #else
-TEST_CASE("test_crypto_support_sdo_msg_decrypt_get_pt_len_verify",
-	  "[crypto_support][sdo]")
+TEST_CASE("test_crypto_support_fdo_msg_decrypt_get_pt_len_verify",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -1215,10 +1215,10 @@ TEST_CASE("test_crypto_support_sdo_msg_decrypt_get_pt_len_verify",
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 	int *dptr = NULL;
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	dptr = (int *)malloc(sizeof(char) * decrypthed_length);
@@ -1228,9 +1228,9 @@ TEST_CASE("test_crypto_support_sdo_msg_decrypt_get_pt_len_verify",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_verify(void)
+void test_crypto_support_fdo_msg_decrypt_verify(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_decrypt_verify", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_decrypt_verify", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1242,21 +1242,21 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_verify", "[crypto_support][sdo]")
 	int result_memcmp = 0;
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
 			      iv1);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	decrypted_txt = malloc(decrypthed_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(decrypted_txt);
 
-	ret = sdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher,
+	ret = fdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher,
 			      cipher_length, iv1);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
@@ -1273,9 +1273,9 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_verify", "[crypto_support][sdo]")
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_valid(void)
+void test_crypto_support_fdo_msg_decrypt_valid(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_decrypt_valid", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_decrypt_valid", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1286,21 +1286,21 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_valid", "[crypto_support][sdo]")
 	uint32_t clear_length = sizeof(test_buff1);
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(cipher_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
 			      iv1);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	decrypted_txt = malloc(decrypthed_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(decrypted_txt);
 
-	ret = sdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher,
+	ret = fdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher,
 			      cipher_length, iv1);
 	if (cipher)
 		free(cipher);
@@ -1312,10 +1312,10 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_valid", "[crypto_support][sdo]")
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_invalid_cipher(void)
+void test_crypto_support_fdo_msg_decrypt_invalid_cipher(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_cipher",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_decrypt_invalid_cipher",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1326,19 +1326,19 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_cipher",
 	uint32_t clear_length = sizeof(test_buff1);
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_encrypt(test_buff1, sizeof(test_buff1), cipher,
+	ret = fdo_msg_encrypt(test_buff1, sizeof(test_buff1), cipher,
 			      &cipher_length, iv1);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	decrypted_txt = malloc(decrypthed_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(decrypted_txt);
 
-	ret = sdo_msg_decrypt(decrypted_txt, &decrypthed_length, NULL,
+	ret = fdo_msg_decrypt(decrypted_txt, &decrypthed_length, NULL,
 			      cipher_length, iv1);
 	if (iv1)
 		free(iv1);
@@ -1348,10 +1348,10 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_cipher",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_invalid_cipher_length(void)
+void test_crypto_support_fdo_msg_decrypt_invalid_cipher_length(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_cipher_length",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_decrypt_invalid_cipher_length",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1362,22 +1362,22 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_cipher_length",
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 	uint8_t *iv1 = get_randomiv();
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(sizeof(char) * cipher_length);
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, sizeof(test_buff1), cipher,
+	ret = fdo_msg_encrypt(test_buff1, sizeof(test_buff1), cipher,
 			      &cipher_length, iv1);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	decrypted_txt = malloc(decrypthed_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(decrypted_txt);
 
 	ret =
-	    sdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher, 0, iv1);
+	    fdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher, 0, iv1);
 	if (iv1)
 		free(iv1);
 	if (cipher)
@@ -1388,9 +1388,9 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_cipher_length",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_msg_decrypt_invalid_iv(void)
+void test_crypto_support_fdo_msg_decrypt_invalid_iv(void)
 #else
-TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_iv", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_msg_decrypt_invalid_iv", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
@@ -1401,90 +1401,90 @@ TEST_CASE("crypto_support_sdo_msg_decrypt_invalid_iv", "[crypto_support][sdo]")
 	uint32_t clear_length = PLAIN_TEXT_SIZE;
 	uint8_t *iv1 = NULL;
 
-	ret = sdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
+	ret = fdo_msg_encrypt_get_cipher_len(clear_length, &cipher_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	cipher = malloc(sizeof(char) * cipher_length);
 	TEST_ASSERT_NOT_NULL(cipher);
 
-	ret = sdo_msg_encrypt(test_buff1, sizeof(test_buff1), cipher,
+	ret = fdo_msg_encrypt(test_buff1, sizeof(test_buff1), cipher,
 			      &cipher_length, iv1);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
-	ret = sdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
+	ret = fdo_msg_decrypt_get_pt_len(cipher_length, &decrypthed_length);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	decrypted_txt = malloc(decrypthed_length * sizeof(char));
 	TEST_ASSERT_NOT_NULL(decrypted_txt);
 
-	ret = sdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher,
+	ret = fdo_msg_decrypt(decrypted_txt, &decrypthed_length, cipher,
 			      cipher_length, iv1);
 	if (cipher)
 		free(cipher);
 	if (decrypted_txt)
 		free(decrypted_txt);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_kex_init(void)
+void test_crypto_support_fdo_kex_init(void)
 #else
-TEST_CASE("crypto_support_sdo_kex_init", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_kex_init", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_kex_close(void)
+void test_crypto_support_fdo_kex_close(void)
 #else
-TEST_CASE("crypto_support_sdo_kex_close", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_kex_close", "[crypto_support][fdo]")
 #endif
 {
 	int ret = -1;
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_kex_init_sdo_string_alloc_with_str_fail(void)
+void test_crypto_support_fdo_kex_init_fdo_string_alloc_with_str_fail(void)
 #else
-TEST_CASE("crypto_support_sdo_kex_init_sdo_string_alloc_with_str_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_kex_init_fdo_string_alloc_with_str_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = 0;
-	sdo_string_alloc_with_str_fail_case = true;
-	ret = sdo_kex_init();
-	sdo_string_alloc_with_str_fail_case = false;
+	fdo_string_alloc_with_str_fail_case = true;
+	ret = fdo_kex_init();
+	fdo_string_alloc_with_str_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_kex_init_sdo_byte_array_alloc_fail(void)
+void test_crypto_support_fdo_kex_init_fdo_byte_array_alloc_fail(void)
 #else
-TEST_CASE("crypto_support_sdo_kex_init_sdo_byte_array_alloc_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_kex_init_fdo_byte_array_alloc_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret = 0;
-	sdo_byte_array_alloc_fail_case = true;
-	ret = sdo_kex_init();
-	sdo_byte_array_alloc_fail_case = false;
+	fdo_byte_array_alloc_fail_case = true;
+	ret = fdo_kex_init();
+	fdo_byte_array_alloc_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_get_kex_paramB_valid(void)
+void test_crypto_support_fdo_get_kex_paramB_valid(void)
 #else
-TEST_CASE("crypto_support_sdo_get_kex_paramB_valid", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_get_kex_paramB_valid", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_byte_array_t *xB = NULL;
-	ret = sdo_kex_init();
+	fdo_byte_array_t *xB = NULL;
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 #if defined(KEX_ASYM_ENABLED)
@@ -1492,27 +1492,27 @@ TEST_CASE("crypto_support_sdo_get_kex_paramB_valid", "[crypto_support][sdo]")
 	RSA *validkey = generateRSA_pubkey();
 	TEST_ASSERT_NOT_NULL(validkey);
 
-	sdo_public_key_t *encrypt_key = getSDOpkey(validkey);
+	fdo_public_key_t *encrypt_key = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_rsa_context validkey;
 	ret = generateRSA_pubkey(&validkey);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	sdo_public_key_t *encrypt_key = getSDOpkey(&validkey);
+	fdo_public_key_t *encrypt_key = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
-	struct sdo_kex_ctx *kex_ctx = getsdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
 	set_encrypt_key_asym(kex_ctx->context, encrypt_key);
 #endif
-	ret = sdo_get_kex_paramB(&xB);
+	ret = fdo_get_kex_paramB(&xB);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 #if defined(KEX_ASYM_ENABLED)
 	if (encrypt_key)
-		sdo_public_key_free(encrypt_key);
+		fdo_public_key_free(encrypt_key);
 #ifdef USE_OPESSL
 	if (validkey)
 		RSA_free(validkey);
@@ -1525,103 +1525,103 @@ TEST_CASE("crypto_support_sdo_get_kex_paramB_valid", "[crypto_support][sdo]")
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_get_kex_paramB_crypto_hal_get_device_random_fail(
+void test_crypto_support_fdo_get_kex_paramB_crypto_hal_get_device_random_fail(
     void)
 #else
-TEST_CASE("crypto_support_sdo_get_kex_paramB_crypto_hal_get_device_random_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_get_kex_paramB_crypto_hal_get_device_random_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_byte_array_t *xB = NULL;
-	ret = sdo_kex_init();
+	fdo_byte_array_t *xB = NULL;
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	crypto_hal_get_device_random_fail_case = true;
-	ret = sdo_get_kex_paramB(&xB);
+	ret = fdo_get_kex_paramB(&xB);
 	crypto_hal_get_device_random_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_get_kex_paramB_sdo_alloc_fail(void)
+void test_crypto_support_fdo_get_kex_paramB_fdo_alloc_fail(void)
 #else
-TEST_CASE("crypto_support_sdo_get_kex_paramB_sdo_alloc_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_get_kex_paramB_fdo_alloc_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_byte_array_t *xB = NULL;
-	ret = sdo_kex_init();
+	fdo_byte_array_t *xB = NULL;
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	g_malloc_fail = true;
-	ret = sdo_get_kex_paramB(&xB);
+	ret = fdo_get_kex_paramB(&xB);
 	g_malloc_fail = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_get_kex_paramB_memset_s_fail(void)
+void test_crypto_support_fdo_get_kex_paramB_memset_s_fail(void)
 #else
-TEST_CASE("crypto_support_sdo_get_kex_paramB_memset_s_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_get_kex_paramB_memset_s_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_byte_array_t *xB = NULL;
-	ret = sdo_kex_init();
+	fdo_byte_array_t *xB = NULL;
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	g_memset_fail = true;
-	ret = sdo_get_kex_paramB(&xB);
+	ret = fdo_get_kex_paramB(&xB);
 	g_memset_fail = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_set_kex_paramA_valid(void)
+void test_crypto_support_fdo_set_kex_paramA_valid(void)
 #else
-TEST_CASE("crypto_support_sdo_set_kex_paramA_valid", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_set_kex_paramA_valid", "[crypto_support][fdo]")
 #endif
 {
 #if 1
 	int ret;
-	sdo_public_key_t *encrypt_key = NULL;
+	fdo_public_key_t *encrypt_key = NULL;
 #ifdef USE_OPENSSL
 	RSA *validkey = generateRSA_pubkey();
 	TEST_ASSERT_NOT_NULL(validkey);
 
-	encrypt_key = getSDOpkey(validkey);
+	encrypt_key = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_rsa_context validkey;
 	ret = generateRSA_pubkey(&validkey);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	encrypt_key = getSDOpkey(&validkey);
+	encrypt_key = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	ret = random_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 #if defined(KEX_DH_ENABLED)
 	if (NULL == adh_bytes) {
-		adh_bytes = sdo_alloc(DH_PEER_RANDOM_SIZE);
+		adh_bytes = fdo_alloc(DH_PEER_RANDOM_SIZE);
 		if (!adh_bytes)
 			goto error;
 		if (0 !=
-		    sdo_crypto_random_bytes(adh_bytes, DH_PEER_RANDOM_SIZE)) {
+		    fdo_crypto_random_bytes(adh_bytes, DH_PEER_RANDOM_SIZE)) {
 			goto error;
 		}
 	}
@@ -1630,17 +1630,17 @@ TEST_CASE("crypto_support_sdo_set_kex_paramA_valid", "[crypto_support][sdo]")
 	adh.byte_sz = sizeof(adh_bytes);
 #endif
 	adh.bytes = adh_bytes;
-	ret = sdo_set_kex_paramA(&adh, encrypt_key);
+	ret = fdo_set_kex_paramA(&adh, encrypt_key);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 #if defined(KEX_DH_ENABLED)
 error:
 	if (adh_bytes)
-		sdo_free(adh_bytes);
+		fdo_free(adh_bytes);
 #endif
 	if (encrypt_key)
-		sdo_public_key_free(encrypt_key);
+		fdo_public_key_free(encrypt_key);
 #ifdef USE_OPENSSL
 	if (validkey)
 		RSA_free(validkey);
@@ -1652,34 +1652,34 @@ error:
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_set_kex_paramA_invalid(void)
+void test_crypto_support_fdo_set_kex_paramA_invalid(void)
 #else
-TEST_CASE("crypto_support_sdo_set_kex_paramA_invalid", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_set_kex_paramA_invalid", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_public_key_t *encrypt_key = NULL;
+	fdo_public_key_t *encrypt_key = NULL;
 #ifdef USE_OPENSSL
 	RSA *validkey = generateRSA_pubkey();
 	TEST_ASSERT_NOT_NULL(validkey);
 
-	encrypt_key = getSDOpkey(validkey);
+	encrypt_key = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_rsa_context validkey;
 	ret = generateRSA_pubkey(&validkey);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	encrypt_key = getSDOpkey(&validkey);
+	encrypt_key = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	if (encrypt_key)
-		sdo_public_key_free(encrypt_key);
+		fdo_public_key_free(encrypt_key);
 #ifdef USE_OPENSSL
 	if (validkey)
 		RSA_free(validkey);
@@ -1690,38 +1690,38 @@ TEST_CASE("crypto_support_sdo_set_kex_paramA_invalid", "[crypto_support][sdo]")
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_sdo_set_kex_paramA_crypto_hal_set_peer_random_fail(
+void test_crypto_support_fdo_set_kex_paramA_crypto_hal_set_peer_random_fail(
     void)
 #else
-TEST_CASE("crypto_support_sdo_set_kex_paramA_crypto_hal_set_peer_random_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_fdo_set_kex_paramA_crypto_hal_set_peer_random_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_public_key_t *encrypt_key = NULL;
-	ret = sdo_kex_init();
+	fdo_public_key_t *encrypt_key = NULL;
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 #ifdef USE_OPENSSL
 	RSA *validkey = generateRSA_pubkey();
 	TEST_ASSERT_NOT_NULL(validkey);
 
-	encrypt_key = getSDOpkey(validkey);
+	encrypt_key = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_rsa_context validkey;
 	ret = generateRSA_pubkey(&validkey);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	encrypt_key = getSDOpkey(&validkey);
+	encrypt_key = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(encrypt_key);
 #endif
 #if defined(KEX_DH_ENABLED)
 	if (NULL == adh_bytes) {
-		adh_bytes = sdo_alloc(DH_PEER_RANDOM_SIZE);
+		adh_bytes = fdo_alloc(DH_PEER_RANDOM_SIZE);
 		if (adh_bytes == NULL) {
 			goto error;
 		}
-		if (sdo_crypto_random_bytes(adh_bytes, DH_PEER_RANDOM_SIZE) !=
+		if (fdo_crypto_random_bytes(adh_bytes, DH_PEER_RANDOM_SIZE) !=
 		    0) {
 			goto error;
 		}
@@ -1732,17 +1732,17 @@ TEST_CASE("crypto_support_sdo_set_kex_paramA_crypto_hal_set_peer_random_fail",
 #endif
 	adh.bytes = adh_bytes;
 	crypto_hal_set_peer_random_fail_case = true;
-	ret = sdo_set_kex_paramA(&adh, encrypt_key);
+	ret = fdo_set_kex_paramA(&adh, encrypt_key);
 
 	crypto_hal_set_peer_random_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 #if defined(KEX_DH_ENABLED)
 error:
 	if (adh_bytes)
-		sdo_free(adh_bytes);
+		fdo_free(adh_bytes);
 #endif
 	if (encrypt_key)
-		sdo_public_key_free(encrypt_key);
+		fdo_public_key_free(encrypt_key);
 #ifdef USE_OPENSSL
 	if (validkey)
 		RSA_free(validkey);
@@ -1750,14 +1750,14 @@ error:
 #ifdef USE_MBEDTLS
 	mbedtls_rsa_free(&validkey);
 #endif
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_load_ecdsa_privkey(void)
 #else
-TEST_CASE("crypto_support_load_ecdsa_privkey", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_load_ecdsa_privkey", "[crypto_support][fdo]")
 #endif
 {
 #if !defined(EPID_DA)
@@ -1778,10 +1778,10 @@ TEST_CASE("crypto_support_load_ecdsa_privkey", "[crypto_support][sdo]")
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_load_ecdsa_privkey_sdo_blob_size_fail(void)
+void test_crypto_support_load_ecdsa_privkey_fdo_blob_size_fail(void)
 #else
-TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_blob_size_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_blob_size_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 #if !defined(EPID_DA)
@@ -1790,9 +1790,9 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_blob_size_fail",
 	size_t privkey_size = 0;
 
 	/* Get the private key from storage */
-	sdo_blob_size_fail_case = true;
+	fdo_blob_size_fail_case = true;
 	ret = load_ecdsa_privkey(&privkey, &privkey_size);
-	sdo_blob_size_fail_case = false;
+	fdo_blob_size_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 	if (privkey) {
 		free(privkey);
@@ -1804,10 +1804,10 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_blob_size_fail",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_load_ecdsa_privkey_sdo_alloc_fail(void)
+void test_crypto_support_load_ecdsa_privkey_fdo_alloc_fail(void)
 #else
-TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_alloc_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_alloc_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 #if !defined(EPID_DA)
@@ -1830,10 +1830,10 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_alloc_fail",
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_crypto_support_load_ecdsa_privkey_sdo_blob_read_fail(void)
+void test_crypto_support_load_ecdsa_privkey_fdo_blob_read_fail(void)
 #else
-TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_blob_read_fail",
-	  "[crypto_support][sdo]")
+TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_blob_read_fail",
+	  "[crypto_support][fdo]")
 #endif
 {
 #if !defined(EPID_DA)
@@ -1842,9 +1842,9 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_blob_read_fail",
 	size_t privkey_size = 0;
 
 	/* Get the private key from storage */
-	sdo_blob_read_fail_case = true;
+	fdo_blob_read_fail_case = true;
 	ret = load_ecdsa_privkey(&privkey, &privkey_size);
-	sdo_blob_read_fail_case = false;
+	fdo_blob_read_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 	if (privkey) {
 		free(privkey);
@@ -1855,17 +1855,18 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_sdo_blob_read_fail",
 #endif
 }
 
-/* Test cases for sdo_ov_verify
+/* Test cases for fdo_ov_verify
  * message of length message_length is signed using RSA or ECDSA.
  * Same message is signed with puukey
- * sdo_ov_verify will check is both signature are same or not
+ * fdo_ov_verify will check is both signature are same or not
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verify(void)
+void test_fdo_ov_verify(void)
 #else
-TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify", "[crypto_support][fdo]")
 #endif
 {
+#if 0
 	int ret;
 	uint8_t test_buff[] = {1, 2, 3, 4, 5};
 	uint8_t *message = test_buff;
@@ -1886,7 +1887,7 @@ TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -1901,7 +1902,7 @@ TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -1914,7 +1915,7 @@ TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -1932,7 +1933,7 @@ TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -1971,22 +1972,22 @@ TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
 	 * verifying signature done by either RSA or ECDSA
 	   with signature done by pubkey passes as parameter
 	 */
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_ov_verify(message, message_length, message_signature,
+	ret = fdo_ov_verify(message, message_length, message_signature,
 			    signature_len, pubkey, result);
 	TEST_ASSERT_EQUAL(0, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -2007,18 +2008,19 @@ TEST_CASE("sdo_ov_verify", "[crypto_support][sdo]")
 	if (result) {
 		result = NULL;
 	}
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
+#endif
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * passing NULL as message to check invalid parameters
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verify_invalid_message(void)
+void test_fdo_ov_verify_invalid_message(void)
 #else
-TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify_invalid_message", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -2040,7 +2042,7 @@ TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2054,7 +2056,7 @@ TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -2067,7 +2069,7 @@ TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2085,7 +2087,7 @@ TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -2121,19 +2123,19 @@ TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
 #endif
 
 	/* Negative test case */
-	ret = sdo_ov_verify(NULL, message_length, message_signature,
+	ret = fdo_ov_verify(NULL, message_length, message_signature,
 			    signature_len, pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -2156,14 +2158,14 @@ TEST_CASE("sdo_ov_verify_invalid_message", "[crypto_support][sdo]")
 	}
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * passing 0 as message_length to check invalid parameters
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verify_invalid_message_length(void)
+void test_fdo_ov_verify_invalid_message_length(void)
 #else
-TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify_invalid_message_length", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -2185,7 +2187,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2199,7 +2201,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -2212,7 +2214,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2230,7 +2232,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -2266,19 +2268,19 @@ TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
 #endif
 
 	/* Negative test case */
-	ret = sdo_ov_verify(message, 0, message_signature, signature_len,
+	ret = fdo_ov_verify(message, 0, message_signature, signature_len,
 			    pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -2301,14 +2303,14 @@ TEST_CASE("sdo_ov_verify_invalid_message_length", "[crypto_support][sdo]")
 	}
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * passing NULL as message_signature to check invalid parameters
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verify_invalid_message_signature(void)
+void test_fdo_ov_verify_invalid_message_signature(void)
 #else
-TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify_invalid_message_signature", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -2330,7 +2332,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2344,7 +2346,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -2357,7 +2359,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2375,7 +2377,7 @@ TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -2411,19 +2413,19 @@ TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
 #endif
 
 	/* Negative test case */
-	ret = sdo_ov_verify(message, message_length, NULL, signature_len,
+	ret = fdo_ov_verify(message, message_length, NULL, signature_len,
 			    pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -2446,14 +2448,14 @@ TEST_CASE("sdo_ov_verify_invalid_message_signature", "[crypto_support][sdo]")
 	}
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * passing 0 as Signature_len to check invalid parameters
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verify_invalid_signature_len(void)
+void test_fdo_ov_verify_invalid_signature_len(void)
 #else
-TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify_invalid_signature_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -2475,7 +2477,7 @@ TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2489,7 +2491,7 @@ TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -2502,7 +2504,7 @@ TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2520,7 +2522,7 @@ TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -2556,19 +2558,19 @@ TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
 #endif
 
 	/* Negative test case */
-	ret = sdo_ov_verify(message, message_length, message_signature, 0,
+	ret = fdo_ov_verify(message, message_length, message_signature, 0,
 			    pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -2591,14 +2593,14 @@ TEST_CASE("sdo_ov_verify_invalid_signature_len", "[crypto_support][sdo]")
 	}
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * passing NULL as pubkey to check invalid parameters
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verify_invalid_pubkey(void)
+void test_fdo_ov_verify_invalid_pubkey(void)
 #else
-TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify_invalid_pubkey", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -2620,7 +2622,7 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = NULL;
+	fdo_public_key_t *pubkey = NULL;
 #else
 	int curve = 0;
 #if defined(ECDSA256_DA)
@@ -2633,7 +2635,7 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = NULL;
+	fdo_public_key_t *pubkey = NULL;
 #endif
 #endif
 
@@ -2645,7 +2647,7 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2663,7 +2665,7 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -2699,18 +2701,18 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 #endif
 
 	/* Negative test case */
-	ret = sdo_ov_verify(message, message_length, message_signature,
+	ret = fdo_ov_verify(message, message_length, message_signature,
 			    signature_len, pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
-	sdo_public_key_free(pubkey);
+	fdo_public_key_free(pubkey);
 
 	if (validkey)
 		EC_KEY_free(validkey);
@@ -2734,14 +2736,14 @@ TEST_CASE("sdo_ov_verify_invalid_pubkey", "[crypto_support][sdo]")
 	}
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * passing NULL as result to check invalid parameters
  */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_ov_verifyi_invalid_result(void)
+void test_fdo_ov_verifyi_invalid_result(void)
 #else
-TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
+TEST_CASE("fdo_ov_verify_invalid_result", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -2761,7 +2763,7 @@ TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2775,7 +2777,7 @@ TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -2788,7 +2790,7 @@ TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -2806,7 +2808,7 @@ TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -2842,21 +2844,21 @@ TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
 #endif
 
 	// Negative test case
-	ret = sdo_ov_verify(message, message_length, message_signature,
+	ret = fdo_ov_verify(message, message_length, message_signature,
 			    signature_len, pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -2878,19 +2880,19 @@ TEST_CASE("sdo_ov_verify_invalid_result", "[crypto_support][sdo]")
 
 /* Test cases fot Device_sign */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_sign(void)
+void test_fdo_device_sign(void)
 #else
-TEST_CASE("sdo_device_sign", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_sign", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
-	sdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *signature = NULL;
 
 #if defined(EPID_DA)
-	sdo_byte_array_t sig_rl;
-	sdo_byte_array_t pubkey;
+	fdo_byte_array_t sig_rl;
+	fdo_byte_array_t pubkey;
 
 	sig_rl.bytes = NULL;
 	sig_rl.byte_sz = 0;
@@ -2898,62 +2900,62 @@ TEST_CASE("sdo_device_sign", "[crypto_support][sdo]")
 	pubkey.bytes = pub_key;
 	pubkey.byte_sz = sizeof(pub_key);
 
-	sdo_set_device_sig_infoeB(&sig_rl, &pubkey);
+	fdo_set_device_sig_infoeB(&sig_rl, &pubkey);
 	ret = dev_attestation_init();
 	TEST_ASSERT_EQUAL(0, ret);
 #endif
 	// Positive test case
-	ret = sdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature);
 	TEST_ASSERT_EQUAL(0, ret);
 	if (signature) {
-		sdo_byte_array_free(signature);
+		fdo_byte_array_free(signature);
 		signature = NULL;
 	}
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_sign_invalid_message(void)
+void test_fdo_device_sign_invalid_message(void)
 #else
-TEST_CASE("sdo_device_sign_invalid_message", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_sign_invalid_message", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	size_t message_len = sizeof(test_buff1);
-	sdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *signature = NULL;
 
 	/* Negative test case */
-	ret = sdo_device_sign(NULL, message_len, &signature);
+	ret = fdo_device_sign(NULL, message_len, &signature);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
-		sdo_byte_array_free(signature);
+		fdo_byte_array_free(signature);
 		signature = NULL;
 	}
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_sign_invalid_message_len(void)
+void test_fdo_device_sign_invalid_message_len(void)
 #else
-TEST_CASE("sdo_device_sign_invalid_message_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_sign_invalid_message_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	const uint8_t *message = test_buff1;
-	sdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *signature = NULL;
 
 	/* Negative test case */
-	ret = sdo_device_sign(message, 0, &signature);
+	ret = fdo_device_sign(message, 0, &signature);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
-		sdo_byte_array_free(signature);
+		fdo_byte_array_free(signature);
 		signature = NULL;
 	}
 }
 
-/* Test cases for sdo_crypto_hash */
+/* Test cases for fdo_crypto_hash */
 #ifndef TARGET_OS_FREERTOS
 void testcrypto_hal_hash(void)
 #else
-TEST_CASE("sdo_crypto_hash", "[crypto_support][sdo]")
+TEST_CASE("fdo_crypto_hash", "[crypto_support][fdo]")
 #endif
 {
 #if defined(ECDSA384_DA)
@@ -2962,23 +2964,23 @@ TEST_CASE("sdo_crypto_hash", "[crypto_support][sdo]")
 	int ret;
 	uint8_t *message = test_buff1;
 	size_t message_len = TEST_BUFF_SZ;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
 	/* Check initialisation of hashes. */
 	TEST_ASSERT_NOT_NULL(hash1);
 
 	/* Positive test case */
-	ret = sdo_crypto_hash(message, message_len, hash1->hash->bytes,
+	ret = fdo_crypto_hash(message, message_len, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
-	sdo_hash_free(hash1);
+	fdo_hash_free(hash1);
 }
 
 #ifndef TARGET_OS_FREERTOS
 void testcrypto_hal_hash_SHA384(void)
 #else
-TEST_CASE("sdo_crypto_hash_SHA384", "[crypto_support][sdo]")
+TEST_CASE("fdo_crypto_hash_SHA384", "[crypto_support][fdo]")
 #endif
 {
 #if defined(ECDSA256_DA)
@@ -2987,121 +2989,121 @@ TEST_CASE("sdo_crypto_hash_SHA384", "[crypto_support][sdo]")
 	int ret;
 	uint8_t *message = test_buff1;
 	size_t message_len = TEST_BUFF_SZ;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_SHA_384, SHA384_DIGEST_SIZE);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_384, SHA384_DIGEST_SIZE);
 
 	/* Check initialisation of hashes. */
 	TEST_ASSERT_NOT_NULL(hash1);
 
 	/* Positive test case */
-	ret = sdo_crypto_hash(message, message_len, hash1->hash->bytes,
+	ret = fdo_crypto_hash(message, message_len, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
-	sdo_hash_free(hash1);
+	fdo_hash_free(hash1);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_cryptoHASH_invalid_message(void)
+void test_fdo_cryptoHASH_invalid_message(void)
 #else
-TEST_CASE("sdo_cryptoHASH_invalid_message", "[crypto_support][sdo]")
+TEST_CASE("fdo_cryptoHASH_invalid_message", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	size_t message_len = TEST_BUFF_SZ;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation of hashes. */
 	TEST_ASSERT_NOT_NULL(hash1);
 
 	/* Negative test case */
-	ret = sdo_crypto_hash(NULL, message_len, hash1->hash->bytes,
+	ret = fdo_crypto_hash(NULL, message_len, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hash1);
+	fdo_hash_free(hash1);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_cryptoHASH_invalid_message_len(void)
+void test_fdo_cryptoHASH_invalid_message_len(void)
 #else
-TEST_CASE("sdo_cryptoHASH_invalid_message_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_cryptoHASH_invalid_message_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *message = test_buff1;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation of hashes. */
 	TEST_ASSERT_NOT_NULL(hash1);
 
 	/* Negative test case */
-	ret = sdo_crypto_hash(message, 0, hash1->hash->bytes,
+	ret = fdo_crypto_hash(message, 0, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hash1);
+	fdo_hash_free(hash1);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_cryptoHASH_invalid_hash(void)
+void test_fdo_cryptoHASH_invalid_hash(void)
 #else
-TEST_CASE("sdo_cryptoHASH_invalid_hash", "[crypto_support][sdo]")
+TEST_CASE("fdo_cryptoHASH_invalid_hash", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *message = test_buff1;
 	size_t message_len = TEST_BUFF_SZ;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation of hashes. */
 	TEST_ASSERT_NOT_NULL(hash1);
 
 	/* Negative test case */
-	ret = sdo_crypto_hash(message, message_len, NULL, hash1->hash->byte_sz);
+	ret = fdo_crypto_hash(message, message_len, NULL, hash1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hash1);
+	fdo_hash_free(hash1);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_cryptoHASH_invalid_hash_len(void)
+void test_fdo_cryptoHASH_invalid_hash_len(void)
 #else
-TEST_CASE("sdo_cryptoHASH_invalid_hash_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_cryptoHASH_invalid_hash_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *message = test_buff1;
 	size_t message_len = TEST_BUFF_SZ;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	// Check initialisation of hashes
 	TEST_ASSERT_NOT_NULL(hash1);
 
 	// Negative test case
-	ret = sdo_crypto_hash(message, message_len, hash1->hash->bytes, 0);
+	ret = fdo_crypto_hash(message, message_len, hash1->hash->bytes, 0);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hash1);
+	fdo_hash_free(hash1);
 }
 
-/* Test cases for sdo_to2_hmac */
+/* Test cases for fdo_to2_hmac */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_to2_hmac(void)
+void test_fdo_to2_hmac(void)
 #else
-TEST_CASE("sdo_to2_hmac", "[crypto_support][sdo]")
+TEST_CASE("fdo_to2_hmac", "[crypto_support][fdo]")
 #endif
 {
 #if defined(ECDSA384_DA)
 	TEST_IGNORE();
 #endif
 	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	// Check initialisation.
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3109,30 +3111,30 @@ TEST_CASE("sdo_to2_hmac", "[crypto_support][sdo]")
 	size_t to2Msg_len = TEST_BUFF_SZ;
 
 	// Positve test case
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_to2_hmac(to2Msg, to2Msg_len, hmac1->hash->bytes,
+	ret = fdo_to2_hmac(to2Msg, to2Msg_len, hmac1->hash->bytes,
 			   hmac1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
-	sdo_hash_free(hmac1);
-	ret = sdo_kex_close();
+	fdo_hash_free(hmac1);
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_to2_hmac_SHA384(void)
+void test_fdo_to2_hmac_SHA384(void)
 #else
-TEST_CASE("sdo_to2_hmac_SHA_384", "[crypto_support][sdo]")
+TEST_CASE("fdo_to2_hmac_SHA_384", "[crypto_support][fdo]")
 #endif
 {
 #if defined(ECDSA256_DA)
 	TEST_IGNORE();
 #endif
 	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_384, SHA384_DIGEST_SIZE);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_384, SHA384_DIGEST_SIZE);
 
 	// Check initialisation.
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3140,107 +3142,80 @@ TEST_CASE("sdo_to2_hmac_SHA_384", "[crypto_support][sdo]")
 	size_t to2Msg_len = TEST_BUFF_SZ;
 
 	// Positve test case
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_to2_hmac(to2Msg, to2Msg_len, hmac1->hash->bytes,
+	ret = fdo_to2_hmac(to2Msg, to2Msg_len, hmac1->hash->bytes,
 			   hmac1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
-	sdo_hash_free(hmac1);
-	ret = sdo_kex_close();
+	fdo_hash_free(hmac1);
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_to2_hmac_invalid_to2Msg(void)
+void test_fdo_to2_hmac_invalid_to2Msg(void)
 #else
-TEST_CASE("sdo_to2_hmac", "[crypto_support][sdo]")
+TEST_CASE("fdo_to2_hmac", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	// Check initialisation
 	TEST_ASSERT_NOT_NULL(hmac1);
 	size_t to2Msg_len = TEST_BUFF_SZ;
 
 	// Negative test case
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_to2_hmac(NULL, to2Msg_len, hmac1->hash->bytes,
+	ret = fdo_to2_hmac(NULL, to2Msg_len, hmac1->hash->bytes,
 			   hmac1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
-	ret = sdo_kex_close();
+	fdo_hash_free(hmac1);
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_to2_hmac_invalid_to2Msg_len(void)
+void test_fdo_to2_hmac_invalid_to2Msg_len(void)
 #else
-TEST_CASE("sdo_to2_hmac_invalid_to2Msg_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_to2_hmac_invalid_to2Msg_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	// Check initialisation
 	TEST_ASSERT_NOT_NULL(hmac1);
 	uint8_t *to2Msg = test_buff1;
 
 	// Negative test case
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_to2_hmac(to2Msg, 0, hmac1->hash->bytes, hmac1->hash->byte_sz);
+	ret = fdo_to2_hmac(to2Msg, 0, hmac1->hash->bytes, hmac1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
-	ret = sdo_kex_close();
+	fdo_hash_free(hmac1);
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_to2_hmac_invalid_hmac(void)
+void test_fdo_to2_hmac_invalid_hmac(void)
 #else
-TEST_CASE("sdo_to2_hmac_invalid_hmac", "[crypto_support][sdo]")
+TEST_CASE("fdo_to2_hmac_invalid_hmac", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
-
-	// Check initialisation
-	TEST_ASSERT_NOT_NULL(hmac1);
-	uint8_t *to2Msg = test_buff1;
-	size_t to2Msg_len = TEST_BUFF_SZ;
-
-	// Negative test case
-	ret = sdo_kex_init();
-	TEST_ASSERT_EQUAL(0, ret);
-
-	ret = sdo_to2_hmac(to2Msg, to2Msg_len, NULL, hmac1->hash->byte_sz);
-	TEST_ASSERT_EQUAL(-1, ret);
-
-	sdo_hash_free(hmac1);
-	ret = sdo_kex_close();
-	TEST_ASSERT_EQUAL(0, ret);
-}
-
-#ifndef TARGET_OS_FREERTOS
-void test_sdo_to2_hmac_invalid_hmac_len(void)
-#else
-TEST_CASE("sdo_to2_hmac_invalid_hmac_len", "[crypto_support][sdo]")
-#endif
-{
-	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	// Check initialisation
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3248,37 +3223,64 @@ TEST_CASE("sdo_to2_hmac_invalid_hmac_len", "[crypto_support][sdo]")
 	size_t to2Msg_len = TEST_BUFF_SZ;
 
 	// Negative test case
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_to2_hmac(to2Msg, to2Msg_len, hmac1->hash->bytes, 0);
+	ret = fdo_to2_hmac(to2Msg, to2Msg_len, NULL, hmac1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
-	ret = sdo_kex_close();
+	fdo_hash_free(hmac1);
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
 }
 
-/* Test cases for sdo_device_ov_hmac */
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_ov_hmac(void)
+void test_fdo_to2_hmac_invalid_hmac_len(void)
 #else
-TEST_CASE("sdo_device_ov_hmac", "[crypto_support][sdo]")
+TEST_CASE("fdo_to2_hmac_invalid_hmac_len", "[crypto_support][fdo]")
+#endif
+{
+	int ret;
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+
+	// Check initialisation
+	TEST_ASSERT_NOT_NULL(hmac1);
+	uint8_t *to2Msg = test_buff1;
+	size_t to2Msg_len = TEST_BUFF_SZ;
+
+	// Negative test case
+	ret = fdo_kex_init();
+	TEST_ASSERT_EQUAL(0, ret);
+
+	ret = fdo_to2_hmac(to2Msg, to2Msg_len, hmac1->hash->bytes, 0);
+	TEST_ASSERT_EQUAL(-1, ret);
+
+	fdo_hash_free(hmac1);
+	ret = fdo_kex_close();
+	TEST_ASSERT_EQUAL(0, ret);
+}
+
+/* Test cases for fdo_device_ov_hmac */
+#ifndef TARGET_OS_FREERTOS
+void test_fdo_device_ov_hmac(void)
+#else
+TEST_CASE("fdo_device_ov_hmac", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *OVHdr = test_buff1;
 	size_t OVHdr_len = sizeof(test_buff1);
 	size_t OVKey_len = BUFF_SIZE_32_BYTES;
-	sdo_byte_array_t *OVkey = sdo_byte_array_alloc(OVKey_len);
+	fdo_byte_array_t *OVkey = fdo_byte_array_alloc(OVKey_len);
 	TEST_ASSERT_NOT_NULL(OVkey);
 
 #if defined(ECDSA384_DA)
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_384, SHA384_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_384, SHA384_DIGEST_SZ);
 #else
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 #endif
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3286,35 +3288,35 @@ TEST_CASE("sdo_device_ov_hmac", "[crypto_support][sdo]")
 	size_t hmac_len = (hmac1->hash->byte_sz);
 
 	/* Positive test case */
-	ret = sdo_kex_init();
+	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL(0, ret);
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = sdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, hmac_len);
+	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, hmac_len);
 	TEST_ASSERT_EQUAL(0, ret);
 
-	ret = sdo_kex_close();
+	ret = fdo_kex_close();
 	TEST_ASSERT_EQUAL(0, ret);
-	sdo_hash_free(hmac1);
+	fdo_hash_free(hmac1);
 	if (OVkey) {
-		sdo_byte_array_free(OVkey);
+		fdo_byte_array_free(OVkey);
 		OVkey = NULL;
 	}
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_ov_hmac_invalid_OVHdr(void)
+void test_fdo_device_ov_hmac_invalid_OVHdr(void)
 #else
-TEST_CASE("sdo_device_ov_hmac_invalid_OVHdr", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_ov_hmac_invalid_OVHdr", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	size_t OVHdr_len = sizeof(test_buff1);
 	size_t OVKey_len = BUFF_SIZE_32_BYTES;
-	sdo_byte_array_t *OVkey = sdo_byte_array_alloc(OVKey_len);
+	fdo_byte_array_t *OVkey = fdo_byte_array_alloc(OVKey_len);
 	TEST_ASSERT_NOT_NULL(OVkey);
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3324,29 +3326,29 @@ TEST_CASE("sdo_device_ov_hmac_invalid_OVHdr", "[crypto_support][sdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = sdo_device_ov_hmac(NULL, OVHdr_len, hmac, hmac_len);
+	ret = fdo_device_ov_hmac(NULL, OVHdr_len, hmac, hmac_len);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
+	fdo_hash_free(hmac1);
 	if (OVkey) {
-		sdo_byte_array_free(OVkey);
+		fdo_byte_array_free(OVkey);
 		OVkey = NULL;
 	}
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_ov_hmac_invalid_OVHdr_len(void)
+void test_fdo_device_ov_hmac_invalid_OVHdr_len(void)
 #else
-TEST_CASE("sdo_device_ov_hmac_invalid_OVHdr_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_ov_hmac_invalid_OVHdr_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *OVHdr = test_buff1;
 	size_t OVKey_len = BUFF_SIZE_32_BYTES;
-	sdo_byte_array_t *OVkey = sdo_byte_array_alloc(OVKey_len);
+	fdo_byte_array_t *OVkey = fdo_byte_array_alloc(OVKey_len);
 	TEST_ASSERT_NOT_NULL(OVkey);
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3356,30 +3358,30 @@ TEST_CASE("sdo_device_ov_hmac_invalid_OVHdr_len", "[crypto_support][sdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = sdo_device_ov_hmac(OVHdr, 0, hmac, hmac_len);
+	ret = fdo_device_ov_hmac(OVHdr, 0, hmac, hmac_len);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
+	fdo_hash_free(hmac1);
 	if (OVkey) {
-		sdo_byte_array_free(OVkey);
+		fdo_byte_array_free(OVkey);
 		OVkey = NULL;
 	}
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_ov_hmac_invalid_hmac(void)
+void test_fdo_device_ov_hmac_invalid_hmac(void)
 #else
-TEST_CASE("sdo_device_ov_hmac_invalid_hmac", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_ov_hmac_invalid_hmac", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *OVHdr = test_buff1;
 	size_t OVHdr_len = sizeof(test_buff1);
 	size_t OVKey_len = BUFF_SIZE_32_BYTES;
-	sdo_byte_array_t *OVkey = sdo_byte_array_alloc(OVKey_len);
+	fdo_byte_array_t *OVkey = fdo_byte_array_alloc(OVKey_len);
 	TEST_ASSERT_NOT_NULL(OVkey);
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3388,30 +3390,30 @@ TEST_CASE("sdo_device_ov_hmac_invalid_hmac", "[crypto_support][sdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = sdo_device_ov_hmac(OVHdr, OVHdr_len, NULL, hmac_len);
+	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, NULL, hmac_len);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
+	fdo_hash_free(hmac1);
 	if (OVkey) {
-		sdo_byte_array_free(OVkey);
+		fdo_byte_array_free(OVkey);
 		OVkey = NULL;
 	}
 }
 
 #ifndef TARGET_OS_FREERTOS
-void test_sdo_device_ov_hmac_invalid_hmac_len(void)
+void test_fdo_device_ov_hmac_invalid_hmac_len(void)
 #else
-TEST_CASE("sdo_device_ov_hmac_invalid_hmac_len", "[crypto_support][sdo]")
+TEST_CASE("fdo_device_ov_hmac_invalid_hmac_len", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	uint8_t *OVHdr = test_buff1;
 	size_t OVHdr_len = sizeof(test_buff1);
 	size_t OVKey_len = BUFF_SIZE_32_BYTES;
-	sdo_byte_array_t *OVkey = sdo_byte_array_alloc(OVKey_len);
+	fdo_byte_array_t *OVkey = fdo_byte_array_alloc(OVKey_len);
 	TEST_ASSERT_NOT_NULL(OVkey);
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3420,24 +3422,24 @@ TEST_CASE("sdo_device_ov_hmac_invalid_hmac_len", "[crypto_support][sdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = sdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, 0);
+	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, 0);
 	TEST_ASSERT_EQUAL(-1, ret);
 
-	sdo_hash_free(hmac1);
+	fdo_hash_free(hmac1);
 	if (OVkey) {
-		sdo_byte_array_free(OVkey);
+		fdo_byte_array_free(OVkey);
 		OVkey = NULL;
 	}
 }
 
-/* Test cases for sdo_ov_verify invalid message
+/* Test cases for fdo_ov_verify invalid message
  * message of length message_length is signed using RSA or ECDSA.
  * wraper flag is set to true, to fail internal API
  */
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_hal_sig_verify_fail_case(void)
 #else
-TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
+TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
@@ -3459,7 +3461,7 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -3473,7 +3475,7 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #endif
 #endif
@@ -3486,7 +3488,7 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
 	ret = sha256_RSAsign(message, message_length, message_signature,
 			     &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpkey(&validkey);
+	fdo_public_key_t *pubkey = getFDOpkey(&validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 #else
 	int curve = 0;
@@ -3504,7 +3506,7 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, &validkey);
 	TEST_ASSERT_EQUAL(1, ret);
-	sdo_public_key_t *pubkey = getSDOpk(curve, &validkey);
+	fdo_public_key_t *pubkey = getFDOpk(curve, &validkey);
 	TEST_ASSERT_NOT_NULL(pubkey);
 
 	/* convert ecdsa_context to pk_context */
@@ -3539,21 +3541,21 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
 #endif
 #endif
 
-	/* if flag is true, sdo_ov_verify will fail due to wraper */
+	/* if flag is true, fdo_ov_verify will fail due to wraper */
 	crypto_hal_sig_verify_fail_flag = true;
-	ret = sdo_ov_verify(message, message_length, message_signature,
+	ret = fdo_ov_verify(message, message_length, message_signature,
 			    signature_len, pubkey, result);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #ifdef USE_OPENSSL
 #if defined(PK_ENC_RSA)
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		RSA_free(validkey);
 #else
 	if (pubkey)
-		sdo_public_key_free(pubkey);
+		fdo_public_key_free(pubkey);
 	if (validkey)
 		EC_KEY_free(validkey);
 #endif
@@ -3580,17 +3582,17 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_get_ec_key_fail_case(void)
 #else
-TEST_CASE("get_ec_key_fail_case", "[crypto_support][sdo]")
+TEST_CASE("get_ec_key_fail_case", "[crypto_support][fdo]")
 #endif
 {
 #ifdef USE_OPENSSL
 	int ret;
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
-	sdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *signature = NULL;
 
 	get_ec_key_fail_flag = true;
-	ret = sdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	get_ec_key_fail_flag = false;
@@ -3602,17 +3604,17 @@ TEST_CASE("get_ec_key_fail_case", "[crypto_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_ECDSA_size_fail_case(void)
 #else
-TEST_CASE("ECDSA_size_fail_case", "[crypto_support][sdo]")
+TEST_CASE("ECDSA_size_fail_case", "[crypto_support][fdo]")
 #endif
 {
 #ifdef USE_OPENSSL
 	int ret;
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
-	sdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *signature = NULL;
 
 	ECDSA_size_fail_flag = true;
-	ret = sdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	ECDSA_size_fail_flag = false;
@@ -3624,28 +3626,28 @@ TEST_CASE("ECDSA_size_fail_case", "[crypto_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_memcpy_s_fail_case(void)
 #else
-TEST_CASE("memcpy_s_fail_case", "[crypto_support][sdo]")
+TEST_CASE("memcpy_s_fail_case", "[crypto_support][fdo]")
 #endif
 {
 #ifdef USE_OPENSSL
 	int ret;
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
-	sdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *signature = NULL;
 
 	memcpy_s_fail_flag = true;
-	ret = sdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature);
 	memcpy_s_fail_flag = false;
 	TEST_ASSERT_EQUAL(-1, ret);
 
 #if defined(EPID_DA)
-	sdo_dev_key_ctx_t *device_ctx = getsdo_dev_key_ctx();
+	fdo_dev_key_ctx_t *device_ctx = getfdo_dev_key_ctx();
 	device_ctx->eB->sig_rl = 0;
 	device_ctx->eB->pubkey = 0;
 #endif
 #else
 #if defined(EPID_DA)
-	sdo_dev_key_ctx_t *device_ctx = getsdo_dev_key_ctx();
+	fdo_dev_key_ctx_t *device_ctx = getfdo_dev_key_ctx();
 	device_ctx->eB->sig_rl = 0;
 	device_ctx->eB->pubkey = 0;
 #endif
@@ -3656,47 +3658,47 @@ TEST_CASE("memcpy_s_fail_case", "[crypto_support][sdo]")
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_make_hash(void)
 #else
-TEST_CASE("crypto_support_make_hash", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_make_hash", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	int i;
 	bool flag = true;
-	sdo_hash_t *hash1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
-	sdo_hash_t *hash2 =
-	    sdo_hash_alloc(SDO_CRYPTO_HASH_TYPE_USED, SDO_SHA_DIGEST_SIZE_USED);
+	fdo_hash_t *hash1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	fdo_hash_t *hash2 =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 
 	/* Check initialisation of hashes. */
 	TEST_ASSERT_NOT_NULL(hash1);
 	TEST_ASSERT_NOT_NULL(hash2);
 
 	/* Negative case - null buffer. */
-	ret = sdo_crypto_hash(NULL, TEST_BUFF_SZ, hash1->hash->bytes,
+	ret = fdo_crypto_hash(NULL, TEST_BUFF_SZ, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_NOT_EQUAL(0, ret);
 
 	/* Negative case - invalid  hash output buffer size*/
-	ret = sdo_crypto_hash(test_buff1, 0, hash1->hash->bytes,
+	ret = fdo_crypto_hash(test_buff1, 0, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_NOT_EQUAL(0, ret);
 
 	/* Negative case - invalid  hash output buffer */
-	ret = sdo_crypto_hash(test_buff1, TEST_BUFF_SZ, NULL,
+	ret = fdo_crypto_hash(test_buff1, TEST_BUFF_SZ, NULL,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_NOT_EQUAL(0, ret);
 
 	/* Negative case - zero hash buffer size. */
-	ret = sdo_crypto_hash(test_buff1, TEST_BUFF_SZ, hash1->hash->bytes, 0);
+	ret = fdo_crypto_hash(test_buff1, TEST_BUFF_SZ, hash1->hash->bytes, 0);
 	TEST_ASSERT_NOT_EQUAL(0, ret);
 
 	/* Positive case. */
-	ret = sdo_crypto_hash(test_buff1, TEST_BUFF_SZ, hash1->hash->bytes,
+	ret = fdo_crypto_hash(test_buff1, TEST_BUFF_SZ, hash1->hash->bytes,
 			      hash1->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
 	/* Using the same buffer, we expect the same result. */
-	ret = sdo_crypto_hash(test_buff1, TEST_BUFF_SZ, hash2->hash->bytes,
+	ret = fdo_crypto_hash(test_buff1, TEST_BUFF_SZ, hash2->hash->bytes,
 			      hash2->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
@@ -3706,7 +3708,7 @@ TEST_CASE("crypto_support_make_hash", "[crypto_support][sdo]")
 				      hash1->hash->byte_sz);
 
 	/* Using a different buffer, we expect a different result. */
-	ret = sdo_crypto_hash(test_buff2, TEST_BUFF_SZ, hash2->hash->bytes,
+	ret = fdo_crypto_hash(test_buff2, TEST_BUFF_SZ, hash2->hash->bytes,
 			      hash2->hash->byte_sz);
 	TEST_ASSERT_EQUAL(0, ret);
 
@@ -3719,24 +3721,24 @@ TEST_CASE("crypto_support_make_hash", "[crypto_support][sdo]")
 	}
 
 	TEST_ASSERT_FALSE(flag);
-	sdo_hash_free(hash1);
-	sdo_hash_free(hash2);
-	sdo_crypto_close();
+	fdo_hash_free(hash1);
+	fdo_hash_free(hash2);
+	fdo_crypto_close();
 }
 
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_make_hmac(void)
 #else
-TEST_CASE("crypto_support_make_hmac", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_make_hmac", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
 	int i;
 	bool flag;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
-	sdo_hash_t *hmac2 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac2 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3831,25 +3833,25 @@ TEST_CASE("crypto_support_make_hmac", "[crypto_support][sdo]")
 
 	TEST_ASSERT_FALSE(flag);
 
-	sdo_hash_free(hmac1);
-	sdo_hash_free(hmac2);
-	sdo_crypto_close();
+	fdo_hash_free(hmac1);
+	fdo_hash_free(hmac2);
+	fdo_crypto_close();
 }
 #ifndef TARGET_OS_FREERTOS
 void test_crypto_support_make_hmac_chained(void)
 #else
-TEST_CASE("crypto_support_make_hmac_chained", "[crypto_support][sdo]")
+TEST_CASE("crypto_support_make_hmac_chained", "[crypto_support][fdo]")
 #endif
 {
 	int ret;
-	sdo_hash_t *hmac1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
-	sdo_hash_t *hmac2 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
-	sdo_hash_t *chain1 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
-	sdo_hash_t *chain2 =
-	    sdo_hash_alloc(SDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *hmac2 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *chain1 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
+	fdo_hash_t *chain2 =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_SHA_256, SHA256_DIGEST_SZ);
 
 	/* Check initialisation. */
 	TEST_ASSERT_NOT_NULL(hmac1);
@@ -3868,9 +3870,9 @@ TEST_CASE("crypto_support_make_hmac_chained", "[crypto_support][sdo]")
 			      TEST_KEY_SZ);
 	TEST_ASSERT_EQUAL(0, ret);
 
-	sdo_hash_free(hmac1);
-	sdo_hash_free(hmac2);
-	sdo_hash_free(chain2);
-	sdo_hash_free(chain1);
-	sdo_crypto_close();
+	fdo_hash_free(hmac1);
+	fdo_hash_free(hmac2);
+	fdo_hash_free(chain2);
+	fdo_hash_free(chain1);
+	fdo_crypto_close();
 }

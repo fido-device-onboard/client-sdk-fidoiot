@@ -4,7 +4,7 @@
 
 /*!
  * \file
- * \brief Unit tests for credential store/read routines of SDO library.
+ * \brief Unit tests for credential store/read routines of FDO library.
  */
 
 #include <errno.h>
@@ -13,7 +13,7 @@
 #include "base64.h"
 #include "load_credentials.h"
 #include "safe_lib.h"
-#include "sdoCryptoHal.h"
+#include "fdoCryptoHal.h"
 #include "platform_utils.h"
 
 #ifdef TARGET_OS_FREERTOS
@@ -28,7 +28,7 @@ bool file_fail = false;
 static bool g_malloc_fail = false;
 #endif
 /*** Unity Declarations ***/
-void *__wrap_sdo_alloc(size_t size);
+void *__wrap_fdo_alloc(size_t size);
 void test_read_normal_device_credentials(void);
 void test_read_secure_device_credentials(void);
 void test_read_mfg_device_credentials(void);
@@ -38,20 +38,20 @@ void test_store_credential(void);
 void test_app_alloc_credentials(void);
 
 /*** Wrapper Functions ***/
-bool __real_sdor_next_block(sdor_t *sdor, uint32_t *typep);
+bool __real_fdor_next_block(fdor_t *fdor, uint32_t *typep);
 
 #ifdef TARGET_OS_LINUX
-void *__real_sdo_alloc(size_t size);
-void *__wrap_sdo_alloc(size_t size)
+void *__real_fdo_alloc(size_t size);
+void *__wrap_fdo_alloc(size_t size)
 {
 	if (g_malloc_fail)
 		return NULL;
 	else
-		return __real_sdo_alloc(size);
+		return __real_fdo_alloc(size);
 }
 #endif
 
-/**** Following function is repeated in tests/unit/test_sdoprot.c please do
+/**** Following function is repeated in tests/unit/test_fdoprot.c please do
  * related necessary changes there too
  ****/
 
@@ -190,7 +190,7 @@ static int32_t configure_blobs(void)
 		fclose(fp1);
 
 	/* Write Normal Blob */
-	if (!(fp1 = fopen((const char *)SDO_CRED_NORMAL, "w"))) {
+	if (!(fp1 = fopen((const char *)FDO_CRED_NORMAL, "w"))) {
 		LOG(LOG_ERROR, "Could not open platform HMAC Key file!\n");
 		goto err;
 	}
@@ -211,7 +211,7 @@ static int32_t configure_blobs(void)
 		fclose(fp1);
 
 	/* Write secure dev blob */
-	if (!(fp1 = fopen((const char *)SDO_CRED_SECURE, "w"))) {
+	if (!(fp1 = fopen((const char *)FDO_CRED_SECURE, "w"))) {
 		LOG(LOG_ERROR, "Could not open Sec dev blob!\n");
 		goto err;
 	}
@@ -232,7 +232,7 @@ static int32_t configure_blobs(void)
 		fclose(fp1);
 
 	/* Write mfg blob */
-	if (!(fp1 = fopen((const char *)SDO_CRED_MFG, "w"))) {
+	if (!(fp1 = fopen((const char *)FDO_CRED_MFG, "w"))) {
 		LOG(LOG_ERROR, "Could not open mfg cred file!\n");
 		goto err;
 	}
@@ -252,11 +252,15 @@ static int32_t configure_blobs(void)
 		fclose(fp1);
 
 err:
+	if (fp1) {
+		fclose(fp1);
+		fp1 = NULL;
+	}
 	return -1;
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("read_normal_device_credentials", "[credentials][sdo]")
+TEST_CASE("read_normal_device_credentials", "[credentials][fdo]")
 #else
 void test_read_normal_device_credentials(void)
 #endif
@@ -293,10 +297,10 @@ void test_read_normal_device_credentials(void)
 	    0x45, 0x3d, 0x22, 0x5d, 0x7d, 0x7d};
 	unsigned int data_Normal_blob_len = 226;
 
-	ret = sdo_sdk_init(NULL, 0, NULL);
-	TEST_ASSERT_EQUAL(SDO_SUCCESS, ret);
+	ret = fdo_sdk_init(NULL, 0, NULL);
+	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
-	ret = sdo_blob_write((char *)SDO_CRED_NORMAL, SDO_SDK_NORMAL_DATA,
+	ret = fdo_blob_write((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA,
 			     normal_buf, data_Normal_blob_len);
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
@@ -304,26 +308,26 @@ void test_read_normal_device_credentials(void)
 	ret = load_mfg_secret();
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
-	sdo_dev_cred_t *Normal_cred = app_get_credentials();
+	fdo_dev_cred_t *Normal_cred = app_get_credentials();
 
 	/* Negative case - no credentials file */
-	ret = read_normal_device_credentials(NULL, SDO_SDK_NORMAL_DATA,
+	ret = read_normal_device_credentials(NULL, FDO_SDK_NORMAL_DATA,
 					     Normal_cred);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = read_normal_device_credentials((char *)SDO_CRED_NORMAL, 0,
+	ret = read_normal_device_credentials((char *)FDO_CRED_NORMAL, 0,
 					     Normal_cred);
 	TEST_ASSERT_FALSE(ret);
 
 	/* Positive case */
-	ret = read_normal_device_credentials((char *)SDO_CRED_NORMAL,
-					     SDO_SDK_NORMAL_DATA, Normal_cred);
+	ret = read_normal_device_credentials((char *)FDO_CRED_NORMAL,
+					     FDO_SDK_NORMAL_DATA, Normal_cred);
 	TEST_ASSERT_TRUE(ret);
-	sdo_sdk_deinit();
+	fdo_sdk_deinit();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("read_secure_device_credentials", "[credentials][sdo]")
+TEST_CASE("read_secure_device_credentials", "[credentials][fdo]")
 #else
 void test_read_secure_device_credentials(void)
 #endif
@@ -331,35 +335,35 @@ void test_read_secure_device_credentials(void)
 	int ret = -1;
 	uint8_t secure_buf[100] = "{\"Secret\":[\"p++AC/nnKsfYOh1+WBU8cw==\"]}";
 	// base64_init();
-	ret = sdo_sdk_init(NULL, 0, NULL);
-	TEST_ASSERT_EQUAL(SDO_SUCCESS, ret);
+	ret = fdo_sdk_init(NULL, 0, NULL);
+	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
-	ret = sdo_blob_write((char *)SDO_CRED_SECURE, SDO_SDK_SECURE_DATA,
+	ret = fdo_blob_write((char *)FDO_CRED_SECURE, FDO_SDK_SECURE_DATA,
 			     secure_buf, sizeof(secure_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
-	sdo_dev_cred_t *Secure_cred = app_get_credentials();
+	fdo_dev_cred_t *Secure_cred = app_get_credentials();
 
 	/* Positive case*/
-	ret = read_secure_device_credentials((char *)SDO_CRED_SECURE,
-					     SDO_SDK_SECURE_DATA, Secure_cred);
+	ret = read_secure_device_credentials((char *)FDO_CRED_SECURE,
+					     FDO_SDK_SECURE_DATA, Secure_cred);
 	TEST_ASSERT_TRUE(ret);
 
 	/* Negative case - no credentials file */
-	ret = read_secure_device_credentials(NULL, SDO_SDK_SECURE_DATA,
+	ret = read_secure_device_credentials(NULL, FDO_SDK_SECURE_DATA,
 					     Secure_cred);
 	TEST_ASSERT_FALSE(ret);
 
 	/* Negative case */
-	ret = read_secure_device_credentials((char *)SDO_CRED_SECURE, 0,
+	ret = read_secure_device_credentials((char *)FDO_CRED_SECURE, 0,
 					     Secure_cred);
 	TEST_ASSERT_FALSE(ret);
 
-	sdo_sdk_deinit();
+	fdo_sdk_deinit();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("read_mfg_device_credentials", "[credentials][sdo]")
+TEST_CASE("read_mfg_device_credentials", "[credentials][fdo]")
 #else
 void test_read_mfg_device_credentials(void)
 #endif
@@ -367,40 +371,40 @@ void test_read_mfg_device_credentials(void)
 	int ret = -1;
 	uint8_t mfg_buf[] = "{\"M\":{\"d\":\"device-serial\"}}";
 	// base64_init();
-	ret = sdo_sdk_init(NULL, 0, NULL);
-	TEST_ASSERT_EQUAL(SDO_SUCCESS, ret);
+	ret = fdo_sdk_init(NULL, 0, NULL);
+	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
-	ret = sdo_blob_write((char *)SDO_CRED_MFG, SDO_SDK_NORMAL_DATA, mfg_buf,
+	ret = fdo_blob_write((char *)FDO_CRED_MFG, FDO_SDK_NORMAL_DATA, mfg_buf,
 			     sizeof(mfg_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
-	sdo_dev_cred_t *Mfg_cred = app_get_credentials();
+	fdo_dev_cred_t *Mfg_cred = app_get_credentials();
 
 	/* Positive case */
-	ret = read_mfg_device_credentials((char *)SDO_CRED_MFG,
-					  SDO_SDK_NORMAL_DATA, Mfg_cred);
+	ret = read_mfg_device_credentials((char *)FDO_CRED_MFG,
+					  FDO_SDK_NORMAL_DATA, Mfg_cred);
 	TEST_ASSERT_TRUE(ret);
 
 	/* Negative case - no credentials file */
-	ret = read_mfg_device_credentials(NULL, SDO_SDK_SECURE_DATA, Mfg_cred);
+	ret = read_mfg_device_credentials(NULL, FDO_SDK_SECURE_DATA, Mfg_cred);
 	TEST_ASSERT_FALSE(ret);
 
 	/* Negative case */
-	ret = read_mfg_device_credentials((char *)SDO_CRED_MFG, 0, Mfg_cred);
+	ret = read_mfg_device_credentials((char *)FDO_CRED_MFG, 0, Mfg_cred);
 	TEST_ASSERT_FALSE(ret);
 
-	sdo_sdk_deinit();
+	fdo_sdk_deinit();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("load_credential", "[credentials][sdo]")
+TEST_CASE("load_credential", "[credentials][fdo]")
 #else
 void test_load_credential(void)
 #endif
 {
 	int ret;
-	ret = sdo_sdk_init(NULL, 0, NULL);
-	TEST_ASSERT_EQUAL(SDO_SUCCESS, ret);
+	ret = fdo_sdk_init(NULL, 0, NULL);
+	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 	// base64_init();
 
 	/* Negative case*/
@@ -408,11 +412,11 @@ void test_load_credential(void)
 	ret = load_credential();
 	TEST_ASSERT_EQUAL(-1, ret);
 	g_malloc_fail = false;
-	sdo_sdk_deinit();
+	fdo_sdk_deinit();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("read_write_Device_credentials", "[credentials][sdo]")
+TEST_CASE("read_write_Device_credentials", "[credentials][fdo]")
 #else
 void test_read_write_Device_credentials(void)
 #endif
@@ -430,50 +434,50 @@ void test_read_write_Device_credentials(void)
 	uint8_t mfg_buf[] = "{\"M\":{\"d\":\"device-serial\"}}";
 	uint8_t secure_buf[100] = "{\"Secret\":[\"p++AC/nnKsfYOh1+WBU8cw==\"]}";
 
-	ret = sdo_sdk_init(NULL, 0, NULL);
-	TEST_ASSERT_EQUAL(SDO_SUCCESS, ret);
+	ret = fdo_sdk_init(NULL, 0, NULL);
+	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
-	ret = sdo_blob_write((char *)SDO_CRED_NORMAL, SDO_SDK_NORMAL_DATA,
+	ret = fdo_blob_write((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA,
 			     normal_buf, sizeof(normal_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
-	ret = sdo_blob_write((char *)SDO_CRED_MFG, SDO_SDK_NORMAL_DATA, mfg_buf,
+	ret = fdo_blob_write((char *)FDO_CRED_MFG, FDO_SDK_NORMAL_DATA, mfg_buf,
 			     sizeof(mfg_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
-	ret = sdo_blob_write((char *)SDO_CRED_SECURE, SDO_SDK_SECURE_DATA,
+	ret = fdo_blob_write((char *)FDO_CRED_SECURE, FDO_SDK_SECURE_DATA,
 			     secure_buf, sizeof(secure_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
 	load_mfg_secret();
 
-	sdo_dev_cred_t *ocred = app_get_credentials();
-	ret = read_normal_device_credentials((char *)SDO_CRED_NORMAL,
-					     SDO_SDK_NORMAL_DATA, ocred);
+	fdo_dev_cred_t *ocred = app_get_credentials();
+	ret = read_normal_device_credentials((char *)FDO_CRED_NORMAL,
+					     FDO_SDK_NORMAL_DATA, ocred);
 	TEST_ASSERT_TRUE(ret);
 
-	ret = read_mfg_device_credentials((char *)SDO_CRED_MFG,
-					  SDO_SDK_NORMAL_DATA, ocred);
+	ret = read_mfg_device_credentials((char *)FDO_CRED_MFG,
+					  FDO_SDK_NORMAL_DATA, ocred);
 	TEST_ASSERT_TRUE(ret);
 
-	ret = read_secure_device_credentials((char *)SDO_CRED_SECURE,
-					     SDO_SDK_SECURE_DATA, ocred);
+	ret = read_secure_device_credentials((char *)FDO_CRED_SECURE,
+					     FDO_SDK_SECURE_DATA, ocred);
 	TEST_ASSERT_TRUE(ret);
 
-	ret = write_normal_device_credentials((char *)SDO_CRED_NORMAL,
-					      SDO_SDK_NORMAL_DATA, ocred);
+	ret = write_normal_device_credentials((char *)FDO_CRED_NORMAL,
+					      FDO_SDK_NORMAL_DATA, ocred);
 	TEST_ASSERT_TRUE(ret);
 
-	ret = write_mfg_device_credentials((char *)SDO_CRED_MFG,
-					   SDO_SDK_NORMAL_DATA, ocred);
+	ret = write_mfg_device_credentials((char *)FDO_CRED_MFG,
+					   FDO_SDK_NORMAL_DATA, ocred);
 	TEST_ASSERT_TRUE(ret);
 
-	ret = write_secure_device_credentials((char *)SDO_CRED_SECURE,
-					      SDO_SDK_SECURE_DATA, ocred);
+	ret = write_secure_device_credentials((char *)FDO_CRED_SECURE,
+					      FDO_SDK_SECURE_DATA, ocred);
 	TEST_ASSERT_TRUE(ret);
-	sdo_sdk_deinit();
+	fdo_sdk_deinit();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("store_credential", "[credentials][sdo]")
+TEST_CASE("store_credential", "[credentials][fdo]")
 #else
 void test_store_credential(void)
 #endif
@@ -490,36 +494,36 @@ void test_store_credential(void)
 	uint8_t mfg_buf[] = "{\"M\":{\"d\":\"device-serial\"}}";
 	uint8_t secure_buf[100] = "{\"Secret\":[\"p++AC/nnKsfYOh1+WBU8cw==\"]}";
 
-	ret = sdo_blob_write((char *)SDO_CRED_NORMAL, SDO_SDK_NORMAL_DATA,
+	ret = fdo_blob_write((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA,
 			     normal_buf, sizeof(normal_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
-	ret = sdo_blob_write((char *)SDO_CRED_MFG, SDO_SDK_NORMAL_DATA, mfg_buf,
+	ret = fdo_blob_write((char *)FDO_CRED_MFG, FDO_SDK_NORMAL_DATA, mfg_buf,
 			     sizeof(mfg_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
-	ret = sdo_blob_write((char *)SDO_CRED_SECURE, SDO_SDK_SECURE_DATA,
+	ret = fdo_blob_write((char *)FDO_CRED_SECURE, FDO_SDK_SECURE_DATA,
 			     secure_buf, sizeof(secure_buf));
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
-	ret = sdo_sdk_init(NULL, 0, NULL);
-	TEST_ASSERT_EQUAL(SDO_SUCCESS, ret);
+	ret = fdo_sdk_init(NULL, 0, NULL);
+	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 	load_mfg_secret();
 
-	sdo_dev_cred_t *ocred = app_get_credentials();
+	fdo_dev_cred_t *ocred = app_get_credentials();
 	/* Positive Case */
 	ret = store_credential(ocred);
 	TEST_ASSERT_EQUAL(0, ret);
-	sdo_sdk_deinit();
+	fdo_sdk_deinit();
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("app_alloc_credentials", "[credentials][sdo]")
+TEST_CASE("app_alloc_credentials", "[credentials][fdo]")
 #else
 void test_app_alloc_credentials(void)
 #endif
 {
-	sdo_dev_cred_t *ret = NULL;
+	fdo_dev_cred_t *ret = NULL;
 
 	g_malloc_fail = true;
 	ret = app_alloc_credentials();
