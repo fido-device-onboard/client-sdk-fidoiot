@@ -35,6 +35,16 @@ node('ccode'){
       '''
     }
 
+    //CSDK binaries are currently built without MODULES flag and hence don't support the ServiceInfo transfers.
+    //Enabling the flag temporarily for the smoke-test in cDevice_Build.sh. This stage will be removed once the script is modified.
+    stage('Add MODULES flag to build script'){
+      sh '''
+        cd $WORKSPACE/client-sdk
+        sed -i 's/-DPK_ENC=ecdsa/-DPK_ENC=ecdsa -DMODULES=true/g' cDevice_Build.sh
+      '''
+
+    }
+
     stage('Build ClientSDK'){
       sh '''
         export SAFESTRING_ROOT=$WORKSPACE/safestringlib
