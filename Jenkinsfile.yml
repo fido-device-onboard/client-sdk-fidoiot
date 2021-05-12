@@ -42,7 +42,6 @@ node('ccode'){
         cd $WORKSPACE/client-sdk
         sed -i 's/-DPK_ENC=ecdsa/-DPK_ENC=ecdsa -DMODULES=true/g' cDevice_Build.sh
       '''
-
     }
 
     stage('Build ClientSDK'){
