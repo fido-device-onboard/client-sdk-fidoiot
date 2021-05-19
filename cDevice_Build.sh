@@ -11,50 +11,59 @@ else
         BUILDTYPE=$1
 fi
 
-# Build To Archive into Artifactory
+############################
+### Build Configurations ###
+############################
 
-echo "For ecdsa_c_device *******"
-mkdir -p ecdsa256_c_device_bin
-mkdir -p ecdsa256_c_device_bin/blob_backup
+# Helper function for copying build artifacts to target folder
+function copy_build_artifacts()
+{
+  # Arg1: Target build directory
+  BUILDDIR=$1
+
+  # Create the target directory, cleanup if it already exists
+  rm -rf ${BUILDDIR}
+  mkdir -p ${BUILDDIR}
+  mkdir -p ${BUILDDIR}/blob_backup
+
+  # Copy the build artifacts
+  cp -a build/linux-client ${BUILDDIR}
+  cp -a data ${BUILDDIR}
+  cp -a data/*.blob ${BUILDDIR}/blob_backup
+  cp -a data/platform_aes_key.bin ${BUILDDIR}/blob_backup
+  cp -a data/platform_hmac_key.bin ${BUILDDIR}/blob_backup
+  cp -a data/platform_iv.bin ${BUILDDIR}/blob_backup
+}
+
+## Common build configurations
+DEFAULT_CONFIG="-DBUILD=${BUILDTYPE} -DMANUFACTURER_TOOLKIT=true -DMODULES=true -DPK_ENC=ecdsa"
+
+## ECDSA256 build configurations
+echo "***** Building with ECDSA256 support *****"
 make pristine || true
-cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa256 -DKEX=ecdh
+cmake ${DEFAULT_CONFIG} -DDA=ecdsa256 -DKEX=ecdh .
 make -j$(nproc)
+copy_build_artifacts x86_ecdsa256_bin
 
-cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/ecdsa256_c_device_bin
-cp -a ${WORKSPACE}/data   ${WORKSPACE}/ecdsa256_c_device_bin
-cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/ecdsa256_c_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/ecdsa256_c_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/ecdsa256_c_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa256_c_device_bin/blob_backup
-
-echo "For ecdsa_c_device for Supply chain tool*******"
-mkdir -p ecdsa256_c_sct_device_bin
-mkdir -p ecdsa256_c_sct_device_bin/blob_backup
+# Build configurations for ECDSA384
+echo "***** Building with ECDSA384 support *****"
 make pristine || true
-cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa256 -DMANUFACTURER_TOOLKIT=true -DKEX=ecdh
+cmake ${DEFAULT_CONFIG} -DDA=ecdsa384 -DKEX=ecdh384 .
 make -j$(nproc)
+copy_build_artifacts x86_ecdsa384_bin
 
-cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/ecdsa256_c_sct_device_bin
-cp -a ${WORKSPACE}/data   ${WORKSPACE}/ecdsa256_c_sct_device_bin
-cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/ecdsa256_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/ecdsa256_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/ecdsa256_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa256_c_sct_device_bin/blob_backup
-
-mkdir -p ecdsa384_c_sct_device_bin
-mkdir -p ecdsa384_c_sct_device_bin/blob_backup
+# Build configurations for TPM based devices
+echo "***** Building with TPM (ECDSA256) support *****"
 make pristine || true
-cmake -DBUILD=${BUILDTYPE} -DPK_ENC=ecdsa -DDA=ecdsa384 -DMANUFACTURER_TOOLKIT=true -DKEX=ecdh384
+cmake ${DEFAULT_CONFIG} -DDA=tpm20_ecdsa256 -DPK_ENC=ecdsa .
 make -j$(nproc)
+copy_build_artifacts tpm_ecdsa256_bin
 
-cp -a ${WORKSPACE}/build/linux-client    ${WORKSPACE}/ecdsa384_c_sct_device_bin
-cp -a ${WORKSPACE}/data   ${WORKSPACE}/ecdsa384_c_sct_device_bin
-cp -a ${WORKSPACE}/data/*.blob ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_aes_key.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_hmac_key.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
-cp -a ${WORKSPACE}/data/platform_iv.bin ${WORKSPACE}/ecdsa384_c_sct_device_bin/blob_backup
+######################
+### Run Unit Tests ###
+######################
 
-echo " *****Running Unit Tests*********"
+echo " ***** Running Unit Tests *****"
 TEST_OUTPUT="build/unit-test-output.txt"
 rm -f $TEST_OUTPUT
 make pristine || true; cmake -Dunit-test=true -DHTTPPROXY=true -DBUILD=release -DKEX=ecdh -DAES_MODE=ctr -DDA=ecdsa256 -DPK_ENC=ecdsa ; make -j$(nproc) | tee -a $TEST_OUTPUT
