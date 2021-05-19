@@ -42,7 +42,7 @@ node('ccode'){
         export TINYCBOR_ROOT=$WORKSPACE/tinycbor
         echo $TINYCBOR_ROOT
         cd $WORKSPACE/client-sdk
-        $WORKSPACE/client-sdk/cDevice_Build.sh
+        $WORKSPACE/client-sdk/build.sh
         tar -cvzf x86_ecdsa256_bin.tar.gz x86_ecdsa256_bin
         tar -cvzf x86_ecdsa384_bin.tar.gz x86_ecdsa384_bin
         tar -cvzf tpm_ecdsa256_bin.tar.gz tpm_ecdsa256_bin

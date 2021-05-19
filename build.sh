@@ -3,13 +3,39 @@ set -e -x
 export WORKSPACE=`pwd`
 
 BUILDTYPE="release"
+SKIP_UNIT_TEST=0
 
-if [ -z $1 ]
-        then
-        echo "No argument supplied"
-else
-        BUILDTYPE=$1
-fi
+# Parse command line arguments
+function usage()
+{
+ echo -e "Usage:
+         $0 <OPTION>\n
+        OPTION:
+           [-d: Build in Debug mode]
+           [-s: Skip unit test execution]
+           [-h: Print help message]"
+}
+
+function parse_args()
+{
+  arg_count=0
+  for opt in $@; do
+    case $opt in
+      -d)
+        BUILDTYPE="debug"
+        ;;
+      -s)
+        SKIP_UNIT_TEST=1
+        ;;
+      -h|*)
+        usage;
+        exit 1
+        ;;
+      esac
+  done
+}
+
+parse_args "$@"
 
 ############################
 ### Build Configurations ###
@@ -64,6 +90,11 @@ copy_build_artifacts tpm_ecdsa256_bin
 ### Run Unit Tests ###
 ######################
 
+# Skip unit test if requested through command-line
+if [ $SKIP_UNIT_TEST -eq 1 ]; then
+  exit 0
+fi
+
 echo " ***** Running Unit Tests *****"
 TEST_OUTPUT="build/unit-test-output.txt"
 rm -f $TEST_OUTPUT
@@ -83,6 +114,8 @@ run_unit_test -DDA=ecdsa384 -DKEX=ecdh384 -DAES_MODE=ctr
 run_unit_test -DDA=ecdsa384 -DKEX=ecdh384 -DAES_MODE=cbc
 run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=ctr -DDA_FILE=pem
 
+# DO NOT change the AWK search string, the spaces has been kept deliberately.
 fail_count=$(awk '/Tests Failed  :/ {split($0,a,": "); count+=a[2]} END{print count}' $TEST_OUTPUT)
 echo "Found $fail_count unit-test failure(s)."
+
 exit $fail_count
