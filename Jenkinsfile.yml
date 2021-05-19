@@ -78,7 +78,7 @@ node('ccode'){
       // Updating the TO0 scheduling time interval
       sh '''
         cd test-fidoiot/binaries/pri-fidoiot/owner
-        sed -i 's/300/60/g' owner.env
+        sed -i 's/300/30/g' owner.env
       '''
 
       // Setting the TEST_DIR and executing smoke test
