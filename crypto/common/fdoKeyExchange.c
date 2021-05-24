@@ -230,10 +230,10 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray)
  * KeyMaterial = (byte)i||"FIDO-KDF"||(byte)0||"AutomaticOnboardTunnel"||Lstr
  *
  * index is used to determine the 1st byte 'i', and cannot be more than 2.
- * bytes_length is the total number of key-bytes to generate, and is used to calculate Lstr.
+ * keymat_bit_length is the total number of key-bits to generate, and is used to calculate Lstr.
  */
 static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size, const int index,
-	const int bytes_length)
+	const int keymat_bit_length)
 {
 	int ret = -1;
 	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
@@ -270,8 +270,8 @@ static int32_t prep_keymat(uint8_t *keymat, size_t keymat_size, const int index,
 		goto err;
 	}
 	ofs += strnlen_s(kex_ctx->context_label, FDO_MAX_STR_SIZE);
-	keymat[ofs++] = (bytes_length >> 8) & 0xff;
-	keymat[ofs++] = bytes_length & 0xff;
+	keymat[ofs++] = (keymat_bit_length >> 8) & 0xff;
+	keymat[ofs++] = keymat_bit_length & 0xff;
 
 	ret = 0;
 
@@ -350,6 +350,8 @@ static int32_t kex_kdf(void)
 	fdo_aes_keyset_t *keyset = get_keyset();
 	uint8_t *keymat = NULL;
 	size_t keymat_size = 0;
+	// length of 1 byte in bits
+	int byte_size = 8;
 	// number of key bytes to derive = SEK + SVK size for AES-CTR and AES-CBC modes
 	// TO-DO : update when AES-GCM and AES-CCM are added
 	size_t key_bytes_sz = SEK_KEY_SIZE + SVK_KEY_SIZE;
@@ -364,8 +366,8 @@ static int32_t kex_kdf(void)
 		goto err;
 	}
 
-	// total number of rounds to iterate for generating the total number of key bytes
-	num_rounds = ceil((double)key_bytes_sz / FDO_SHA_DIGEST_SIZE_USED);
+	// total number of rounds to iterate for generating the total number of key bits
+	num_rounds = ceil((double)(key_bytes_sz * byte_size) / (FDO_SHA_DIGEST_SIZE_USED * byte_size));
 
 	// KeyMaterial = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where
 	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL, and
@@ -398,7 +400,7 @@ static int32_t kex_kdf(void)
 			goto err;
 		}
 		// generate KeyMaterial
-		ret = prep_keymat(keymat, keymat_size, num_rounds_index, key_bytes_sz);
+		ret = prep_keymat(keymat, keymat_size, num_rounds_index, key_bytes_sz * byte_size);
 		if (ret) {
 			LOG(LOG_ERROR, "Failed to prepare keymat\n");
 			goto err;
