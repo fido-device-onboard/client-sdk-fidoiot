@@ -33,6 +33,11 @@ int32_t msg11(fdo_prot_t *ps)
 	fdo_ownership_voucher_t *ov = NULL;
 	fdo_dev_cred_t *dev_cred = app_get_credentials();
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	/* Is device credentials memory allocated */
 	if (!dev_cred) {
 		LOG(LOG_ERROR, "No device credentials available\n");

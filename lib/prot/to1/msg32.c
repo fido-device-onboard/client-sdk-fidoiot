@@ -28,6 +28,11 @@ int32_t msg32(fdo_prot_t *ps)
 	fdo_eat_payload_base_map_t payloadbasemap;
 	fdo_byte_array_t *encoded_payloadbasemap = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO1.ProveToRV started\n");
 
 	// Allocate EAT object now. Initialize and fill the contents when needed to finally

@@ -31,7 +31,7 @@ int keyfromstring(const char *key);
  * @param byte_sz - size of bytes to ve initialized
  * @return bits if initialization in success
  */
-fdo_bits_t *fdo_bits_init(fdo_bits_t *b, int byte_sz)
+fdo_bits_t *fdo_bits_init(fdo_bits_t *b, size_t byte_sz)
 {
 	if (!b)
 		return NULL;
@@ -58,7 +58,7 @@ fdo_bits_t *fdo_bits_init(fdo_bits_t *b, int byte_sz)
  * @param byte_sz - number of bytes to be initialized
  * @return pointer to the bits allocated if success else NULL
  */
-fdo_bits_t *fdo_bits_alloc(int byte_sz)
+fdo_bits_t *fdo_bits_alloc(size_t byte_sz)
 {
 	fdo_bits_t *b = fdo_alloc(sizeof(fdo_bits_t));
 
@@ -77,7 +77,7 @@ fdo_bits_t *fdo_bits_alloc(int byte_sz)
  * @param data - data to be written to the initialized bits
  * @return pointer to bits if success else NULL
  */
-fdo_bits_t *fdo_bits_alloc_with(int byte_sz, uint8_t *data)
+fdo_bits_t *fdo_bits_alloc_with(size_t byte_sz, uint8_t *data)
 {
 	fdo_bits_t *b = fdo_bits_alloc(byte_sz);
 
@@ -4917,7 +4917,7 @@ void fdo_service_info_free(fdo_service_info_t *si)
 fdo_key_value_t **fdo_service_info_fetch(fdo_service_info_t *si,
 					 const char *key)
 {
-	fdo_key_value_t **kvp, *kv;
+	fdo_key_value_t **kvp = NULL, *kv = NULL;
 	int res = 1;
 
 	for (kvp = &si->kv; (kv = *kvp) != NULL; kvp = &kv->next) {
@@ -4945,7 +4945,7 @@ fdo_key_value_t **fdo_service_info_fetch(fdo_service_info_t *si,
  */
 fdo_key_value_t **fdo_service_info_get(fdo_service_info_t *si, int key_num)
 {
-	fdo_key_value_t **kvp, *kv;
+	fdo_key_value_t **kvp = NULL, *kv = NULL;
 	int index;
 
 	for (kvp = &si->kv, index = 0; (kv = *kvp) != NULL;
@@ -4970,7 +4970,7 @@ fdo_key_value_t **fdo_service_info_get(fdo_service_info_t *si, int key_num)
 bool fdo_service_info_add_kv_str(fdo_service_info_t *si, const char *key,
 				 const char *val)
 {
-	fdo_key_value_t **kvp, *kv;
+	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
 	if (!si || !key || !val)
 		return false;
@@ -5032,7 +5032,7 @@ bool fdo_service_info_add_kv_str(fdo_service_info_t *si, const char *key,
 bool fdo_service_info_add_kv_bin(fdo_service_info_t *si, const char *key,
 				 const fdo_byte_array_t *val)
 {
-	fdo_key_value_t **kvp, *kv;
+	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
 	if (!si || !key || !val)
 		return false;
@@ -5082,7 +5082,7 @@ bool fdo_service_info_add_kv_bin(fdo_service_info_t *si, const char *key,
 bool fdo_service_info_add_kv_bool(fdo_service_info_t *si, const char *key,
 				 bool val)
 {
-	fdo_key_value_t **kvp, *kv;
+	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
 	if (!si || !key)
 		return false;
@@ -5137,7 +5137,7 @@ bool fdo_service_info_add_kv_bool(fdo_service_info_t *si, const char *key,
 bool fdo_service_info_add_kv_int(fdo_service_info_t *si, const char *key,
 				 int val)
 {
-	fdo_key_value_t **kvp, *kv;
+	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
 	if (!si || !key)
 		return false;

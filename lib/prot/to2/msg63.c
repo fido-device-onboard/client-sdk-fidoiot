@@ -49,6 +49,11 @@ int32_t msg63(fdo_prot_t *ps)
 	fdo_cose_t *cose = NULL;
 	fdo_byte_array_t *cose_encoded = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
 	}

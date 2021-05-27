@@ -25,7 +25,6 @@
 #include "safe_lib.h"
 #include "fdodeviceinfo.h"
 
-int TO2_done;
 typedef struct app_data_s {
 	bool error_recovery;
 	bool recovery_enabled;
@@ -771,7 +770,7 @@ fdo_sdk_status fdo_sdk_resale(void)
  */
 static void app_close(void)
 {
-	fdo_block_t *fdob;
+	fdo_block_t *fdob = NULL;
 
 	if (!g_fdo_data)
 		return;
@@ -1357,7 +1356,6 @@ static bool _STATE_TO2(void)
 		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 		LOG(LOG_INFO, "@FIDO Device Onboard Complete@\n");
 		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-		TO2_done = 1;
 		ret = true;
 		break;
 	}

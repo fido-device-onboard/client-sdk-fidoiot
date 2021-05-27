@@ -25,6 +25,12 @@
  */
 int32_t msg30(fdo_prot_t *ps)
 {
+	int ret = -1;
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO1.HelloRV started\n");
 	fdow_next_block(&ps->fdow, FDO_TO1_TYPE_HELLO_FDO);
 	if (!fdow_start_array(&ps->fdow, 2)) {

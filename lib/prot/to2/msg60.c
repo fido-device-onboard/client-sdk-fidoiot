@@ -31,6 +31,11 @@ int32_t msg60(fdo_prot_t *ps)
 	fdo_string_t *kx = fdo_get_device_kex_method();
 	fdo_string_t *cs = fdo_get_device_crypto_suite();
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO2.HelloDevice started\n");
 
 	fdow_next_block(&ps->fdow, FDO_TO2_HELLO_DEVICE);

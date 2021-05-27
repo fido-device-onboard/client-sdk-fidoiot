@@ -23,9 +23,9 @@ typedef struct {
 	uint8_t *bytes;
 } fdo_bits_t;
 
-fdo_bits_t *fdo_bits_init(fdo_bits_t *b, int byte_sz);
-fdo_bits_t *fdo_bits_alloc(int byte_sz);
-fdo_bits_t *fdo_bits_alloc_with(int byte_sz, uint8_t *data);
+fdo_bits_t *fdo_bits_init(fdo_bits_t *b, size_t byte_sz);
+fdo_bits_t *fdo_bits_alloc(size_t byte_sz);
+fdo_bits_t *fdo_bits_alloc_with(size_t byte_sz, uint8_t *data);
 void fdo_bits_free(fdo_bits_t *b);
 void fdo_bits_empty(fdo_bits_t *b);
 fdo_bits_t *fdo_bits_clone(fdo_bits_t *b);

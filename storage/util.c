@@ -248,7 +248,7 @@ void hexdump(const char *message, const void *buffer, size_t size)
 /**
  * Internal API
  */
-void *fdo_alloc(int size)
+void *fdo_alloc(size_t size)
 {
 	void *buf = malloc(size);
 
