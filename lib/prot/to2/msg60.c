@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg40 of TO2
+ * \brief This file implements msg60 of TO2
  */
 
 #include "fdoprot.h"
@@ -13,7 +13,7 @@
 #include "fdoCrypto.h"
 
 /**
- * msg60() - TO2.Hello_device
+ * msg60() - TO2.HelloDevice
  * This message starts the Transfer of ownership of device to new owner. The
  * device sends some parameters to setup up trust with the owner
  *
@@ -71,7 +71,7 @@ int32_t msg60(fdo_prot_t *ps)
 		return false;
 	}
 
-	/* Write the eA info */
+	/* Write the eASiginfo */
 	if (!fdo_siginfo_write(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write eASigInfo\n");
 		return false;

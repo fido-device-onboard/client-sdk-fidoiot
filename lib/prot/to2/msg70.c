@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg50 of TO2 state machine.
+ * \brief This file implements msg70 of TO2 state machine.
  */
 
 #include "fdoCrypto.h"
@@ -32,7 +32,7 @@ int32_t msg70(fdo_prot_t *ps)
 
 	/*
 	 * TODO: Writing credentials to TEE!
-	 * This GUID came as g3 - "the new transaction GUID"
+	 * This GUID came as TO2SetupDevicePayload.Guid - "the new transaction GUID"
 	 * which will overwrite GUID in initial credential data.
 	 * A new transaction will start fresh, taking the latest
 	 * credential (among them this, new GUID). That's why
