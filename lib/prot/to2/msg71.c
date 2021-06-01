@@ -27,6 +27,11 @@ int32_t msg71(fdo_prot_t *ps)
 	char prot[] = "FDOProtTO2";
 	fdo_encrypted_packet_t *pkt = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO2.Done2 started\n");
 
 	if (!fdo_check_to2_round_trips(ps)) {

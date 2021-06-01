@@ -25,6 +25,11 @@ int32_t msg13(fdo_prot_t *ps)
 	char prot[] = "FDOProtDI";
 	fdo_dev_cred_t *dev_cred = app_get_credentials();
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	/* Check if we are able to read the device credentials from storage */
 	if (dev_cred == NULL) {
 		LOG(LOG_ERROR, "Device credentials missing\n");

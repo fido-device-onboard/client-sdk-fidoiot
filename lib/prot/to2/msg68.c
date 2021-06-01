@@ -36,6 +36,11 @@ int32_t msg68(fdo_prot_t *ps)
 {
 	int ret = -1;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO2.DeviceServiceInfo started\n");
 
 	/* send entry number to load */

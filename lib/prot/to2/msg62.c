@@ -20,6 +20,13 @@
  */
 int32_t msg62(fdo_prot_t *ps)
 {
+	int ret = -1;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO2.GetOVNextEntry started\n");
 
 	fdow_next_block(&ps->fdow, FDO_TO2_GET_OP_NEXT_ENTRY);

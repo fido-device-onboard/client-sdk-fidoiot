@@ -26,6 +26,11 @@ int32_t msg67(fdo_prot_t *ps)
 	fdo_encrypted_packet_t *pkt = NULL;
 	int rec_maxDeviceServiceInfoSz = 0;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
 	}

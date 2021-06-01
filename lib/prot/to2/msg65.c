@@ -37,6 +37,11 @@ int32_t msg65(fdo_prot_t *ps)
 	fdo_encrypted_packet_t *pkt = NULL;
 	fdo_cose_t *cose = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
 	}

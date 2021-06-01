@@ -28,6 +28,11 @@ int32_t msg12(fdo_prot_t *ps)
 {
 	int ret = -1;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	/* Prepare the block for msg12 */
 	if (!fdow_next_block(&ps->fdow, FDO_DI_SET_HMAC))
 		goto err;

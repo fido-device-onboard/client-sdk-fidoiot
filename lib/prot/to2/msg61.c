@@ -44,6 +44,11 @@ int32_t msg61(fdo_prot_t *ps)
 	fdo_byte_array_t *xA = NULL;
 	fdo_cose_t *cose = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	/*
 	 * Check that we don't exceed Round Trip Times requirements. The reason
 	 * for checking here is that fdo_prot_rcv_msg() fails the first time.

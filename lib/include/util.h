@@ -170,7 +170,7 @@ int read_buffer_from_file(const char *filename, void *buffer, size_t size);
 /*
  * Allocate a buffer and set its contents to 0 before using it.
  */
-void *fdo_alloc(int size);
+void *fdo_alloc(size_t size);
 
 /* Print timestamp */
 int print_timestamp(void);

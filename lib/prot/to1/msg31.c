@@ -27,6 +27,11 @@ int32_t msg31(fdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "FDOProtTO1";
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	/* Read network data from internal buffer */
 	if (!fdo_prot_rcv_msg(&ps->fdor, &ps->fdow, prot, &ps->state)) {
 		ret = 0; /* Mark for retry */
