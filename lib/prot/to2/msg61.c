@@ -289,7 +289,7 @@ int32_t msg61(fdo_prot_t *ps)
 		ps->ov_entry_num = 0;
 		ps->state = FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY;
 	} else {
-		LOG(LOG_INFO, "No Ownership Vouchers, jumping to msg44\n");
+		LOG(LOG_INFO, "No OVEntries, jumping to msg64\n");
 		ps->state = FDO_STATE_TO2_SND_PROVE_DEVICE;
 	}
 

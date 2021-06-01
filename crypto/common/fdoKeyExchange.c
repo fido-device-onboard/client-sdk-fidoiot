@@ -265,7 +265,8 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 		goto err;
 	}
 	ofs += strnlen_s(kex_ctx->kdf_label, FDO_MAX_STR_SIZE);
-	kdf_input[ofs++] = 0x00;	// separation indicator
+	// Separation indicator
+	kdf_input[ofs++] = 0x00;
 	// Fill in the context
 	if (strncpy_s((char *)&kdf_input[ofs], kdf_input_len - ofs,
 		kex_ctx->context_label,
@@ -352,16 +353,20 @@ static int32_t kex_kdf(void)
 	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
 	fdo_byte_array_t *shse = get_secret();
 	fdo_aes_keyset_t *keyset = get_keyset();
-	uint8_t *kdf_input = NULL;	// input data to the KDF
+	// input data to the KDF
+	uint8_t *kdf_input = NULL;
 	size_t kdf_input_len = 0;
 	// length of 1 byte in bits
 	int byte_size = 8;
 	// Length of Output Keying Material, in bytes = SEK + SVK size for AES-CTR and AES-CBC modes
 	// TO-DO : update when AES-GCM and AES-CCM are added
 	size_t keymat_bytes_sz = SEK_KEY_SIZE + SVK_KEY_SIZE;
-	uint8_t keymat[keymat_bytes_sz];	// Output Keying Material
-	int n = 0;	// number of iterations of PRF
-	int i = 0;	// counter, that is an input to each iteration of PRF
+	// Output Keying Material
+	uint8_t keymat[keymat_bytes_sz];
+	// number of iterations of PRF
+	int n = 0;
+	// counter, that is an input to each iteration of PRF
+	int i = 0;
 	size_t keymat_bytes_index = 0;
 	size_t keymat_bytes_to_copy = 0;
 	uint8_t *hmac = NULL;

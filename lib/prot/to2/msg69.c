@@ -13,7 +13,7 @@
 #include "util.h"
 
 /**
- * msg49() - TO2.OwnerServiceInfo
+ * msg69() - TO2.OwnerServiceInfo
  * Device receives the Owner ServiceInfo.
  *
  * TO2.OwnerServiceInfo = [
