@@ -28,6 +28,11 @@ int32_t msg66(fdo_prot_t *ps)
 	int ret = -1;
 	fdo_hash_t *hmac = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady started\n");
 
 	/* Send all the key value sets in the Service Info list */

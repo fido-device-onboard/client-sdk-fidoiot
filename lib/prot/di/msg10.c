@@ -30,6 +30,10 @@
 int32_t msg10(fdo_prot_t *ps)
 {
 	int ret = -1;
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	fdow_next_block(&ps->fdow, FDO_DI_APP_START);
 	if (!fdow_start_array(&ps->fdow, 1))

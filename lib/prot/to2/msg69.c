@@ -43,6 +43,11 @@ int32_t msg69(fdo_prot_t *ps)
 	int module_ret_val = -1;
 	fdo_sdk_service_info_module_list_t *module_list_itr = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
 	}
