@@ -198,11 +198,11 @@ typedef struct {
 #define FDO_COSE_SIGN1_CUPHNONCE_KEY -17760701
 #define FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY -17760702
 
-// Appendix E. AESPlainType values.
-#define FDO_CRYPTO_COSEAES128CBC -17760703
-#define FDO_CRYPTO_COSEAES128CTR -17760704
-#define FDO_CRYPTO_COSEAES256CBC -17760705
-#define FDO_CRYPTO_COSEAES256CTR -17760706
+// AES GCM/CCM algotithm values from COSE specification, RFC 8152
+#define FDO_CRYPTO_A128GCM 1
+#define FDO_CRYPTO_A256GCM 3
+#define FDO_CRYPTO_A128CCM 32
+#define FDO_CRYPTO_A256CCM 33
 
 // 3.3.4 PublicKey encodings (pkEnc)
 #define FDO_CRYPTO_PUB_KEY_ENCODING_NONE 0
@@ -237,37 +237,63 @@ bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk);
 fdo_public_key_t *fdo_public_key_read(fdor_t *fdor);
 fdo_public_key_t *fdo_public_key_clone(fdo_public_key_t *pk);
 
-#define AES_IV 16
-#define AES_CTR_IV 12
-#define AES_CTR_IV_COUNTER 4
+// AES GCM IV length
+#define AES_GCM_IV 12
+// AES CCM IV length
+#define AES_CCM_IV 7
+
+// AES GCM authenticated TAG length
+#define AES_GCM_TAG_LEN 16
+// AES CCM authenticated TAG length
+#define AES_CCM_TAG_LEN 16
+
+#if defined(AES_MODE_GCM_ENABLED)
+#define AES_IV_LEN AES_GCM_IV
+#define AES_TAG_LEN AES_GCM_TAG_LEN
+#elif defined(AES_MODE_CCM_ENABLED)
+#define AES_IV_LEN AES_CCM_IV
+#define AES_TAG_LEN AES_CCM_TAG_LEN
+#else
+// Update IV length for AES here, if AES CTR/CBC modes are needed as per the FDO specification
+#define AES_IV_LEN 16
+#define AES_TAG_LEN 0
+#endif
 
 typedef struct {
 	uint8_t nulls_added;
 	fdo_byte_array_t *ct_string;
 	fdo_byte_array_t *em_body; // Ciphertext of Encrypted Message Body
+	uint8_t tag[AES_TAG_LEN];
 	fdo_hash_t *hmac;	  // HMAC of ct body
-	uint8_t iv[AES_IV];	// iv of ctr/cbc.
+	uint8_t iv[AES_IV_LEN];	// iv of gcm/ccm.
 	uint32_t offset;
 	int aes_plain_type;
 } fdo_encrypted_packet_t;
 
+// TO-DO: Look at the usages of this. The contents are probably not used in any capacity
 typedef struct {
-	uint8_t ctr_iv[AES_CTR_IV];
+	uint8_t ctr_iv[AES_IV_LEN];
 	uint32_t ctr_enc;
 	uint32_t ctr_dec;
-	uint8_t cbc_iv_enc[AES_IV];
-	uint8_t cbc_iv_dec[AES_IV];
+	uint8_t cbc_iv_enc[AES_IV_LEN];
+	uint8_t cbc_iv_dec[AES_IV_LEN];
 	uint32_t pkt_count;
 } fdo_iv_t; // IV store
 
 fdo_encrypted_packet_t *fdo_encrypted_packet_alloc(void);
 void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt);
 fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor);
+bool fdo_aad_write(fdow_t *fdow, int alg_type);
+bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
 				 fdo_iv_t *iv);
 bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv);
+bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
+	fdow_t *fdow, size_t fdow_buff_default_sz);
+bool fdo_prep_composed_encrypted_message(fdo_encrypted_packet_t *pkt,
+	fdow_t *fdow, size_t fdow_buff_default_sz);
 
 #define FDO_AES_128_BLOCK_SIZE 16
 
@@ -288,7 +314,7 @@ typedef struct {
 } fdo_cose_encrypt0_protected_header_t;
 
 typedef struct {
-	uint8_t aes_iv[AES_IV];
+	uint8_t aes_iv[AES_IV_LEN];
 } fdo_cose_encrypt0_unprotected_header_t;
 
 typedef struct {

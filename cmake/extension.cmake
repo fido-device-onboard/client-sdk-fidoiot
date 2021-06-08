@@ -179,12 +179,12 @@ elseif(TLS MATCHES mbedtls)
     -DUSE_MBEDTLS)
 endif()
 
-if(${AES_MODE} MATCHES ctr)
+if(${AES_MODE} MATCHES gcm)
   client_sdk_compile_definitions(
-    -DAES_MODE_CTR_ENABLED)
-elseif(${AES_MODE} MATCHES cbc)
+    -DAES_MODE_GCM_ENABLED)
+elseif(${AES_MODE} MATCHES ccm)
   client_sdk_compile_definitions(
-    -DAES_MODE_CBC_ENABLED)
+    -DAES_MODE_CCM_ENABLED)
 else()
   message(WARNING "Incorrect AES_MODE selected")
 endif()

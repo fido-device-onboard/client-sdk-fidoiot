@@ -309,11 +309,10 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 
 		// decrypt and authenticate cipher-text content and fill the
 		// given buffer with clear-text
-		if (fdo_crypto_aes_gcm_decrypt(
-			buf, n_bytes, data, data_length, iv,
-			PLATFORM_IV_DEFAULT_LEN, aes_key,
-			PLATFORM_AES_KEY_DEFAULT_LEN, stored_tag,
-			AES_GCM_TAG_LEN) < 0) {
+		if (crypto_hal_aes_decrypt(
+			buf, &n_bytes, data, data_length, 16, iv,
+			aes_key, PLATFORM_AES_KEY_DEFAULT_LEN,
+			stored_tag, AES_GCM_TAG_LEN, NULL, 0) < 0) {
 			LOG(LOG_ERROR, "Decryption failed during Secure "
 				       "Blob Read!\n");
 			goto exit;
@@ -357,6 +356,7 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 	int retval = -1;
 	FILE *f = NULL;
 	uint32_t write_context_len = 0;
+	uint32_t write_context_len_temp = 0;
 	uint8_t *write_context = NULL;
 	size_t bytes_written = 0;
 	uint8_t tag[PLATFORM_GCM_TAG_SIZE] = {0};
@@ -466,16 +466,17 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 			goto exit;
 		}
 
+		write_context_len_temp = write_context_len - (PLATFORM_IV_DEFAULT_LEN +
+			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE);
 		// encrypt plain-text and copy cipher-text content
-		if (fdo_crypto_aes_gcm_encrypt(
+		if (crypto_hal_aes_encrypt(
 			buf, n_bytes,
-			write_context + PLATFORM_IV_DEFAULT_LEN +
-			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE,
-			write_context_len - (PLATFORM_IV_DEFAULT_LEN +
-			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE),
-			iv, PLATFORM_IV_DEFAULT_LEN, aes_key,
+			&write_context[PLATFORM_IV_DEFAULT_LEN +
+			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE],
+			&write_context_len_temp,
+			16, iv, aes_key,
 			PLATFORM_AES_KEY_DEFAULT_LEN, tag,
-			AES_GCM_TAG_LEN) < 0) {
+			AES_GCM_TAG_LEN, NULL, 0) < 0) {
 			LOG(LOG_ERROR, "Encypting data failed during Secure "
 				       "Blob write!\n");
 			goto exit;
