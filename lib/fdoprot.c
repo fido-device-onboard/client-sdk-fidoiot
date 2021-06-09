@@ -222,7 +222,7 @@ bool fdo_process_states(fdo_prot_t *ps)
 			break;
 		}
 
-		/* If we reached with msg51 as ps->state, we are done */
+		/* If we reached with msg71 as ps->state, we are done */
 		if (prev_state == FDO_STATE_TO2_RCV_DONE_2 &&
 		    ps->state == FDO_STATE_DONE) {
 			ps_free(ps);

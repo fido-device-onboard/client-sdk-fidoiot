@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg42 of TO2 state machine.
+ * \brief This file implements msg62 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -35,7 +35,7 @@ int32_t msg62(fdo_prot_t *ps)
 		return -1;
 	}
 
-	/* Write "enn" value in the block */
+	/* Write OVEntryNum value in the block */
 	if (!fdow_signed_int(&ps->fdow, ps->ov_entry_num)) {
 		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read OPEntryNum\n");
 		return -1;
@@ -45,7 +45,7 @@ int32_t msg62(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read end array\n");
 		return -1;
 	}
-	/* Move to msg43 */
+	/* Move to msg63 */
 	ps->state = FDO_STATE_T02_RCV_OP_NEXT_ENTRY;
 	LOG(LOG_DEBUG, "TO2.GetOVNextEntry completed successfully\n");
 	return 0;

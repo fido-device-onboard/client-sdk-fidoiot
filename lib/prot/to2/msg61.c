@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg41 of TO2 state machine.
+ * \brief This file implements msg61 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -103,8 +103,7 @@ int32_t msg61(fdo_prot_t *ps)
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: COSE signature verification successful\n");
 
 	// verify the to1d that was received during TO1.RVRedirect, Type 33
-	// TO-DO : needs to happen only when TO2 was started without RVBypass flow.
-	// Add one more condition check for bypass when it is fixed up.
+	// Happens only when TO2 was started without RVBypass flow.
 	if (ps->to1d_cose) {
 		if (!fdo_signature_verification(ps->to1d_cose->cose_payload,
 					ps->to1d_cose->cose_signature,
@@ -144,7 +143,7 @@ int32_t msg61(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// Read the ownership header
+	// Read the OVHeader
 	ps->ovoucher = fdo_ov_hdr_read(&ps->fdor, &ps->new_ov_hdr_hmac);
 	if (!ps->ovoucher) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read OVHeader\n");
@@ -156,9 +155,7 @@ int32_t msg61(fdo_prot_t *ps)
 	}
 
 	/*
-	 * Read the number of Ownership Vouchers present. The device does not
-	 * know without "sz" tag, how many hops it has taken from Manufacturer
-	 * to the real owner (end-user)
+	 * Read the number of OVEntries present.
 	 */
 	ps->ovoucher->num_ov_entries = 0;
 	if (!fdor_signed_int(&ps->fdor, &ps->ovoucher->num_ov_entries) ||
@@ -233,7 +230,7 @@ int32_t msg61(fdo_prot_t *ps)
 
 	/*
 	 * Read the key exchange info. This is the first part of key exchange of
-	 * info. xA is used based on KEX selected (asym, RSA, DH)
+	 * info. xA is used based on KEX selected.
 	 */
 	size_t xA_length = 8;
 	if (!fdor_string_length(&ps->fdor, &xA_length)) {
@@ -250,7 +247,7 @@ int32_t msg61(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// Save TO2.ProveOPHdr.pk for Asymmetric Key Exchange algorithm
+	// Save CUPHOwnerPubKey for Asymmetric Key Exchange algorithm
 	if (fdo_set_kex_paramA(xA, ps->owner_public_key)) {
 		goto err;
 	}
@@ -292,7 +289,7 @@ int32_t msg61(fdo_prot_t *ps)
 		ps->ov_entry_num = 0;
 		ps->state = FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY;
 	} else {
-		LOG(LOG_INFO, "No Ownership Vouchers, jumping to msg44\n");
+		LOG(LOG_INFO, "No OVEntries, jumping to msg64\n");
 		ps->state = FDO_STATE_TO2_SND_PROVE_DEVICE;
 	}
 

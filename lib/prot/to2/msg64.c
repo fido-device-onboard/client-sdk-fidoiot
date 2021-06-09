@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg44 of TO2 state machine.
+ * \brief This file implements msg64 of TO2 state machine.
  */
 
 #include "fdoprot.h"
