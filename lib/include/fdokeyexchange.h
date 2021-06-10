@@ -9,7 +9,7 @@
 #include "fdotypes.h"
 #include <stdbool.h>
 
-typedef enum { KEXSUITE_NONE, DHKEXid14, ASYMKEX, ECDH } key_ex_suite_t;
+typedef enum { KEXSUITE_NONE, DHKEXid14, ECDH } key_ex_suite_t;
 typedef enum { HMAC_NONE, HMAC_SHA256, HMAC_SHA384 } hmac_name_t;
 typedef enum { HASH_SHA1, HASH_SHA256, HASH_SHA384 } hash_type_t;
 typedef enum { NIST_P_256, NIST_P_384 } ecccurve_type_t;

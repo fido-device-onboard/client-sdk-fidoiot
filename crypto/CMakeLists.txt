@@ -26,10 +26,6 @@ client_sdk_sources_with_lib(
   common/fdoDevAttest.c
   )
 
-if (${KEX} MATCHES asym)
-  client_sdk_sources_with_lib( crypto common/fdokeyexchange_asym.c)
-endif()
-
 
 #################################################################
 #openssl build
@@ -39,7 +35,6 @@ if (${TLS} STREQUAL openssl)
     openssl/openssl_cryptoSupport.c
     openssl/openssl_SSLRoutines.c
     openssl/openssl_base64.c
-    openssl/openssl_RSAEncryptRoutines.c
     openssl/BN_support.c)
 
     if (${CRYPTO_HW} MATCHES false)
@@ -56,14 +51,8 @@ if (${TLS} STREQUAL openssl)
     endif()
 
     ### Signature verifications types
-    if (${PK_ENC} STREQUAL ecdsa)
-
-      if (${CRYPTO_HW} STREQUAL false)
-            client_sdk_sources_with_lib( crypto openssl/openssl_ECDSAVerifyRoutines.c)
-        endif()
-    endif()
-    if (${PK_ENC} STREQUAL rsa)
-      client_sdk_sources_with_lib( crypto openssl/openssl_RSAVerifyRoutines.c)
+    if (${CRYPTO_HW} STREQUAL false)
+          client_sdk_sources_with_lib( crypto openssl/openssl_ECDSAVerifyRoutines.c)
     endif()
 
 
@@ -119,14 +108,9 @@ if (${TLS} STREQUAL mbedtls)
     endif()
 
     ### Signature verifications types
-    if (${PK_ENC} STREQUAL ecdsa)
 
-      if (${CRYPTO_HW} STREQUAL false)
-            client_sdk_sources_with_lib( crypto mbedtls/mbedtls_ECDSAVerifyRoutines.c)
-        endif()
-    endif()
-    if (${PK_ENC} STREQUAL rsa)
-      client_sdk_sources_with_lib( crypto mbedtls/mbedtls_RSAVerifyRoutines.c)
+    if (${CRYPTO_HW} STREQUAL false)
+          client_sdk_sources_with_lib( crypto mbedtls/mbedtls_ECDSAVerifyRoutines.c)
     endif()
 
 
@@ -151,11 +135,9 @@ if (${CRYPTO_HW} MATCHES true)
   client_sdk_sources_with_lib( crypto
     se/se_AESGCMRoutines.c
     se/se_cryptoSupport.c
-    se/se_csr.c)
+    se/se_csr.c
+    se/se_ECDSAVerifyRoutines.c)
 
-  if (${PK_ENC} STREQUAL ecdsa)
-    client_sdk_sources_with_lib( crypto se/se_ECDSAVerifyRoutines.c)
-  endif()
   if (${DA} STREQUAL ecdsa256 )
     client_sdk_sources_with_lib( crypto se/se_ECDSASignRoutines.c)
     endif()

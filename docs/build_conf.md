@@ -4,7 +4,6 @@ There following are some of the options to choose when building the device:
 - DA: Device Attestation Algorithm
 - AES_MODE: Advanced Encryption Standard (AES) encryption mode
 - KEX: Key Exchange method
-- PK_ENC: Owner Attestation Algorithm
 - TLS: SSL support
 
 ## Default Configuration
@@ -15,11 +14,12 @@ There following are some of the options to choose when building the device:
   KEX = ecdh #key-exchange method
   AES_MODE = ctr #AES encryption type
   DA = ecdsa256 #device attestation method
-  PK_ENC = ecdsa #public key encoding (for owner attestation)
   TLS = openssl #underlying cryptography library to use. (`openssl` denotes the OpenSSL* toolkit.)
   MODULES = false #whether to use FIDO Device Onboard (FDO) ServiceInfo functionality
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
+
+> ***NOTE***: The Owner attestation supported is conversely based on the specified `DA`. Additionally, by default `COSEX509 (COSE EC2)` Public Key encoding is supported.
 
 ## Custom Build
 The default configuration can be overridden by using more options in `cmake`.<br>
@@ -28,7 +28,6 @@ For example, to build the `STM32F429ZI` device:
 - DA: ECDSA-256
 - AES_MODE: CBC
 - KEX: Diffie-Hellman
-- PK_ENC: rsa (Default)
 ```shell
 $ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=cbc -DKEX=dh -DDA=ecdsa256 .
 $ make -j4
@@ -63,9 +62,6 @@ DA=ecdsa256           # Use ECDSA P256 based device attestation(default)
 DA=ecdsa384           # Use ECDSA-P384 based device attestation
 DA=tpm20_ecdsa256     # Use ECDSA-P256 based device attestation with TPM2.0 support
 DA_FILE=pem           # only Use if ECDSA private keys are PEM encoded
-
-List of Public Key encoding/owner-attestation options:
-PK_ENC=ecdsa          # Use ECDSA-X.509 based public key encoding (default)
 
 Underlying crypto library to be used:
 TLS=openssl           # (Linux default, not supported for other TARGET_OS)

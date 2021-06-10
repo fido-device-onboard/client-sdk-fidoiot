@@ -10,7 +10,6 @@ set (TARGET_OS linux)
 set (CSTD c99)
 set (TLS openssl)
 set (DA ecdsa256)
-set (PK_ENC ecdsa)
 set (KEX ecdh)
 set (AES_MODE ctr)
 set (EPID epid_r6)
@@ -101,34 +100,6 @@ endif()
 
 set(CACHED_DA ${DA} CACHE STRING "Selected DA")
 message("Selected DA ${DA}")
-
-###########################################
-# FOR PK_ENC
-get_property(cached_pk_enc_value CACHE PK_ENC PROPERTY VALUE)
-
-set(pk_enc_cli_arg ${cached_pk_enc_value})
-if(pk_enc_cli_arg STREQUAL CACHED_PK_ENC)
-  unset(pk_enc_cli_arg)
-endif()
-
-set(pk_enc_app_cmake_lists ${PK_ENC})
-if(cached_pk_enc_value STREQUAL PK_ENC)
-  unset(pk_enc_app_cmake_lists)
-endif()
-
-if(CACHED_PK_ENC)
-  if ((pk_enc_cli_arg) AND (NOT(CACHED_PK_ENC STREQUAL pk_enc_cli_arg)))
-    message(WARNING "Need to do make pristine before cmake args can change.")
-  endif()
-  set(PK_ENC ${CACHED_PK_ENC})
-elseif(pk_enc_cli_arg)
-  set(PK_ENC ${pk_enc_cli_arg})
-elseif(pk_enc_app_cmake_lists)
-  set(PK_ENC ${pk_enc_app_cmake_lists})
-endif()
-
-set(CACHED_PK_ENC ${PK_ENC} CACHE STRING "Selected PK_ENC")
-message("Selected PK_ENC ${PK_ENC}")
 
 ###########################################
 # FOR KEX
