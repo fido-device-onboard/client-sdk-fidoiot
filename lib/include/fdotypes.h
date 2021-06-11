@@ -174,24 +174,9 @@ typedef struct {
 	char *name;
 } fdo_dns_name_t;
 
-// Legacy Hash and HMAC types
-// TO-DO : Used in RSA-based crypto operations. Remove when the classes themselves are removed.
-#define FDO_PK_HASH_NONE 0
-#define FDO_PK_HASH_SHA1 3
-#define FDO_PK_HASH_SHA256 8
-#define FDO_PK_HASH_SHA512 10
-#define FDO_PK_HASH_SHA384 14
-#define FDO_PK_HASH_HMAC_SHA256 108
-#define FDO_PK_HASH_HMAC_SHA512 110
-#define FDO_PK_HASH_HMAC_SHA_384 114
-
 // 3.3.4, PublicKey types (pkType)
 #define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 -7
 #define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384 -35
-
-// TO-DO: Legacy, Used in RSA-based crypto operations.
-// Remove when the classes themselves are removed.
-#define FDO_CRYPTO_PUB_KEY_ALGO_RSA 1
 
 // 3.3.5 COSECompatibleSignatureTypes
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
@@ -225,16 +210,9 @@ typedef struct {
 #define FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 2
 #define FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY 3
 
-// TO-DO: Legacy, Used in RSA-based crypto operations.
-// Remove when the classes themselves are removed.
-#define FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP 3
-
 #define FDOEPID20_GID_LEN (16)
 
-//#define FDO_PK_ENC_DEFAULT FDO_CRYPTO_PUB_KEY_ENCODING_X509
-#define FDO_PK_ENC_DEFAULT FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP
-// Define the encryption values
-//#define FDOEAlgAES_ECB_No_padding 1
+#define FDO_PK_ENC_DEFAULT FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509
 
 typedef struct {
 	int pkalg;

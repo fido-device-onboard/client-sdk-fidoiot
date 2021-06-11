@@ -56,22 +56,13 @@
 #define FDO_AES_KEY_LENGTH BUFF_SIZE_16_BYTES /* 128 bits */
 #endif
 
-#ifdef PK_ENC_ECDSA
-#define FDO_OWNER_ATTEST_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_X509
-#elif defined PK_ENC_RSA
-#define FDO_OWNER_ATTEST_PK_ENC FDO_PK_ENC_DEFAULT
-#else
-#error "PK_ENC is undefined, it is either rsa or ecdsa"
-#endif /* PK_ENC_ECDSA */
+// default Owner attestation
+#define FDO_OWNER_ATTEST_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509
 
 #if defined(ECDSA256_DA)
 #define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256
-#define FDO_PK_EA_SIZE 0
-#define FDO_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_X509
 #elif defined(ECDSA384_DA)
 #define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384
-#define FDO_PK_EA_SIZE 0
-#define FDO_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_X509
 #endif
 
 #if defined(AES_MODE_CTR_ENABLED) && AES_BITS == 128

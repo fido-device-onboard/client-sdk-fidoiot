@@ -133,18 +133,18 @@ Example command to build TPM* enabled FDO Client SDK with the Resource Manager a
 
 ```shell
 make pristine
-cmake -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 .
+cmake -DDA=tpm20_ecdsa256 .
 make -j$(nproc)
 ```
 
 To use the in-kernel Resource Manager '/dev/tpmrm0', use the following command
 ```shell
 make pristine
-cmake -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
+cmake -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
 make -j$(nproc)
 ```
 
-Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), Public-key encoding (PK_ENC) type, and SSL support (TLS).
+Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), and SSL support (TLS).
 Refer to the section [FDO Build configurations](build_conf.md)
 
 <a name="run_linux_fdo"></a>

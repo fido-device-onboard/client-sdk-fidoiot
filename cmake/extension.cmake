@@ -142,16 +142,6 @@ elseif (${TARGET_OS} STREQUAL mbedos)
   set(TLS mbedtls)
 endif()
 
-if(PK_ENC MATCHES ecdsa)
-  client_sdk_compile_definitions(
-    -DPK_ENC_ECDSA)
-elseif(PK_ENC MATCHES rsa)
-  client_sdk_compile_definitions(
-    -DPK_ENC_RSA)
-else()
-  message(WARNING "Supported PK_ENC are ecdsa and rsa'")  
-endif()
-
 if(DA MATCHES ecdsa256)
   client_sdk_compile_definitions(
     -DECDSA256_DA)
@@ -210,13 +200,10 @@ endif()
 if(KEX STREQUAL dh)
   client_sdk_compile_definitions(
     -DKEX=\"DHKEXid14\" -DKEX_DH_ENABLED)
-elseif(KEX STREQUAL asym)
-    client_sdk_compile_definitions(
-      -DKEX=\"ASYMKEX\" -DKEX_ASYM_ENABLED)
-  elseif(KEX STREQUAL ecdh)
-    client_sdk_compile_definitions(
-      -DKEX=\"ECDH\" -DKEX_ECDH_ENABLED -DAES_128_BIT)
-  elseif(KEX STREQUAL ecdh384)
+elseif(KEX STREQUAL ecdh)
+  client_sdk_compile_definitions(
+    -DKEX=\"ECDH\" -DKEX_ECDH_ENABLED -DAES_128_BIT)
+elseif(KEX STREQUAL ecdh384)
   client_sdk_compile_definitions(
     -DKEX=\"ECDH384\" -DKEX_ECDH384_ENABLED -DAES_256_BIT)
 else()

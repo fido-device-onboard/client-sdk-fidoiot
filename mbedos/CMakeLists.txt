@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache 2.0
 #
 
-
+# TO-DO: Revisit and remove the use of PK_ENC and KEX=asym
 set (MBED_OS_DIR ${BASE_DIR}/mbedos/components/fdo)
 
 if (${HTTPPROXY} STREQUAL true)
