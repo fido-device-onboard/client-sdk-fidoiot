@@ -24,6 +24,8 @@ int32_t msg13(fdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "FDOProtDI";
 	fdo_dev_cred_t *dev_cred = app_get_credentials();
+	// GUID needs (2 * 16) + 1 sized buffer, simplifying by using a larger buffer
+	char guid_buf[BUFF_SIZE_48_BYTES] = {0};
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -72,6 +74,9 @@ int32_t msg13(fdo_prot_t *ps)
 	/* Mark as success, and DI done */
 	ps->state = FDO_STATE_DONE;
 	ps->fdor.have_block = false;
+
+	LOG(LOG_DEBUG, "(Current) GUID after DI: %s\n",
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, &guid_buf[0], sizeof(guid_buf)));
 	LOG(LOG_DEBUG, "DIDone completed\n");
 	ret = 0;
 

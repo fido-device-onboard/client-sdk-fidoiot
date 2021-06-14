@@ -858,6 +858,39 @@ char *fdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz)
 	return buf;
 }
 
+// -----------------------------------------------------------------------------
+// GUID routines
+//
+/**
+ * convert to GUID to string
+ * @param g - pointer to the byte array that holds the GUID
+ * @param buf - pointer to the converted string
+ * @param buf_sz - size of the converted string
+ * @return pointer to the converted string
+ */
+char *fdo_guid_to_string(fdo_byte_array_t *g, char *buf, int buf_sz)
+{
+	int i = 0;
+	int n = 0;
+	char *a = NULL;
+
+	// buffer size must be (2*16 + 1), where 2*16 is for holding GUID chars, +1 for \0
+	// return empty string, in case pre-requisites are not met
+	if (!g || !buf || buf_sz < ((2 * FDO_GUID_BYTES) + 1)) {
+		return "";
+	}
+
+	a = (char *)g->bytes;
+	while (i < FDO_GUID_BYTES) {
+		buf[n++] = INT2HEX(((*a >> 4) & 0xf));
+		buf[n++] = INT2HEX((*a & 0xf));
+		i++;
+		a++;
+	}
+	buf[n++] = 0;
+	return buf;
+}
+
 //------------------------------------------------------------------------------
 // Hash/HMAC Routines
 //

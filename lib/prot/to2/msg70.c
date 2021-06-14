@@ -27,6 +27,8 @@ int32_t msg70(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_hash_t *hmac = NULL;
+	// GUID needs (2 * 16) + 1 sized buffer, simplifying by using a larger buffer
+	char guid_buf[BUFF_SIZE_48_BYTES] = {0};
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -34,6 +36,9 @@ int32_t msg70(fdo_prot_t *ps)
 	}
 
 	LOG(LOG_DEBUG, "TO2.Done started\n");
+
+	LOG(LOG_DEBUG, "(Old) GUID before TO2: %s\n",
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, &guid_buf[0], sizeof(guid_buf)));
 
 	/*
 	 * TODO: Writing credentials to TEE!
@@ -60,6 +65,14 @@ int32_t msg70(fdo_prot_t *ps)
 		// As of now moving to done state for resale
 		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
 	}
+
+	// clear and reuse the buffer to print new guid
+	if (0 != memset_s(guid_buf, sizeof(guid_buf), 0)) {
+		LOG(LOG_ERROR, "TO2.Done2: Failed to clear GUID buffer\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "(New) GUID after TO2: %s\n",
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, &guid_buf[0], sizeof(guid_buf)));
 
 	/* Rotate Data Protection Key */
 	if (0 != fdo_generate_storage_hmac_key()) {
