@@ -76,7 +76,7 @@ int32_t msg13(fdo_prot_t *ps)
 	ps->fdor.have_block = false;
 
 	LOG(LOG_DEBUG, "(Current) GUID after DI: %s\n",
-		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, &guid_buf[0], sizeof(guid_buf)));
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
 	LOG(LOG_DEBUG, "DIDone completed\n");
 	ret = 0;
 

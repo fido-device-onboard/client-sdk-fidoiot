@@ -876,7 +876,7 @@ char *fdo_guid_to_string(fdo_byte_array_t *g, char *buf, int buf_sz)
 
 	// buffer size must be (2*16 + 1), where 2*16 is for holding GUID chars, +1 for \0
 	// return empty string, in case pre-requisites are not met
-	if (!g || !buf || buf_sz < ((2 * FDO_GUID_BYTES) + 1)) {
+	if (!g || !g->bytes || !buf || buf_sz < ((2 * FDO_GUID_BYTES) + 1)) {
 		return "";
 	}
 

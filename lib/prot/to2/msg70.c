@@ -38,7 +38,7 @@ int32_t msg70(fdo_prot_t *ps)
 	LOG(LOG_DEBUG, "TO2.Done started\n");
 
 	LOG(LOG_DEBUG, "(Old) GUID before TO2: %s\n",
-		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, &guid_buf[0], sizeof(guid_buf)));
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
 
 	/*
 	 * TODO: Writing credentials to TEE!
@@ -72,7 +72,7 @@ int32_t msg70(fdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "(New) GUID after TO2: %s\n",
-		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, &guid_buf[0], sizeof(guid_buf)));
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
 
 	/* Rotate Data Protection Key */
 	if (0 != fdo_generate_storage_hmac_key()) {
