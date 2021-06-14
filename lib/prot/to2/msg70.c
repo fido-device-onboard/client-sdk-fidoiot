@@ -27,7 +27,8 @@ int32_t msg70(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_hash_t *hmac = NULL;
-	// GUID needs (2 * 16) + 1 sized buffer, simplifying by using a larger buffer
+	// GUID needs (2 * 16) + 4 + 1 sized buffer for format 8-4-4-4-12,
+	// simplifying by using a larger buffer
 	char guid_buf[BUFF_SIZE_48_BYTES] = {0};
 
 	if (!ps) {

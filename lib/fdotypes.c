@@ -873,8 +873,10 @@ char *fdo_guid_to_string(fdo_byte_array_t *g, char *buf, int buf_sz)
 	int i = 0;
 	int n = 0;
 	char *a = NULL;
+	char hyphen = '-';
 
-	// buffer size must be (2*16 + 1), where 2*16 is for holding GUID chars, +1 for \0
+	// buffer size must be (2*16 + 4 + 1), where 2*16 is for holding GUID chars,
+	// +4 for holding hyphens and +1 for \0
 	// return empty string, in case pre-requisites are not met
 	if (!g || !g->bytes || !buf || buf_sz < ((2 * FDO_GUID_BYTES) + 1)) {
 		return "";
@@ -884,6 +886,10 @@ char *fdo_guid_to_string(fdo_byte_array_t *g, char *buf, int buf_sz)
 	while (i < FDO_GUID_BYTES) {
 		buf[n++] = INT2HEX(((*a >> 4) & 0xf));
 		buf[n++] = INT2HEX((*a & 0xf));
+		// GUID format: 8-4-4-4-12
+		if ((n == 8) || (n == 13) || (n == 18) || (n == 23)) {
+			buf[n++] = hyphen;
+		}
 		i++;
 		a++;
 	}
