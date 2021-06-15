@@ -108,6 +108,9 @@ bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data);
  * GUID - 128-bit Random number used for identification.
  */
 typedef uint8_t fdo_guid_t[FDO_GUID_BYTES];
+
+char *fdo_guid_to_string(fdo_byte_array_t *g, char *buf, int buf_sz);
+
 /*
  * nonce - 128-bit Random number, intended to be used naught but once.
  */
