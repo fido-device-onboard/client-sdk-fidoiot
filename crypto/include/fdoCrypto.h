@@ -14,14 +14,14 @@
 #include "base64.h"
 #include "fdoCryptoCtx.h"
 
-#if defined KEX_ECDH384_ENABLED
+#if defined(KEX_ECDH384_ENABLED)
 #define SEK_KEY_SIZE 32 /* KEX_ECDH384_ENABLED */
 #else
 #define SEK_KEY_SIZE 16
 #endif
 
-/* Cipher suite "cs" for msg 60 in TO2 */
-#if defined AES_256_BIT
+/* Cipher suite "cs" for msg60 in TO2 */
+#if defined(AES_256_BIT)
 #define AES_BITS 256
 #else
 #define AES_BITS 128
@@ -33,7 +33,7 @@
 #define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_48_BYTES
 #endif
 
-#if defined KEX_ECDH384_ENABLED
+#if defined(KEX_ECDH384_ENABLED)
 #define HMAC_MODE 384
 #else
 #define HMAC_MODE 256

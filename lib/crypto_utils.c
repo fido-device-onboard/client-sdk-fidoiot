@@ -36,8 +36,9 @@
 int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 		       size_t clear_txt_size, const uint8_t *aad, size_t aad_length)
 {
-	if (!cipher_txt || !clear_txt || 0 == clear_txt_size)
+	if (!cipher_txt || !clear_txt || 0 == clear_txt_size) {
 		return -1;
+	}
 
 	int ret = -1;
 	uint8_t *temp = NULL;
@@ -154,7 +155,8 @@ int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
 
 	ret = 0;
 end:
-	if (cleartext)
+	if (cleartext) {
 		fdo_free(cleartext);
+	}
 	return ret;
 }

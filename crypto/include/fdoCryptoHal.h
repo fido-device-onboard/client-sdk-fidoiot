@@ -119,8 +119,8 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t *cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
 			       uint32_t key_length,
-				   uint8_t *tag, size_t tag_length,
-				   const uint8_t *aad, size_t aad_length);
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length);
 
 /* Decrypt "cypher_text" using "key" and put the result in "clear_text".
  * and "clear_text" must point to a buffer large enough to store the
@@ -132,8 +132,8 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       uint32_t cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
 			       uint32_t key_length,
-				   uint8_t *tag, size_t tag_length,
-				   const uint8_t *aad, size_t aad_length);
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length);
 
 /*
  * Helper API designed to convert the raw signature into DER format required by
