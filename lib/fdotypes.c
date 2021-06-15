@@ -2711,10 +2711,12 @@ err:
 	if (temp_fdow.current) {
 		fdow_flush(&temp_fdow);
 	}
-	if (pkt)
+	if (pkt) {
 		fdo_encrypted_packet_free(pkt);
-	if (cleartext)
+	}
+	if (cleartext) {
 		fdo_byte_array_free(cleartext);
+	}
 	return ret;
 }
 

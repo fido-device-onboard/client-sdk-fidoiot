@@ -26,13 +26,17 @@
  *        Input text to be encrypted.
  * @param clear_txt_size
  *        Plain text size.
+ * @param aad
+ *        Buffer containing the Additonal Authenticated Data (AAD).
+ * @param aad_length
+ *        Size of the aad
  * @return ret
  *        return 0 on success. -1 on failure.
  */
 int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 		       size_t clear_txt_size, const uint8_t *aad, size_t aad_length)
 {
-	if (NULL == cipher_txt || NULL == clear_txt || 0 == clear_txt_size)
+	if (!cipher_txt || !clear_txt || 0 == clear_txt_size)
 		return -1;
 
 	int ret = -1;
@@ -88,19 +92,23 @@ end:
  *        Cipher text to be decrypted and HMAC to be verified.
  * @param clear_txt
  *        Buffer to place the decrypted text.
+ * @param aad
+ *        Buffer containing the Additonal Authenticated Data (AAD).
+ * @param aad_length
+ *        Size of the aad
  * @return ret
  *        return 0 on success. -1 on failure.
  */
 int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
 		       fdo_byte_array_t *clear_txt, const uint8_t *aad,
-			   size_t aad_length)
+		       size_t aad_length)
 {
 	int ret = -1;
 	uint32_t clear_text_length = 0;
 	uint8_t *cleartext = NULL;
 	int result = -1;
 
-	if (NULL == cipher_txt || NULL == cipher_txt->em_body) {
+	if (!cipher_txt || !cipher_txt->em_body) {
 		return -1;
 	}
 
@@ -122,7 +130,7 @@ int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
 	if (0 != fdo_msg_decrypt(
 		     cleartext, &clear_text_length, cipher_txt->em_body->bytes,
 		     cipher_txt->em_body->byte_sz, cipher_txt->iv,
-			 cipher_txt->tag, sizeof(cipher_txt->tag), aad, aad_length)) {
+		     cipher_txt->tag, sizeof(cipher_txt->tag), aad, aad_length)) {
 		LOG(LOG_ERROR, "Failed to Decrypt\n");
 		goto end;
 	}

@@ -26,29 +26,17 @@ int32_t fdo_msg_encrypt_get_cipher_len(uint32_t clear_length,
 		return -1;
 	}
 
-#ifdef AES_MODE_GCM_ENABLED
+	// for both AES GCM/CCM modes, same cipher data length is the same as plain data length
 	*cipher_length = clear_length;
-#elif defined AES_MODE_CCM_ENABLED
-	*cipher_length = clear_length;
-#endif
 	return 0;
 }
 
 static int32_t getIV(uint8_t *iv, uint32_t clear_text_length)
 {
-	int ret = -1;
-
-/* Generate IV for encryption */
-#ifdef AES_MODE_GCM_ENABLED
+	// unused
 	(void)clear_text_length;
-	return fdo_crypto_random_bytes(iv, AES_GCM_IV);
-#elif defined AES_MODE_CCM_ENABLED
-	(void)clear_text_length;
-	return fdo_crypto_random_bytes(iv, AES_CCM_IV);
-#else
-	LOG(LOG_ERROR, "IV generation failed due to invalid AES mode selected");
-#endif
-	return ret;
+	//Generate IV for encryption
+	return fdo_crypto_random_bytes(iv, AES_IV_LEN);
 }
 
 /**
@@ -73,6 +61,14 @@ static int32_t getIV(uint8_t *iv, uint32_t clear_text_length)
  * encryption.
  * The IV is 16 bytes long, so the buffer specified by iv must be
  * at least 16 bytes long
+ * @param tag Out Pointer to the buffer where the authentication tag is stored
+ * after encryption. This buffer must be
+ * allocated before calling this API
+ * @param tag_length In/Out In: Size of the tag
+ * Out: Size of the authentication tag stored in tag
+ * @param aad In Pointer to the buffer containing the Additonal Authenticated Data (AAD)
+ * used during encryption
+ * @param aad_length In Size of the aad
  * @return 0 on success and -1 on failures.
  */
 int32_t fdo_msg_encrypt(const uint8_t *clear_text, uint32_t clear_text_length,
@@ -150,6 +146,13 @@ int32_t fdo_msg_decrypt_get_pt_len(uint32_t cipher_length,
  * @param iv In Pointer to the initialization vector (IV) used for AES
  * decryption. The IV is 16 bytes long, so the buffer specified by
  * iv must be at least 16 bytes long
+ * @param tag In Pointer to the buffer containing the authentication tag that is
+ * used for decryption.
+ * @param tag_length In/Out In: Size of the tag
+ * Out: Size of the authentication tag stored in tag
+ * @param aad In Pointer to the buffer containing the Additonal Authenticated Data (AAD)
+ * used during encryption
+ * @param aad_length In Size of the aad
  * @return 0 on success and -1 on failures.
  */
 int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,

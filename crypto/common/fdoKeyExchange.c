@@ -20,7 +20,7 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
 /**
  * fdo_kex_init() - Initialize key exchange context
  * Initialize the key exchange context which can be done at init time
- * o Key Exchange algorithm (DH, ECDH, ECDH384)
+ * o Key Exchange algorithm (ECDH, ECDH384)
  * o Cipher Suite to be used
  * o If it's ECDH, perform the 1st step of ECDH
  */
@@ -50,15 +50,14 @@ int32_t fdo_kex_init(void)
 	 *     SHA = 384 bit
 	 */
 
-#if defined(AES_MODE_GCM_ENABLED)
+#ifdef AES_MODE_GCM_ENABLED
+	// AES GCM mode
 	snprintf_s_i(cs, sizeof(cs), "AES%uGCM", AES_BITS);
 	(void)ofs;
-#elif defined(AES_MODE_CCM_ENABLED)
+#else
+	// AES CCM mode
 	snprintf_s_i(cs, sizeof(cs), "AES-CCM-64-128-%u", AES_BITS);
 	(void)ofs;
-#else
-	LOG(LOG_ERROR, "Invalid cipher suite\n");
-	goto err;
 #endif
 
 	kex_ctx->cs = fdo_string_alloc_with_str(cs);
@@ -232,7 +231,7 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray)
  *
  * KDFInput = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr,
  * where Context = "AutomaticOnboardTunnel"||ContextRand, and,
- * ContextRand = null for ECDH/DH Key Exchange (Section 3.6.1 and 3.6.3)
+ * ContextRand = null for ECDH Key Exchange (Section 3.6.3)
  *
  * index is the counter (i), and cannot be more than 2.
  * keymat_bit_length is the total number of key-bits to generate, and is used to calculate Lstr.
@@ -383,7 +382,7 @@ static int32_t kex_kdf(void)
 	n = ceil((double)(keymat_bytes_sz * byte_size) / (hmac_sha256_sz * byte_size));
 
 	// Input to the KDF, KDFInput = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where
-	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL for ECDH/DH key-exchange,
+	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL for ECDH key-exchange,
 	// Lstr = (byte)L1||(byte)L2, i.e, 16-bit number, depending on L=key-bits to generate
 	// Therefore, KDFInput size = 1 for byte (i) + length of Label + 1 for byte (0) +
 	// length of Context + 2 bytes for Lstr

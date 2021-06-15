@@ -31,7 +31,7 @@
 #endif
 
 #define TAG_LENGTH AES_GCM_TAG_LEN
-#define IV_LENGTH AES_GCM_IV
+#define IV_LENGTH AES_GCM_IV_LEN
 
 #define SET_IV EVP_CTRL_GCM_SET_IVLEN
 #define GET_TAG EVP_CTRL_GCM_GET_TAG
@@ -49,7 +49,7 @@
 #endif
 
 #define TAG_LENGTH AES_CCM_TAG_LEN
-#define IV_LENGTH AES_CCM_IV
+#define IV_LENGTH AES_CCM_IV_LEN
 
 #define SET_IV EVP_CTRL_CCM_SET_IVLEN
 #define GET_TAG EVP_CTRL_CCM_GET_TAG
@@ -94,8 +94,8 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t *cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
 			       uint32_t key_length,
-				   uint8_t *tag, size_t tag_length,
-				   const uint8_t *aad, size_t aad_length)
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length)
 {
 	int ret = -1;
 	EVP_CIPHER_CTX *ctx = NULL;
@@ -108,7 +108,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	if (!clear_text || !clear_text_length || !cipher_length ||
 	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
 	    KEY_LENGTH_LOCAL != key_length ||
-		NULL == tag || tag_length != TAG_LENGTH) {
+	    !tag || tag_length != TAG_LENGTH) {
 		LOG(LOG_ERROR, "Invalid parameters received\n");
 		goto end;
 	}
@@ -120,7 +120,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 
 	// Initialise the context
 	ctx = EVP_CIPHER_CTX_new();
-	if (NULL == ctx) {
+	if (!ctx) {
 		LOG(LOG_ERROR, "Error during Initializing EVP cipher ctx!\n");
 		goto end;
 	}
@@ -152,7 +152,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	}
 
 	// Specify AAD, only if available
-	if (aad != NULL && aad_length > 0) {
+	if (aad && aad_length > 0) {
 #ifdef AES_MODE_CCM_ENABLED
 		// Specify Plain data length (only required in case of CCM)
 		if (!EVP_EncryptUpdate(ctx, NULL, &len, NULL, clear_text_length)){
@@ -234,8 +234,8 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       uint32_t cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
 			       uint32_t key_length,
-				   uint8_t *tag, size_t tag_length,
-				   const uint8_t *aad, size_t aad_length)
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length)
 {
 	int ret = -1;
 	EVP_CIPHER_CTX *ctx = NULL;
@@ -245,7 +245,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 	if (!clear_text_length || !cipher_text || cipher_length <= 0 ||
 	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
 	    KEY_LENGTH_LOCAL != key_length ||
-		NULL == tag || tag_length != AES_CCM_TAG_LEN) {
+	    !tag || tag_length != AES_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid paramters received\n");
 		goto end;
 	}
@@ -269,8 +269,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 	}
 
 	// Set IV
-	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_IV, IV_LENGTH,
-				 NULL)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_IV, IV_LENGTH, NULL)) {
 		LOG(LOG_ERROR, "Error during setting AES IV length!\n");
 		goto end;
 	}
@@ -294,7 +293,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 	}
 
 	// Specify AAD, only if available
-	if (aad != NULL && aad_length > 0) {
+	if (aad && aad_length > 0) {
 
 #ifdef AES_MODE_CCM_ENABLED
 		// Set ciphertext length (only required for CCM)

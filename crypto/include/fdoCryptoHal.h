@@ -135,27 +135,6 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 				   uint8_t *tag, size_t tag_length,
 				   const uint8_t *aad, size_t aad_length);
 
-
-
-/* AES-CCM authenticated encryption/decryption APIs */
-int32_t fdo_crypto_aes_ccm_encrypt(const uint8_t *plain_text,
-				   uint32_t plain_text_length,
-				   uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length,
-				   const uint8_t *aad, size_t aad_length);
-
-int32_t fdo_crypto_aes_ccm_decrypt(uint8_t *clear_text,
-				   uint32_t clear_text_length,
-				   const uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length,
-				   const uint8_t *aad, size_t aad_length);
-
 /*
  * Helper API designed to convert the raw signature into DER format required by
  * FDO.

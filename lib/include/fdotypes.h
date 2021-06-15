@@ -237,26 +237,16 @@ bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk);
 fdo_public_key_t *fdo_public_key_read(fdor_t *fdor);
 fdo_public_key_t *fdo_public_key_clone(fdo_public_key_t *pk);
 
-// AES GCM IV length
-#define AES_GCM_IV 12
-// AES CCM IV length
-#define AES_CCM_IV 7
-
-// AES GCM authenticated TAG length
-#define AES_GCM_TAG_LEN 16
-// AES CCM authenticated TAG length
-#define AES_CCM_TAG_LEN 16
-
 #if defined(AES_MODE_GCM_ENABLED)
-#define AES_IV_LEN AES_GCM_IV
+#define AES_GCM_IV_LEN 12
+#define AES_IV_LEN AES_GCM_IV_LEN
+#define AES_GCM_TAG_LEN 16
 #define AES_TAG_LEN AES_GCM_TAG_LEN
-#elif defined(AES_MODE_CCM_ENABLED)
-#define AES_IV_LEN AES_CCM_IV
-#define AES_TAG_LEN AES_CCM_TAG_LEN
 #else
-// Update IV length for AES here, if AES CTR/CBC modes are needed as per the FDO specification
-#define AES_IV_LEN 16
-#define AES_TAG_LEN 0
+#define AES_CCM_IV_LEN 7
+#define AES_IV_LEN AES_CCM_IV_LEN
+#define AES_CCM_TAG_LEN 16
+#define AES_TAG_LEN AES_CCM_TAG_LEN
 #endif
 
 typedef struct {
