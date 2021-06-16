@@ -53,9 +53,7 @@ static int32_t *gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
 int32_t configure_normal_blob(void)
 {
 	/* From the platfrom, read unsealed Normal Blob for the very first time
-	 * and
-	 * write back
-	 * sealed Normal blob for FDO.
+	 * and write back sealed Normal blob for FDO.
 	 */
 	size_t bytes_written = 0;
 	uint8_t *raw_normal_blob = NULL;
@@ -115,11 +113,6 @@ int32_t configure_normal_blob(void)
 		LOG(LOG_DEBUG,
 		    "Platform Normal blob size is zero, DI not done!\n");
 		ret = 0;
-		goto err;
-	}
-
-	if (raw_normal_blob_size < 0) {
-		LOG(LOG_ERROR, "Trouble getting plain Normal blob size!\n");
 		goto err;
 	} else if (raw_normal_blob_size >
 		   PLATFORM_HMAC_KEY_DEFAULT_LEN + DATA_CONTENT_SIZE) {

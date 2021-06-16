@@ -196,7 +196,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 				    fdo_dev_cred_t *our_dev_cred)
 {
 	bool ret = false;
-	int32_t dev_cred_len = 0;
+	size_t dev_cred_len = 0;
 	fdor_t *fdor = NULL;
 
 	if (!our_dev_cred) {
@@ -224,7 +224,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		return true;
 	}
 
-	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRId32"\n", dev_cred_len);
+	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRIu64"\n", dev_cred_len);
 
 	fdor = fdo_alloc(sizeof(fdor_t));
 	if (!fdor || !fdor_init(fdor) || !fdo_block_alloc_with_size(&fdor->b, dev_cred_len)) {

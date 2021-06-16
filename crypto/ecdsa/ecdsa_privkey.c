@@ -34,7 +34,7 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 
 	/* Get the ECDSA private key size from storage */
 	privkeysize = fdo_blob_size((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA);
-	if (privkeysize <= 0) {
+	if (privkeysize == 0) {
 		LOG(LOG_ERROR, "No ECDSA private key exists\n");
 		goto err;
 	}
