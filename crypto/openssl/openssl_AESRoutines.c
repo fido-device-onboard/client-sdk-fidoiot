@@ -16,25 +16,46 @@
 #include <openssl/err.h>
 #include "safe_lib.h"
 
+// Specify Openssl constants depending on the AES MODES (GCM/CCM) 
+#ifdef AES_MODE_GCM_ENABLED
+// GCM mode enabled
+
 #ifdef AES_256_BIT
-
-#ifdef AES_MODE_CTR_ENABLED
-#define CIPHER_TYPE EVP_aes_256_ctr()
+// 256 bit keys
+#define CIPHER_TYPE EVP_aes_256_gcm()
+#define KEY_LENGTH_LOCAL 32
 #else
-#define CIPHER_TYPE EVP_aes_256_cbc()
-#endif /* AES_MODE_CTR_ENABLED */
-#define KEY_LENGTH_LOCAL 32 //256 bit
+ //128 bit keys
+#define CIPHER_TYPE EVP_aes_128_gcm()
+#define KEY_LENGTH_LOCAL 16
+#endif
+
+#define TAG_LENGTH AES_GCM_TAG_LEN
+#define IV_LENGTH AES_GCM_IV_LEN
+
+#define SET_IV EVP_CTRL_GCM_SET_IVLEN
+#define GET_TAG EVP_CTRL_GCM_GET_TAG
+#define SET_TAG EVP_CTRL_GCM_SET_TAG
 
 #else
+// CCM mode enabled
 
-#ifdef AES_MODE_CTR_ENABLED
-#define CIPHER_TYPE EVP_aes_128_ctr()
+#ifdef AES_256_BIT
+#define CIPHER_TYPE EVP_aes_256_ccm()
+#define KEY_LENGTH_LOCAL 32 //256 bits
 #else
-#define CIPHER_TYPE EVP_aes_128_cbc()
-#endif /* AES_MODE_CTR_ENABLED */
+#define CIPHER_TYPE EVP_aes_128_ccm()
 #define KEY_LENGTH_LOCAL 16 //128 bit
+#endif
 
-#endif /* AES_256_BIT */
+#define TAG_LENGTH AES_CCM_TAG_LEN
+#define IV_LENGTH AES_CCM_IV_LEN
+
+#define SET_IV EVP_CTRL_CCM_SET_IVLEN
+#define GET_TAG EVP_CTRL_CCM_GET_TAG
+#define SET_TAG EVP_CTRL_CCM_SET_TAG
+
+#endif
 
 /**
  * crypto_hal_aes_encrypt -  Perform AES encryption of the input text.
@@ -55,6 +76,14 @@
  *        Key in Byte_array format used in encryption.
  * @param key_length
  *        Key size in Bytes.
+ * @param tag
+ *        Tag in Byte_array format (output).
+ * @param tag_length
+ *        Fixed tag length in Bytes (output).
+ * @param aad
+ *        Additional Authenticated Datac(AAD) in Byte_array format used in encryption.
+ * @param aad_length
+ *        Additional Authenticated Datac(AAD) size in Bytes.
  * @return ret
  *        return 0 on success. -1 on failure.
  *        fills cipher_length in bytes while cipher_text passed as NULL, & all
@@ -64,13 +93,13 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t clear_text_length, uint8_t *cipher_text,
 			       uint32_t *cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length)
+			       uint32_t key_length,
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length)
 {
 	int ret = -1;
-	int outlen = 0;
-	int offset = 0;
-	size_t exp_cipher_len = clear_text_length;
 	EVP_CIPHER_CTX *ctx = NULL;
+	int len = 0;
 
 	/*
 	 * Check all parameters except cipher_text, as if it's NULL,
@@ -78,61 +107,90 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	 */
 	if (!clear_text || !clear_text_length || !cipher_length ||
 	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
-	    KEY_LENGTH_LOCAL != key_length) {
+	    KEY_LENGTH_LOCAL != key_length ||
+	    !tag || tag_length != TAG_LENGTH) {
 		LOG(LOG_ERROR, "Invalid parameters received\n");
 		goto end;
 	}
 
-/*
- * CTR: cipher_length = clear_text_length
- * CBC: cipher_length = clear_text_length + padding bytes
- * Padding:
- * a. For non AES block aligned cleartext, padding extends
- *    the size to be multiple of AES block.
- * b. For AES block aligned cleartext, padding extends the
- *    size by 1 AES block.
- */
-#ifdef AES_MODE_CBC_ENABLED
-	exp_cipher_len = ((clear_text_length / block_size) + 1) * block_size;
-#endif /* AES_MODE_CTR_ENABLED */
-
-	/* Fill in the expected cipher text length */
-	if (!cipher_text) {
-		*cipher_length = exp_cipher_len;
-		ret = 0;
+	if (*cipher_length < clear_text_length) {
+		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
 		goto end;
 	}
 
-	/* If we reach here, cipher_text is non-NULL, no need to check */
-	if (*cipher_length < exp_cipher_len) {
-		LOG(LOG_ERROR, "Invalid cleartext/ciphertext size received\n");
-		goto end;
-	}
-
+	// Initialise the context
 	ctx = EVP_CIPHER_CTX_new();
 	if (!ctx) {
+		LOG(LOG_ERROR, "Error during Initializing EVP cipher ctx!\n");
 		goto end;
 	}
 
-	if (1 != EVP_EncryptInit_ex(ctx, CIPHER_TYPE, NULL, key, iv)) {
+	// Initialise the AES GCM encryption operation
+	if (!EVP_EncryptInit_ex(ctx, CIPHER_TYPE, NULL, NULL, NULL)) {
+		LOG(LOG_ERROR, "Error during Initializing AES encrypt operation!\n");
 		goto end;
 	}
 
-	/* Common for cbc and ctr */
-	if (1 != EVP_EncryptUpdate(ctx, cipher_text, &outlen, clear_text,
+	// Set IV length
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_IV, IV_LENGTH, NULL)) {
+		LOG(LOG_ERROR, "Error during setting AES IV length!\n");
+		goto end;
+	}
+
+	// Set tag length (only for CCM mode)
+#ifdef AES_MODE_CCM_ENABLED
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, tag_length, NULL)) {
+		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
+		goto end;
+	}
+#endif
+
+	// Initialise key and IV
+	if (!EVP_EncryptInit_ex(ctx, NULL, NULL, key, iv)) {
+		LOG(LOG_ERROR, "Key and IV initialization failed!\n");
+		goto end;
+	}
+
+	// Specify AAD, only if available
+	if (aad && aad_length > 0) {
+#ifdef AES_MODE_CCM_ENABLED
+		// Specify Plain data length (only required in case of CCM)
+		if (!EVP_EncryptUpdate(ctx, NULL, &len, NULL, clear_text_length)){
+			LOG(LOG_ERROR, "Plain data length initialization failed!\n");
+			goto end;
+		}
+#endif
+		if (!EVP_EncryptUpdate(ctx, NULL, &len, aad, aad_length)) {
+			LOG(LOG_ERROR, "AAD initialization failed!\n");
+			goto end;
+		}
+	}
+
+	// Provide the message to be encrypted, and obtain the encrypted output.
+	// EVP_EncryptUpdate can be called multiple times if necessary
+	if (!EVP_EncryptUpdate(ctx, cipher_text, &len, clear_text,
 				   clear_text_length)) {
+		LOG(LOG_ERROR, "EVP_EncryptUpdate() failed!\n");
 		goto end;
 	}
 
-	offset += outlen;
+	*cipher_length = len;
 
-	if (!EVP_EncryptFinal_ex(ctx, cipher_text + offset, &outlen)) {
+	// Finalise the encryption, get no output
+	if (!EVP_EncryptFinal_ex(ctx, cipher_text + len, &len)) {
+		LOG(LOG_ERROR, "EVP_EncryptFinal_ex() failed!\n");
+		goto end;
+	}
+
+	// Get the tag
+	if (!EVP_CIPHER_CTX_ctrl(ctx, GET_TAG, tag_length, tag)) {
+		LOG(LOG_ERROR, "Failed to get required tag value!\n");
 		goto end;
 	}
 
 	ret = 0;
-
 end:
+	// Clean up and free allocated memory
 	if (ctx) {
 		EVP_CIPHER_CTX_free(ctx);
 	}
@@ -158,6 +216,14 @@ end:
  *        Key in Byte_array format used in encryption.
  * @param key_length
  *        Key size in Bytes.
+ * @param tag
+ *        Tag in Byte_array format that will be verified.
+ * @param tag_length
+ *        Fixed tag length in Bytes.
+ * @param aad
+ *        Additional Authenticated Datac(AAD) in Byte_array format used in decryption.
+ * @param aad_length
+ *        Additional Authenticated Datac(AAD) size in Bytes.
  * @return ret
  *        return 0 on success. -1 on failure.
  *        fills clear_text_length in bytes for maximum possible buffer size
@@ -167,74 +233,127 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       const uint8_t *cipher_text,
 			       uint32_t cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length)
+			       uint32_t key_length,
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length)
 {
 	int ret = -1;
-	int outlen = 0;
-	int offset = 0;
 	EVP_CIPHER_CTX *ctx = NULL;
+	int len = 0;
 
-	/* Check all the incoming parameters */
-	if (!clear_text_length || !cipher_text || !cipher_length ||
+	// Check all the incoming parameters
+	if (!clear_text_length || !cipher_text || cipher_length <= 0 ||
 	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
-	    KEY_LENGTH_LOCAL != key_length) {
+	    KEY_LENGTH_LOCAL != key_length ||
+	    !tag || tag_length != AES_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid paramters received\n");
 		goto end;
 	}
 
-	/*
-	 * If clear_text is NULL, then return the size of clear_text. Since,
-	 * for CBC, we cannot tell the precise length of clear_text without
-	 * decryption, so, clear_text_length is returned to be same as
-	 * cipher_length. After decryption, clear_text_length will be updated
-	 * with the precise length.
-	 */
-	if (!clear_text) {
-		*clear_text_length = cipher_length;
-		ret = 0;
-		goto end;
-	}
-
-	/*
-	 * The caller has to ensure that the clear_text is big enough to hold
-	 * complete clear data. The padding scheme is already known to caller,
-	 * so, expecting that the buffer sent in is at minimum equal to
-	 * ciphertext size.
-	 */
 	if (*clear_text_length < cipher_length) {
-		LOG(LOG_ERROR, "Invalid cleartext/ciphertext size received\n");
+		LOG(LOG_ERROR, "Output buffer is not sufficient!\n");
 		goto end;
 	}
 
-	/* Allocate the cipher context */
+	// Create and initialise the context
 	ctx = EVP_CIPHER_CTX_new();
 	if (!ctx) {
+		LOG(LOG_ERROR, "Error during Initializing EVP cipher ctx!\n");
 		goto end;
 	}
 
-#if defined(AES_DEBUG)
-	LOG(LOG_DEBUG, "ciphered msg size: %d\n", cipher_length);
-	hexdump("Cipher txt to decrypt", cipher_text, cipher_length);
+	// Initialise the AES decryption operation
+	if (!EVP_DecryptInit_ex(ctx, CIPHER_TYPE, NULL, NULL, NULL)) {
+		LOG(LOG_ERROR, "Error during Initializing EVP AES decrypt operation!\n");
+		goto end;
+	}
+
+	// Set IV
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_IV, IV_LENGTH, NULL)) {
+		LOG(LOG_ERROR, "Error during setting AES IV length!\n");
+		goto end;
+	}
+
+	// NOTE: As per Openssl's documentation, Tag is specified for CCM before EVP_DecryptUpdate,
+	// while the same is specified for GCM after EVP_DecryptUpdate.
+	// As a result, the tag for GCM is specified later.
+#ifdef AES_MODE_CCM_ENABLED
+	// Set tag
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length,
+				 tag)) {
+		LOG(LOG_ERROR, "Error during setting AES IV length!\n");
+		goto end;
+	}
+ #endif
+
+	// Initialise key and IV
+	if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) {
+		LOG(LOG_ERROR, "Key and IV initialization failed!\n");
+		goto end;
+	}
+
+	// Specify AAD, only if available
+	if (aad && aad_length > 0) {
+
+#ifdef AES_MODE_CCM_ENABLED
+		// Set ciphertext length (only required for CCM)
+    	if (!EVP_DecryptUpdate(ctx, NULL, &len, NULL, cipher_length)) {
+			LOG(LOG_ERROR, "Cipher length set failed!\n");
+			goto end;
+		}
+#endif
+		if (!EVP_DecryptUpdate(ctx, NULL, &len, aad, aad_length)) {
+			LOG(LOG_ERROR, "AAD initialization failed!\n");
+			goto end;
+		}
+	}
+
+#ifdef AES_MODE_CCM_ENABLED
+	// Decrypt the message. Can only be called once.
+	ret = EVP_DecryptUpdate(ctx, clear_text, &len, cipher_text,
+			       cipher_length);
+	if (ret > 0) {
+		// Success: decrypted and authentication passed
+		*clear_text_length = len;
+		ret = 0;
+	} else {
+		// Failure: decryption/authentication failed
+		ret = -1;
+		LOG(LOG_ERROR, "Decrypt: EVP_DecryptUpdate failed\n");
+		goto end;
+	}
+#else
+	// Provide message to be decrypted. Can be called multiple times.
+	if (!EVP_DecryptUpdate(ctx, clear_text, &len, cipher_text,
+			       cipher_length)) {
+		LOG(LOG_ERROR, "EVP_DecryptUpdate() failed!\n");
+		goto end;
+	}
+	*clear_text_length = len;
+
+	// Set tag
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length,
+				 tag)) {
+		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
+		goto end;
+	}
+
+	// Finalise the decryption. A positive return value indicates success
+	// anything else is a failure i.e. the plaintext is not trustworthy.
+	ret = EVP_DecryptFinal_ex(ctx, clear_text + len, &len);
+	if (ret > 0) {
+		// Success: authentication passed
+		ret = 0;
+	} else {
+		// Failure: authentication failed
+		// reset clear text length since tag couldn't be verified
+		*clear_text_length = 0;
+		ret = -1;
+	}
 #endif
 
-	if (1 != EVP_DecryptInit_ex(ctx, CIPHER_TYPE, NULL, key, iv)) {
-		goto end;
-	}
-
-	if (1 != EVP_DecryptUpdate(ctx, clear_text, &outlen, cipher_text,
-				   cipher_length)) {
-		goto end;
-	}
-
-	offset += outlen; /* Backup the number of output bytes */
-
-	if (1 != EVP_DecryptFinal_ex(ctx, clear_text + offset, &outlen))
-		goto end;
-
-	*clear_text_length = offset + outlen;
-	ret = 0; /* Mark the operation as success */
-
 end:
+	/* Clean up and free allocated memory */
 	if (ctx) {
 		EVP_CIPHER_CTX_free(ctx);
 	}

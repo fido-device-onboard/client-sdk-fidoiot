@@ -18,10 +18,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// platform HMAC and GCM tag size
+// platform HMAC and blob size
 #define PLATFORM_HMAC_SIZE BUFF_SIZE_32_BYTES
-#define PLATFORM_GCM_TAG_SIZE BUFF_SIZE_16_BYTES
-
 #define BLOB_CONTENT_SIZE BUFF_SIZE_4_BYTES
 
 typedef enum {

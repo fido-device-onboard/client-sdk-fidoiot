@@ -35,10 +35,6 @@ extern "C" {
 #define SHA384_DIGEST_SIZE BUFF_SIZE_48_BYTES
 #define SHA512_DIGEST_SIZE BUFF_SIZE_64_BYTES
 #define HMACSHA256_KEY_SIZE BUFF_SIZE_32_BYTES
-#define FDO_CRYPTO_AES_MODE_CBC 1
-#define FDO_CRYPTO_AES_MODE_CTR 2
-// AES GCM authenticated TAG length
-#define AES_GCM_TAG_LEN BUFF_SIZE_16_BYTES
 
 #define FDO_AES_BLOCK_SIZE BUFF_SIZE_16_BYTES /* 128 bits */
 #define FDO_AES_IV_SIZE BUFF_SIZE_16_BYTES    /* 128 bits */
@@ -122,7 +118,9 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t clear_text_length, uint8_t *cypher_text,
 			       uint32_t *cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length);
+			       uint32_t key_length,
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length);
 
 /* Decrypt "cypher_text" using "key" and put the result in "clear_text".
  * and "clear_text" must point to a buffer large enough to store the
@@ -133,24 +131,9 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       const uint8_t *cypher_text,
 			       uint32_t cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length);
-
-/* AES-GCM authenticated encryption/decryption APIs */
-int32_t fdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
-				   uint32_t plain_text_length,
-				   uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length);
-
-int32_t fdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
-				   uint32_t clear_text_length,
-				   const uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length);
+			       uint32_t key_length,
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length);
 
 /*
  * Helper API designed to convert the raw signature into DER format required by

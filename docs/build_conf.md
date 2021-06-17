@@ -12,8 +12,8 @@ There following are some of the options to choose when building the device:
   BUILD = debug #build mode
   TARGET_OS = linux #target OS. (`linux` denotes the Linux* OS.)
   KEX = ecdh #key-exchange method
-  AES_MODE = ctr #AES encryption type
-  DA = ecdsa256 #device attestation method
+  AES_MODE = gcm #AES encryption type
+  DA = ecdsa384 #device attestation method
   TLS = openssl #underlying cryptography library to use. (`openssl` denotes the OpenSSL* toolkit.)
   MODULES = false #whether to use FIDO Device Onboard (FDO) ServiceInfo functionality
 ```
@@ -26,10 +26,10 @@ The default configuration can be overridden by using more options in `cmake`.<br
 For example, to build the `STM32F429ZI` device:
 - BUILD: Debug mode
 - DA: ECDSA-256
-- AES_MODE: CBC
+- AES_MODE: GCM
 - KEX: Diffie-Hellman
 ```shell
-$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=cbc -DKEX=dh -DDA=ecdsa256 .
+$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=gcm -DKEX=dh -DDA=ecdsa256 .
 $ make -j4
 ```
 
@@ -54,12 +54,12 @@ KEX=ecdh              # use Elliptic-curve Diffie–Hellman key exchange mechani
 KEX=ecdh384           # use Elliptic-curve Diffie–Hellman 384 bit key exchange mechanism during TO2
 
 List of AES encryption modes:
-AES_MODE=ctr          # use Counter mode encryption during TO2 (default)
-AES_MODE=cbc          # use Code-Block-Chaining mode encryption during TO2
+AES_MODE=gcm          # use Counter mode encryption during TO2 (default)
+AES_MODE=ccm          # use Code-Block-Chaining mode encryption during TO2
 
 List of Device Attestation options:
-DA=ecdsa256           # Use ECDSA P256 based device attestation(default)
-DA=ecdsa384           # Use ECDSA-P384 based device attestation
+DA=ecdsa256           # Use ECDSA P256 based device attestation
+DA=ecdsa384           # Use ECDSA-P384 based device attestation(default)
 DA=tpm20_ecdsa256     # Use ECDSA-P256 based device attestation with TPM2.0 support
 DA_FILE=pem           # only Use if ECDSA private keys are PEM encoded
 
