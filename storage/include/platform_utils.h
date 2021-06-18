@@ -9,9 +9,13 @@
  */
 
 // default key sizes used by platform for blob(s) sealing/encryption
-#define PLATFORM_IV_DEFAULT_LEN BUFF_SIZE_12_BYTES
+#define PLATFORM_IV_DEFAULT_LEN AES_IV_LEN
 #define PLATFORM_AES_BLOCK_LEN BUFF_SIZE_16_BYTES
+#ifdef AES_256_BIT
+#define PLATFORM_AES_KEY_DEFAULT_LEN BUFF_SIZE_32_BYTES
+#else
 #define PLATFORM_AES_KEY_DEFAULT_LEN BUFF_SIZE_16_BYTES
+#endif
 #define PLATFORM_HMAC_KEY_DEFAULT_LEN BUFF_SIZE_32_BYTES
 
 bool get_platform_hmac_key(uint8_t *key, size_t len);

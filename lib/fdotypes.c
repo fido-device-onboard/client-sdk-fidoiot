@@ -2420,20 +2420,13 @@ void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt)
 
 /**
  * Read an Encrypted Message Body object from the FDOR buffer.
- * Currently, this parses EncryptedMessage of Composed Type (EncThenMacMessage),
- * that contains an COSE_Encrypt0 (ETMInnerBlock) wrapped by COSE_Mac0 (ETMOuterBlock)
+ * Currently, this parses EncryptedMessage of Simple Type,
+ * that contains an COSE_Encrypt0.
  * ETMOuterBlock = [
  *   protected:   { 1:ETMMacType },		// bstr
- *   unprotected: { }					// empty map
- *   payload:     ETMInnerBlock			// COSE_Encrypt0
- *   hmac:   hmac						// bstr
+ *   unprotected: { 5:IV}				// contains IV
+ *   payload:     ETMInnerBlock			// cipher||tag
  * ]
- * ETMInnerBlock = [
- *   protected:   { 1:AESPlainType },	// bstr
- *   unprotected: { 5:AESIV }
- *   payload:     ProtocolMessage
- * ]
- * TO-DO : To be updated later to parse Simple Type.
  * @param fdor - pointer to the character buffer to parse
  * @return a newly allocated FDOEcnrypted_packet object if successful, otherwise
  * NULL
@@ -2443,6 +2436,7 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 	fdo_encrypted_packet_t *pkt = NULL;
 	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
 	fdo_cose_mac0_t *cose_mac0 = NULL;
+	int expected_aes_alg_type;
 
 	if (!fdor){
 		LOG(LOG_ERROR, "Encrypted Message Read: Invalid FDOR\n");
@@ -2452,62 +2446,6 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 	pkt = fdo_encrypted_packet_alloc();
 	if (!pkt) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted structure\n");
-		goto error;
-	}
-
-	cose_mac0 = fdo_alloc(sizeof(fdo_cose_mac0_t));
-	if (!cose_mac0) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc COSE_Mac0\n");
-		goto error;
-	}
-	if (!fdo_cose_mac0_read(fdor, cose_mac0)) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to read COSE_Mac0\n");
-		goto error;
-	}
-
-	// copy the COSE_Mac0 payload which will be verified against the
-	// COSE_Mac0 hmac later
-	pkt->ct_string = fdo_byte_array_alloc_with_byte_array(
-		cose_mac0->payload->bytes, cose_mac0->payload->byte_sz);
-	if (!pkt->ct_string) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy Encrypted Payload structure\n");
-		goto error;
-	}
-
-	// Verify hash/hmac type
-	// TO-DO: When implementing Simple Encrypted Message,
-	// use the key to differentiate Simple/Composed types.
-	int expected_hmac_type = FDO_CRYPTO_HMAC_TYPE_USED;
-	if (cose_mac0->protected_header->mac_type != expected_hmac_type) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected HMac Type\n");
-		goto error;	
-	}
-	pkt->hmac = fdo_hash_alloc(cose_mac0->protected_header->mac_type,
-		cose_mac0->hmac->byte_sz);	
-	if (!pkt->hmac) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted Hmac structure\n");
-		goto error;
-	}
-	if (0 != memcpy_s(pkt->hmac->hash->bytes, pkt->hmac->hash->byte_sz,
-		cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Mac0.hmac\n");
-		goto error;
-	}
-
-	// clear the FDOR buffer and push COSE payload into it, essentially reusing the FDOR object.
-	fdo_block_reset(&fdor->b);
-	fdor->b.block_size = cose_mac0->payload->byte_sz;
-	if (0 != memcpy_s(fdor->b.block, fdor->b.block_size,
-		cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Mac0.payload into FDOR\n");
-		goto error;
-	}
-	fdo_cose_mac0_free(cose_mac0);
-	cose_mac0 = NULL;
-
-	// initialize the parser once the buffer contains COSE payload to be decoded.
-	if (!fdor_parser_init(fdor)) {
-		LOG(LOG_ERROR, "Encrypted Message Read: Failed to initialize FDOR parser\n");
 		goto error;
 	}
 
@@ -2521,24 +2459,47 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 		goto error;
 	}
 
-	// copy Encrypted payload that will be decrypted later.
-	pkt->em_body = fdo_byte_array_alloc_with_byte_array(
-		cose_encrypt0->payload->bytes, cose_encrypt0->payload->byte_sz);
+	// Encrypted payload that contains cipher||tag
+	// Allocate for cipher, discarding the tag length
+	pkt->em_body = fdo_byte_array_alloc(cose_encrypt0->payload->byte_sz - sizeof(pkt->tag));
 	if (!pkt->em_body) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Payload\n");
 		goto error;
 	}
 
+	// copy the cipher
+	if (memcpy_s(pkt->em_body->bytes, pkt->em_body->byte_sz,
+		    cose_encrypt0->payload->bytes,
+			cose_encrypt0->payload->byte_sz - sizeof(pkt->tag)) != 0) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy cipher data\n");
+		goto error;
+	}
+
+	// copy the tag
+	if (0 != memcpy_s(&pkt->tag, sizeof(pkt->tag),
+		cose_encrypt0->payload->bytes + pkt->em_body->byte_sz, sizeof(pkt->tag))) {
+		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy tag\n");
+		goto error;
+	}
+
 	// copy IV that is used to decrypt the encrypted payload
+	// even though the IV buffer length is 16 bytes, the actual IV length is different
+	// for GCM vs CCM
+	// however, while actually using the IV, only the appropriate length of IV is read/used
 	if (0 != memcpy_s(&pkt->iv, sizeof(pkt->iv),
 		&cose_encrypt0->unprotected_header->aes_iv, sizeof(cose_encrypt0->unprotected_header->aes_iv))) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Unprotected.AESIV\n");
 		goto error;
 	}
 
-	// verify and copy AESPlainType value
-	int expected_aes_plain_type = AES_PLAIN_TYPE;
-	if (cose_encrypt0->protected_header->aes_plain_type != expected_aes_plain_type) {
+#ifdef COSE_ENC_TYPE
+	expected_aes_alg_type = COSE_ENC_TYPE;
+#else
+	LOG(LOG_ERROR, "Encrypted Message Read: Invalid Encryption type\n");
+	goto error;
+#endif
+
+	if (cose_encrypt0->protected_header->aes_plain_type != expected_aes_alg_type) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected AESPlainType\n");
 		goto error;
 	}
@@ -2562,19 +2523,96 @@ error:
 }
 
 /**
- * Write the ETMInnerBlock stucture (COSE_Encrypt0) in the FDOW buffer using the contents
+ * Write the Enc_structure (RFC 8152) used as Addditional Authenticated Data (AAD)
+ * for AES GCM/CCM, in the FDOW buffer.
+ * Enc_structure = [
+ *   context: "Encrypt0"
+ *   protected:   { 1:COSEEncType },
+ *   external_aad:     bstr
+ *]
+ * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
+ * @param alg_type - COSEEncType value to be used in protected header
+ * @return true if write is successfull, false otherwise.
+ */
+bool fdo_aad_write(fdow_t *fdow, int alg_type) {
+
+	bool ret = false;
+
+	if (!fdow) {
+		return false;
+	}
+
+	char enc_structure_context[9] = "Encrypt0";
+	fdo_cose_encrypt0_protected_header_t *protected_header = NULL;
+	fdo_byte_array_t *enc_structure_external_aad = NULL;
+
+	if (!fdow_start_array(fdow, 3)) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to write start array\n");
+		goto err;
+	}
+
+	// context is a constant chosen from a list of available values, as per RFC 8152
+	// ignore the NULL terminator in the 'Context' string
+	if (!fdow_text_string(fdow, &enc_structure_context[0], sizeof(enc_structure_context) - 1)) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to write Context\n");
+		goto err;
+	}
+
+	// protected header is the same as "Encrypt0" protected header structure, thus reuse
+	protected_header = fdo_alloc(sizeof(fdo_cose_encrypt0_protected_header_t));
+	if (!protected_header) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to alloc protected header\n");
+		goto err;
+	}
+	protected_header->aes_plain_type = alg_type;
+	if (!fdo_cose_encrypt0_write_protected_header(fdow, protected_header)) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to write protected header\n");
+		goto err;
+	}
+
+	// external_aad is an empty bstr
+	enc_structure_external_aad = fdo_byte_array_alloc(0);
+	if (!enc_structure_external_aad) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to alloc external_aad\n");
+		goto err;
+	}
+
+	if (!fdow_byte_string(fdow, enc_structure_external_aad->bytes,
+		enc_structure_external_aad->byte_sz)) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to write external_aad\n");
+		goto err;
+	}
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Enc_Structure: Failed to write end array\n");
+		goto err;
+	}
+	ret = true;
+err:
+	if (protected_header) {
+		fdo_free(protected_header);
+		protected_header = NULL;
+	}
+	if (enc_structure_external_aad) {
+		fdo_free(enc_structure_external_aad);
+		enc_structure_external_aad = NULL;
+	}
+	return ret;
+}
+
+/**
+ * Write the EMBlock stucture (COSE_Encrypt0) in the FDOW buffer using the contents
  * of fdo_encrypted_packet_t.
  * ETMInnerBlock = [
- *   protected:   { 1:AESPlainType },
+ *   protected:   { 1:COSEEncType },
  *   unprotected: { 5:AESIV }
  *   payload:     ProtocolMessage
- *   signature:   bstr
  *]
  * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
  * @param pkt - fdo_encrypted_packet_t object
  * @return true if write is successfull, false otherwise.
  */
-bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
+bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
 {
 	if (!fdow || !pkt)
 		return false;
@@ -2598,12 +2636,32 @@ bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
 			"Encrypted Message write: Failed to copy IV\n");
 		goto err;
 	}
-	cose_encrypt0->payload = fdo_byte_array_alloc_with_byte_array(
-		pkt->em_body->bytes, pkt->em_body->byte_sz);
+
+	// Allocate for payload that contains cipher||tag
+	cose_encrypt0->payload = fdo_byte_array_alloc(pkt->em_body->byte_sz + sizeof(pkt->tag));
+	if (!cose_encrypt0->payload) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to alloc COSE_Encrypt0.Payload\n");
+		goto err;
+	}
+
+	// copy the cipher data
+	if (0 != memcpy_s(cose_encrypt0->payload->bytes, pkt->em_body->byte_sz,
+			pkt->em_body->bytes, pkt->em_body->byte_sz)) {
+		LOG(LOG_ERROR, "Encrypted Message write: Failed to copy cipher data\n");
+		goto err;
+	}
+
+	// copy the tag
+	if (0 != memcpy_s(cose_encrypt0->payload->bytes + pkt->em_body->byte_sz, sizeof(pkt->tag),
+		    pkt->tag, sizeof(pkt->tag))) {
+		LOG(LOG_ERROR, "Encrypted Message write: Failed to copy tag\n");
+		goto err;
+	}
 
 	if (!fdo_cose_encrypt0_write(fdow, cose_encrypt0)) {
 		LOG(LOG_ERROR,
-			"Encrypted Message write: Failed to write COSE_Encrypt0 (ETMInnerBlock)\n");
+			"Encrypted Message write: Failed to write COSE_Encrypt0\n");
 		goto err;
 	}
 
@@ -2615,61 +2673,6 @@ err:
 	if (cose_encrypt0) {
 		fdo_cose_encrypt0_free(cose_encrypt0);
 		cose_encrypt0 = NULL;
-	}
-	return false;
-}
-
-/**
- * Write the ETMOuterBlock stucture (COSE_Mac0) in the FDOW buffer using the contents
- * of fdo_encrypted_packet_t.
- * ETMOuterBlock = [
- *   protected:   bstr .cbor ETMMacType,
- *   unprotected: {},
- *   payload:     bstr .cbor ETMPayloadTag,
- *   hmac:        bstr 
- * ]
- * ETMPayloadTag = ETMInnerBlock
- * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
- * @param pkt - fdo_encrypted_packet_t object
- * @return  true if write is successfull, false otherwise.
- */
-bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
-{
-	if (!fdow || !pkt)
-		return false;
-
-	fdo_cose_mac0_t *cose_mac0 = fdo_alloc(sizeof(fdo_cose_mac0_t));
-	if (!cose_mac0) {
-		LOG(LOG_ERROR,
-			"Encrypted Message write: Failed to alloc COSE_Sign1 (ETMOuterBlock)\n");
-		goto err;
-	}
-	cose_mac0->protected_header = fdo_alloc(sizeof(fdo_cose_mac0_protected_header_t));
-	if (!cose_mac0->protected_header) {
-		LOG(LOG_ERROR,
-			"Encrypted Message write: Failed to alloc COSE_Mac0 Protected (ETMOuterBlock)\n");
-		goto err;
-	}
-	cose_mac0->protected_header->mac_type = pkt->hmac->hash_type;
-
-	// set the encoded ETMInnerBlock (COSE_Encrypt0) as payload and its HMac into COSE_Mac0
-	cose_mac0->payload = fdo_byte_array_alloc_with_byte_array(
-		pkt->ct_string->bytes, pkt->ct_string->byte_sz);
-	cose_mac0->hmac = fdo_byte_array_alloc_with_byte_array(
-		pkt->hmac->hash->bytes, pkt->hmac->hash->byte_sz);
-
-	if (!fdo_cose_mac0_write(fdow, cose_mac0)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message write: Failed to write COSE_Sign1 (ETMOuterBlock)\n");
-		goto err;
-	}
-	fdo_cose_mac0_free(cose_mac0);
-	cose_mac0 = NULL;
-	return true;
-err:
-	if (cose_mac0) {
-		fdo_cose_mac0_free(cose_mac0);
-		cose_mac0 = NULL;
 	}
 	return false;
 }
@@ -2688,6 +2691,7 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
 {
 	bool ret = false;
 	fdo_byte_array_t *cleartext = NULL;
+	fdow_t temp_fdow = {0};
 
 	// Decrypt the Encrypted Body
 	if (!fdor || !pkt || !iv) {
@@ -2701,8 +2705,27 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
 		goto err;
 	}
 
+	// create temporary FDOW, use it to create Protected header map and then clear it.
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: FDOW Initialization/Allocation failed!\n");
+		goto err;
+	}
+	if (!fdo_aad_write(&temp_fdow, pkt->aes_plain_type)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to generate AAD\n");
+		goto err;
+	}
+	// update the final encoded length in temporary FDOW
+	if (!fdow_encoded_length(&temp_fdow, &temp_fdow.b.block_size)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to read AAD length\n");
+		goto err;
+	}
+
 	/* New iv is used for each new decryption which comes from pkt*/
-	if (0 != aes_decrypt_packet(pkt, cleartext)) {
+	if (0 != aes_decrypt_packet(pkt, cleartext, temp_fdow.b.block, temp_fdow.b.block_size)) {
 		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to decrypt\n");
 		goto err;
 	}
@@ -2724,29 +2747,103 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
 	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decrytion done\n");
 	ret = true;
 err:
-	if (pkt)
+	if (temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	if (pkt) {
 		fdo_encrypted_packet_free(pkt);
-	if (cleartext)
+	}
+	if (cleartext) {
 		fdo_byte_array_free(cleartext);
+	}
+	return ret;
+}
+
+/**
+ * Prepare to write Simple EncryptedMessage (Section 4.4 FDO Specification).
+ * At the end of this method, structure EMBlock is generated.
+ * 
+ * @param pkt - Pointer to the Encrypted packet pkt that has to be processed.
+ * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
+ * @param fdow_buff_default_sz - default buffer length of fdow.b.block
+ * @return true if all goes well, otherwise false
+ */
+bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
+	fdow_t *fdow, size_t fdow_buff_default_sz) {
+
+	bool ret = false;
+	fdow_t temp_fdow = {0};
+
+	// create temporary FDOW, use it to create Protected header map and then clear it.
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: FDOW Initialization/Allocation failed!\n");
+		goto exit;
+	}
+	if (!fdo_aad_write(&temp_fdow, pkt->aes_plain_type)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to read COSE_Encrypt0 (EMBlock) length\n");
+		goto exit;
+	}
+	// update the final encoded length in temporary FDOW
+	if (!fdow_encoded_length(&temp_fdow, &temp_fdow.b.block_size)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Failed to read COSE_Encrypt0 (EMBlock) length\n");
+		goto exit;
+	}
+
+	if (0 != aes_encrypt_packet(pkt, fdow->b.block, fdow->b.block_size, temp_fdow.b.block,
+		temp_fdow.b.block_size)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to encrypt\n");
+		goto exit;
+	}
+
+	// reset the FDOW block to write EMBlock
+	// This clears the unencrypted (clear text) as well
+	fdo_block_reset(&fdow->b);
+	fdow->b.block_size = fdow_buff_default_sz;
+	if (!fdow_encoder_init(fdow)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
+		goto exit;
+	}
+
+	// write the EMBlock containing the cipher text || tag as payload
+	if (!fdo_emblock_write(fdow, pkt)) {
+		LOG(LOG_ERROR,
+			"Encrypted Message (encrypt): Failed to write COSE_Encrypt0 (EMBlock)\n");
+		goto exit;
+	}
+	ret = true;
+exit:
+	if (temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	if (!ret) {
+		// reset the FDOW block for further writing
+		fdo_block_reset(&fdow->b);
+		fdow->b.block_size = fdow_buff_default_sz;
+		if (!fdow_encoder_init(fdow)) {
+			LOG(LOG_ERROR,
+				"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
+			goto exit;
+		}
+	}
 	return ret;
 }
 
 /**
  * Take the cleartext packet contained in the fdow buffer and convert it
- * to an Encrypted Message Body of Composed Type (EncThenMacMessage) in the fdow buffer.
- * It contains an COSE_Encrypt0 (ETMInnerBlock) wrapped by COSE_Mac0 (ETMOuterBlock)
- * ETMOuterBlock = [
+ * to an Encrypted Message Body of Simple Type in the fdow buffer.
+ * It contains an COSE_Encrypt0.
+ * EMBlock = [
  *   protected:   { 1:ETMMacType },		// bstr
- *   unprotected: { }					// empty map
- *   payload:     ETMInnerBlock			// COSE_Encrypt0
- *   hmac:   hmac						// bstr
+ *   unprotected: { 5 : IV}				// contains IV
+ *   payload:     bstr					// cipher||tag
  * ]
- * ETMInnerBlock = [
- *   protected:   { 1:AESPlainType },	// bstr
- *   unprotected: { 5:AESIV }
- *   payload:     ProtocolMessage
- * ]
- * TO-DO : To be updated later to write Simple Type.
+
  * @param fdow - pointer to the message buffer
  * @param type - message type
  * @param iv - Pointer to the iv to fill Encrypted Packet pkt.
@@ -2778,89 +2875,25 @@ bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
 		return ret;
 	}
 
-	if (0 != aes_encrypt_packet(pkt, fdob->block, payload_length)) {
+#if defined(COSE_ENC_TYPE)
+	pkt->aes_plain_type = COSE_ENC_TYPE;
+	if (!fdo_prep_simple_encrypted_message(pkt, fdow, fdow_buff_default_sz)) {
 		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to encrypt\n");
+			"Encrypted Message (encrypt): Failed to generate Simple Encrypted Message\n");
 		goto exit;
 	}
-
-#if defined AES_PLAIN_TYPE
-	pkt->aes_plain_type = AES_PLAIN_TYPE;
-#elif
+#else
 	LOG(LOG_ERROR,
-		"Encrypted Message (encrypt): AES_PLAIN_TYPE is undefined\n");
+		"Encrypted Message (encrypt): Invalid AES algorithm type\n");
 	goto exit;
 #endif
 
-	// reset the FDOW block to write COSE_Encrypt0 (ETMInnerBlock)
-	// This clears the unencrypted (clear text) as well
-	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = fdow_buff_default_sz;
-	if (!fdow_encoder_init(fdow)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
-		goto exit;
-	}
-	// write the ETMInnerBlock containing the cipher text as payload
-	if (!fdo_etminnerblock_write(fdow, pkt)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to write COSE_Encrypt0 (ETMInnerBlock)\n");
-		goto exit;
-	}
-
-	// update the final encoded length in FDOW
-	if (!fdow_encoded_length(fdow, &fdow->b.block_size)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message write: Failed to read COSE_Encrypt0 ((ETMInnerBlock)) length\n");
-		goto exit;		
-	}
-
-	// initialize the cipher text array to hold the payload over which HMac will be generated.
-	pkt->ct_string = fdo_byte_array_alloc_with_byte_array(fdow->b.block, fdow->b.block_size);
-	if (!pkt->ct_string) {
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to alloc for Encrypted CT structure\n");
-		goto exit;
-	}
-
-	// reset the FDOW block to prepare for writing COSE_Sign1 (ETMOuterBlock)
-	fdo_block_reset(&fdow->b);
-	fdow->b.block_size = fdow_buff_default_sz;
-	if (!fdow_encoder_init(fdow)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
-		goto exit;
-	}
-
-	// prepare to calculate the HMac over encoded ETMInnerBlock
-	pkt->hmac =
-	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
-
-	if (!pkt->hmac || !pkt->hmac->hash){
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to alloc for HMac\n");
-		goto exit;
-	}
-	if (0 != fdo_to2_hmac(pkt->ct_string->bytes, pkt->ct_string->byte_sz,
-			      pkt->hmac->hash->bytes,
-			      pkt->hmac->hash->byte_sz)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to generate HMac\n");
-		goto exit;
-	}
-
-	// write the final ETMOuetrBlock and the message type
-	// This is the message that goes over the network/channel
 	fdow_next_block(fdow, type);
-	if (!fdo_etmouterblock_write(fdow, pkt)) {
-		LOG(LOG_ERROR,
-			"Encrypted Message (encrypt): Failed to write COSE_Sign1 (ETMOuterBlock)\n");
-		goto exit;
-	}
 	ret = true;
 exit:
-	if (pkt)
+	if (pkt) {
 		fdo_encrypted_packet_free(pkt);
+	}
 	return ret;
 }
 

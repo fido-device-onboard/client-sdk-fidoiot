@@ -14,16 +14,14 @@
 #include "base64.h"
 #include "fdoCryptoCtx.h"
 
-#ifdef KEX_ECDH384_ENABLED
-#define SEK_KEY_SIZE 32
-#define SVK_KEY_SIZE 64
+#if defined(KEX_ECDH384_ENABLED)
+#define SEK_KEY_SIZE 32 /* KEX_ECDH384_ENABLED */
 #else
 #define SEK_KEY_SIZE 16
-#define SVK_KEY_SIZE 32
-#endif /* KEX_ECDH384_ENABLED */
+#endif
 
-/* Cipher suite "cs" for msg 40 in TO2 */
-#ifdef AES_256_BIT
+/* Cipher suite "cs" for msg60 in TO2 */
+#if defined(AES_256_BIT)
 #define AES_BITS 256
 #else
 #define AES_BITS 128
@@ -35,13 +33,7 @@
 #define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_48_BYTES
 #endif
 
-#ifdef AES_MODE_CTR_ENABLED
-#define AES_MODE "CTR"
-#else
-#define AES_MODE "CBC"
-#endif /* AES_MODE_CTR_ENABLED */
-
-#ifdef KEX_ECDH384_ENABLED
+#if defined(KEX_ECDH384_ENABLED)
 #define HMAC_MODE 384
 #else
 #define HMAC_MODE 256
@@ -65,14 +57,14 @@
 #define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384
 #endif
 
-#if defined(AES_MODE_CTR_ENABLED) && AES_BITS == 128
-#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES128CTR
-#elif defined(AES_MODE_CTR_ENABLED) && AES_BITS == 256
-#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES256CTR
-#elif !defined(AES_MODE_CTR_ENABLED) && AES_BITS == 128
-#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES128CBC
-#elif !defined(AES_MODE_CTR_ENABLED) && AES_BITS == 256
-#define AES_PLAIN_TYPE FDO_CRYPTO_COSEAES256CBC
+#if defined(AES_MODE_GCM_ENABLED) && AES_BITS == 128
+#define COSE_ENC_TYPE FDO_CRYPTO_A128GCM
+#elif defined(AES_MODE_GCM_ENABLED) && AES_BITS == 256
+#define COSE_ENC_TYPE FDO_CRYPTO_A256GCM
+#elif defined(AES_MODE_CCM_ENABLED) && AES_BITS == 128
+#define COSE_ENC_TYPE FDO_CRYPTO_A128CCM
+#elif defined(AES_MODE_CCM_ENABLED) && AES_BITS == 256
+#define COSE_ENC_TYPE FDO_CRYPTO_A256CCM
 #endif
 
 /* Function declarations */
@@ -94,12 +86,16 @@ int32_t fdo_ov_verify(uint8_t *message, uint32_t message_length,
 
 int32_t fdo_msg_encrypt_get_cipher_len(uint32_t clear_length,
 				       uint32_t *cipher_length);
-int32_t fdo_msg_encrypt(uint8_t *clear_text, uint32_t clear_text_length,
-			uint8_t *cipher, uint32_t *cipher_length, uint8_t *iv);
+int32_t fdo_msg_encrypt(const uint8_t *clear_text, uint32_t clear_text_length,
+			uint8_t *cipher, uint32_t *cipher_length, uint8_t *iv,
+			uint8_t *tag, size_t tag_length,
+			const uint8_t *aad, size_t aad_length);
 int32_t fdo_msg_decrypt_get_pt_len(uint32_t cipher_length,
 				   uint32_t *clear_text_length);
 int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
-			uint8_t *cipher, uint32_t cipher_length, uint8_t *iv);
+			const uint8_t *cipher, uint32_t cipher_length, uint8_t *iv,
+			uint8_t *tag, size_t tag_length,
+			const uint8_t *aad, size_t aad_length);
 int32_t fdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
 		     size_t hmac_len);
 int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,

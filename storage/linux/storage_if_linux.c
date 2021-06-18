@@ -59,7 +59,7 @@ size_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 {
 	size_t retval = 0;
 	const size_t NORMAL_BLOB_OVERHEAD = PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
-	const size_t SECURE_BLOB_OVERHEAD = PLATFORM_GCM_TAG_SIZE +
+	const size_t SECURE_BLOB_OVERHEAD = AES_TAG_LEN +
 					PLATFORM_IV_DEFAULT_LEN + BLOB_CONTENT_SIZE;
 
 	if (!name) {
@@ -146,7 +146,7 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 	uint32_t encrypted_data_len = 0;
 	uint8_t stored_hmac[PLATFORM_HMAC_SIZE] = {0};
 	uint8_t computed_hmac[PLATFORM_HMAC_SIZE] = {0};
-	uint8_t stored_tag[PLATFORM_GCM_TAG_SIZE] = {0};
+	uint8_t stored_tag[AES_TAG_LEN] = {0};
 	int strcmp_result = -1;
 	uint8_t iv[PLATFORM_IV_DEFAULT_LEN] = {0};
 	uint8_t aes_key[PLATFORM_AES_KEY_DEFAULT_LEN] = {0};
@@ -261,7 +261,7 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		 */
 
 		encrypted_data_len = PLATFORM_IV_DEFAULT_LEN +
-				     PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE +
+				     AES_TAG_LEN + BLOB_CONTENT_SIZE +
 				     n_bytes;
 
 		encrypted_data = fdo_alloc(encrypted_data_len);
@@ -276,7 +276,7 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			goto exit;
 		}
 
-		dat_len_offst = PLATFORM_GCM_TAG_SIZE + PLATFORM_IV_DEFAULT_LEN;
+		dat_len_offst = AES_TAG_LEN + PLATFORM_IV_DEFAULT_LEN;
 		// get actual data length
 		data_length |= encrypted_data[dat_len_offst] << 24;
 		data_length |= encrypted_data[dat_len_offst + 1] << 16;
@@ -301,9 +301,9 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			goto exit;
 		}
 
-		if (memcpy_s(stored_tag, PLATFORM_GCM_TAG_SIZE,
+		if (memcpy_s(stored_tag, AES_TAG_LEN,
 			     encrypted_data + PLATFORM_IV_DEFAULT_LEN,
-			     PLATFORM_GCM_TAG_SIZE) != 0) {
+			     AES_TAG_LEN) != 0) {
 			LOG(LOG_ERROR,
 			    "Copying stored TAG failed during "
 			    "%s!\n",
@@ -312,7 +312,7 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		}
 
 		data = encrypted_data + PLATFORM_IV_DEFAULT_LEN +
-		       PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE;
+		       AES_TAG_LEN + BLOB_CONTENT_SIZE;
 
 		if (!get_platform_aes_key(aes_key,
 					  PLATFORM_AES_KEY_DEFAULT_LEN)) {
@@ -322,11 +322,10 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 
 		// decrypt and authenticate cipher-text content and fill the
 		// given buffer with clear-text
-		if (fdo_crypto_aes_gcm_decrypt(
-			buf, n_bytes, data, data_length, iv,
-			PLATFORM_IV_DEFAULT_LEN, aes_key,
-			PLATFORM_AES_KEY_DEFAULT_LEN, stored_tag,
-			AES_GCM_TAG_LEN) < 0) {
+		if (crypto_hal_aes_decrypt(
+			buf, &n_bytes, data, data_length, 16, iv,
+			aes_key, PLATFORM_AES_KEY_DEFAULT_LEN,
+			stored_tag, AES_TAG_LEN, NULL, 0) < 0) {
 			LOG(LOG_ERROR, "Decryption failed during Secure "
 				       "Blob Read!\n");
 			goto exit;
@@ -370,9 +369,10 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 	int retval = -1;
 	FILE *f = NULL;
 	uint32_t write_context_len = 0;
+	uint32_t write_context_len_temp = 0;
 	uint8_t *write_context = NULL;
 	size_t bytes_written = 0;
-	uint8_t tag[PLATFORM_GCM_TAG_SIZE] = {0};
+	uint8_t tag[AES_TAG_LEN] = {0};
 	uint8_t iv[PLATFORM_IV_DEFAULT_LEN] = {0};
 	uint8_t aes_key[PLATFORM_AES_KEY_DEFAULT_LEN] = {0};
 	size_t dat_len_offst = 0;
@@ -459,7 +459,7 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		 */
 
 		write_context_len = PLATFORM_IV_DEFAULT_LEN +
-				    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE +
+				    AES_TAG_LEN + BLOB_CONTENT_SIZE +
 				    n_bytes;
 
 		write_context = fdo_alloc(write_context_len);
@@ -479,16 +479,17 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 			goto exit;
 		}
 
+		write_context_len_temp = write_context_len - (PLATFORM_IV_DEFAULT_LEN +
+			    AES_TAG_LEN + BLOB_CONTENT_SIZE);
 		// encrypt plain-text and copy cipher-text content
-		if (fdo_crypto_aes_gcm_encrypt(
+		if (crypto_hal_aes_encrypt(
 			buf, n_bytes,
-			write_context + PLATFORM_IV_DEFAULT_LEN +
-			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE,
-			write_context_len - (PLATFORM_IV_DEFAULT_LEN +
-			    PLATFORM_GCM_TAG_SIZE + BLOB_CONTENT_SIZE),
-			iv, PLATFORM_IV_DEFAULT_LEN, aes_key,
+			&write_context[PLATFORM_IV_DEFAULT_LEN +
+			    AES_TAG_LEN + BLOB_CONTENT_SIZE],
+			&write_context_len_temp,
+			16, iv, aes_key,
 			PLATFORM_AES_KEY_DEFAULT_LEN, tag,
-			AES_GCM_TAG_LEN) < 0) {
+			AES_TAG_LEN, NULL, 0) < 0) {
 			LOG(LOG_ERROR, "Encypting data failed during Secure "
 				       "Blob write!\n");
 			goto exit;
@@ -504,13 +505,13 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		// copy Authenticated TAG value
 		if (memcpy_s(write_context + PLATFORM_IV_DEFAULT_LEN,
 			     write_context_len - PLATFORM_IV_DEFAULT_LEN, tag,
-			     PLATFORM_GCM_TAG_SIZE) != 0) {
+			     AES_TAG_LEN) != 0) {
 			LOG(LOG_ERROR, "Copying TAG value failed during Secure "
 				       "Blob write!\n");
 			goto exit;
 		}
 
-		dat_len_offst = PLATFORM_GCM_TAG_SIZE + PLATFORM_IV_DEFAULT_LEN;
+		dat_len_offst = AES_TAG_LEN + PLATFORM_IV_DEFAULT_LEN;
 		/* copy cipher-text size; CT size= PT size (AES GCM uses AES CTR
 		 * mode internally for encryption)
 		 */

@@ -20,8 +20,8 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
 /**
  * fdo_kex_init() - Initialize key exchange context
  * Initialize the key exchange context which can be done at init time
- * o Key Exchange algorithm (DH, AYSM, ECDH, ECDH384)
- * o Cipher Suite to be used (AESxxx/CTRorCBC/HMAC-SHAyyy)
+ * o Key Exchange algorithm (ECDH, ECDH384)
+ * o Cipher Suite to be used
  * o If it's ECDH, perform the 1st step of ECDH
  */
 int32_t fdo_kex_init(void)
@@ -50,11 +50,15 @@ int32_t fdo_kex_init(void)
 	 *     SHA = 384 bit
 	 */
 
-	/* Construct the cs string: AESxxx/CTRorCBC/HMAC-SHAyyy */
-	snprintf_s_i(cs, sizeof(cs), "AES%u/", AES_BITS);
-	ofs = strnlen_s(cs, sizeof(cs));
-	snprintf_s_si(cs + ofs, sizeof(cs) - ofs, "%s/HMAC-SHA%u",
-		      (char *)AES_MODE, HMAC_MODE);
+#ifdef AES_MODE_GCM_ENABLED
+	// AES GCM mode
+	snprintf_s_i(cs, sizeof(cs), "AES%uGCM", AES_BITS);
+	(void)ofs;
+#else
+	// AES CCM mode
+	snprintf_s_i(cs, sizeof(cs), "AES-CCM-64-128-%u", AES_BITS);
+	(void)ofs;
+#endif
 
 	kex_ctx->cs = fdo_string_alloc_with_str(cs);
 	if (!kex_ctx->cs) {
@@ -65,10 +69,6 @@ int32_t fdo_kex_init(void)
 	/* Allocate buffer for Session Encryption Key (SEK) */
 	to2sym_ctx->keyset.sek = fdo_byte_array_alloc(SEK_KEY_SIZE);
 	if (!to2sym_ctx->keyset.sek)
-		goto err;
-
-	to2sym_ctx->keyset.svk = fdo_byte_array_alloc(SVK_KEY_SIZE);
-	if (!to2sym_ctx->keyset.svk)
 		goto err;
 
 	if (crypto_hal_kex_init(&(kex_ctx->context))) {
@@ -231,7 +231,7 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray)
  *
  * KDFInput = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr,
  * where Context = "AutomaticOnboardTunnel"||ContextRand, and,
- * ContextRand = null for ECDH/DH Key Exchange (Section 3.6.1 and 3.6.3)
+ * ContextRand = null for ECDH Key Exchange (Section 3.6.3)
  *
  * index is the counter (i), and cannot be more than 2.
  * keymat_bit_length is the total number of key-bits to generate, and is used to calculate Lstr.
@@ -342,7 +342,6 @@ err:
 /**
  * Derive encryption and hashing key using the input shared secret for
  * the selected key exchange mode.
- * NOTE: Currently, only works for AES-CTR and AES-CBC
  *
  * @return ret
  *        return true on success. false on failure.
@@ -358,9 +357,8 @@ static int32_t kex_kdf(void)
 	size_t kdf_input_len = 0;
 	// length of 1 byte in bits
 	int byte_size = 8;
-	// Length of Output Keying Material, in bytes = SEK + SVK size for AES-CTR and AES-CBC modes
-	// TO-DO : update when AES-GCM and AES-CCM are added
-	size_t keymat_bytes_sz = SEK_KEY_SIZE + SVK_KEY_SIZE;
+	// Length of Output Keying Material, in bytes = SEK size for AES-GCM and AES-CCM modes
+	size_t keymat_bytes_sz = SEK_KEY_SIZE;
 	// Output Keying Material
 	uint8_t keymat[keymat_bytes_sz];
 	// number of iterations of PRF
@@ -370,6 +368,7 @@ static int32_t kex_kdf(void)
 	size_t keymat_bytes_index = 0;
 	size_t keymat_bytes_to_copy = 0;
 	uint8_t *hmac = NULL;
+	size_t hmac_sha256_sz = BUFF_SIZE_32_BYTES;
 
 	if (!shse) {
 		LOG(LOG_ERROR, "Failed to get the shared secret\n");
@@ -380,10 +379,10 @@ static int32_t kex_kdf(void)
 	// n = ceil (L/h), where,
 	// L = Keying Material length in bits, and
 	// h = PRF output length in bits
-	n = ceil((double)(keymat_bytes_sz * byte_size) / (FDO_SHA_DIGEST_SIZE_USED * byte_size));
+	n = ceil((double)(keymat_bytes_sz * byte_size) / (hmac_sha256_sz * byte_size));
 
 	// Input to the KDF, KDFInput = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where
-	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL for ECDH/DH key-exchange,
+	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL for ECDH key-exchange,
 	// Lstr = (byte)L1||(byte)L2, i.e, 16-bit number, depending on L=key-bits to generate
 	// Therefore, KDFInput size = 1 for byte (i) + length of Label + 1 for byte (0) +
 	// length of Context + 2 bytes for Lstr
@@ -397,7 +396,7 @@ static int32_t kex_kdf(void)
 	}
 
 	// Allocate memory to store hmac
-	hmac = fdo_alloc(FDO_SHA_DIGEST_SIZE_USED);
+	hmac = fdo_alloc(hmac_sha256_sz);
 	if (!hmac) {
 		LOG(LOG_ERROR, "Failed to allocate hmac buffer\n");
 		goto err;
@@ -420,20 +419,20 @@ static int32_t kex_kdf(void)
 		}
 
 		// clear for new round usage
-		if (0 != memset_s(hmac, FDO_SHA_DIGEST_SIZE_USED, 0)) {
+		if (0 != memset_s(hmac, hmac_sha256_sz, 0)) {
 			LOG(LOG_ERROR, "Failed to clear hmac buffer\n");
 			goto err;
 		}
 		// generate hmac that gives us the key (or a part of it)
-		if (crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_USED, kdf_input, kdf_input_len,
-					hmac, FDO_SHA_DIGEST_SIZE_USED, shse->bytes,
+		if (crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_SHA_256, kdf_input, kdf_input_len,
+					hmac, hmac_sha256_sz, shse->bytes,
 					shse->byte_sz)) {
 			LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
 			goto err;
 		}
 
-		if (keymat_bytes_index + FDO_SHA_DIGEST_SIZE_USED <= keymat_bytes_sz) {
-			keymat_bytes_to_copy = FDO_SHA_DIGEST_SIZE_USED;
+		if (keymat_bytes_index + hmac_sha256_sz <= keymat_bytes_sz) {
+			keymat_bytes_to_copy = hmac_sha256_sz;
 		}
 		else {
 			keymat_bytes_to_copy = keymat_bytes_sz - keymat_bytes_index;
@@ -453,17 +452,10 @@ static int32_t kex_kdf(void)
 		goto err;
 	}
 
-	// Get the sek
+	// Get the sevk
 	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, &keymat[0],
 		      keyset->sek->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy sek key\n");
-		goto err;
-	}
-
-	// Get the svk
-	if (memcpy_s(keyset->svk->bytes, keyset->svk->byte_sz, &keymat[keyset->sek->byte_sz],
-		     keyset->svk->byte_sz)) {
-		LOG(LOG_ERROR, "Failed to copy svk key\n");
 		goto err;
 	}
 

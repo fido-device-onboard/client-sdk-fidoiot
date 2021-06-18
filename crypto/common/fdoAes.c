@@ -26,83 +26,17 @@ int32_t fdo_msg_encrypt_get_cipher_len(uint32_t clear_length,
 		return -1;
 	}
 
-#ifdef AES_MODE_CBC_ENABLED
-	*cipher_length =
-	    ((clear_length / FDO_AES_BLOCK_SIZE) + 1) * FDO_AES_BLOCK_SIZE;
-#elif AES_MODE_CTR_ENABLED
+	// for both AES GCM/CCM modes, same cipher data length is the same as plain data length
 	*cipher_length = clear_length;
-#endif
 	return 0;
 }
 
 static int32_t getIV(uint8_t *iv, uint32_t clear_text_length)
 {
-/* Generate IV for encription */
-#ifdef AES_MODE_CBC_ENABLED
+	// unused
 	(void)clear_text_length;
-	return fdo_crypto_random_bytes(iv, AES_IV);
-#else
-	int ret = -1;
-	uint32_t *ctr_value;
-	uint64_t temp_ctr_value;
-	uint32_t iv_ctr_ntohl;
-	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
-
-	if (NULL == to2sym_ctx) {
-		return -1;
-	}
-
-	ctr_value = &to2sym_ctx->ctr_value;
-	temp_ctr_value = (uint64_t)*ctr_value;
-
-	if (0 == *ctr_value) {
-		to2sym_ctx->initialization_vector =
-		    fdo_alloc(sizeof(uint8_t) * AES_CTR_IV);
-
-		if (NULL == to2sym_ctx->initialization_vector) {
-			goto error;
-		}
-
-		if (0 !=
-		    fdo_crypto_random_bytes(to2sym_ctx->initialization_vector,
-					    AES_CTR_IV)) {
-			goto error;
-		}
-	}
-
-	if (memcpy_s(iv, AES_CTR_IV, to2sym_ctx->initialization_vector,
-		     AES_CTR_IV) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		goto error;
-	}
-
-	iv_ctr_ntohl = fdo_net_to_host_long(*ctr_value);
-
-	if (memcpy_s(iv + AES_CTR_IV, AES_IV - AES_CTR_IV, &iv_ctr_ntohl,
-		     AES_CTR_IV_COUNTER) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		goto error;
-	}
-	temp_ctr_value +=
-	    (clear_text_length / FDO_AES_BLOCK_SIZE) +
-	    (uint32_t)((clear_text_length % FDO_AES_BLOCK_SIZE) != 0);
-
-	if (temp_ctr_value >= UINT32_MAX) {
-		LOG(LOG_ERROR, "CTR value reset occurred\n");
-		goto error;
-	}
-	*ctr_value = (uint32_t)temp_ctr_value;
-
-	ret = 0;
-
- error:
-	if (0 != ret) {
-		if(NULL != to2sym_ctx->initialization_vector) {
-			fdo_free(to2sym_ctx->initialization_vector);
-		}
-	}
-	return ret;
-#endif
+	//Generate IV for encryption
+	return fdo_crypto_random_bytes(iv, AES_IV_LEN);
 }
 
 /**
@@ -127,10 +61,20 @@ static int32_t getIV(uint8_t *iv, uint32_t clear_text_length)
  * encryption.
  * The IV is 16 bytes long, so the buffer specified by iv must be
  * at least 16 bytes long
+ * @param tag Out Pointer to the buffer where the authentication tag is stored
+ * after encryption. This buffer must be
+ * allocated before calling this API
+ * @param tag_length In/Out In: Size of the tag
+ * Out: Size of the authentication tag stored in tag
+ * @param aad In Pointer to the buffer containing the Additonal Authenticated Data (AAD)
+ * used during encryption
+ * @param aad_length In Size of the aad
  * @return 0 on success and -1 on failures.
  */
-int32_t fdo_msg_encrypt(uint8_t *clear_text, uint32_t clear_text_length,
-			uint8_t *cipher, uint32_t *cipher_length, uint8_t *iv)
+int32_t fdo_msg_encrypt(const uint8_t *clear_text, uint32_t clear_text_length,
+			uint8_t *cipher, uint32_t *cipher_length, uint8_t *iv,
+			uint8_t *tag, size_t tag_length,
+			const uint8_t *aad, size_t aad_length)
 {
 	fdo_aes_keyset_t *keyset = get_keyset();
 	uint8_t *sek;
@@ -154,7 +98,7 @@ int32_t fdo_msg_encrypt(uint8_t *clear_text, uint32_t clear_text_length,
 
 	if (0 != crypto_hal_aes_encrypt(clear_text, clear_text_length, cipher,
 					cipher_length, FDO_AES_BLOCK_SIZE, iv,
-					sek, sek_len)) {
+					sek, sek_len, tag, tag_length, aad, aad_length)) {
 		goto error;
 	}
 	return 0;
@@ -202,10 +146,19 @@ int32_t fdo_msg_decrypt_get_pt_len(uint32_t cipher_length,
  * @param iv In Pointer to the initialization vector (IV) used for AES
  * decryption. The IV is 16 bytes long, so the buffer specified by
  * iv must be at least 16 bytes long
+ * @param tag In Pointer to the buffer containing the authentication tag that is
+ * used for decryption.
+ * @param tag_length In/Out In: Size of the tag
+ * Out: Size of the authentication tag stored in tag
+ * @param aad In Pointer to the buffer containing the Additonal Authenticated Data (AAD)
+ * used during encryption
+ * @param aad_length In Size of the aad
  * @return 0 on success and -1 on failures.
  */
 int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
-			uint8_t *cipher, uint32_t cipher_length, uint8_t *iv)
+			const uint8_t *cipher, uint32_t cipher_length, uint8_t *iv,
+			uint8_t *tag, size_t tag_length,
+			const uint8_t *aad, size_t aad_length)
 {
 	fdo_aes_keyset_t *keyset = get_keyset();
 	uint8_t *sek;
@@ -223,7 +176,7 @@ int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 
 	if (0 != crypto_hal_aes_decrypt(clear_text, clear_text_length, cipher,
 					cipher_length, FDO_AES_BLOCK_SIZE, iv,
-					sek, sek_len)) {
+					sek, sek_len, tag, tag_length, aad, aad_length)) {
 		LOG(LOG_ERROR, "decrypt failed\n");
 		goto error;
 	}

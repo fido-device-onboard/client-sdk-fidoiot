@@ -37,11 +37,6 @@ if (${TLS} STREQUAL openssl)
     openssl/openssl_base64.c
     openssl/BN_support.c)
 
-    if (${CRYPTO_HW} MATCHES false)
-        client_sdk_sources_with_lib( crypto openssl/openssl_AESGCMRoutines.c)
-    endif()
-
-
     if (${KEX} STREQUAL dh)
       ### DH key exchange
         client_sdk_sources_with_lib( crypto openssl/openssl_key_exchange_dh.c)
