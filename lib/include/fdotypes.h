@@ -40,9 +40,6 @@ char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz);
 // Byte Array
 typedef fdo_bits_t fdo_byte_array_t;
 
-#if 0
-fdo_byte_array_t *fdo_byte_array_init(fdo_byte_array_t *bn, int byte_sz);
-#endif
 fdo_byte_array_t *fdo_byte_array_alloc(int byte_sz);
 fdo_byte_array_t *fdo_byte_array_alloc_with_int(int val);
 fdo_byte_array_t *fdo_byte_array_alloc_with_byte_array(uint8_t *ba, int ba_len);

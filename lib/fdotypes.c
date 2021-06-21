@@ -286,17 +286,6 @@ char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz)
 	}
 	return buf0;
 }
-
-//==============================================================================
-// Byte Array is FDOBits but read and written as base64
-
-/**
- * Internal API
- */
-fdo_byte_array_t *fdo_byte_array_init(fdo_byte_array_t *bn, int byte_sz)
-{
-	return fdo_bits_init(bn, byte_sz);
-}
 #endif
 
 /**
