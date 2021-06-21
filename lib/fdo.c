@@ -827,8 +827,19 @@ static bool _STATE_DI(void)
 {
 	bool ret = false;
 	fdo_prot_ctx_t *prot_ctx = NULL;
-	uint16_t di_port = g_DI_PORT;
-	size_t fsize = 0;
+
+	char mfg_transport_prot[6] = {0};
+	fdo_ip_address_t *mfg_ip = NULL;
+	char mfg_dns[100] = {0};
+	int di_port = g_DI_PORT;
+
+	bool tls = false;
+	int32_t fsize = 0;
+	char *buffer = NULL;
+	int result = 0;
+
+	const char transport_http[5] = "http";
+	const char transport_https[6] = "https";
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -843,15 +854,7 @@ static bool _STATE_DI(void)
 
 	fdo_prot_di_init(&g_fdo_data->prot, g_fdo_data->devcred);
 
-	fdo_ip_address_t *manIPAddr = NULL;
-
-#if defined(TARGET_OS_LINUX) || defined(TARGET_OS_MBEDOS) ||                   \
-    defined(TARGET_OS_OPTEE)
-	char *mfg_dns = NULL;
-	char *buffer = NULL;
-	bool is_mfg_addr = false;
-
-	fsize = fdo_blob_size((char *)MANUFACTURER_IP, FDO_SDK_RAW_DATA);
+	fsize = fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
 	if (fsize > 0) {
 		buffer = fdo_alloc(fsize + 1);
 		if (buffer == NULL) {
@@ -859,135 +862,79 @@ static bool _STATE_DI(void)
 			goto end;
 		}
 
-		if (fdo_blob_read((char *)MANUFACTURER_IP, FDO_SDK_RAW_DATA,
+		if (fdo_blob_read((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA,
 				  (uint8_t *)buffer, fsize) == -1) {
-			LOG(LOG_ERROR, "Failed to read Manufacture DN\n");
-			fdo_free(buffer);
+			LOG(LOG_ERROR, "Failed to read Manufacture address\n");
 			goto end;
 		}
 
 		buffer[fsize] = '\0';
-		manIPAddr = fdo_ipaddress_alloc();
 
-		if (!manIPAddr) {
+		// the expected format is '{http/https}://{IP/DNS}:port', port is optional
+		result = sscanf(buffer, "%5[^:]://%99[^:]:%d/",
+			mfg_transport_prot, mfg_dns, &di_port);
+		// if all 3 are updated, wer're all good,
+		// but if only 2 of these are updated, verify each and decide
+		if (result != 2 && result != 3) {
+			LOG(LOG_ERROR, "Failed to parse manufacturer address\n");
+			goto end;
+		}
+
+		// parse transport protocol. check for 'http' first, then 'https'
+		if (memcmp_s(mfg_transport_prot, sizeof(mfg_transport_prot), transport_http,
+				sizeof(transport_http), &result) != 0) {
+			LOG(LOG_ERROR, "Failed to compare transport protocol\n");
+			goto end;
+		}
+		if (0 != result) {
+			if (memcmp_s(mfg_transport_prot, sizeof(mfg_transport_prot), transport_https,
+				sizeof(transport_https), &result) != 0) {
+				LOG(LOG_ERROR, "Failed to compare transport protocol\n");
+				goto end;
+			}
+			if (0 == result) {
+				tls = true;
+				LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTPS\n");
+			} else {
+				LOG(LOG_DEBUG, "Invalid Manufacturer Transport protocol specified.\n");
+				goto end;
+			}
+		} else {
+			LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTP\n");
+		}
+
+		// parse IP/DNS. check for IP first, then DNS
+		mfg_ip = fdo_ipaddress_alloc();
+		if (!mfg_ip) {
 			LOG(LOG_ERROR, "Failed to alloc memory\n");
-			ERROR()
-			fdo_free(buffer);
+			ERROR();
 			goto end;
 		}
-		int result = fdo_printable_to_net(buffer, manIPAddr->addr);
-
-		if (result <= 0) {
-			LOG(LOG_ERROR, "Failed to convert Mfg address\n");
-			ERROR()
-			fdo_free(buffer);
-			goto end;
-		}
-		manIPAddr->length = IPV4_ADDR_LEN;
-		fdo_free(buffer);
-		is_mfg_addr = true;
-	} else {
-		fsize =
-		    fdo_blob_size((char *)MANUFACTURER_DN, FDO_SDK_RAW_DATA);
-		if (fsize > 0) {
-			buffer = fdo_alloc(fsize + 1);
-			if (buffer == NULL) {
-				LOG(LOG_ERROR, "malloc failed\n");
-				ERROR()
-				goto end;
-			}
-			if (fdo_blob_read((char *)MANUFACTURER_DN,
-					  FDO_SDK_RAW_DATA, (uint8_t *)buffer,
-					  fsize) == -1) {
-				LOG(LOG_ERROR,
-				    "Failed to real Manufacture DN\n");
-				fdo_free(buffer);
-				goto end;
-			}
-			buffer[fsize] = '\0';
-			mfg_dns = buffer;
-			is_mfg_addr = true;
-		}
-	}
-	if (is_mfg_addr == false) {
-		LOG(LOG_ERROR, "Failed to get neither ip/dn mfg address\n");
-		ERROR()
-		goto end;
-	}
-#else
-#ifdef MANUFACTURER_IP
-	manIPAddr = fdo_ipaddress_alloc();
-	if (!manIPAddr) {
-		LOG(LOG_ERROR, "Failed to alloc memory\n");
-		ERROR()
-		goto end;
-	}
-	int result = fdo_printable_to_net(MANUFACTURER_IP, manIPAddr->addr);
-
-	if (result <= 0) {
-		LOG(LOG_ERROR, "Failed to convert Mfg address\n");
-		ERROR()
-		goto end;
-	}
-	manIPAddr->length = IPV4_ADDR_LEN;
-#endif
-
-	const char *mfg_dns = NULL;
-#ifdef MANUFACTURER_DN
-	mfg_dns = MANUFACTURER_DN;
-#endif
-#endif
-
-	/* If MANUFACTURER_PORT file does not exist or is a blank file then,
-	 *  use existing global DI port(8039) else use configured value as DI
-	 *  port
-	 */
-
-	fsize = fdo_blob_size((char *)MANUFACTURER_PORT, FDO_SDK_RAW_DATA);
-
-	if ((fsize > 0) && (fsize <= FDO_PORT_MAX_LEN)) {
-		char port_buffer[FDO_PORT_MAX_LEN + 1] = {0};
-		char *extra_string = NULL;
-		unsigned long configured_port = 0;
-
-		if (fdo_blob_read((char *)MANUFACTURER_PORT, FDO_SDK_RAW_DATA,
-				  (uint8_t *)port_buffer, fsize) == -1) {
-			LOG(LOG_ERROR, "Failed to read manufacturer port\n");
-			goto end;
+		result = fdo_printable_to_net(mfg_dns, mfg_ip->addr);
+		if (result > 0) {
+			// valid IP address
+			mfg_ip->length = IPV4_ADDR_LEN;
+			LOG(LOG_DEBUG, "Manufacturer IP will be used\n");
+		} else if (result == 0) {
+			// not an IP address, so treat it as DNS address
+			LOG(LOG_DEBUG, "Manufacturer DNS will be used\n");
 		}
 
-		configured_port = strtoul(port_buffer, &extra_string, 10);
-
-		if (strnlen_s(extra_string, 1)) {
-			LOG(LOG_ERROR, "Invalid character encounered in the "
-				       "given port.\n");
-			goto end;
-		}
-
-		if (!((configured_port >= FDO_PORT_MIN_VALUE) &&
-		      (configured_port <= FDO_PORT_MAX_VALUE))) {
+		// parse port
+		if (!((di_port >= FDO_PORT_MIN_VALUE) &&
+		      (di_port <= FDO_PORT_MAX_VALUE))) {
 			LOG(LOG_ERROR,
 			    "Manufacturer port value should be between "
 			    "[%d-%d].\n",
 			    FDO_PORT_MIN_VALUE, FDO_PORT_MAX_VALUE);
-			goto end;
+			// set default
+			di_port = g_DI_PORT;
 		}
-
-		di_port = (uint16_t)configured_port;
-
-	} else if (fsize > FDO_PORT_MAX_LEN) {
-		LOG(LOG_ERROR,
-		    "Manufacturer port value should be between "
-		    "[%d-%d]. "
-		    "It should not be zero prepended.\n",
-		    FDO_PORT_MIN_VALUE, FDO_PORT_MAX_VALUE);
-		goto end;
+		LOG(LOG_DEBUG, "Manufacturer Port: %d\n", di_port);
 	}
 
-	LOG(LOG_DEBUG, "Manufacturer Port = %d.\n", di_port);
-
 	prot_ctx = fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
-				      manIPAddr, mfg_dns, di_port, false);
+				      mfg_ip, mfg_dns, di_port, tls);
 	if (prot_ctx == NULL) {
 		ERROR();
 		goto end;
@@ -1020,8 +967,12 @@ static bool _STATE_DI(void)
 end:
 	fdo_protDIExit(g_fdo_data);
 	fdo_prot_ctx_free(prot_ctx);
-	fdo_free(manIPAddr);
-	fdo_free(mfg_dns);
+	if (buffer) {
+		fdo_free(buffer);
+	}
+	if (mfg_ip) {
+		fdo_free(mfg_ip);
+	}
 	return ret;
 }
 
