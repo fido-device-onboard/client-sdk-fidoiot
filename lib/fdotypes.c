@@ -287,27 +287,6 @@ char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz)
 	return buf0;
 }
 
-#if 0 // Deprecated
-/**
- * Internal API
- */
-void fdo_bits_write(fdow_t *fdow, fdo_bits_t *b)
-{
-	fdo_write_big_num_field(fdow, b->bytes, b->byte_sz);
-	//    fdo_write_byte_array_field(fdow, b->bytes, b->byte_sz);
-}
-
-/**
- * Internal API
- */
-bool fdo_bits_read(fdor_t *fdor, fdo_bits_t *b)
-{
-	if (b->bytes == NULL)
-		if (!fdo_bits_fill(b))
-			return false;
-	return fdo_read_big_num_field(fdor, b->bytes, b->byte_sz) == b->byte_sz;
-}
-#endif
 //==============================================================================
 // Byte Array is FDOBits but read and written as base64
 

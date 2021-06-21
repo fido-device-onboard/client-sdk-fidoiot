@@ -37,11 +37,6 @@ bool fdo_bits_equal(fdo_bits_t *b1, fdo_bits_t *b2);
 int fdo_bits_randomize(fdo_bits_t *b);
 char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz);
 
-#if 0
-void fdo_bits_write(fdow_t *fdow, fdo_bits_t *b);
-bool fdo_bits_read(fdor_t *fdor, fdo_bits_t *b);
-#endif
-
 // Byte Array
 typedef fdo_bits_t fdo_byte_array_t;
 
