@@ -78,49 +78,6 @@ int read_buffer_from_file(const char *filename, void *buffer, size_t size)
 	return 0;
 }
 
-#if 0
-/* API not in use ! */
-/**
- * Internal API
- */
-void *new_buffer_from_file(const char *filename, size_t *size)
-{
-	void *buffer = NULL;
-	size_t len = 0;
-
-	if (!file_exists(filename)) {
-		LOG(LOG_ERROR, "Cannot access '%s'\n", filename);
-		return NULL;
-	}
-
-	len = get_file_size(filename);
-	if (len == 0) {
-		LOG(LOG_ERROR, "Cannot load empty file '%s'\n", filename);
-		return NULL;
-	}
-
-	buffer = fdo_alloc(len);
-	if (!buffer) {
-		LOG(LOG_ERROR, "Failed to allocate memory\n");
-		return NULL;
-	}
-
-	LOG(LOG_DEBUG, "Reading %s\n", filename);
-
-	if (0 != read_buffer_from_file(filename, buffer, len)) {
-		LOG(LOG_ERROR, "Failed to read from `%s`\n", filename);
-		fdo_free(buffer);
-		return NULL;
-	}
-
-	if (size) {
-		*size = len;
-	}
-
-	return buffer;
-}
-#endif
-
 /**
  * Internal API
  */

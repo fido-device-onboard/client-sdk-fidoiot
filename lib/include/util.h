@@ -123,23 +123,6 @@ bool file_exists(char const *filename);
 */
 size_t get_file_size(char const *filename);
 
-#if 0
-/// Allocate a buffer to hold the content of a file and load
-/*!
-  Logs an error message on failure.
-
-  \param[in] filename
-  The file path.
-  \param[out] size
-  The allocated size of the buffer in bytes (same as file size).
-
-  \returns
-  A pointer to the allocated buffer or NULL if the allocation failed.
-
-*/
-void *new_buffer_from_file(const char *filename, size_t *size);
-#endif
-
 /// print a buffer to standard out using default options
 /*!
   \param[in] buf
