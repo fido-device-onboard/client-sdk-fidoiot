@@ -35,7 +35,6 @@ bool fdo_bits_fill_with(fdo_bits_t *b, uint8_t *data, uint32_t data_len);
 bool fdo_bits_resize_with(fdo_bits_t *b, int new_byte_sz, uint8_t *data);
 bool fdo_bits_equal(fdo_bits_t *b1, fdo_bits_t *b2);
 int fdo_bits_randomize(fdo_bits_t *b);
-char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz);
 
 // Byte Array
 typedef fdo_bits_t fdo_byte_array_t;
@@ -44,17 +43,10 @@ fdo_byte_array_t *fdo_byte_array_alloc(int byte_sz);
 fdo_byte_array_t *fdo_byte_array_alloc_with_int(int val);
 fdo_byte_array_t *fdo_byte_array_alloc_with_byte_array(uint8_t *ba, int ba_len);
 void fdo_byte_array_free(fdo_byte_array_t *ba);
-#if 0
-void fdo_byte_array_empty(fdo_byte_array_t *ba);
-#endif
 bool fdo_byte_array_resize(fdo_byte_array_t *b, int byte_sz);
-#if 0
-bool fdo_byte_array_resize_with(fdo_byte_array_t *b, int new_byte_sz, uint8_t *data);
-#endif
 fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
 					fdo_byte_array_t *baB);
 fdo_byte_array_t *fdo_byte_array_clone(fdo_byte_array_t *ba);
-bool fdo_byte_array_equal(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
 
 // Generic string holder
 typedef struct {
@@ -139,15 +131,9 @@ typedef struct {
 fdo_ip_address_t *fdo_ipaddress_alloc(void);
 bool fdo_null_ipaddress(fdo_ip_address_t *fdoip);
 void fdo_init_ipv4_address(fdo_ip_address_t *fdoip, uint8_t *ipv4);
-#if 0
-void fdo_init_ipv6_address(fdo_ip_address_t *fdoip, uint8_t *ipv6);
-#endif
 bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip);
 bool fdo_convert_to_ipaddress(fdo_byte_array_t * ip_bytes, fdo_ip_address_t *fdoip);
 char *fdo_ipaddress_to_string(fdo_ip_address_t *fdoip, char *buf, int buf_sz);
-#if 0
-int fdo_ipaddress_to_mem(fdo_ip_address_t *fdoip, uint8_t *copyto);
-#endif
 
 typedef struct {
 	uint16_t length;
