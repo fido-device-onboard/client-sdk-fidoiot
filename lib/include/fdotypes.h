@@ -64,21 +64,6 @@ fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
 fdo_byte_array_t *fdo_byte_array_clone(fdo_byte_array_t *ba);
 bool fdo_byte_array_equal(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
 
-// Bignum
-
-typedef struct {
-	bool sign;
-	fdo_bits_t *value;
-} fdo_bignum_t;
-
-#define BN_POSITIVE true
-#define BN_NEGATIVE false
-
-fdo_bignum_t *fdo_big_num_alloc(void);
-void fdo_big_num_free(fdo_bignum_t *bn);
-bool fdo_bignum_equal(fdo_bignum_t *bn1, fdo_bignum_t *bn2);
-char *fdo_bignum_to_string(fdo_bignum_t *g, char *buf, int buf_sz);
-
 // Generic string holder
 typedef struct {
 	int byte_sz;

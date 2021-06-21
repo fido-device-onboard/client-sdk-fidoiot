@@ -453,64 +453,6 @@ fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
 }
 
 //------------------------------------------------------------------------------
-// Bignum Routines
-//
-
-#if 0
-/**
- * Allocate the struct of type bignum
- */
-fdo_bignum_t *fdo_big_num_alloc()
-{
-	fdo_bignum_t *bn = fdo_alloc(sizeof(fdo_bignum_t));
-
-	if (!bn)
-		return NULL;
-
-	bn->sign = BN_POSITIVE;
-	bn->value = NULL;
-	return bn;
-}
-
-/**
- * Free the allocated struct of type bignum
- * @param bn - pointer to the struct of type bignum
- */
-void fdo_big_num_free(fdo_bignum_t *bn)
-{
-	fdo_bits_free(bn->value);
-	fdo_free(bn);
-}
-#endif
-
-#if 0
-/**
- * Compare the struct of type bignum
- * @param bn1 - pointer to struct of type bignum1
- * @param bn2 - pointer to struct of type bignum2
- * @return true if equal else false
- */
-bool fdo_bignum_equal(fdo_bignum_t *bn1, fdo_bignum_t *bn2)
-{
-	if (bn1->sign != bn2->sign)
-		return false;
-	return fdo_bits_equal(bn1->value, bn2->value);
-}
-
-/**
- * Convert bignum to string
- * @param bn - pointer to struct of type bignum
- * @param buf - pointer to the converted string
- * @param buf_sz - size of the converted string
- * @return pointer to the converted string
- */
-char *fdo_bignum_to_string(fdo_bignum_t *bn, char *buf, int buf_sz)
-{
-	return fdo_bits_to_string_hex(bn->value, buf, buf_sz);
-}
-#endif
-
-//------------------------------------------------------------------------------
 // String handler Routines
 //
 
