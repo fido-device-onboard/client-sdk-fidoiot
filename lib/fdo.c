@@ -382,7 +382,7 @@ static fdo_sdk_status app_initialize(void)
 			max_serviceinfo_sz = strtol(buffer, &eptr, 10);
 			if (!eptr || eptr == buffer || errno != 0) {
 				LOG(LOG_INFO, "Invalid maximum ServiceInfo size, "
-											"defaulting to %d\n", MIN_SERVICEINFO_SZ);
+					"defaulting to %d\n", MIN_SERVICEINFO_SZ);
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
 			}
 
