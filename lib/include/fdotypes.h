@@ -280,7 +280,6 @@ typedef struct {
 	fdo_public_key_t *pk;
 	fdo_byte_array_t *sg;
 } fdo_sig_t;
-#define FDO_EPDI_GROUPID_SZ 4
 
 typedef struct {
 	fdo_byte_array_t *plain_text;
