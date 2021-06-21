@@ -54,7 +54,7 @@ static int read_fill_modelserial(void)
 	int ret = -1;
 	uint8_t def_serial_sz = 0;
 	uint8_t def_model_sz = 0;
-	int32_t fsize = 0;
+	size_t fsize = 0;
 
 	fsize = fdo_blob_size((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_DEV_SERIAL_SZ)) {

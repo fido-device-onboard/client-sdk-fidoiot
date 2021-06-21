@@ -52,14 +52,17 @@
  * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
  * @param name - pointer to the blob/file name
  * @param flags - descriptor telling type of file
- * @return file size on success, 0 if file does not exits, -1 on failure
+* @return file size on success, 0 if file does not exist or on other failure
  */
 
-int32_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
+size_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 {
-	int32_t retval = -1;
+	size_t retval = 0;
+	const size_t NORMAL_BLOB_OVERHEAD = PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
+	const size_t SECURE_BLOB_OVERHEAD = AES_TAG_LEN +
+					PLATFORM_IV_DEFAULT_LEN + BLOB_CONTENT_SIZE;
 
-	if (name == NULL) {
+	if (!name) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
 		goto end;
 	}
@@ -80,22 +83,32 @@ int32_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 	switch (flags) {
 	case FDO_SDK_RAW_DATA:
 		/* Raw Files are stored as plain files */
-		retval = (int32_t)(get_file_size(name));
+		retval = get_file_size(name);
 		break;
 	case FDO_SDK_NORMAL_DATA:
 		/* Normal blob is stored as:
 		 * [HMAC(32bytes)||data-content-size(4bytes)||data-content(?)]
 		 */
-		retval = (int32_t)(get_file_size(name) - PLATFORM_HMAC_SIZE -
-				   BLOB_CONTENT_SIZE);
+		retval = get_file_size(name);
+		if (retval >= NORMAL_BLOB_OVERHEAD) {
+			retval -= NORMAL_BLOB_OVERHEAD;
+		} else {
+			/* File format is not correct, not enough data in the file */
+			retval = 0;
+		}
 		break;
 	case FDO_SDK_SECURE_DATA:
 		/* Secure blob is stored as:
 		 * [IV_data(12byte)||TAG(16bytes)||
 		 * data-content-size(4bytes)||data-content(?)]
 		 */
-		retval = (int32_t)(get_file_size(name) - AES_TAG_LEN -
-				   PLATFORM_IV_DEFAULT_LEN - BLOB_CONTENT_SIZE);
+		retval = get_file_size(name);
+		if (retval >= SECURE_BLOB_OVERHEAD) {
+			retval -= SECURE_BLOB_OVERHEAD;
+		} else {
+			/* File format is not correct, not enough data in the file */
+			retval = 0;
+		}
 		break;
 	default:
 		LOG(LOG_ERROR, "Invalid storage flag:%d!\n", flags);
@@ -105,7 +118,7 @@ int32_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 end:
 	if (retval > R_MAX_SIZE) {
 		LOG(LOG_ERROR, "File size is more than R_MAX_SIZE\n");
-		retval = -1;
+		retval = 0;
 	}
 	return retval;
 }

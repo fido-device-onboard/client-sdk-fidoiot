@@ -322,7 +322,7 @@ fdo_dev_cred_t *app_get_credentials(void)
 static fdo_sdk_status app_initialize(void)
 {
 	int ret = FDO_ERROR;
-	int32_t fsize;
+	size_t fsize;
 	int max_serviceinfo_sz;
 	char *buffer = NULL;
 	char *eptr = NULL;
@@ -356,18 +356,21 @@ static fdo_sdk_status app_initialize(void)
 	}
 #endif
 
-	// read the file at path MAX_SERVICEINFO_SZ_FILE to get the maximum ServiceInfo size
-	// that will be supported for both Owner and Device ServiceInfo
-	// default to MIN_SERVICEINFO_SZ if the file is empty/non-existent
-	// file of size 1 is also considered an empty file containing new-line character
+	// Read the file at path MAX_SERVICEINFO_SZ_FILE to get the maximum
+	// ServiceInfo size that will be supported for both Owner and Device
+	// ServiceInfo.
+	//
+	// Default to MIN_SERVICEINFO_SZ if the file is non-existent, or if the file
+	// content is not a valid number between MIN_SERVICEINFO_SZ and
+	// MAX_SERVICEINFO_SZ
 	fsize = fdo_blob_size((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA);
-	if (fsize == 0 || fsize == 1) {
+	if (fsize == 0) {
 		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.prot_buff_sz = MIN_SERVICEINFO_SZ + MSG_METADATA_SIZE;
-	} else if (fsize > 0) {
+	} else {
 		buffer = fdo_alloc(fsize + 1);
-		if (buffer == NULL) {
+		if (!buffer) {
 			LOG(LOG_ERROR, "malloc failed\n");
 		} else {
 			if (fdo_blob_read((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA,
@@ -378,8 +381,11 @@ static fdo_sdk_status app_initialize(void)
 			errno = 0;
 			max_serviceinfo_sz = strtol(buffer, &eptr, 10);
 			if (!eptr || eptr == buffer || errno != 0) {
-				LOG(LOG_ERROR, "Invalid value read for maximum ServiceInfo size.\n");
+				LOG(LOG_INFO, "Invalid maximum ServiceInfo size, "
+					"defaulting to %d\n", MIN_SERVICEINFO_SZ);
+				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
 			}
+
 			if (max_serviceinfo_sz <= MIN_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
 			}
@@ -822,6 +828,7 @@ static bool _STATE_DI(void)
 	bool ret = false;
 	fdo_prot_ctx_t *prot_ctx = NULL;
 	uint16_t di_port = g_DI_PORT;
+	size_t fsize = 0;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -841,7 +848,6 @@ static bool _STATE_DI(void)
 #if defined(TARGET_OS_LINUX) || defined(TARGET_OS_MBEDOS) ||                   \
     defined(TARGET_OS_OPTEE)
 	char *mfg_dns = NULL;
-	int32_t fsize = 0;
 	char *buffer = NULL;
 	bool is_mfg_addr = false;
 
@@ -932,7 +938,7 @@ static bool _STATE_DI(void)
 #endif
 #endif
 
-	/* If MANUFACTURER_PORT file does not exists or is a blank file then,
+	/* If MANUFACTURER_PORT file does not exist or is a blank file then,
 	 *  use existing global DI port(8039) else use configured value as DI
 	 *  port
 	 */
@@ -969,7 +975,7 @@ static bool _STATE_DI(void)
 
 		di_port = (uint16_t)configured_port;
 
-	} else if (fsize > 0) {
+	} else if (fsize > FDO_PORT_MAX_LEN) {
 		LOG(LOG_ERROR,
 		    "Manufacturer port value should be between "
 		    "[%d-%d]. "
