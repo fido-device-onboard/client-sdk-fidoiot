@@ -711,30 +711,6 @@ void test_fdo_public_key_free(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_pk_alg_to_string", "[fdo_types][fdo]")
-#else
-void test_fdoPKAlg_toString(void)
-#endif
-{
-	const char *ret;
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_NONE);
-	TEST_ASSERT_EQUAL_STRING("AlgNONE", ret);
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_RSA);
-	TEST_ASSERT_EQUAL_STRING("AlgRSA", ret);
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1);
-	TEST_ASSERT_EQUAL_STRING("AlgEPID11", ret);
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0);
-	TEST_ASSERT_EQUAL_STRING("AlgEPID20", ret);
-
-	ret = fdo_pk_alg_to_string(-1);
-	TEST_ASSERT_NULL(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
 TEST_CASE("fdo_pk_enc_to_string", "[fdo_types][fdo]")
 #else
 void test_fdoPKEnc_toString(void)
@@ -744,12 +720,6 @@ void test_fdoPKEnc_toString(void)
 
 	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_X509);
 	TEST_ASSERT_EQUAL_STRING("EncX509", ret);
-
-	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP);
-	TEST_ASSERT_EQUAL_STRING("EncRSAMODEXP", ret);
-
-	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_EPID);
-	TEST_ASSERT_EQUAL_STRING("EncEPID", ret);
 
 	ret = fdo_pk_enc_to_string(-1);
 	TEST_ASSERT_NULL(ret);

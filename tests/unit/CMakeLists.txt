@@ -116,8 +116,6 @@ endif()
 
 ###############
 #need to check the need for this.
-#epid
-      
 
 foreach(unit_test ${UNIT_TEST_SOURCES})
 
@@ -142,7 +140,6 @@ foreach(unit_test ${UNIT_TEST_SOURCES})
   target_compile_options(${unit_test_exe}_lib PUBLIC
     ${c_ops}
     ${${unit_test_exe}_flags}
-    -I$ENV{EPID_SDK_R6_ROOT}
     -std=c99
     )
   
