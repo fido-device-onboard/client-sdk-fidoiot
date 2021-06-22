@@ -14,8 +14,6 @@
 // file path could also be supplied
 #define FILE_NAME_LEN 150
 
-#define MOD_MAX_MSG_LEN 10
-
 #define MOD_ACTIVE_TAG "active"
 #define MOD_ACTIVE_STATUS "1"
 

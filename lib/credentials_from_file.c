@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include "util.h"
 #include "fdoCrypto.h"
-#define verbose_dump_packets 0
 
 /**
  * Write the Device Credentials blob, contains our state

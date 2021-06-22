@@ -193,19 +193,11 @@ int fdo_ssl_close(void *ssl);
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks);
 
-/* DH kex type */
-#define FDO_CRYPTO_KEX_DH_GROUP_14 1
-#define FDO_CRYPTO_KEX_DH_GROUP_15 2
-
 #if defined(KEX_DH_ENABLED) //(m size =2048)
 #define DH_PEER_RANDOM_SIZE 256
 #else // KEX_DH_3072_ENABLED  (m size 3072)
 #define DH_PEER_RANDOM_SIZE 768
 #endif
-
-/* ECDH kex type */
-#define FDO_CRYPTO_KEX_ECDH_P256 0
-#define FDO_CRYPTO_KEX_ECDH_P384 1
 
 #define FDO_ECDH256_DEV_RANDOM BUFF_SIZE_16_BYTES // 128bits
 #define FDO_ECDH384_DEV_RANDOM BUFF_SIZE_48_BYTES // 384bits

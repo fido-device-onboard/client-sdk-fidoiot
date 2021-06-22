@@ -16,9 +16,6 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 
-#define OCBUF_SIZE 256
-#define PUBLIC_KEY_OFFSET 12
-
 /*------------------------------------------------------------------------------
  * DeviceCredential's Owner Credential (fdo_cred_owner_t) routines
  */

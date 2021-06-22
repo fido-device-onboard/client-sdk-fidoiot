@@ -60,17 +60,7 @@ typedef struct _FDOW_s {
 	fdow_cbor_encoder_t *current;
 } fdow_t;
 
-
 #define CBOR_BUFFER_LENGTH 2048
-
-#define FDO_FIX_UP_STR "\"0000\""
-#define FDO_FIX_UP_TEMPL "\"%04x\""
-#define FDO_FIX_UP_LEN 6
-#define FDO_BLOCK_READ_SZ 7 // ["XXXX"
-#define FDO_BLOCKINC 256
-#define FDO_BLOCK_MASK ~255
-#define FDO_OK 0
-#define FDO_BLOCKLEN_SZ 8
 
 // Block methods
 void fdo_block_reset(fdo_block_t *fdob);

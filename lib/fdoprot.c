@@ -19,11 +19,6 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 
-/* This is a test mode to skip the CEC1702 signing and present a constant nonce_to1proof
- * nonce and signature.  These were generated in the server.
- */
-//#define CONSTANT_N4
-
 #ifndef asizeof
 #define asizeof(x) (sizeof(x) / sizeof(x)[0])
 #endif

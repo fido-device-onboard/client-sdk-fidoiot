@@ -64,14 +64,9 @@ bool fdo_string_resize(fdo_string_t *b, int byte_sz);
 bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data);
 
 #define FDO_GUID_BYTES (128 / 8)
-#define FDO_GID_BYTES (128 / 8)
 #define FDO_NONCE_BYTES (128 / 8)
-#define FDO_NONCE_FIELD_BYTES 32
 // EAT-UEID is of length 17 (EAT-RAND(1) + EAT-GUID(16))
 #define FDO_UEID_BYTES (1 + FDO_GUID_BYTES)
-#define FDO_MSG_PRIFIX_LEN 48
-#define FDO_MSG_UUID_LEN 16
-#define FDO_APP_ID_BYTES 16
 
 /*
  * GUID - 128-bit Random number used for identification.
@@ -147,7 +142,6 @@ typedef struct {
 // 3.3.5 COSECompatibleSignatureTypes
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp384 -35
-#define FDO_CRYPTO_SIG_TYPE_ECSDAp512 -36
 
 #define FDO_COSE_ALG_KEY 1
 
@@ -171,14 +165,8 @@ typedef struct {
 #define FDO_CRYPTO_A256CCM 33
 
 // 3.3.4 PublicKey encodings (pkEnc)
-#define FDO_CRYPTO_PUB_KEY_ENCODING_NONE 0
 #define FDO_CRYPTO_PUB_KEY_ENCODING_X509 1
 #define FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 2
-#define FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY 3
-
-#define FDOEPID20_GID_LEN (16)
-
-#define FDO_PK_ENC_DEFAULT FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509
 
 typedef struct {
 	int pkalg;
@@ -250,8 +238,6 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz);
 bool fdo_prep_composed_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz);
-
-#define FDO_AES_128_BLOCK_SIZE 16
 
 typedef struct {
 	int sig_block_start;
@@ -468,9 +454,6 @@ fdo_rendezvous_t *fdo_rendezvous_alloc(void);
 void fdo_rendezvous_free(fdo_rendezvous_t *rv);
 bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv);
 bool fdo_rendezvous_write(fdow_t *fdow, fdo_rendezvous_t *rv);
-#define FDO_RENDEZVOUS_GET_IP_ADDRESS_P(rv) ((rv)->ip)
-#define FDO_RENDEZVOUS_GET_PORT(rv) (*(rv)->po)
-//#define FDORendezvous_set_port(rv,p) ((rv)->po = (p))
 
 typedef struct fdo_rendezvous_directive_s {
 	uint16_t num_entries;
@@ -523,8 +506,6 @@ bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
 /*==================================================================*/
 /* Service Info functionality */
 
-#define EMPTY_STRING_LEN 1
-
 /* Module list */
 typedef struct fdo_sdk_service_info_module_list_s {
 	fdo_sdk_service_info_module module;
@@ -564,8 +545,5 @@ bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1,
 	fdo_rendezvous_t *entry2);
 
 void fdo_log_block(fdo_block_t *fdob);
-
-#define FDO_DSI_ACTIVE_LEN 6
-/*==================================================================*/
 
 #endif /* __FDOTYPES_H__ */

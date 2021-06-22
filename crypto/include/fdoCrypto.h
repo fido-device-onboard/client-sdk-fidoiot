@@ -33,12 +33,6 @@
 #define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_48_BYTES
 #endif
 
-#if defined(KEX_ECDH384_ENABLED)
-#define HMAC_MODE 384
-#else
-#define HMAC_MODE 256
-#endif /* KEX_ECDH384_ENABLED */
-
 #define FDO_AES_BLOCK_SIZE BUFF_SIZE_16_BYTES /* 128 bits */
 #define FDO_AES_IV_SIZE BUFF_SIZE_16_BYTES    /* 128 bits */
 #define HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES    /* 256 bits */

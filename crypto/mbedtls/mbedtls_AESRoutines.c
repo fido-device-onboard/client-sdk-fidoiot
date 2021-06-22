@@ -20,8 +20,6 @@
 #include "BN_support.h"
 #include "safe_lib.h"
 
-#define STREAM_BLOCK_SIZE FDO_AES_BLOCK_SIZE
-
 #ifdef AES_256_BIT
 
 #ifdef AES_MODE_CTR_ENABLED

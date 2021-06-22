@@ -25,28 +25,15 @@
 #define FDO_DEVICE_STATE_DN 7     // Transfer Disabled
 
 // Ports
-#define FDO_PORT_TO1 8041
-#define FDO_PORT_TO2 8042
-#define FDO_PORT_REST 8085
-#define FDO_PORT_REPORTED 980
 #define FDO_PORT_MAX_LEN 5 // max value of port is 65535 i.e. length 5
 #define FDO_PORT_MIN_VALUE 1
 #define FDO_PORT_MAX_VALUE 65535
 
 // States
-#define FDO_STATE_RCV_ERROR 80
 #define FDO_STATE_ERROR 81
 #define FDO_STATE_DONE 82
 
-// Operational States for the device
-#define FDO_OP_STATE_APPLICATION 2 // FDO Complete, running customer application
-
 // Note states are sequential to make fdo_state_toURL work
-
-// Protocol Report: Device => Reporter Server
-#define FDO_STATE_MGR_AGENT_INIT 17
-#define FDO_STATE_SND_REPORT 18
-#define FDO_STATE_RCV_REPORT_ACK 19
 
 // DI
 #define FDO_DI_APP_START 10
@@ -109,6 +96,7 @@
 #define FDO_TYPE_ERROR 255
 
 // Persistent
+// TODO: Needs review (Only FDO_TYPE_HMAC is used in code)
 #define FDO_TYPE_CRED_OWNER 1
 #define FDO_TYPE_CRED_MFG 2
 #define FDO_TYPE_OWNERSHIP_VOUCHER 3
@@ -117,19 +105,13 @@
 #define FDO_TYPE_DEVICE_CRED 6
 #define FDO_TYPE_HMAC 7
 
-// Report
-#define FDO_MGR_AGENT_SND_REPORT 52
-#define FDO_MGR_AGENT_RCV_REPORT_ACK 53
-
 // For restful URL mapping
+// TODO: Not used, needs to review
 #define FDOMsg_typeMIN FDO_TO1_TYPE_HELLO_FDO
 #define FDOMsg_typeMAX FDO_TO2_DONE2
 
-// Protocol version
-#define FDO_VER_MAJOR 1
-#define FDO_VER_MINOR 10
-
 // Error Message
+// TODO: Not used, needs to review (Only INTERNAL_SERVER_ERROR is used)
 #define INVALID_JWT_TOKEN 1
 #define INVALID_OWNERSHIP_VOUCHER 2
 #define INVALID_OWNER_SIGN_BODY 3
@@ -155,6 +137,7 @@
  *
  * An alternative is to declare the buffer global
  */
+// TODO: Needs review, macro not used.
 #define DEBUGBUFSZ 1024
 
 // minimum ServiceInfo size

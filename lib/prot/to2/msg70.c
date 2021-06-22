@@ -13,8 +13,6 @@
 #include "fdoprot.h"
 #include "util.h"
 
-#define REUSE_HMAC_MAX_LEN 1
-
 /**
  * msg70() - TO2.Done
  *

@@ -57,8 +57,6 @@ fdo_ov_entry_t *fdo_ov_entry_alloc_empty(void);
 fdo_ov_entry_t *fdo_ov_entry_free(fdo_ov_entry_t *e);
 bool fdo_ov_entry_add(fdo_ov_entry_t *root_entry, fdo_ov_entry_t *e);
 
-#define FDO_DEV_INFO_SZ 512 // max size of dev info we handle
-
 // 5.5.7, Replacement info supplied by the Owner in TO2.SetupDevice, Type 65
 typedef struct FDOOwner_supplied_credentials_s {
 	fdo_rendezvous_list_t *rvlst;	// replacement RendezvousInfo
