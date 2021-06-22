@@ -203,7 +203,6 @@ typedef struct fdo_prot_s {
 	fdo_byte_array_t *nonce_to2provedv;
 	fdo_byte_array_t *nonce_to2setupdv;
 	fdo_byte_array_t *nonce_to2setupdv_rcv;
-	fdo_redirect_t fdo_redirect;
 	uint32_t round_trip_count;
 	//	void *key_ex_data;
 	fdo_sdk_service_info_module_list_t

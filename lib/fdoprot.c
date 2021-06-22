@@ -75,14 +75,6 @@ static state_func to2_state_fn[] = {
  */
 static void ps_free(fdo_prot_t *ps)
 {
-	if (ps->fdo_redirect.plain_text) {
-		fdo_byte_array_free(ps->fdo_redirect.plain_text);
-		ps->fdo_redirect.plain_text = NULL;
-	}
-	if (ps->fdo_redirect.obsig) {
-		fdo_byte_array_free(ps->fdo_redirect.obsig);
-		ps->fdo_redirect.obsig = NULL;
-	}
 	if (ps->nonce_to2proveov) {
 		fdo_byte_array_free(ps->nonce_to2proveov);
 		ps->nonce_to2proveov = NULL;
