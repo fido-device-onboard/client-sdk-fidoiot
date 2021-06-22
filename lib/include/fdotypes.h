@@ -229,12 +229,6 @@ bool fdo_prep_composed_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz);
 
 typedef struct {
-	int sig_block_start;
-	fdo_public_key_t *pk;
-	fdo_byte_array_t *sg;
-} fdo_sig_t;
-
-typedef struct {
 	fdo_byte_array_t *plain_text;
 	fdo_byte_array_t *obsig;
 } fdo_redirect_t;
