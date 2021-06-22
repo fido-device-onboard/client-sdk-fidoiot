@@ -2406,15 +2406,14 @@ err:
  * @param iv - pointer to the IV struct
  * @return true if all goes well, otherwise false
  */
-bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
-				 fdo_iv_t *iv)
+bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 {
 	bool ret = false;
 	fdo_byte_array_t *cleartext = NULL;
 	fdow_t temp_fdow = {0};
 
 	// Decrypt the Encrypted Body
-	if (!fdor || !pkt || !iv) {
+	if (!fdor || !pkt) {
 		LOG(LOG_ERROR, "Encrypted Message (decrypt): Invalid params\n");
 		goto err;
 	}
@@ -2566,13 +2565,13 @@ exit:
 
  * @param fdow - pointer to the message buffer
  * @param type - message type
- * @param iv - Pointer to the iv to fill Encrypted Packet pkt.
  * @return true if all goes well, otherwise false
  */
-bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
+bool fdo_encrypted_packet_windup(fdow_t *fdow, int type)
 {
-	if (!fdow || !iv)
+	if (!fdow) {
 		return false;
+	}
 
 	fdo_block_t *fdob = &fdow->b;
 	bool ret = false;

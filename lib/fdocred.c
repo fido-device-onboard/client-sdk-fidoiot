@@ -707,14 +707,3 @@ void fdo_owner_supplied_credentials_free(fdo_owner_supplied_credentials_t *osc)
 		fdo_free(osc);
 	}
 }
-
-/**
- * Free the IV object
- * @param iv - The iv store object
- * @return none.
- */
-void fdo_iv_free(fdo_iv_t *iv)
-{
-	if (iv != NULL)
-		fdo_free(iv);
-}

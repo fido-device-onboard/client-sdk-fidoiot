@@ -181,7 +181,6 @@ typedef struct fdo_prot_s {
 	// Installed during manufacturing is a hash of this
 	fdo_public_key_t *
 	    owner_public_key; // TO2.ProveOVHdr bo.pk - The new Owner Public key
-	fdo_iv_t *iv;	 // IV store
 	fdo_service_info_t *service_info;
 	fdo_public_key_t *tls_key;
 	fdo_public_key_t *local_key_pair;

@@ -1108,27 +1108,6 @@ void test_fdo_get_iv(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_write_iv", "[fdo_types][fdo]")
-#else
-void test_fdo_write_iv(void)
-#endif
-{
-	fdo_encrypted_packet_t pkt = {
-	    0,
-	};
-	fdo_iv_t ps_iv = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdo_write_iv(NULL, NULL, 0);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_write_iv(&pkt, &ps_iv, 0);
-	TEST_ASSERT_TRUE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
 TEST_CASE("fdo_encrypted_packet_write", "[fdo_types][fdo]")
 #else
 void test_fdo_encrypted_packet_write(void)
@@ -1159,13 +1138,12 @@ void test_fdo_encrypted_packet_write_unwind(void)
 	    0,
 	};
 	fdo_encrypted_packet_t *pkt = NULL;
-	fdo_iv_t iv;
 	bool ret;
 
-	ret = fdo_encrypted_packet_unwind(NULL, NULL, NULL);
+	ret = fdo_encrypted_packet_unwind(NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_encrypted_packet_unwind(&fdor, pkt, &iv);
+	ret = fdo_encrypted_packet_unwind(&fdor, pkt);
 	TEST_ASSERT_FALSE(ret);
 }
 
@@ -1178,15 +1156,12 @@ void test_fdo_encrypted_packet_windup(void)
 	fdow_t fdow = {
 	    0,
 	};
-	fdo_iv_t iv = {
-	    0,
-	};
 	bool ret;
 
-	ret = fdo_encrypted_packet_windup(NULL, 0, NULL);
+	ret = fdo_encrypted_packet_windup(NULL, 0);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_encrypted_packet_windup(&fdow, 0, &iv);
+	ret = fdo_encrypted_packet_windup(&fdow, 0);
 	TEST_ASSERT_FALSE(ret);
 }
 

@@ -49,7 +49,7 @@ int32_t msg71(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt, ps->iv)) {
+	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt)) {
 		LOG(LOG_ERROR, "TO2.Done2: Failed to decrypt packet!\n");
 		goto err;
 	}

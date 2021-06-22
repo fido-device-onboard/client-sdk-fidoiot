@@ -214,16 +214,6 @@ typedef struct {
 	int aes_plain_type;
 } fdo_encrypted_packet_t;
 
-// TO-DO: Look at the usages of this. The contents are probably not used in any capacity
-typedef struct {
-	uint8_t ctr_iv[AES_IV_LEN];
-	uint32_t ctr_enc;
-	uint32_t ctr_dec;
-	uint8_t cbc_iv_enc[AES_IV_LEN];
-	uint8_t cbc_iv_dec[AES_IV_LEN];
-	uint32_t pkt_count;
-} fdo_iv_t; // IV store
-
 fdo_encrypted_packet_t *fdo_encrypted_packet_alloc(void);
 void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt);
 fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor);
@@ -231,9 +221,8 @@ bool fdo_aad_write(fdow_t *fdow, int alg_type);
 bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
-bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
-				 fdo_iv_t *iv);
-bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv);
+bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt);
+bool fdo_encrypted_packet_windup(fdow_t *fdow, int type);
 bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz);
 bool fdo_prep_composed_encrypted_message(fdo_encrypted_packet_t *pkt,

@@ -284,11 +284,6 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 	ps->dev_cred = dev_cred;
 	ps->g2 = dev_cred->owner_blk->guid;
 	ps->round_trip_count = 0;
-	ps->iv = fdo_alloc(sizeof(fdo_iv_t));
-	if (!ps->iv) {
-		LOG(LOG_ERROR, "Malloc failed!\n");
-		return false;
-	}
 
 	/* Initialize svinfo related data */
 	if (module_list) {
@@ -306,7 +301,6 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 					      FDO_SI_START)) {
 			LOG(LOG_ERROR,
 			    "Sv_info: One or more module's START failed\n");
-			fdo_free(ps->iv);
 			fdo_free(ps->dsi_info);
 			return false;
 		}

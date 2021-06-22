@@ -95,6 +95,4 @@ bool fdo_ovheader_write(fdow_t *fdow, int protver, fdo_byte_array_t *guid,
 	fdo_rendezvous_list_t *rvlst, fdo_string_t *dev_info,
 	fdo_public_key_t *pubkey, fdo_hash_t *hdc);
 
-void fdo_iv_free(fdo_iv_t *iv);
-
 #endif /* __FDOCRED_H__ */
