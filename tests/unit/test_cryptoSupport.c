@@ -17,7 +17,7 @@
 #include "ecdsa_privkey.h"
 #include "safe_lib.h"
 #include "fdotypes.h"
-#include "test_RSARoutines.h"
+//#include "test_RSARoutines.h"
 
 #if defined(KEX_DH_ENABLED) //(m size =2048)
 #define DH_PEER_RANDOM_SIZE 256
@@ -269,22 +269,6 @@ static RSA *generateRSA_pubkey(void)
 	BN_free(bne);
 	return r;
 }
-
-#if defined(PK_ENC_RSA)
-int sha256_RSAsign(uint8_t *msg, uint32_t mlen, uint8_t *out, uint32_t *outlen,
-		   RSA *r)
-{
-	uint8_t hash[SHA256_DIGEST_SIZE];
-
-	if (SHA256(msg, mlen, hash) == NULL)
-		return -1;
-
-	int result =
-	    RSA_sign(NID_sha256, hash, SHA256_DIGEST_SIZE, out, outlen, r);
-
-	return result;
-}
-#endif // PK_ENC_RSA
 
 static fdo_public_key_t *getFDOpkey(RSA *r)
 {
