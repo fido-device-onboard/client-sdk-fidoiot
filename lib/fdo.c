@@ -57,6 +57,8 @@ extern char **g_argv;
 #define ERROR_RETRY_COUNT 5
 #endif
 
+static const uint16_t g_DI_PORT = 8039;
+
 static unsigned int error_count;
 static bool rvbypass;
 
@@ -69,6 +71,8 @@ static bool _STATE_Shutdown_Error(void);
 
 static fdo_sdk_status app_initialize(void);
 static void app_close(void);
+bool parse_manufacturer_address(char *buffer, bool *tls,
+	fdo_ip_address_t **mfg_ip, char *mfg_dns, size_t mfg_dns_sz, int *mfg_port);
 
 #define ERROR()                                                                \
 	{                                                                      \
@@ -695,6 +699,111 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 	return FDO_SUCCESS;
 }
 
+/**
+ * Parse the manufacturer network address in the given buffer, and extract and save
+ * the TLS/IP/DNS/Port values.
+ *
+ * @param buffer Buffer containing the network address
+ * @param tls Output flag describibg whether HTTP (false) or HTTPS (true) is used
+ * @param mfg_ip Output structure to store IP. Null is returned if no IP is present
+ * @param mfg_dns Output pre-allocated buffer to store DNS
+ * @param mfg_dns_sz Size of the DNS buffer (minimum 100)
+ * @param mfg_port Output variable to store port
+ *
+ * Return true if parse was successful, false otherwise.
+ */
+bool parse_manufacturer_address(char *buffer, bool *tls,
+	fdo_ip_address_t **mfg_ip, char *mfg_dns, size_t mfg_dns_sz,
+	int *mfg_port) {
+
+	char transport_prot[6] = {0};
+	char port[6] = {0};
+	size_t dns_sz = 100;
+	int result = 0;
+	char *eptr = NULL;
+	const char transport_http[5] = "http";
+	const char transport_https[6] = "https";
+
+	if (!buffer || !tls || !mfg_ip || !mfg_dns ||
+		mfg_dns_sz < dns_sz || !mfg_port) {
+		LOG(LOG_ERROR, "Invalid params\n");
+		return false;
+	}
+
+	// the expected format is '{http/https}://{IP/DNS}:port', port is optional
+	result = sscanf(buffer, "%5[^:]://%99[^:]:%5s/", transport_prot, mfg_dns, port);
+
+	// if all 3 are updated, wer're all good,
+	// but if only 2 of these are updated, verify each and decide
+	if (result != 2 && result != 3) {
+		LOG(LOG_ERROR, "Failed to parse manufacturer address\n");
+		goto end;
+	}
+
+	// parse transport protocol. check for 'http' first, then 'https'
+	*tls = false;
+	if (memcmp_s(transport_prot, sizeof(transport_prot), transport_http,
+			sizeof(transport_http), &result) != 0) {
+		LOG(LOG_ERROR, "Failed to compare transport protocol\n");
+		goto end;
+	}
+	if (0 != result) {
+		if (memcmp_s(transport_prot, sizeof(transport_prot), transport_https,
+			sizeof(transport_https), &result) != 0) {
+			LOG(LOG_ERROR, "Failed to compare transport protocol\n");
+			goto end;
+		}
+		if (0 == result) {
+			*tls = true;
+			LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTPS\n");
+		} else {
+			LOG(LOG_ERROR, "Invalid Manufacturer Transport protocol specified.\n");
+			goto end;
+		}
+	} else {
+		LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTP\n");
+	}
+
+	// parse IP/DNS, check for IP first, if it fails, treat it as DNS
+	*mfg_ip = fdo_ipaddress_alloc();
+	if (!mfg_ip) {
+		LOG(LOG_ERROR, "Failed to alloc memory\n");
+		ERROR();
+		goto end;
+	}
+	result = fdo_printable_to_net(mfg_dns, (*mfg_ip)->addr);
+	if (result > 0) {
+		// valid IP address
+		(*mfg_ip)->length = IPV4_ADDR_LEN;
+		LOG(LOG_DEBUG, "Manufacturer IP will be used\n");
+	} else if (result == 0) {
+		// not an IP address, so treat it as DNS address
+		LOG(LOG_DEBUG, "Manufacturer DNS will be used\n");
+		fdo_free(*mfg_ip);
+	}
+
+	// parse port
+	// set to 0 explicitly
+	errno = 0;
+	*mfg_port = strtol(port, &eptr, 10);
+	if (!eptr || eptr == port || errno != 0) {
+		LOG(LOG_ERROR, "Failed to parse Manufacturer port.\n");
+		*mfg_port = g_DI_PORT;
+	} else if (!((*mfg_port >= FDO_PORT_MIN_VALUE) &&
+	      (*mfg_port <= FDO_PORT_MAX_VALUE))) {
+		LOG(LOG_ERROR,
+		    "Manufacturer port value should be between "
+		    "[%d-%d]. Using default.\n",
+		    FDO_PORT_MIN_VALUE, FDO_PORT_MAX_VALUE);
+		// set default
+		*mfg_port = g_DI_PORT;
+	}
+	LOG(LOG_DEBUG, "Manufacturer Port: %d\n", *mfg_port);
+	return true;
+end:
+	return false;
+}
+
 #ifdef MODULES_ENABLED
 /**
  * Internal API
@@ -814,8 +923,6 @@ static void app_close(void)
 	}
 }
 
-static const uint16_t g_DI_PORT = 8039;
-
 /**
  * Handles DI state of device. Initializes protocol context engine,
  * initializse state variables and runs the DI protocol.
@@ -828,18 +935,13 @@ static bool _STATE_DI(void)
 	bool ret = false;
 	fdo_prot_ctx_t *prot_ctx = NULL;
 
-	char mfg_transport_prot[6] = {0};
 	fdo_ip_address_t *mfg_ip = NULL;
 	char mfg_dns[100] = {0};
-	int di_port = g_DI_PORT;
+	int mfg_port = g_DI_PORT;
 
 	bool tls = false;
 	int32_t fsize = 0;
 	char *buffer = NULL;
-	int result = 0;
-
-	const char transport_http[5] = "http";
-	const char transport_https[6] = "https";
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
 		       "-------------------------------------------"
@@ -864,77 +966,21 @@ static bool _STATE_DI(void)
 
 		if (fdo_blob_read((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA,
 				  (uint8_t *)buffer, fsize) == -1) {
-			LOG(LOG_ERROR, "Failed to read Manufacture address\n");
+			LOG(LOG_ERROR, "Failed to read Manufacturer address\n");
 			goto end;
 		}
 
 		buffer[fsize] = '\0';
 
-		// the expected format is '{http/https}://{IP/DNS}:port', port is optional
-		result = sscanf(buffer, "%5[^:]://%99[^:]:%d/",
-			mfg_transport_prot, mfg_dns, &di_port);
-		// if all 3 are updated, wer're all good,
-		// but if only 2 of these are updated, verify each and decide
-		if (result != 2 && result != 3) {
-			LOG(LOG_ERROR, "Failed to parse manufacturer address\n");
+		if (!parse_manufacturer_address(buffer, &tls, &mfg_ip,
+			mfg_dns, sizeof(mfg_dns), &mfg_port)) {
+			LOG(LOG_ERROR, "Failed to parse Manufacturer Network address.\n");
 			goto end;
 		}
-
-		// parse transport protocol. check for 'http' first, then 'https'
-		if (memcmp_s(mfg_transport_prot, sizeof(mfg_transport_prot), transport_http,
-				sizeof(transport_http), &result) != 0) {
-			LOG(LOG_ERROR, "Failed to compare transport protocol\n");
-			goto end;
-		}
-		if (0 != result) {
-			if (memcmp_s(mfg_transport_prot, sizeof(mfg_transport_prot), transport_https,
-				sizeof(transport_https), &result) != 0) {
-				LOG(LOG_ERROR, "Failed to compare transport protocol\n");
-				goto end;
-			}
-			if (0 == result) {
-				tls = true;
-				LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTPS\n");
-			} else {
-				LOG(LOG_DEBUG, "Invalid Manufacturer Transport protocol specified.\n");
-				goto end;
-			}
-		} else {
-			LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTP\n");
-		}
-
-		// parse IP/DNS. check for IP first, then DNS
-		mfg_ip = fdo_ipaddress_alloc();
-		if (!mfg_ip) {
-			LOG(LOG_ERROR, "Failed to alloc memory\n");
-			ERROR();
-			goto end;
-		}
-		result = fdo_printable_to_net(mfg_dns, mfg_ip->addr);
-		if (result > 0) {
-			// valid IP address
-			mfg_ip->length = IPV4_ADDR_LEN;
-			LOG(LOG_DEBUG, "Manufacturer IP will be used\n");
-		} else if (result == 0) {
-			// not an IP address, so treat it as DNS address
-			LOG(LOG_DEBUG, "Manufacturer DNS will be used\n");
-		}
-
-		// parse port
-		if (!((di_port >= FDO_PORT_MIN_VALUE) &&
-		      (di_port <= FDO_PORT_MAX_VALUE))) {
-			LOG(LOG_ERROR,
-			    "Manufacturer port value should be between "
-			    "[%d-%d].\n",
-			    FDO_PORT_MIN_VALUE, FDO_PORT_MAX_VALUE);
-			// set default
-			di_port = g_DI_PORT;
-		}
-		LOG(LOG_DEBUG, "Manufacturer Port: %d\n", di_port);
 	}
 
 	prot_ctx = fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
-				      mfg_ip, mfg_dns, di_port, tls);
+				      mfg_ip, mfg_ip ? NULL : mfg_dns, mfg_port, tls);
 	if (prot_ctx == NULL) {
 		ERROR();
 		goto end;

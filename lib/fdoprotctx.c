@@ -100,7 +100,8 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port, NULL,
+					prot_ctx->host_port,
+					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
 					is_mfg_proxy_defined())) {
 				ret = false;
 				break;

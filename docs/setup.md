@@ -13,12 +13,19 @@ FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (C
 
 <a name="manuf_addr"></a>
 ## 3. Setting the Manufacturer Network Address
-To set the manufacturer network address(transport protocol, DNS/IP or port) that FDO Client SDK Linux device uses during Device Initialization (DI) protocol:
+To set the manufacturer network address(transport protocol, DNS/IP and/or port) that FDO Client SDK Linux device uses during Device Initialization (DI) protocol:
 
 ```shell
-# To set the manufacturer address
+# To set the complete manufacturer address
 $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <{http,https}://{DNS,IP}:port> > data/manufacturer_addr.bin
+```
+
+The port information is optional. If one is not specified in the network address, `8039` is chosen as the default port.
+```shell
+# To set the manufacturer address without the port information
+$ cd <path-to-client-sdk-fidoiot>
+$ echo -n <{http,https}://{DNS,IP}:> > data/manufacturer_addr.bin
 ```
 
 > ***NOTE***: By default, `manufacturer_addr.bin` is configured with "http://localhost:8039".
