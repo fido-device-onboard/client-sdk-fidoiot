@@ -147,7 +147,6 @@ fdo_hash_t *fdo_pub_key_hash(fdo_public_key_t *pub_key)
 	fdo_hash_t *hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!hash)
 		return NULL;
-	fdow_next_block(fdow, FDO_TYPE_HMAC);
 	fdo_public_key_write(fdow, pub_key);
 	size_t encoded_pk_length = 0;
 	if (!fdow_encoded_length(fdow, &encoded_pk_length) || encoded_pk_length == 0) {

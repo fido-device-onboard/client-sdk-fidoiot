@@ -95,23 +95,9 @@
 // Protocol message types
 #define FDO_TYPE_ERROR 255
 
-// Persistent
-// TODO: Needs review (Only FDO_TYPE_HMAC is used in code)
-#define FDO_TYPE_CRED_OWNER 1
-#define FDO_TYPE_CRED_MFG 2
-#define FDO_TYPE_OWNERSHIP_VOUCHER 3
-#define FDO_TYPE_PUBLIC_KEY 4
-#define FDO_TYPE_SERVICE_INFO 5
-#define FDO_TYPE_DEVICE_CRED 6
-#define FDO_TYPE_HMAC 7
-
-// For restful URL mapping
-// TODO: Not used, needs to review
-#define FDOMsg_typeMIN FDO_TO1_TYPE_HELLO_FDO
-#define FDOMsg_typeMAX FDO_TO2_DONE2
-
 // Error Message
-// TODO: Not used, needs to review (Only INTERNAL_SERVER_ERROR is used)
+// TODO: These macros are not currently used, but they should be mapped
+// to different ERROR messages.
 #define INVALID_JWT_TOKEN 1
 #define INVALID_OWNERSHIP_VOUCHER 2
 #define INVALID_OWNER_SIGN_BODY 3
@@ -128,17 +114,6 @@
 
 // Current protocol version
 #define FDO_PROT_SPEC_VERSION 100
-
-/*
- * Set size of buffer for generating debugging messages.
- * The messages will be truncated appropriately, so this can be
- * any size.  To see an entire public key, you need more than 512 bytes,
- * which may be too much for a constrained system to put on the stack.
- *
- * An alternative is to declare the buffer global
- */
-// TODO: Needs review, macro not used.
-#define DEBUGBUFSZ 1024
 
 // minimum ServiceInfo size
 #define MIN_SERVICEINFO_SZ 1300
