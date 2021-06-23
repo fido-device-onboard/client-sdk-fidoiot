@@ -13,30 +13,22 @@ FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (C
 
 <a name="manuf_addr"></a>
 ## 3. Setting the Manufacturer Network Address
-To set the manufacturer network address(domain name or IP) that FDO Client SDK Linux device uses during Device Initialization (DI) protocol:
+To set the manufacturer network address(transport protocol, DNS/IP and/or port) that FDO Client SDK Linux device uses during Device Initialization (DI) protocol:
 
 ```shell
-# To set the manufacturer DNS
+# To set the complete manufacturer address
 $ cd <path-to-client-sdk-fidoiot>
-$ echo -n <manufacturer domain-name> > data/manufacturer_dn.bin
+$ echo -n <{http,https}://{DNS,IP}:port> > data/manufacturer_addr.bin
 ```
-or
 
+The port information is optional. If one is not specified in the network address, `8039` is chosen as the default port.
 ```shell
-# To set the manufacturer IP
+# To set the manufacturer address without the port information
 $ cd <path-to-client-sdk-fidoiot>
-$ echo -n <manufacturer server-ip> > data/manufacturer_ip.bin
+$ echo -n <{http,https}://{DNS,IP}:> > data/manufacturer_addr.bin
 ```
 
-The default manufacturer port is 8039. If required, it can be configured by the following instructions:
-
-```shell
-# For setting manufacturer port
-$ cd <path-to-client-sdk-fidoiot>
-$ echo -n <manufacturer server-port> > data/manufacturer_port.bin
-```
-
-> ***NOTE***: By default, `manufacturer_dn.bin` is configured with "localhost". If both IP and domain name are set, the IP takes precedence over domain name.
+> ***NOTE***: By default, `manufacturer_addr.bin` is configured with "http://localhost:8039".
 
 <a name="ecdsa_priv"></a>
 ## 4. Elliptic Curve Digital Signature Algorithm (ECDSA) Private Key File Generation

@@ -100,7 +100,8 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port, NULL,
+					prot_ctx->host_port,
+					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
 					is_mfg_proxy_defined())) {
 				ret = false;
 				break;
@@ -113,7 +114,8 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_DI_DONE: /* type 13 */
 		ret = connect_to_manufacturer(prot_ctx->host_ip,
 					      prot_ctx->host_port,
-					      &prot_ctx->sock_hdl, NULL);
+					      &prot_ctx->sock_hdl,
+					      (prot_ctx->tls ? &prot_ctx->ssl : NULL));
 		break;
 	case FDO_STATE_T01_SND_HELLO_FDO: /* type 30 */
 		ATTRIBUTE_FALLTHROUGH;
