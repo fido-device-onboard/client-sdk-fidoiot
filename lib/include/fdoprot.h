@@ -96,18 +96,9 @@
 #define FDO_TYPE_ERROR 255
 
 // Error Message
-// TODO: These macros are not currently used, but they should be mapped
-// to different ERROR messages.
-#define INVALID_JWT_TOKEN 1
-#define INVALID_OWNERSHIP_VOUCHER 2
-#define INVALID_OWNER_SIGN_BODY 3
-#define INVALID_IP_ADDRESS 4
-#define INVALID_GUID 5
-#define RESOURCE_NOT_FOUND 6
-#define INVALID_PROVE_REQUEST_EXCEPTION 7
-#define INVALID_EPID_SIGNATURE 8
+// TODO: Additional macros should be created to map different error conditions
+// specified in the spec.
 #define MESSAGE_BODY_ERROR 100
-#define INVALID_MESSAGE_ERROR 101
 #define INTERNAL_SERVER_ERROR 500
 
 #define MAX_TO2_ROUND_TRIPS 1000000
