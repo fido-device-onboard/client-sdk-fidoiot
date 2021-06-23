@@ -36,6 +36,8 @@ set (REUSE true)
 set (DATASTORE sd)
 set (WIFI_SSID " ")
 set (WIFI_PASS " ")
+# TO-DO : This flag is no longer being used in the source.
+# Explore use of the alternative MANUFACTURER_ADDR instead.
 set (MANUFACTURER_IP " ")
 set (MANUFACTURER_DN " ")
 

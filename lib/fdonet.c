@@ -449,6 +449,13 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
+	if (ssl) {
+		if (!cache_tls_connection()) {
+			LOG(LOG_ERROR, "REST TLS caching failed!\n");
+			goto end;
+		}
+	}
+
 	if (is_mfg_proxy_defined()) {
 #if defined HTTPPROXY
 		ip = &mfgproxy_ip;
