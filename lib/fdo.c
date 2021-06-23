@@ -705,7 +705,10 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
  *
  * @param buffer Buffer containing the network address
  * @param tls Output flag describibg whether HTTP (false) or HTTPS (true) is used
- * @param mfg_ip Output structure to store IP. Null is returned if no IP is present
+ * @param mfg_ip
+ * Output structure to store IP. Memory allocation is done in this method.
+ * If IP address is found while parsing, this allocated structure is returned that must
+ * be freed by the caller after use. Otherwise, a NULL object is returned.
  * @param mfg_dns Output pre-allocated buffer to store DNS
  * @param mfg_dns_sz Size of the DNS buffer (minimum 100)
  * @param mfg_port Output variable to store port
@@ -765,6 +768,9 @@ bool parse_manufacturer_address(char *buffer, bool *tls,
 	}
 
 	// parse IP/DNS, check for IP first, if it fails, treat it as DNS
+	// allocate IP structure here
+	// if a valid IP is found, return the IP structure conatining IP, that must be freed by caller
+	// if a valid IP is not found, free the IP structure immediately and return NULL IP structure
 	*mfg_ip = fdo_ipaddress_alloc();
 	if (!mfg_ip) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
