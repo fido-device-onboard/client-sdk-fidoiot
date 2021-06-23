@@ -17,7 +17,6 @@
 #include "ecdsa_privkey.h"
 #include "safe_lib.h"
 #include "fdotypes.h"
-//#include "test_RSARoutines.h"
 
 #if defined(KEX_DH_ENABLED) //(m size =2048)
 #define DH_PEER_RANDOM_SIZE 256
