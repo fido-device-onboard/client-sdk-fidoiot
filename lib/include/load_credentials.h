@@ -12,9 +12,6 @@
 #include "storage_al.h"
 #include <stdbool.h>
 
-#define DATA_FILES "./data/"
-#define MAX_FILENAME_LEN 1024
-
 bool read_normal_device_credentials(const char *dev_cred_file,
 				    fdo_sdk_blob_flags flags,
 				    fdo_dev_cred_t *our_dev_cred);

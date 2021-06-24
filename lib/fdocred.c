@@ -16,9 +16,6 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 
-#define OCBUF_SIZE 256
-#define PUBLIC_KEY_OFFSET 12
-
 /*------------------------------------------------------------------------------
  * DeviceCredential's Owner Credential (fdo_cred_owner_t) routines
  */
@@ -150,7 +147,6 @@ fdo_hash_t *fdo_pub_key_hash(fdo_public_key_t *pub_key)
 	fdo_hash_t *hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!hash)
 		return NULL;
-	fdow_next_block(fdow, FDO_TYPE_HMAC);
 	fdo_public_key_write(fdow, pub_key);
 	size_t encoded_pk_length = 0;
 	if (!fdow_encoded_length(fdow, &encoded_pk_length) || encoded_pk_length == 0) {
@@ -709,15 +705,4 @@ void fdo_owner_supplied_credentials_free(fdo_owner_supplied_credentials_t *osc)
 		fdo_service_info_free(osc->si);
 		fdo_free(osc);
 	}
-}
-
-/**
- * Free the IV object
- * @param iv - The iv store object
- * @return none.
- */
-void fdo_iv_free(fdo_iv_t *iv)
-{
-	if (iv != NULL)
-		fdo_free(iv);
 }

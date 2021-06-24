@@ -13,8 +13,6 @@
 #include "fdoprot.h"
 #include "util.h"
 
-#define REUSE_HMAC_MAX_LEN 1
-
 /**
  * msg70() - TO2.Done
  *
@@ -117,7 +115,7 @@ int32_t msg70(fdo_prot_t *ps)
 		return false;
 	}
 
-	if (!fdo_encrypted_packet_windup(&ps->fdow, FDO_TO2_DONE, ps->iv)) {
+	if (!fdo_encrypted_packet_windup(&ps->fdow, FDO_TO2_DONE)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to create Encrypted Message\n");
 		goto err;
 	}

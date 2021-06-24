@@ -922,11 +922,6 @@ static void app_close(void)
 		fdo_free(g_fdo_data->devcred);
 		g_fdo_data->devcred = NULL;
 	}
-
-	if (g_fdo_data->prot.iv != NULL) {
-		fdo_iv_free(g_fdo_data->prot.iv);
-		g_fdo_data->prot.iv = NULL;
-	}
 }
 
 /**

@@ -153,8 +153,6 @@ elseif(DA MATCHES ecdsa384)
       set(KEX ecdh384)
       message("KEX moved to higher crypto")
     endif()
-elseif(DA MATCHES epid)
-  message(WARNING "EPID support is no longer available")
 endif()
 
 if(DA STREQUAL tpm20_ecdsa256)
