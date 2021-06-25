@@ -6,6 +6,11 @@
 /*!
  * \file
  * \brief Abstraction layer for AES encryption routines of openssl library.
+ * Supported modes are:
+ * - AES-GCM-128 (Key = 128 bits)
+ * - AES-GCM-256 (Key = 256 bits)
+ * - AES-CCM-64-128-128 (L=64 (2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
+ * - AES-CCM-64-128-256 (L=64 (2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
  */
 
 #include "fdoCryptoHal.h"
@@ -50,6 +55,7 @@
 
 #define TAG_LENGTH AES_CCM_TAG_LEN
 #define IV_LENGTH AES_CCM_IV_LEN
+#define L_VALUE_BYTES 8
 
 #define SET_IV EVP_CTRL_CCM_SET_IVLEN
 #define GET_TAG EVP_CTRL_CCM_GET_TAG
@@ -137,9 +143,14 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 		goto end;
 	}
 
-	// Set tag length (only for CCM mode)
+	// Set tag length and L value (only for CCM mode)
 #ifdef AES_MODE_CCM_ENABLED
 	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, tag_length, NULL)) {
+		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
+		goto end;
+	}
+
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, L_VALUE_BYTES, NULL)) {
 		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
 		goto end;
 	}
@@ -277,11 +288,17 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 	// NOTE: As per Openssl's documentation, Tag is specified for CCM before EVP_DecryptUpdate,
 	// while the same is specified for GCM after EVP_DecryptUpdate.
 	// As a result, the tag for GCM is specified later.
+	// L value is set for CCM separately here.
 #ifdef AES_MODE_CCM_ENABLED
 	// Set tag
 	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length,
 				 tag)) {
 		LOG(LOG_ERROR, "Error during setting AES IV length!\n");
+		goto end;
+	}
+
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, L_VALUE_BYTES, NULL)) {
+		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
 		goto end;
 	}
  #endif
