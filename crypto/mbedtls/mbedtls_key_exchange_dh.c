@@ -44,7 +44,6 @@ typedef struct {
  *        returns true on success, false on error
  */
 static bool compute_publicBDH(dh_context_t *key_ex_data);
-#define MBEDTLS_INPUT_NUMBASE 16
 
 /**
  * Initialize the key exchange of type DH

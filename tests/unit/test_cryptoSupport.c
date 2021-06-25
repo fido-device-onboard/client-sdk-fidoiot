@@ -17,7 +17,6 @@
 #include "ecdsa_privkey.h"
 #include "safe_lib.h"
 #include "fdotypes.h"
-#include "test_RSARoutines.h"
 
 #if defined(KEX_DH_ENABLED) //(m size =2048)
 #define DH_PEER_RANDOM_SIZE 256
@@ -269,22 +268,6 @@ static RSA *generateRSA_pubkey(void)
 	BN_free(bne);
 	return r;
 }
-
-#if defined(PK_ENC_RSA)
-int sha256_RSAsign(uint8_t *msg, uint32_t mlen, uint8_t *out, uint32_t *outlen,
-		   RSA *r)
-{
-	uint8_t hash[SHA256_DIGEST_SIZE];
-
-	if (SHA256(msg, mlen, hash) == NULL)
-		return -1;
-
-	int result =
-	    RSA_sign(NID_sha256, hash, SHA256_DIGEST_SIZE, out, outlen, r);
-
-	return result;
-}
-#endif // PK_ENC_RSA
 
 static fdo_public_key_t *getFDOpkey(RSA *r)
 {
@@ -827,7 +810,6 @@ int __wrap_crypto_hal_sig_verify(
 }
 
 #ifdef USE_OPENSSL
-#if !defined(EPID_DA)
 int __real_get_ec_key(void);
 int __wrap_get_ec_key(void)
 {
@@ -837,7 +819,6 @@ int __wrap_get_ec_key(void)
 		return __real_get_ec_key();
 	}
 }
-#endif
 
 int __real_ECDSA_size(const EC_KEY *eckey);
 int __wrap_ECDSA_size(const EC_KEY *eckey)
@@ -1760,7 +1741,6 @@ void test_crypto_support_load_ecdsa_privkey(void)
 TEST_CASE("crypto_support_load_ecdsa_privkey", "[crypto_support][fdo]")
 #endif
 {
-#if !defined(EPID_DA)
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
@@ -1772,9 +1752,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey", "[crypto_support][fdo]")
 		free(privkey);
 		privkey = NULL;
 	}
-#else
-	TEST_IGNORE();
-#endif
 }
 
 #ifndef TARGET_OS_FREERTOS
@@ -1784,7 +1761,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_blob_size_fail",
 	  "[crypto_support][fdo]")
 #endif
 {
-#if !defined(EPID_DA)
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
@@ -1798,9 +1774,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_blob_size_fail",
 		free(privkey);
 		privkey = NULL;
 	}
-#else
-	TEST_IGNORE();
-#endif
 }
 
 #ifndef TARGET_OS_FREERTOS
@@ -1810,7 +1783,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_alloc_fail",
 	  "[crypto_support][fdo]")
 #endif
 {
-#if !defined(EPID_DA)
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
@@ -1824,9 +1796,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_alloc_fail",
 		free(privkey);
 		privkey = NULL;
 	}
-#else
-	TEST_IGNORE();
-#endif
 }
 
 #ifndef TARGET_OS_FREERTOS
@@ -1836,7 +1805,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_blob_read_fail",
 	  "[crypto_support][fdo]")
 #endif
 {
-#if !defined(EPID_DA)
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
@@ -1850,9 +1818,6 @@ TEST_CASE("crypto_support_load_ecdsa_privkey_fdo_blob_read_fail",
 		free(privkey);
 		privkey = NULL;
 	}
-#else
-	TEST_IGNORE();
-#endif
 }
 
 /* Test cases for fdo_ov_verify
@@ -2890,20 +2855,6 @@ TEST_CASE("fdo_device_sign", "[crypto_support][fdo]")
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
 
-#if defined(EPID_DA)
-	fdo_byte_array_t sig_rl;
-	fdo_byte_array_t pubkey;
-
-	sig_rl.bytes = NULL;
-	sig_rl.byte_sz = 0;
-
-	pubkey.bytes = pub_key;
-	pubkey.byte_sz = sizeof(pub_key);
-
-	fdo_set_device_sig_infoeB(&sig_rl, &pubkey);
-	ret = dev_attestation_init();
-	TEST_ASSERT_EQUAL(0, ret);
-#endif
 	// Positive test case
 	ret = fdo_device_sign(message, message_len, &signature);
 	TEST_ASSERT_EQUAL(0, ret);
@@ -3639,18 +3590,7 @@ TEST_CASE("memcpy_s_fail_case", "[crypto_support][fdo]")
 	ret = fdo_device_sign(message, message_len, &signature);
 	memcpy_s_fail_flag = false;
 	TEST_ASSERT_EQUAL(-1, ret);
-
-#if defined(EPID_DA)
-	fdo_dev_key_ctx_t *device_ctx = getfdo_dev_key_ctx();
-	device_ctx->eB->sig_rl = 0;
-	device_ctx->eB->pubkey = 0;
-#endif
 #else
-#if defined(EPID_DA)
-	fdo_dev_key_ctx_t *device_ctx = getfdo_dev_key_ctx();
-	device_ctx->eB->sig_rl = 0;
-	device_ctx->eB->pubkey = 0;
-#endif
 	TEST_IGNORE();
 #endif
 }

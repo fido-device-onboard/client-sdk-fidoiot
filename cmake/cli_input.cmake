@@ -12,7 +12,6 @@ set (TLS openssl)
 set (DA ecdsa384)
 set (KEX ecdh)
 set (AES_MODE gcm)
-set (EPID epid_r6)
 set (BUILD debug)
 set (TARGET_OS linux)
 set (HTTPPROXY true)
@@ -36,6 +35,8 @@ set (REUSE true)
 set (DATASTORE sd)
 set (WIFI_SSID " ")
 set (WIFI_PASS " ")
+# TO-DO : This flag is no longer being used in the source.
+# Explore use of the alternative MANUFACTURER_ADDR instead.
 set (MANUFACTURER_IP " ")
 set (MANUFACTURER_DN " ")
 

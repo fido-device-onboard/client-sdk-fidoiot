@@ -117,7 +117,7 @@ int32_t msg66(fdo_prot_t *ps)
 
 	/* Encrypt the packet */
 	if (!fdo_encrypted_packet_windup(
-		&ps->fdow, FDO_TO2_NEXT_DEVICE_SERVICE_INFO, ps->iv)) {
+		&ps->fdow, FDO_TO2_NEXT_DEVICE_SERVICE_INFO)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to create Encrypted Message\n");
 		goto err;
 	}

@@ -9,9 +9,6 @@
 #include "fdomodules.h"
 #include <stdint.h>
 
-/* Application ID */
-#define APPID 0x01020304
-
 typedef enum {
 	FDO_RV_TIMEOUT = 1,
 	FDO_CONN_TIMEOUT,

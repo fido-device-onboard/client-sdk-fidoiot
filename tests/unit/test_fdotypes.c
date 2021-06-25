@@ -711,30 +711,6 @@ void test_fdo_public_key_free(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_pk_alg_to_string", "[fdo_types][fdo]")
-#else
-void test_fdoPKAlg_toString(void)
-#endif
-{
-	const char *ret;
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_NONE);
-	TEST_ASSERT_EQUAL_STRING("AlgNONE", ret);
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_RSA);
-	TEST_ASSERT_EQUAL_STRING("AlgRSA", ret);
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_EPID_1_1);
-	TEST_ASSERT_EQUAL_STRING("AlgEPID11", ret);
-
-	ret = fdo_pk_alg_to_string(FDO_CRYPTO_PUB_KEY_ALGO_EPID_2_0);
-	TEST_ASSERT_EQUAL_STRING("AlgEPID20", ret);
-
-	ret = fdo_pk_alg_to_string(-1);
-	TEST_ASSERT_NULL(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
 TEST_CASE("fdo_pk_enc_to_string", "[fdo_types][fdo]")
 #else
 void test_fdoPKEnc_toString(void)
@@ -744,12 +720,6 @@ void test_fdoPKEnc_toString(void)
 
 	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_X509);
 	TEST_ASSERT_EQUAL_STRING("EncX509", ret);
-
-	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_RSA_MOD_EXP);
-	TEST_ASSERT_EQUAL_STRING("EncRSAMODEXP", ret);
-
-	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_EPID);
-	TEST_ASSERT_EQUAL_STRING("EncEPID", ret);
 
 	ret = fdo_pk_enc_to_string(-1);
 	TEST_ASSERT_NULL(ret);
@@ -1108,27 +1078,6 @@ void test_fdo_get_iv(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_write_iv", "[fdo_types][fdo]")
-#else
-void test_fdo_write_iv(void)
-#endif
-{
-	fdo_encrypted_packet_t pkt = {
-	    0,
-	};
-	fdo_iv_t ps_iv = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdo_write_iv(NULL, NULL, 0);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_write_iv(&pkt, &ps_iv, 0);
-	TEST_ASSERT_TRUE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
 TEST_CASE("fdo_encrypted_packet_write", "[fdo_types][fdo]")
 #else
 void test_fdo_encrypted_packet_write(void)
@@ -1159,13 +1108,12 @@ void test_fdo_encrypted_packet_write_unwind(void)
 	    0,
 	};
 	fdo_encrypted_packet_t *pkt = NULL;
-	fdo_iv_t iv;
 	bool ret;
 
-	ret = fdo_encrypted_packet_unwind(NULL, NULL, NULL);
+	ret = fdo_encrypted_packet_unwind(NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_encrypted_packet_unwind(&fdor, pkt, &iv);
+	ret = fdo_encrypted_packet_unwind(&fdor, pkt);
 	TEST_ASSERT_FALSE(ret);
 }
 
@@ -1178,73 +1126,13 @@ void test_fdo_encrypted_packet_windup(void)
 	fdow_t fdow = {
 	    0,
 	};
-	fdo_iv_t iv = {
-	    0,
-	};
 	bool ret;
 
-	ret = fdo_encrypted_packet_windup(NULL, 0, NULL);
+	ret = fdo_encrypted_packet_windup(NULL, 0);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_encrypted_packet_windup(&fdow, 0, &iv);
+	ret = fdo_encrypted_packet_windup(&fdow, 0);
 	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_begin_write_signature", "[fdo_types][fdo]")
-#else
-void test_fdo_begin_write_signature(void)
-#endif
-{
-	fdow_t fdow = {
-	    0,
-	};
-	fdo_sig_t sig = {
-	    0,
-	};
-	fdo_public_key_t pk = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdo_begin_write_signature(NULL, NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_begin_write_signature(&fdow, NULL, &pk);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_begin_write_signature(&fdow, &sig, &pk);
-	TEST_ASSERT_TRUE(ret);
-	if (fdow.b.block != NULL) {
-		fdo_free(fdow.b.block);
-	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_end_write_signature", "[fdo_types][fdo]")
-#else
-void test_fdo_end_write_signature(void)
-#endif
-{
-	bool ret = false;
-	fdow_t fdow = {0};
-	fdo_sig_t sig = {0};
-
-	ret = fdo_end_write_signature(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_end_write_signature(&fdow, &sig);
-	TEST_ASSERT_FALSE(ret);
-
-	fdow.b.cursor = 10;
-
-#if defined(EPID_DA)
-	ret = fdo_end_write_signature(&fdow, &sig);
-	TEST_ASSERT_FALSE(ret);
-#endif
-	if (fdow.b.block != NULL) {
-		free(fdow.b.block);
-	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1291,53 +1179,6 @@ void test_fdo_end_readHMAC(void)
 	TEST_ASSERT_FALSE(ret);
 
 	ret = fdo_end_readHMAC(&fdor, &hmac, 0);
-	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_begin_read_signature", "[fdo_types][fdo]")
-#else
-void test_fdo_begin_read_signature(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_sig_t sig = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdo_begin_read_signature(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_begin_read_signature(&fdor, &sig);
-	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_end_read_signature_full", "[fdo_types][fdo]")
-#else
-void test_fdo_end_read_signature_full(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_sig_t sig = {
-	    0,
-	};
-	fdo_public_key_t *getpk = NULL;
-	bool ret;
-
-	ret = fdo_end_read_signature_full(NULL, NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_end_read_signature_full(&fdor, &sig, &getpk);
-	TEST_ASSERT_FALSE(ret);
-
-	fdor.b.cursor = 10;
-	ret = fdo_end_read_signature_full(&fdor, &sig, &getpk);
 	TEST_ASSERT_FALSE(ret);
 }
 
@@ -1401,34 +1242,6 @@ void test_fdo_read_pk_null(void)
 	if (fdor.b.block != NULL) {
 		fdo_free(fdor.b.block);
 	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdoOVSignature_verification", "[fdo_types][fdo]")
-#else
-void test_fdoOVSignature_verification(void)
-#endif
-{
-	fdor_t fdor = {0};
-	fdo_sig_t sig = {
-	    0,
-	};
-	fdo_public_key_t pk = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdoOVSignature_verification(NULL, NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdoOVSignature_verification(&fdor, &sig, &pk);
-	TEST_ASSERT_FALSE(ret);
-
-	/*Random len*/
-	fdor.b.cursor = 10;
-	fdor.b.block_size = 20;
-	ret = fdoOVSignature_verification(&fdor, &sig, &pk);
-	TEST_ASSERT_FALSE(ret);
 }
 
 #ifdef TARGET_OS_FREERTOS

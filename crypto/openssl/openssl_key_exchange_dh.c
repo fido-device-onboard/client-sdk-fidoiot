@@ -21,9 +21,6 @@
 
 #define DEFAULT_DH_SECRET_BITS 384
 
-#define SECRET_BITS_256 256
-#define SECRET_BITS_768 768
-
 #ifdef KEX_DH_ENABLED
 #define GET_PRIME get_rfc3526_prime_2048
 #define RFC RFC3526_P2048

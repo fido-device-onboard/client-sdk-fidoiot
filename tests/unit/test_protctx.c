@@ -73,9 +73,6 @@ void *__wrap_fdo_alloc(size_t bytes)
 }
 #endif
 
-#define SIMULATE_SOCKREAD 555
-#define WRAPPER_MALLOC_RET_ERR NULL
-
 char sample_rest[] = "I am test sample test file\n2nd part shouldn't come\r\n"
 		     "Can I really break the code?";
 char sample_rest2[] = " ";

@@ -35,49 +35,18 @@ bool fdo_bits_fill_with(fdo_bits_t *b, uint8_t *data, uint32_t data_len);
 bool fdo_bits_resize_with(fdo_bits_t *b, int new_byte_sz, uint8_t *data);
 bool fdo_bits_equal(fdo_bits_t *b1, fdo_bits_t *b2);
 int fdo_bits_randomize(fdo_bits_t *b);
-char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz);
-
-#if 0
-void fdo_bits_write(fdow_t *fdow, fdo_bits_t *b);
-bool fdo_bits_read(fdor_t *fdor, fdo_bits_t *b);
-#endif
 
 // Byte Array
 typedef fdo_bits_t fdo_byte_array_t;
 
-#if 0
-fdo_byte_array_t *fdo_byte_array_init(fdo_byte_array_t *bn, int byte_sz);
-#endif
 fdo_byte_array_t *fdo_byte_array_alloc(int byte_sz);
 fdo_byte_array_t *fdo_byte_array_alloc_with_int(int val);
 fdo_byte_array_t *fdo_byte_array_alloc_with_byte_array(uint8_t *ba, int ba_len);
 void fdo_byte_array_free(fdo_byte_array_t *ba);
-#if 0
-void fdo_byte_array_empty(fdo_byte_array_t *ba);
-#endif
 bool fdo_byte_array_resize(fdo_byte_array_t *b, int byte_sz);
-#if 0
-bool fdo_byte_array_resize_with(fdo_byte_array_t *b, int new_byte_sz, uint8_t *data);
-#endif
 fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
 					fdo_byte_array_t *baB);
 fdo_byte_array_t *fdo_byte_array_clone(fdo_byte_array_t *ba);
-bool fdo_byte_array_equal(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
-
-// Bignum
-
-typedef struct {
-	bool sign;
-	fdo_bits_t *value;
-} fdo_bignum_t;
-
-#define BN_POSITIVE true
-#define BN_NEGATIVE false
-
-fdo_bignum_t *fdo_big_num_alloc(void);
-void fdo_big_num_free(fdo_bignum_t *bn);
-bool fdo_bignum_equal(fdo_bignum_t *bn1, fdo_bignum_t *bn2);
-char *fdo_bignum_to_string(fdo_bignum_t *g, char *buf, int buf_sz);
 
 // Generic string holder
 typedef struct {
@@ -95,14 +64,9 @@ bool fdo_string_resize(fdo_string_t *b, int byte_sz);
 bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data);
 
 #define FDO_GUID_BYTES (128 / 8)
-#define FDO_GID_BYTES (128 / 8)
 #define FDO_NONCE_BYTES (128 / 8)
-#define FDO_NONCE_FIELD_BYTES 32
 // EAT-UEID is of length 17 (EAT-RAND(1) + EAT-GUID(16))
 #define FDO_UEID_BYTES (1 + FDO_GUID_BYTES)
-#define FDO_MSG_PRIFIX_LEN 48
-#define FDO_MSG_UUID_LEN 16
-#define FDO_APP_ID_BYTES 16
 
 /*
  * GUID - 128-bit Random number used for identification.
@@ -162,15 +126,9 @@ typedef struct {
 fdo_ip_address_t *fdo_ipaddress_alloc(void);
 bool fdo_null_ipaddress(fdo_ip_address_t *fdoip);
 void fdo_init_ipv4_address(fdo_ip_address_t *fdoip, uint8_t *ipv4);
-#if 0
-void fdo_init_ipv6_address(fdo_ip_address_t *fdoip, uint8_t *ipv6);
-#endif
 bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip);
 bool fdo_convert_to_ipaddress(fdo_byte_array_t * ip_bytes, fdo_ip_address_t *fdoip);
 char *fdo_ipaddress_to_string(fdo_ip_address_t *fdoip, char *buf, int buf_sz);
-#if 0
-int fdo_ipaddress_to_mem(fdo_ip_address_t *fdoip, uint8_t *copyto);
-#endif
 
 typedef struct {
 	uint16_t length;
@@ -184,7 +142,6 @@ typedef struct {
 // 3.3.5 COSECompatibleSignatureTypes
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp384 -35
-#define FDO_CRYPTO_SIG_TYPE_ECSDAp512 -36
 
 #define FDO_COSE_ALG_KEY 1
 
@@ -208,14 +165,8 @@ typedef struct {
 #define FDO_CRYPTO_A256CCM 33
 
 // 3.3.4 PublicKey encodings (pkEnc)
-#define FDO_CRYPTO_PUB_KEY_ENCODING_NONE 0
 #define FDO_CRYPTO_PUB_KEY_ENCODING_X509 1
 #define FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509 2
-#define FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY 3
-
-#define FDOEPID20_GID_LEN (16)
-
-#define FDO_PK_ENC_DEFAULT FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509
 
 typedef struct {
 	int pkalg;
@@ -263,16 +214,6 @@ typedef struct {
 	int aes_plain_type;
 } fdo_encrypted_packet_t;
 
-// TO-DO: Look at the usages of this. The contents are probably not used in any capacity
-typedef struct {
-	uint8_t ctr_iv[AES_IV_LEN];
-	uint32_t ctr_enc;
-	uint32_t ctr_dec;
-	uint8_t cbc_iv_enc[AES_IV_LEN];
-	uint8_t cbc_iv_dec[AES_IV_LEN];
-	uint32_t pkt_count;
-} fdo_iv_t; // IV store
-
 fdo_encrypted_packet_t *fdo_encrypted_packet_alloc(void);
 void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt);
 fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor);
@@ -280,27 +221,12 @@ bool fdo_aad_write(fdow_t *fdow, int alg_type);
 bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
-bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
-				 fdo_iv_t *iv);
-bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv);
+bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt);
+bool fdo_encrypted_packet_windup(fdow_t *fdow, int type);
 bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz);
 bool fdo_prep_composed_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz);
-
-#define FDO_AES_128_BLOCK_SIZE 16
-
-typedef struct {
-	int sig_block_start;
-	fdo_public_key_t *pk;
-	fdo_byte_array_t *sg;
-} fdo_sig_t;
-#define FDO_EPDI_GROUPID_SZ 4
-
-typedef struct {
-	fdo_byte_array_t *plain_text;
-	fdo_byte_array_t *obsig;
-} fdo_redirect_t;
 
 typedef struct {
 	int aes_plain_type;
@@ -506,9 +432,6 @@ fdo_rendezvous_t *fdo_rendezvous_alloc(void);
 void fdo_rendezvous_free(fdo_rendezvous_t *rv);
 bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv);
 bool fdo_rendezvous_write(fdow_t *fdow, fdo_rendezvous_t *rv);
-#define FDO_RENDEZVOUS_GET_IP_ADDRESS_P(rv) ((rv)->ip)
-#define FDO_RENDEZVOUS_GET_PORT(rv) (*(rv)->po)
-//#define FDORendezvous_set_port(rv,p) ((rv)->po = (p))
 
 typedef struct fdo_rendezvous_directive_s {
 	uint16_t num_entries;
@@ -561,8 +484,6 @@ bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
 /*==================================================================*/
 /* Service Info functionality */
 
-#define EMPTY_STRING_LEN 1
-
 /* Module list */
 typedef struct fdo_sdk_service_info_module_list_s {
 	fdo_sdk_service_info_module module;
@@ -602,8 +523,5 @@ bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1,
 	fdo_rendezvous_t *entry2);
 
 void fdo_log_block(fdo_block_t *fdob);
-
-#define FDO_DSI_ACTIVE_LEN 6
-/*==================================================================*/
 
 #endif /* __FDOTYPES_H__ */
