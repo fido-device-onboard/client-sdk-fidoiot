@@ -1,8 +1,14 @@
+/*
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
+ */
+
 #include "unity.h"
 #include "crypto_utils.h"
 #include "fdoprot.h"
 #include "base64.h"
 #include "fdotypes.h"
+#include "fdoCrypto.h"
 #include "fdoCryptoHal.h"
 #include "util.h"
 #include "fdo.h"
@@ -11,10 +17,10 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 
-/*!
+/***!
  * \file
  * \brief Unit tests for FDO defined data structure parsing/packing routines.
- */
+**/
 
 /*** Unity Declarations. ***/
 void set_up(void);
@@ -22,78 +28,55 @@ void tear_down(void);
 void test_fdo_bits_init(void);
 void test_fdo_bits_alloc_with(void);
 void test_fdo_bits_fill(void);
-void test_fdo_bits_toString(void);
 void test_fdo_byte_array_append(void);
-void test_fdo_byte_array_read_chars(void);
-void test_fdo_byte_array_read(void);
-void test_fdo_byte_array_read_with_type(void);
 void test_fdo_string_alloc_with(void);
 void test_fdo_string_alloc_str(void);
 void test_fdo_string_resize(void);
 void test_fdo_string_resize_with(void);
-void test_fdo_string_read(void);
 void test_fdo_nonce_equal(void);
 void test_fdo_hash_read(void);
-void test_fdo_hash_null_write(void);
 void test_fdo_init_ipv4_address(void);
 void test_fdoIPAddress_toString(void);
 void test_fdo_read_ipaddress(void);
 void test_fdo_public_key_clone(void);
 void test_fdo_compare_public_keys(void);
 void test_fdo_public_key_free(void);
-void test_fdoPKAlg_toString(void);
-void test_fdoPKEnc_toString(void);
 void test_fdo_public_key_write(void);
-void test_fdo_public_key_toString(void);
 void test_fdo_public_key_read(void);
 void test_fdo_rendezvous_free(void);
-void test_fdo_rendezvous_write(void);
-void test_keyfromstring(void);
-void test_fdo_rendezvous_read(void);
 void test_fdo_rendezvous_list_add(void);
 void test_fdo_rendezvous_list_get(void);
 void test_fdo_rendezvous_list_read(void);
 void test_fdo_rendezvous_list_write(void);
 void test_fdo_encrypted_packet_read(void);
-void test_fdo_get_iv(void);
-void test_fdo_write_iv(void);
-void test_fdo_encrypted_packet_write(void);
-void test_fdo_encrypted_packet_write_unwind(void);
 void test_fdo_encrypted_packet_windup(void);
-void test_fdo_begin_write_signature(void);
-void test_fdo_end_write_signature(void);
-void test_fdo_begin_readHMAC(void);
-void test_fdo_end_readHMAC(void);
-void test_fdo_begin_read_signature(void);
-void test_fdo_end_read_signature_full(void);
+void test_fdo_aad_write(void);
+void test_fdo_emblock_write(void);
+void test_fdo_eat_write_payloadbasemap(void);
+void test_fdo_eat_write(void);
+void test_fdo_cose_read(void);
+void test_fdo_cose_write(void);
+void test_fdo_siginfo_read(void);
+void test_fdo_siginfo_write(void);
 void test_fdo_signature_verification(void);
-void test_fdo_read_pk_null(void);
-void test_fdoOVSignature_verification(void);
-void test_fdo_kv_alloc_with_array(void);
 void test_fdo_kv_alloc_with_str(void);
-void test_fdo_service_info_alloc_with(void);
 void test_fdo_service_info_add_kv_str(void);
+void test_fdo_service_info_add_kv_int(void);
+void test_fdo_service_info_add_kv_bool(void);
+void test_fdo_service_info_add_kv_bin(void);
 void test_fdo_service_info_add_kv(void);
-void test_psiparsing(void);
-void test_fdo_get_module_name_msg_value(void);
-void test_fdo_mod_data_kv(void);
-void test_fdo_osi_parsing(void);
-static int cb(fdo_sdk_si_type type, int *count, fdo_sdk_si_key_value *si);
-void test_fdo_get_dsi_count(void);
-void test_fdo_supply_moduleOSI(void);
-void test_fdo_supply_modulePSI(void);
-void test_fdo_construct_module_dsi(void);
 void test_fdo_compare_hashes(void);
 void test_fdo_compare_byte_arrays(void);
 void test_fdo_compare_rvLists(void);
 
+
 /*** Unity functions. ***/
-/**
+/*
  * set_up function is called at the beginning of each test-case in unity
  * framework. Declare, Initialize all mandatory variables needed at the start
  * to execute the test-case.
  * @return none.
- */
+*/
 void set_up(void)
 {
 }
@@ -114,7 +97,7 @@ void test_fdo_bits_init(void)
 	ret = fdo_bits_init(NULL, 100);
 	TEST_ASSERT_NULL(ret);
 
-	b = malloc(sizeof(fdo_bits_t));
+	b = fdo_alloc(sizeof(fdo_bits_t));
 	TEST_ASSERT_NOT_NULL(b);
 
 	ret = fdo_bits_init(b, 100);
@@ -122,9 +105,9 @@ void test_fdo_bits_init(void)
 
 	fdo_bits_free(b);
 
-	b = malloc(sizeof(fdo_bits_t));
+	b = fdo_alloc(sizeof(fdo_bits_t));
 	TEST_ASSERT_NOT_NULL(b);
-	b->bytes = malloc(5);
+	b->bytes = fdo_alloc(5);
 	TEST_ASSERT_NOT_NULL(b->bytes);
 	ret = fdo_bits_init(b, 0);
 	TEST_ASSERT_NOT_NULL(ret);
@@ -142,7 +125,7 @@ void test_fdo_bits_alloc_with(void)
 	uint8_t *data;
 	fdo_bits_t *ret;
 
-	data = malloc(100);
+	data = fdo_alloc(100);
 	TEST_ASSERT_NOT_NULL(data);
 
 	ret = fdo_bits_alloc_with(100, data);
@@ -158,7 +141,7 @@ void test_fdo_bits_alloc_with(void)
 	ret = fdo_bits_alloc_with(0, NULL);
 	TEST_ASSERT_NULL(ret);
 
-	free(data);
+	fdo_free(data);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -173,7 +156,7 @@ void test_fdo_bits_fill(void)
 	ret = fdo_bits_fill(NULL);
 	TEST_ASSERT_FALSE(ret);
 
-	bits = malloc(sizeof(fdo_bits_t));
+	bits = fdo_alloc(sizeof(fdo_bits_t));
 	TEST_ASSERT_NOT_NULL(bits);
 	bits->bytes = NULL;
 	bits->byte_sz = 0;
@@ -181,40 +164,14 @@ void test_fdo_bits_fill(void)
 	TEST_ASSERT_FALSE(ret);
 	fdo_bits_free(bits);
 
-	bits = malloc(sizeof(fdo_bits_t));
+	bits = fdo_alloc(sizeof(fdo_bits_t));
 	TEST_ASSERT_NOT_NULL(bits);
-	bits->bytes = malloc(100);
+	bits->bytes = fdo_alloc(100);
 	TEST_ASSERT_NOT_NULL(bits->bytes);
 	bits->byte_sz = 0;
 	ret = fdo_bits_fill(&bits);
 	TEST_ASSERT_FALSE(ret);
-	free(bits);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_bits_to_string", "[fdo_types][fdo]")
-#else
-void test_fdo_bits_toString(void)
-#endif
-{
-	fdo_bits_t b;
-	char *typename = "test";
-	char *buf = "test_string";
-	int buf_sz;
-	char *ret;
-
-	buf_sz = 10;
-	ret = fdo_bits_to_string(NULL, typename, buf, buf_sz);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_bits_to_string(&b, NULL, buf, buf_sz);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_bits_to_string(&b, typename, NULL, buf_sz);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_bits_to_string(&b, typename, buf, 0);
-	TEST_ASSERT_NOT_NULL(ret);
+	fdo_free(bits);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -230,9 +187,9 @@ void test_fdo_byte_array_append(void)
 	ret = fdo_byte_array_append(NULL, NULL);
 	TEST_ASSERT_NULL(ret);
 
-	baA = malloc(sizeof(fdo_byte_array_t));
+	baA = fdo_alloc(sizeof(fdo_byte_array_t));
 	TEST_ASSERT_NOT_NULL(baA);
-	baB = malloc(sizeof(fdo_byte_array_t));
+	baB = fdo_alloc(sizeof(fdo_byte_array_t));
 	TEST_ASSERT_NOT_NULL(baB);
 
 	baA->byte_sz = 0;
@@ -261,80 +218,17 @@ void test_fdo_byte_array_append(void)
 
 	baA->byte_sz = 10;
 	baB->byte_sz = 10;
-	baA->bytes = malloc(10);
-	baB->bytes = malloc(10);
+	baA->bytes = fdo_alloc(10);
+	baB->bytes = fdo_alloc(10);
 
 	ret = fdo_byte_array_append(baA, baB);
 	TEST_ASSERT_NOT_NULL(ret);
 	fdo_byte_array_free(ret);
 
-	free(baB->bytes);
-	free(baA->bytes);
-	free(baA);
-	free(baB);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_byte_array_read_chars", "[fdo_types][fdo]")
-#else
-void test_fdo_byte_array_read_chars(void)
-#endif
-{
-	fdor_t fdor;
-	fdo_byte_array_t ba;
-	int ret;
-
-	ret = fdo_byte_array_read_chars(NULL, NULL);
-	TEST_ASSERT_EQUAL_INT(0, ret);
-
-	memset_s(&fdor, sizeof(fdor), 0);
-	memset_s(&ba, sizeof(ba), 0);
-
-	ret = fdo_byte_array_read_chars(&fdor, &ba);
-	TEST_ASSERT_EQUAL_INT(0, ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_byte_array_read", "[fdo_types][fdo]")
-#else
-void test_fdo_byte_array_read(void)
-#endif
-{
-	fdor_t fdor;
-	fdo_byte_array_t ba;
-	int ret;
-
-	ret = fdo_byte_array_read(NULL, NULL);
-	TEST_ASSERT_EQUAL_INT(0, ret);
-
-	memset_s(&fdor, sizeof(fdor), 0);
-	memset_s(&ba, sizeof(ba), 0);
-
-	ret = fdo_byte_array_read(&fdor, &ba);
-	TEST_ASSERT_EQUAL_INT(0, ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_byte_array_read_with_type", "[fdo_types][fdo]")
-#else
-void test_fdo_byte_array_read_with_type(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_byte_array_t ba = {
-	    0,
-	};
-	uint8_t type;
-	int ret;
-	fdo_byte_array_t *ctp = NULL;
-
-	ret = fdo_byte_array_read_with_type(NULL, NULL, NULL, NULL);
-	TEST_ASSERT_EQUAL_INT(0, ret);
-
-	ret = fdo_byte_array_read_with_type(&fdor, &ba, &ctp, &type);
-	TEST_ASSERT_EQUAL_INT(0, ret);
+	fdo_free(baB->bytes);
+	fdo_free(baA->bytes);
+	fdo_free(baA);
+	fdo_free(baB);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -349,12 +243,12 @@ void test_fdo_string_alloc_with(void)
 	ret = fdo_string_alloc_with(NULL, 0);
 	TEST_ASSERT_NULL(ret);
 
-	data = malloc(10);
+	data = fdo_alloc(10);
 	TEST_ASSERT_NOT_NULL(data);
 	ret = fdo_string_alloc_with(data, 1);
 	TEST_ASSERT_NOT_NULL(ret);
 	fdo_string_free(ret);
-	free(data);
+	fdo_free(data);
 
 	ret = fdo_string_alloc_with(NULL, 10);
 	TEST_ASSERT_NULL(ret);
@@ -372,7 +266,7 @@ void test_fdo_string_alloc_str(void)
 	ret = fdo_string_alloc_with_str(NULL);
 	TEST_ASSERT_NULL(ret);
 
-	data = malloc(FDO_MAX_STR_SIZE * 2);
+	data = fdo_alloc(FDO_MAX_STR_SIZE * 2);
 	TEST_ASSERT_NOT_NULL(data);
 	memset_s(data, FDO_MAX_STR_SIZE * 2, 'a');
 	data[(FDO_MAX_STR_SIZE * 2) - 1] = 0;
@@ -380,7 +274,7 @@ void test_fdo_string_alloc_str(void)
 	ret = fdo_string_alloc_with_str(data);
 	TEST_ASSERT_NULL(ret);
 
-	free(data);
+	fdo_free(data);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -419,44 +313,22 @@ void test_fdo_string_resize_with(void)
 	ret = fdo_string_resize_with(&b, 0, NULL);
 	TEST_ASSERT_FALSE(ret);
 
-	data = malloc(100);
+	data = fdo_alloc(100);
 	TEST_ASSERT_NOT_NULL(data);
 	ret = fdo_string_resize_with(&b, 0, data);
 	TEST_ASSERT_TRUE(ret);
-	free(b.bytes);
+	fdo_free(b.bytes);
 	b.bytes = NULL;
 
 	ret = fdo_string_resize_with(&b, -1, data);
 	TEST_ASSERT_TRUE(ret);
-	free(b.bytes);
+	fdo_free(b.bytes);
 	b.bytes = NULL;
 
 	ret = fdo_string_resize_with(&b, 100, data);
 	TEST_ASSERT_TRUE(ret);
-	free(b.bytes);
-	free(data);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_string_read", "[fdo_types][fdo]")
-#else
-void test_fdo_string_read(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_string_t b = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdo_string_read(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_string_read(&fdor, &b);
-	TEST_ASSERT_TRUE(ret);
-	free(b.bytes);
+	fdo_free(b.bytes);
+	fdo_free(data);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -487,41 +359,40 @@ TEST_CASE("fdo_hash_read", "[fdo_types][fdo]")
 void test_fdo_hash_read(void)
 #endif
 {
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_hash_t hp = {
-	    0,
-	};
+	fdor_t *fdor = NULL;
+	fdo_hash_t *hash = NULL;
 	int ret;
+	// sample CBOR encoded HMAC with HMAC-SHA384 data
+	uint8_t hmac_cbor[] = {
+		0x82, 0x06, 0x58, 0x30, 0x89, 0x5B, 0xD7, 0x23, 0x65, 0xFE, 0xE9, 0x3F, 0x89,
+		0x65, 0xBB, 0x5E, 0xB7, 0xDF, 0x6E, 0x74, 0xF6, 0xA8, 0x64, 0x21, 0xA7, 0x22,
+		0x74, 0xC5, 0xAC, 0xC5, 0x48, 0x81, 0x3E, 0x8F, 0x60, 0x1A, 0x05, 0xE4, 0xA6,
+		0x28, 0xDC, 0x79, 0x1E, 0x30, 0xCB, 0x49, 0x6E, 0x69, 0xB9, 0x9B, 0x0F, 0x1C 
+	};
 
 	ret = fdo_hash_read(NULL, NULL);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 10, '[');
-	ret = fdo_hash_read(&fdor, &hp);
-	TEST_ASSERT_EQUAL_INT(0, ret);
-	if (hp.hash) {
-		fdo_byte_array_free(hp.hash);
-	}
-	if (fdor.b.block_size != 0) {
-		fdo_free(fdor.b.block);
-	}
-}
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(hmac_cbor), hmac_cbor, sizeof(hmac_cbor));
+	fdor->b.block_size = sizeof(hmac_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
 
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_hash_null_write", "[fdo_types][fdo]")
-#else
-void test_fdo_hash_null_write(void)
-#endif
-{
-	/*function returns void
-	 * so call only to see NULL check*/
-	fdo_hash_null_write(NULL);
-	TEST_ASSERT_TRUE(1);
+	hash = fdo_hash_alloc_empty();
+	TEST_ASSERT_NOT_NULL(hash);
+
+	ret = fdo_hash_read(fdor, hash);
+	TEST_ASSERT_GREATER_THAN(1, ret);
+	if (hash) {
+		fdo_hash_free(hash);
+	}
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -535,8 +406,7 @@ void test_fdo_init_ipv4_address(void)
 	};
 	uint8_t ipv4;
 
-	/*function returns void
-	 * so call only to see NULL check*/
+	// function returns void, so call only to see NULL check
 	fdo_init_ipv4_address(NULL, NULL);
 	TEST_ASSERT_TRUE(1);
 
@@ -575,29 +445,31 @@ TEST_CASE("fdo_read_ipaddress", "[fdo_types][fdo]")
 void test_fdo_read_ipaddress(void)
 #endif
 {
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_ip_address_t fdoip = {
-	    0,
-	};
+	fdor_t *fdor = NULL;
+	fdo_ip_address_t fdoip = {0};
 	bool ret;
+	// sample CBOR encoded IPV4 address
+	uint8_t ipv4_cbor[] = {
+		0x44, 0x7F, 0x00, 0x00, 0x01
+	};
+
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(ipv4_cbor), ipv4_cbor, sizeof(ipv4_cbor));
+	fdor->b.block_size = sizeof(ipv4_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
 
 	ret = fdo_read_ipaddress(NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_read_ipaddress(&fdor, &fdoip);
-	TEST_ASSERT_FALSE(ret);
+	ret = fdo_read_ipaddress(fdor, &fdoip);
+	TEST_ASSERT_TRUE(ret);
 
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 10, '[');
-
-	ret = fdo_read_ipaddress(&fdor, &fdoip);
-	TEST_ASSERT_FALSE(ret);
-	if (fdor.b.block_size != 0) {
-		free(fdor.b.block);
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
 	}
 }
 
@@ -674,10 +546,10 @@ void test_fdo_compare_public_keys(void)
 	pk1.pkenc = 1;
 	pk2.pkenc = 1;
 	key1.byte_sz = 10;
-	key1.bytes = malloc(10);
+	key1.bytes = fdo_alloc(10);
 	memset_s(key1.bytes, 10, 0);
 	key3.byte_sz = 10;
-	key3.bytes = malloc(10);
+	key3.bytes = fdo_alloc(10);
 	memset_s(key3.bytes, 10, 0);
 	key2.byte_sz = 0;
 	key4.byte_sz = 0;
@@ -703,26 +575,10 @@ TEST_CASE("fdo_public_key_free", "[fdo_types][fdo]")
 void test_fdo_public_key_free(void)
 #endif
 {
-	/*function returns void
-	 * so call only to see NULL check*/
+	// function returns void so call only to see NULL check
 
 	fdo_public_key_free(NULL);
 	TEST_ASSERT_TRUE(1);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_pk_enc_to_string", "[fdo_types][fdo]")
-#else
-void test_fdoPKEnc_toString(void)
-#endif
-{
-	const char *ret;
-
-	ret = fdo_pk_enc_to_string(FDO_CRYPTO_PUB_KEY_ENCODING_X509);
-	TEST_ASSERT_EQUAL_STRING("EncX509", ret);
-
-	ret = fdo_pk_enc_to_string(-1);
-	TEST_ASSERT_NULL(ret);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -731,44 +587,36 @@ TEST_CASE("fdo_public_key_write", "[fdo_types][fdo]")
 void test_fdo_public_key_write(void)
 #endif
 {
-	fdow_t fdow = {
-	    0,
-	};
-	fdo_public_key_t pk;
-	/*function returns void
-	 * so call only to see NULL check*/
-	fdo_public_key_write(NULL, &pk);
-	TEST_ASSERT_TRUE(1);
+	fdow_t *fdow = NULL;
+	fdo_public_key_t *fdopubkey = NULL;
+	uint8_t pkey[100] = {0};
+	bool ret;
 
-	fdo_public_key_write(&fdow, NULL);
-	TEST_ASSERT_TRUE(1);
-	if (fdow.b.block != NULL) {
-		fdo_free(fdow.b.block);
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	fdopubkey = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
+		FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509, sizeof(pkey), pkey);
+	TEST_ASSERT_NOT_NULL(fdopubkey);
+
+	ret = fdo_public_key_write(NULL, fdopubkey);
+	TEST_ASSERT_FALSE(ret);
+
+	ret = fdo_public_key_write(fdow, NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	ret = fdo_public_key_write(fdow, fdopubkey);
+	TEST_ASSERT_TRUE(ret);
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
 	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_public_key_to_string", "[fdo_types][fdo]")
-#else
-void test_fdo_public_key_toString(void)
-#endif
-{
-	char *ret;
-	char buf[128] = {
-	    0,
-	};
-	fdo_public_key_t pk = {
-	    0,
-	};
-
-	ret = fdo_public_key_to_string(NULL, NULL, 0);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_public_key_to_string(&pk, buf, 0);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_public_key_to_string(&pk, buf, 3);
-	TEST_ASSERT_NULL(ret);
+	if (fdopubkey) {
+		fdo_public_key_free(fdopubkey);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -777,39 +625,42 @@ TEST_CASE("fdo_public_key_read", "[fdo_types][fdo]")
 void test_fdo_public_key_read(void)
 #endif
 {
-	fdo_public_key_t *ret;
-	fdor_t fdor = {
-	    0,
+	fdor_t *fdor = NULL;
+	fdo_public_key_t *fdopubkey = NULL;
+	// sample CBOR encoded public key
+	uint8_t pubkey_cbor[] = {
+		0x83, 0x38, 0x22, 0x02, 0x58, 0x60, 0x92, 0x11, 0x12, 0xFD, 0x17, 0xEC, 0x7F, 0x33,
+		0x05, 0x24, 0xFD, 0x4D, 0xE3, 0x18, 0xE5, 0x0A, 0x85, 0x93, 0x3A, 0xDA, 0xFF, 0x6B,
+		0x2F, 0x1B, 0x7C, 0x51, 0xE5, 0x5D, 0xFB, 0x52, 0x71, 0x02, 0x33, 0x94, 0xAE, 0x3F,
+		0x7D, 0x1F, 0xDE, 0x29, 0x82, 0x27, 0x30, 0x4A, 0x01, 0xE5, 0x4B, 0x08, 0x90, 0xFE,
+		0x98, 0xA3, 0xEA, 0x09, 0xD4, 0x01, 0x1C, 0xE0, 0xCC, 0xC5, 0x37, 0xCD, 0xCD, 0xFF,
+		0x55, 0x3B, 0x21, 0x83, 0x24, 0x93, 0x3C, 0x72, 0x55, 0xE2, 0x49, 0xB4, 0xA3, 0xF5,
+		0x38, 0x0E, 0x0D, 0x16, 0x58, 0x97, 0x15, 0xCE, 0x9F, 0x0B, 0xC7, 0xB2, 0xE8, 0x0F,
+		0xAF, 0xB6, 0x15, 0x89
 	};
 
-	ret = fdo_public_key_read(NULL);
-	TEST_ASSERT_NULL(ret);
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(pubkey_cbor), pubkey_cbor, sizeof(pubkey_cbor));
+	fdor->b.block_size = sizeof(pubkey_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
 
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 3, '[');
-	ret = fdo_public_key_read(NULL);
-	TEST_ASSERT_NULL(ret);
+	fdopubkey = fdo_public_key_read(NULL);
+	TEST_ASSERT_NULL(fdopubkey);
 
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 3, '[');
-	memset_s(fdor.b.block + 3, 5, ']');
-	ret = fdo_public_key_read(NULL);
-	TEST_ASSERT_NULL(ret);
+	fdopubkey = fdo_public_key_read(fdor);
+	TEST_ASSERT_NOT_NULL(fdopubkey);
 
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 3, '[');
-	memset_s(fdor.b.block + 3, 7, '[');
-	ret = fdo_public_key_read(NULL);
-	TEST_ASSERT_NULL(ret);
-	if (fdor.b.block_size != 0) {
-		fdo_free(fdor.b.block);
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
 	}
+	if (fdopubkey) {
+		fdo_public_key_free(fdopubkey);
+	}
+
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -818,21 +669,19 @@ TEST_CASE("fdo_rendezvous_free", "[fdo_types][fdo]")
 void test_fdo_rendezvous_free(void)
 #endif
 {
-	fdo_rendezvous_t *rv;
+	fdo_rendezvous_t *rv = NULL;
 
 	fdo_rendezvous_free(NULL);
-	rv = malloc(sizeof(fdo_rendezvous_t));
+	rv = fdo_alloc(sizeof(fdo_rendezvous_t));
 	TEST_ASSERT_NOT_NULL(rv);
 	memset_s(rv, sizeof(fdo_rendezvous_t), 0);
-	rv->ip = malloc(sizeof(fdo_ip_address_t));
+	rv->ip = fdo_alloc(sizeof(fdo_ip_address_t));
 	TEST_ASSERT_NOT_NULL(rv->ip);
-	rv->sch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_NONE,
-				 FDO_CRYPTO_HASH_TYPE_SHA_256);
+	rv->sch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, 32);
 	TEST_ASSERT_NOT_NULL(rv->sch);
-	rv->cch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_NONE,
-				 FDO_CRYPTO_HASH_TYPE_SHA_256);
+	rv->cch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, 48);
 	TEST_ASSERT_NOT_NULL(rv->cch);
-	rv->ui = malloc(sizeof(uint32_t));
+	rv->ui = fdo_alloc(sizeof(bool));
 	TEST_ASSERT_NOT_NULL(rv->ui);
 	rv->ss = fdo_string_alloc_with_str("Test str 1");
 	TEST_ASSERT_NOT_NULL(rv->ss);
@@ -840,175 +689,15 @@ void test_fdo_rendezvous_free(void)
 	TEST_ASSERT_NOT_NULL(rv->pw);
 	rv->wsp = fdo_string_alloc_with_str("Test str 3");
 	TEST_ASSERT_NOT_NULL(rv->wsp);
-	rv->me = fdo_string_alloc_with_str("Test str 4");
+	rv->me = fdo_alloc(sizeof(uint64_t));
 	TEST_ASSERT_NOT_NULL(rv->me);
-	fdo_rendezvous_free(rv);
-	TEST_ASSERT_TRUE(1);
-}
+	rv->bypass = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv->bypass);
+	rv->dev_only = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv->bypass);
 
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_rendezvous_write", "[fdo_types][fdo]")
-#else
-void test_fdo_rendezvous_write(void)
-#endif
-{
-
-	fdow_t fdow = {
-	    0,
-	};
-	fdo_rendezvous_t *rv;
-	bool ret;
-
-	ret = fdo_rendezvous_write(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	rv = malloc(sizeof(fdo_rendezvous_t));
-	TEST_ASSERT_NOT_NULL(rv);
-	memset_s(rv, sizeof(fdo_rendezvous_t), 0);
-	rv->ip = malloc(sizeof(fdo_ip_address_t));
-	TEST_ASSERT_NOT_NULL(rv->ip);
-	rv->sch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_NONE,
-				 FDO_CRYPTO_HASH_TYPE_SHA_256);
-	TEST_ASSERT_NOT_NULL(rv->sch);
-	rv->cch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_NONE,
-				 FDO_CRYPTO_HASH_TYPE_SHA_256);
-	TEST_ASSERT_NOT_NULL(rv->cch);
-	rv->ui = malloc(sizeof(uint32_t));
-	TEST_ASSERT_NOT_NULL(rv->ui);
-	rv->ss = fdo_string_alloc_with_str("Test str 1");
-	TEST_ASSERT_NOT_NULL(rv->ss);
-	rv->pw = fdo_string_alloc_with_str("Test str 2");
-	TEST_ASSERT_NOT_NULL(rv->pw);
-	rv->wsp = fdo_string_alloc_with_str("Test str 3");
-	TEST_ASSERT_NOT_NULL(rv->wsp);
-	rv->me = fdo_string_alloc_with_str("Test str 4");
-	TEST_ASSERT_NOT_NULL(rv->me);
-
-	ret = fdo_rendezvous_write(&fdow, rv);
-	TEST_ASSERT_TRUE(ret);
-	fdo_rendezvous_free(rv);
-	if (fdow.b.block != NULL) {
-		fdo_free(fdow.b.block);
-	}
-}
-
-extern int keyfromstring(char *key);
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("keyfromstring", "[fdo_types][fdo]")
-#else
-void test_keyfromstring(void)
-#endif
-{
-	char *key = "Invalid";
-	int ret;
-
-	ret = keyfromstring(NULL);
-	TEST_ASSERT_EQUAL_INT(-1, ret);
-
-	ret = keyfromstring(key);
-	TEST_ASSERT_EQUAL_INT(-1, ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_rendezvous_read", "[fdo_types][fdo]")
-#else
-void test_fdo_rendezvous_read(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_rendezvous_t *rv;
-	bool ret;
-
-	ret = fdo_rendezvous_read(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	rv = malloc(sizeof(fdo_rendezvous_t));
-	memset_s(rv, sizeof(fdo_rendezvous_t), 0);
-
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 10, '[');
-	ret = fdo_rendezvous_read(&fdor, rv);
-	TEST_ASSERT_FALSE(ret);
-
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 5, '[');
-
-	fdow_begin_sequence((fdow_t *)&fdor);
-	ret = fdo_rendezvous_read(&fdor, rv);
-	TEST_ASSERT_FALSE(ret);
-	free(rv);
-	if (fdor.b.block_size != 0) {
-		fdo_free(fdor.b.block);
-	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_rendezvous_list_add", "[fdo_types][fdo]")
-#else
-void test_fdo_rendezvous_list_add(void)
-#endif
-{
-	fdo_rendezvous_list_t list = {
-	    0,
-	};
-	fdo_rendezvous_t rv = {
-	    0,
-	};
-	int ret;
-
-	ret = fdo_rendezvous_list_add(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_rendezvous_list_add(&list, &rv);
-	TEST_ASSERT_TRUE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_rendezvous_list_get", "[fdo_types][fdo]")
-#else
-void test_fdo_rendezvous_list_get(void)
-#endif
-{
-	fdo_rendezvous_t *ret;
-
-	ret = fdo_rendezvous_list_get(NULL, 0);
-	TEST_ASSERT_NULL(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_rendezvous_list_read", "[fdo_types][fdo]")
-#else
-void test_fdo_rendezvous_list_read(void)
-#endif
-{
-	int ret;
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_rendezvous_list_t list = {
-	    0,
-	};
-
-	ret = fdo_rendezvous_list_read(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_rendezvous_list_read(&fdor, &list);
-	TEST_ASSERT_FALSE(ret);
-
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 10, '[');
-	ret = fdo_rendezvous_list_read(&fdor, &list);
-	TEST_ASSERT_FALSE(ret);
-	if (fdor.b.block_size != 0) {
-		fdo_free(fdor.b.block);
+	if (rv) {
+		fdo_rendezvous_free(rv);
 	}
 }
 
@@ -1018,22 +707,148 @@ TEST_CASE("fdo_rendezvous_list_write", "[fdo_types][fdo]")
 void test_fdo_rendezvous_list_write(void)
 #endif
 {
-	int ret;
-	fdow_t fdow = {
-	    0,
-	};
-	fdo_rendezvous_list_t list = {
-	    0,
-	};
+
+	fdow_t *fdow = NULL;
+	fdo_rendezvous_t *rv = NULL;
+	fdo_rendezvous_list_t *rvlist = NULL;
+	fdo_rendezvous_directive_t *rvdirectives = NULL;
+	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
 
 	ret = fdo_rendezvous_list_write(NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_rendezvous_list_write(&fdow, &list);
+	rv = fdo_rendezvous_alloc();
+	TEST_ASSERT_NOT_NULL(rv);
+
+	rv->ip = fdo_alloc(sizeof(fdo_ip_address_t));
+	TEST_ASSERT_NOT_NULL(rv->ip);
+	rv->sch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, 32);
+	TEST_ASSERT_NOT_NULL(rv->sch);
+	rv->cch = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, 32);
+	TEST_ASSERT_NOT_NULL(rv->cch);
+	rv->ui = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv->ui);
+	rv->ss = fdo_string_alloc_with_str("Test str 1");
+	TEST_ASSERT_NOT_NULL(rv->ss);
+	rv->pw = fdo_string_alloc_with_str("Test str 2");
+	TEST_ASSERT_NOT_NULL(rv->pw);
+	rv->wsp = fdo_string_alloc_with_str("Test str 3");
+	TEST_ASSERT_NOT_NULL(rv->wsp);
+	rv->me = fdo_alloc(sizeof(uint64_t));
+	TEST_ASSERT_NOT_NULL(rv->me);
+	rv->bypass = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv->bypass);
+	rv->dev_only = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv->bypass);
+
+	// create and add the rv structure to the directive
+	rvdirectives = fdo_alloc(sizeof(fdo_rendezvous_directive_t));
+	TEST_ASSERT_NOT_NULL(rvdirectives);
+	ret = fdo_rendezvous_list_add(rvdirectives, rv);
+	TEST_ASSERT_EQUAL_INT(1, ret);
+
+	// create and add the directive to the rv list
+	rvlist = fdo_rendezvous_list_alloc();
+	TEST_ASSERT_NOT_NULL(rvlist);
+	ret = fdo_rendezvous_directive_add(rvlist, rvdirectives);
+	TEST_ASSERT_EQUAL_INT(1, ret);
+
+	ret = fdo_rendezvous_list_write(fdow, rvlist);
 	TEST_ASSERT_TRUE(ret);
-	if (fdow.b.block != NULL) {
-		fdo_free(fdow.b.block);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
 	}
+	if (rvlist) {
+		fdo_rendezvous_list_free(rvlist);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_rendezvous_list_read", "[fdo_types][fdo]")
+#else
+void test_fdo_rendezvous_list_read(void)
+#endif
+{
+	fdor_t *fdor = NULL;
+	fdo_rendezvous_list_t *rvlist = NULL;
+	bool ret;
+	// sample CBOR encoded RV blob
+	uint8_t rv_cbor[] = {
+		0x81, 0x85, 0x82, 0x05, 0x69, 0x6C, 0x6F, 0x63, 0x61, 0x6C, 0x68, 0x6F, 0x73, 0x74,
+		0x82, 0x03, 0x19, 0x1F, 0x68, 0x82, 0x0C, 0x01, 0x82, 0x02, 0x44, 0x7F, 0x00, 0x00,
+		0x01, 0x82, 0x04, 0x19, 0x20, 0xFB
+	};
+
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(rv_cbor), rv_cbor, sizeof(rv_cbor));
+	fdor->b.block_size = sizeof(rv_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
+
+	ret = fdo_rendezvous_list_read(NULL, NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	rvlist = fdo_rendezvous_list_alloc();
+	TEST_ASSERT_NOT_NULL(rvlist);
+	ret = fdo_rendezvous_list_read(fdor, rvlist);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
+	if (rvlist) {
+		fdo_rendezvous_list_free(rvlist);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_rendezvous_list_add", "[fdo_types][fdo]")
+#else
+void test_fdo_rendezvous_list_add(void)
+#endif
+{
+	fdo_rendezvous_directive_t directives = {0};
+	fdo_rendezvous_t rv1 = {0};
+	fdo_rendezvous_t rv2 = {0};
+	int ret;
+
+	ret = fdo_rendezvous_list_add(NULL, NULL);
+	TEST_ASSERT_EQUAL_INT(0, ret);
+
+	rv1.dev_only = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv1.dev_only);
+	ret = fdo_rendezvous_list_add(&directives, &rv1);
+	TEST_ASSERT_EQUAL_INT(1, ret);
+
+	rv2.dev_only = fdo_alloc(sizeof(bool));
+	TEST_ASSERT_NOT_NULL(rv2.dev_only);
+	ret = fdo_rendezvous_list_add(&directives, &rv2);
+	TEST_ASSERT_EQUAL_INT(2, ret);
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_rendezvous_list_get", "[fdo_types][fdo]")
+#else
+void test_fdo_rendezvous_list_get(void)
+#endif
+{
+	fdo_rendezvous_t *ret = NULL;
+
+	ret = fdo_rendezvous_list_get(NULL, 0);
+	TEST_ASSERT_NULL(ret);
+
+
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1042,79 +857,68 @@ TEST_CASE("fdo_encrypted_packet_read", "[fdo_types][fdo]")
 void test_fdo_encrypted_packet_read(void)
 #endif
 {
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_encrypted_packet_t *ret;
-
-	ret = fdo_encrypted_packet_read(NULL);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_encrypted_packet_read(&fdor);
-	TEST_ASSERT_NULL(ret);
-
-	fdow_begin_sequence((fdow_t *)&fdor);
-	// Increse the block size to pass sequence read
-	fdor.b.block_size += 10;
-	memset_s(fdor.b.block, 10, '[');
-
-	ret = fdo_encrypted_packet_read(&fdor);
-	TEST_ASSERT_NULL(ret);
-	if (fdor.b.block_size != 0) {
-		fdo_free(fdor.b.block);
-	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_get_iv", "[fdo_types][fdo]")
-#else
-void test_fdo_get_iv(void)
-#endif
-{
-	bool ret;
-
-	ret = fdo_get_iv(NULL, NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_encrypted_packet_write", "[fdo_types][fdo]")
-#else
-void test_fdo_encrypted_packet_write(void)
-#endif
-{
-	fdow_t fdow = {
-	    0,
-	};
-	fdo_encrypted_packet_t pkt = {
-	    0,
-	};
-
-	fdo_encrypted_packet_write(NULL, NULL);
-	fdo_encrypted_packet_write(&fdow, &pkt);
-	TEST_ASSERT_TRUE(1);
-	if (fdow.b.block != NULL) {
-		fdo_free(fdow.b.block);
-	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_encrypted_packet_write_unwind", "[fdo_types][fdo]")
-#else
-void test_fdo_encrypted_packet_write_unwind(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
+	fdor_t *fdor = NULL;
 	fdo_encrypted_packet_t *pkt = NULL;
-	bool ret;
+	// sample CBOR encoded Encrypted Message body
+	// the changes are in
+	// protected header alg type {1 : 1/3/32/33}
+	// IV 12/7 bytes
+#if COSE_ENC_TYPE == 1
+	uint8_t enc_msg_cbor[] = {
+		0x83, 0x43, 0xa1, 0x01, 0x01, 0xa1, 0x05, 0x4c, 0xfe, 0x6b, 0x0d,
+		0x51, 0x5a, 0x74, 0xe6, 0xe8, 0xb5, 0xa0, 0x07, 0x89, 0x54, 0x48,
+		0x66, 0x0b, 0x35, 0xbc, 0x04, 0xd1, 0x05, 0x07, 0x9a, 0x0a, 0x2f,
+		0xfa, 0x25, 0x28, 0xd3, 0x53, 0x5e, 0xb5, 0x1e
+	};
+#elif COSE_ENC_TYPE == 3
+	uint8_t enc_msg_cbor[] = {
+		0x83, 0x43, 0xa1, 0x01, 0x03, 0xa1, 0x05, 0x4c, 0xfe, 0x6b, 0x0d,
+		0x51, 0x5a, 0x74, 0xe6, 0xe8, 0xb5, 0xa0, 0x07, 0x89, 0x54, 0x48,
+		0x66, 0x0b, 0x35, 0xbc, 0x04, 0xd1, 0x05, 0x07, 0x9a, 0x0a, 0x2f,
+		0xfa, 0x25, 0x28, 0xd3, 0x53, 0x5e, 0xb5, 0x1e
+	};
+#elif COSE_ENC_TYPE == 32
+	uint8_t enc_msg_cbor[] = {
+		0x83, 0x44, 0xa1, 0x01, 0x18, 0x20, 0xa1, 0x05, 0x47, 0xfe, 0x6b,
+		0x0d, 0x51, 0x5a, 0x74, 0xe6, 0x54,
+		0x48, 0x66, 0x0b, 0x35, 0xbc, 0x04, 0xd1, 0x05, 0x07, 0x9a, 0x0a,
+		0x2f, 0xfa, 0x25, 0x28, 0xd3, 0x53, 0x5e, 0xb5, 0x1e
+	};
+#else
+	uint8_t enc_msg_cbor[] = {
+		0x83, 0x44, 0xa1, 0x01, 0x18, 0x21, 0xa1, 0x05, 0x47, 0xfe, 0x6b,
+		0x0d, 0x51, 0x5a, 0x74, 0xe6, 0x54,
+		0x48, 0x66, 0x0b, 0x35, 0xbc, 0x04, 0xd1, 0x05, 0x07, 0x9a, 0x0a,
+		0x2f, 0xfa, 0x25, 0x28, 0xd3, 0x53, 0x5e, 0xb5, 0x1e
+	};
+#endif
 
-	ret = fdo_encrypted_packet_unwind(NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(enc_msg_cbor), enc_msg_cbor, sizeof(enc_msg_cbor));
+	fdor->b.block_size = sizeof(enc_msg_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
 
-	ret = fdo_encrypted_packet_unwind(&fdor, pkt);
-	TEST_ASSERT_FALSE(ret);
+	pkt = fdo_encrypted_packet_read(NULL);
+	TEST_ASSERT_NULL(pkt);
+
+	// positive test-case
+	pkt = fdo_encrypted_packet_read(fdor);
+	TEST_ASSERT_NOT_NULL(pkt);
+	if (pkt) {
+		fdo_encrypted_packet_free(pkt);
+		pkt = NULL;
+	}
+
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
+	if (pkt) {
+		fdo_encrypted_packet_free(pkt);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1123,63 +927,336 @@ TEST_CASE("fdo_encrypted_packet_windup", "[fdo_types][fdo]")
 void test_fdo_encrypted_packet_windup(void)
 #endif
 {
-	fdow_t fdow = {
-	    0,
-	};
+	// test this when encryption is mocked, add 'fdo_encrypted_packet_unwind()' as well
+	// ignore the test for now
+	TEST_IGNORE();
+
+	fdow_t *fdow = NULL;
 	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
 
 	ret = fdo_encrypted_packet_windup(NULL, 0);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_encrypted_packet_windup(&fdow, 0);
-	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_begin_readHMAC", "[fdo_types][fdo]")
-#else
-void test_fdo_begin_readHMAC(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	int sig_block_start;
-	bool ret;
-
-	ret = fdo_begin_readHMAC(NULL, &sig_block_start);
+	// empty fdow.b.block cannot be written, since there is nothing to write
+	ret = fdo_encrypted_packet_windup(fdow, 70);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_begin_readHMAC(&fdor, &sig_block_start);
-	TEST_ASSERT_FALSE(ret);
+	// random CBOR data being generated
+	TEST_ASSERT_TRUE(fdow_boolean(fdow, true));
+	ret = fdo_encrypted_packet_windup(fdow, 70);
+	TEST_ASSERT_TRUE(ret);
 
-	fdow_begin_object((fdow_t *)&fdor);
-	fdow_begin_object((fdow_t *)&fdor);
-	fdow_begin_object((fdow_t *)&fdor);
-	ret = fdo_begin_readHMAC(&fdor, &sig_block_start);
-	TEST_ASSERT_FALSE(ret);
-	if (fdor.b.block != NULL) {
-		free(fdor.b.block);
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
 	}
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_end_readHMAC", "[fdo_types][fdo]")
+TEST_CASE("fdo_aad_write", "[fdo_types][fdo]")
 #else
-void test_fdo_end_readHMAC(void)
+void test_fdo_aad_write(void)
 #endif
 {
-	fdor_t fdor = {
-	    0,
-	};
-	fdo_hash_t *hmac;
+
+	fdow_t *fdow = NULL;
 	bool ret;
 
-	ret = fdo_end_readHMAC(NULL, NULL, 0);
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	ret = fdo_aad_write(NULL, COSE_ENC_TYPE);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = fdo_end_readHMAC(&fdor, &hmac, 0);
+	ret = fdo_aad_write(fdow, COSE_ENC_TYPE);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_emblock_write", "[fdo_types][fdo]")
+#else
+void test_fdo_emblock_write(void)
+#endif
+{
+
+	fdow_t *fdow = NULL;
+	fdo_encrypted_packet_t *pkt = NULL;
+	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	ret = fdo_emblock_write(NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
+
+	pkt = fdo_encrypted_packet_alloc();
+	TEST_ASSERT_NOT_NULL(pkt);
+	pkt->aes_plain_type = COSE_ENC_TYPE;
+	pkt->em_body = fdo_byte_array_alloc(10);
+	ret = fdo_emblock_write(fdow, pkt);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
+	if (pkt) {
+		fdo_encrypted_packet_free(pkt);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_eat_write_payloadbasemap", "[fdo_types][fdo]")
+#else
+void test_fdo_eat_write_payloadbasemap(void)
+#endif
+{
+	fdow_t *fdow = NULL;
+	fdo_eat_payload_base_map_t *payload = NULL;
+	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	ret = fdo_eat_write_payloadbasemap(NULL, NULL);
+	TEST_ASSERT_FALSE(ret);
+	payload = fdo_alloc(sizeof(fdo_eat_payload_base_map_t));
+	TEST_ASSERT_NOT_NULL(payload);
+	ret = fdo_eat_write_payloadbasemap(fdow, payload);
+	TEST_ASSERT_TRUE(ret);
+
+	payload->eatpayloads = fdo_byte_array_alloc(10);
+	TEST_ASSERT_NOT_NULL(payload->eatpayloads);
+	memset_s(fdow->b.block, fdow->b.block_size, 0);
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+	ret = fdo_eat_write_payloadbasemap(fdow, payload);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
+	if (payload) {
+		fdo_byte_array_free(payload->eatpayloads);
+		fdo_free(payload);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_eat_write", "[fdo_types][fdo]")
+#else
+void test_fdo_eat_write(void)
+#endif
+{
+
+	fdow_t *fdow = NULL;
+	fdo_eat_t *eat = NULL;
+	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	ret = fdo_eat_write(NULL, NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	eat = fdo_eat_alloc();
+	TEST_ASSERT_NOT_NULL(eat);
+	eat->eat_payload = fdo_byte_array_alloc(10);
+	TEST_ASSERT_NOT_NULL(eat->eat_payload);
+	eat->eat_signature = fdo_byte_array_alloc(10);
+	TEST_ASSERT_NOT_NULL(eat->eat_signature);
+
+	ret = fdo_eat_write(fdow, eat);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
+	if (eat) {
+		fdo_eat_free(eat);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_cose_read", "[fdo_types][fdo]")
+#else
+void test_fdo_cose_read(void)
+#endif
+{
+	fdor_t *fdor = NULL;
+	fdo_cose_t *cose = NULL;
+	bool ret;
+	uint8_t cose_cbor[] = {
+		0x84, 0x44, 0xA1, 0x01, 0x38, 0x22, 0xA0, 0x41, 0x02, 0x41, 0x02
+	};
+
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(cose_cbor), cose_cbor, sizeof(cose_cbor));
+	fdor->b.block_size = sizeof(cose_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
+
+	ret = fdo_cose_read(NULL, NULL, true);
+	TEST_ASSERT_FALSE(ret);
+
+	cose = fdo_alloc(sizeof(fdo_cose_t));
+	ret = fdo_cose_read(fdor, cose, true);
+	TEST_ASSERT_TRUE(ret);
+
+	memcpy_s(fdor->b.block, sizeof(cose_cbor), cose_cbor, sizeof(cose_cbor));
+	fdor->b.block_size = sizeof(cose_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
+	ret = fdo_cose_read(fdor, cose, false);
+	TEST_ASSERT_FALSE(ret);
+
+	cose_cbor[0] = 0x83;
+	memcpy_s(fdor->b.block, sizeof(cose_cbor), cose_cbor, sizeof(cose_cbor));
+	fdor->b.block_size = sizeof(cose_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
+	ret = fdo_cose_read(fdor, cose, true);
+	TEST_ASSERT_FALSE(ret);
+
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_cose_write", "[fdo_types][fdo]")
+#else
+void test_fdo_cose_write(void)
+#endif
+{
+	fdow_t *fdow = NULL;
+	fdo_cose_t *cose = NULL;
+	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	ret = fdo_cose_write(NULL, NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	cose = fdo_alloc(sizeof(fdo_cose_t));
+	TEST_ASSERT_NOT_NULL(cose);
+	cose->cose_payload = fdo_byte_array_alloc(10);
+	TEST_ASSERT_NOT_NULL(cose->cose_payload);
+	cose->cose_signature = fdo_byte_array_alloc(10);
+	TEST_ASSERT_NOT_NULL(cose->cose_signature);
+
+	// missing parameters
+	ret = fdo_cose_write(fdow, cose);
+	TEST_ASSERT_FALSE(ret);
+
+	cose->cose_ph = fdo_alloc(sizeof(fdo_cose_protected_header_t));
+	TEST_ASSERT_NOT_NULL(cose->cose_ph);
+	cose->cose_uph = fdo_alloc(sizeof(fdo_cose_unprotected_header_t));
+	TEST_ASSERT_NOT_NULL(cose->cose_uph);
+	ret = fdo_cose_write(fdow, cose);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
+	if (cose) {
+		fdo_cose_free(cose);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_siginfo_read", "[fdo_types][fdo]")
+#else
+void test_fdo_siginfo_read(void)
+#endif
+{
+	fdor_t *fdor = NULL;
+	bool ret;
+#if defined(ECDSA384_DA)
+	uint8_t siginfo_cbor[] = {
+		0x82, 0x38, 0x22, 0x40
+	};
+#else
+	uint8_t siginfo_cbor[] = {
+		0x82, 0x26, 0x40
+	};
+#endif
+
+	fdor = fdo_alloc(sizeof(fdor_t));
+	TEST_ASSERT_NOT_NULL(fdor);
+	TEST_ASSERT_TRUE(fdor_init(fdor));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdor->b));
+	memcpy_s(fdor->b.block, sizeof(siginfo_cbor), siginfo_cbor, sizeof(siginfo_cbor));
+	fdor->b.block_size = sizeof(siginfo_cbor);
+	TEST_ASSERT_TRUE(fdor_parser_init(fdor));
+
+	ret = fdo_siginfo_read(NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	ret = fdo_siginfo_read(fdor);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_siginfo_write", "[fdo_types][fdo]")
+#else
+void test_fdo_siginfo_write(void)
+#endif
+{
+	fdow_t *fdow = NULL;
+	bool ret;
+
+	fdow = fdo_alloc(sizeof(fdow_t));
+	TEST_ASSERT_NOT_NULL(fdow);
+	TEST_ASSERT_TRUE(fdow_init(fdow));
+	TEST_ASSERT_TRUE(fdo_block_alloc(&fdow->b));
+	TEST_ASSERT_TRUE(fdow_encoder_init(fdow));
+
+	ret = fdo_siginfo_write(NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	ret = fdo_siginfo_write(fdow);
+	TEST_ASSERT_TRUE(ret);
+
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1205,55 +1282,15 @@ void test_fdo_signature_verification(void)
 	ret = fdo_signature_verification(&plain_text, &sg, &pk);
 	TEST_ASSERT_FALSE(ret);
 
-	/*Random bytes*/
-	plain_text.bytes = malloc(100);
+	// Random bytes
+	plain_text.bytes = fdo_alloc(100);
 	plain_text.byte_sz = 100;
-	sg.bytes = malloc(100);
+	sg.bytes = fdo_alloc(100);
 	sg.byte_sz = 100;
 	ret = fdo_signature_verification(&plain_text, &sg, &pk);
 	TEST_ASSERT_FALSE(ret);
-	free(plain_text.bytes);
-	free(sg.bytes);
-}
-
-bool fdo_read_pk_null(fdor_t *fdor);
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_read_pk_null", "[fdo_types][fdo]")
-#else
-void test_fdo_read_pk_null(void)
-#endif
-{
-	fdor_t fdor = {
-	    0,
-	};
-	bool ret;
-
-	ret = fdo_read_pk_null(NULL);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_read_pk_null(&fdor);
-	TEST_ASSERT_FALSE(ret);
-
-	fdo_write_tag((fdow_t *)&fdor, "pk");
-	ret = fdo_read_pk_null(&fdor);
-	TEST_ASSERT_FALSE(ret);
-
-	if (fdor.b.block != NULL) {
-		fdo_free(fdor.b.block);
-	}
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_kv_alloc_with_array", "[fdo_types][fdo]")
-#else
-void test_fdo_kv_alloc_with_array(void)
-#endif
-{
-	fdo_key_value_t *ret;
-
-	ret = fdo_kv_alloc_with_array(NULL, NULL);
-	TEST_ASSERT_NULL(ret);
+	fdo_free(plain_text.bytes);
+	fdo_free(sg.bytes);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1269,23 +1306,6 @@ void test_fdo_kv_alloc_with_str(void)
 }
 
 #ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_service_info_alloc_with", "[fdo_types][fdo]")
-#else
-void test_fdo_service_info_alloc_with(void)
-#endif
-{
-	char key = 0;
-	char val = 0;
-	fdo_service_info_t *ret;
-
-	ret = fdo_service_info_alloc_with(NULL, NULL);
-	TEST_ASSERT_NULL(ret);
-
-	ret = fdo_service_info_alloc_with(&key, &val);
-	TEST_ASSERT_NULL(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
 TEST_CASE("fdo_service_info_add_kv_str", "[fdo_types][fdo]")
 #else
 void test_fdo_service_info_add_kv_str(void)
@@ -1294,32 +1314,141 @@ void test_fdo_service_info_add_kv_str(void)
 	fdo_service_info_t *si = NULL;
 	bool ret;
 
-	/* sanity negative case */
+	// sanity negative case
 	ret = fdo_service_info_add_kv_str(si, NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	si = fdo_service_info_alloc();
 	TEST_ASSERT_NOT_NULL(si);
 
-	/* value=NULL is a positive case */
+	// value=NULL is a positive case
 	ret = fdo_service_info_add_kv_str(si, "dummy_key", "");
 	TEST_ASSERT_TRUE(ret);
 
-	/* key=NULL is a negative case */
+	// key=NULL is a negative case
 	ret = fdo_service_info_add_kv_str(si, "", "dummy_value");
 	TEST_ASSERT_FALSE(ret);
 
-	/* key=non-NULL and val=non-NULL is a positive case */
+	// key=non-NULL and val=non-NULL is a positive case
 	ret =
 	    fdo_service_info_add_kv_str(si, "dummy_key", "dummy_initial_value");
 	TEST_ASSERT_TRUE(ret);
 
-	/* update existing key with updated value is a positive case */
+	// update existing key with updated value is a positive case
 	ret =
 	    fdo_service_info_add_kv_str(si, "dummy_key", "dummy_updated_value");
 	TEST_ASSERT_TRUE(ret);
 	if (si)
 		fdo_service_info_free(si);
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_service_info_add_kv_bool", "[fdo_types][fdo]")
+#else
+void test_fdo_service_info_add_kv_bool(void)
+#endif
+{
+	fdo_service_info_t *si = NULL;
+	bool ret;
+
+	// sanity negative case
+	ret = fdo_service_info_add_kv_bool(si, NULL, false);
+	TEST_ASSERT_FALSE(ret);
+
+	si = fdo_service_info_alloc();
+	TEST_ASSERT_NOT_NULL(si);
+
+	// value=NULL is a positive case
+	ret = fdo_service_info_add_kv_bool(si, "dummy_key", true);
+	TEST_ASSERT_TRUE(ret);
+
+	// key=NULL is a negative case
+	ret = fdo_service_info_add_kv_bool(si, "", false);
+	TEST_ASSERT_FALSE(ret);
+
+	// update existing key with updated value is a positive case
+	ret =
+	    fdo_service_info_add_kv_bool(si, "dummy_key", false);
+	TEST_ASSERT_TRUE(ret);
+
+	if (si) {
+		fdo_service_info_free(si);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_service_info_add_kv_int", "[fdo_types][fdo]")
+#else
+void test_fdo_service_info_add_kv_int(void)
+#endif
+{
+	fdo_service_info_t *si = NULL;
+	bool ret;
+
+	// sanity negative case
+	ret = fdo_service_info_add_kv_int(si, NULL, 0);
+	TEST_ASSERT_FALSE(ret);
+
+	si = fdo_service_info_alloc();
+	TEST_ASSERT_NOT_NULL(si);
+
+	// positive case
+	ret = fdo_service_info_add_kv_int(si, "dummy_key", -1);
+	TEST_ASSERT_TRUE(ret);
+
+	// key=NULL is a negative case
+	ret = fdo_service_info_add_kv_int(si, "", 7);
+	TEST_ASSERT_FALSE(ret);
+
+	// update existing key with updated value is a positive case
+	ret =
+	    fdo_service_info_add_kv_int(si, "dummy_key", 7);
+	TEST_ASSERT_TRUE(ret);
+
+	if (si) {
+		fdo_service_info_free(si);
+	}
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("fdo_service_info_add_kv_bin", "[fdo_types][fdo]")
+#else
+void test_fdo_service_info_add_kv_bin(void)
+#endif
+{
+	fdo_service_info_t *si = NULL;
+	fdo_byte_array_t *bytes = NULL;
+	bool ret;
+
+	// sanity negative case
+	ret = fdo_service_info_add_kv_bin(si, NULL, 0);
+	TEST_ASSERT_FALSE(ret);
+
+	si = fdo_service_info_alloc();
+	TEST_ASSERT_NOT_NULL(si);
+
+	// positive case
+	bytes = fdo_byte_array_alloc(10);
+	TEST_ASSERT_NOT_NULL(bytes);
+	ret = fdo_service_info_add_kv_bin(si, "dummy_key", bytes);
+	TEST_ASSERT_TRUE(ret);
+
+	// key=NULL is a negative case
+	ret = fdo_service_info_add_kv_bin(si, "", bytes);
+	TEST_ASSERT_FALSE(ret);
+
+	// update existing key with updated value is a positive case
+	memset_s(bytes->bytes, 10, 1);
+	ret =
+	    fdo_service_info_add_kv_bin(si, "dummy_key", bytes);
+	TEST_ASSERT_TRUE(ret);
+
+	if (si) {
+		fdo_service_info_free(si);
+	}
+	if (bytes){
+		fdo_byte_array_free(bytes);
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1341,360 +1470,6 @@ void test_fdo_service_info_add_kv(void)
 
 	ret = fdo_service_info_add_kv(&si, &kvs);
 	TEST_ASSERT_TRUE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("psiparsing", "[fdo_types][fdo]")
-#else
-void test_psiparsing(void)
-#endif
-{
-	char psi_valid_string[100] = "devconfig:maxver~1,devconfig:minver~1";
-	int psi_len = 0;
-	bool ret = 0;
-	int cbret = 0;
-	fdo_sdk_service_info_module_list_t list;
-
-	fdo_string_t *psi = malloc(sizeof(fdo_string_t));
-	TEST_ASSERT_NOT_NULL(psi);
-	psi->bytes = psi_valid_string;
-	psi_len = strnlen_s(psi_valid_string, FDO_MAX_STR_SIZE);
-	TEST_ASSERT_TRUE(psi_len != 0);
-	psi->byte_sz = psi_len;
-
-	// NULL check case
-	ret = fdo_psi_parsing(&list, psi->bytes, psi_len, NULL);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, 0);
-
-	// No module case
-	ret = fdo_psi_parsing(NULL, psi->bytes, psi_len, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, true);
-	TEST_ASSERT_EQUAL(cbret, FDO_SI_SUCCESS);
-	free(psi);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_get_module_name_msg_value", "[fdo_types][fdo]")
-#else
-void test_fdo_get_module_name_msg_value(void)
-#endif
-{
-	char psi[FDO_MAX_STR_SIZE];
-	char *psi_tuple = psi;
-	int psi_len = 0;
-	bool ret = 0;
-	int cbret = 0;
-	char mod_name[16];
-	char msg_name[16];
-	char val_name[16];
-
-	/*++++++++++++++++ Positive Cases +++++++++++++++++++*/
-
-	/*======== iteration-0 ========*/
-	psi_len = strnlen_s("devconfig:minver~1", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "devconfig:minver~1")), 0);
-	strcpy_s(psi_tuple, psi_len + 1, "devconfig:minver~1");
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, true);
-	TEST_ASSERT_EQUAL(cbret, 0);
-	TEST_ASSERT_EQUAL_STRING(mod_name, "devconfig");
-	TEST_ASSERT_EQUAL_STRING(msg_name, "minver");
-	TEST_ASSERT_EQUAL_STRING(val_name, "1");
-
-	/*======== iteration-1 ========*/
-	psi_len = strnlen_s("keypair:maxver~2", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "keypair:maxver~2")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, true);
-	TEST_ASSERT_EQUAL(cbret, 0);
-	TEST_ASSERT_EQUAL_STRING(mod_name, "keypair");
-	TEST_ASSERT_EQUAL_STRING(msg_name, "maxver");
-	TEST_ASSERT_EQUAL_STRING(val_name, "2");
-
-	/*======== iteration-2 ========*/
-	psi_len = strnlen_s("keypair:gen~1/RSA", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "keypair:gen~1/RSA")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, true);
-	TEST_ASSERT_EQUAL(cbret, 0);
-	TEST_ASSERT_EQUAL_STRING(mod_name, "keypair");
-	TEST_ASSERT_EQUAL_STRING(msg_name, "gen");
-	TEST_ASSERT_EQUAL_STRING(val_name, "1/RSA");
-
-	/*======== iteration-3 ========*/
-	psi_len = strnlen_s("some_mod:some_msg~", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "some_mod:some_msg~")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, true);
-	TEST_ASSERT_EQUAL(cbret, 0);
-	TEST_ASSERT_EQUAL_STRING(mod_name, "some_mod");
-	TEST_ASSERT_EQUAL_STRING(msg_name, "some_msg");
-	TEST_ASSERT_EQUAL_STRING(val_name, "");
-
-	/*++++++++++++++++Negative Cases+++++++++++++++++++*/
-
-	/*======== iteration-0 ========*/
-	psi_len = strnlen_s("devconfig~minver:12", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "devconfig~minver:12")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, MESSAGE_BODY_ERROR);
-
-	/*======== iteration-1 ========*/
-	psi_len = strnlen_s("keypair~maxver:12", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "keypair~maxver:12")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, MESSAGE_BODY_ERROR);
-
-	/*======== iteration-2 ========*/
-	psi_len = strnlen_s("devconfig:minver:1", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "devconfig:minver:1")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, MESSAGE_BODY_ERROR);
-
-	/*======== iteration-3 ========*/
-	psi_len = strnlen_s("keypair~maxver~1", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "keypair~maxver~1")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, MESSAGE_BODY_ERROR);
-
-	/*======== iteration-4 ========*/
-	psi_len = strnlen_s("keypair~gen::", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL((strcpy_s(psi_tuple, psi_len + 1, "keypair~gen::")),
-			  0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, MESSAGE_BODY_ERROR);
-
-	/*======== iteration-5 ========*/
-	psi_len = strnlen_s("keypair#gen:1/RSA", FDO_MAX_STR_SIZE);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-	TEST_ASSERT_EQUAL(
-	    (strcpy_s(psi_tuple, psi_len + 1, "keypair#gen:1/RSA")), 0);
-
-	ret = fdo_get_module_name_msg_value(psi_tuple, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, MESSAGE_BODY_ERROR);
-
-	/*======== iteration-6 ========*/
-	psi_len =
-	    strnlen_s("devconfig:minver~"
-		      "01234567890123456789012345678901234567890123456789012345"
-		      "67890123456789012345678901234567890123456789"
-		      "01234567890123456789012345678901234567890123456789012345"
-		      "67890123456789012345678901234567890123456789"
-		      "01234567890123456789012345678901234567890123456789012345"
-		      "67890123456789012345678901234567890123456789",
-		      2048);
-	TEST_ASSERT_NOT_EQUAL(psi_len, 0);
-
-	char *invalid_psi = malloc(psi_len + 1);
-	strcpy_s(invalid_psi, psi_len + 1,
-		 "devconfig:minver~"
-		 "0123456789012345678901234567890123456789012345678901234567890"
-		 "123456789012345678901234567890123456789"
-		 "0123456789012345678901234567890123456789012345678901234567890"
-		 "123456789012345678901234567890123456789"
-		 "0123456789012345678901234567890123456789012345678901234567890"
-		 "123456789012345678901234567890123456789");
-
-	ret = fdo_get_module_name_msg_value(invalid_psi, psi_len, mod_name,
-					    msg_name, val_name, &cbret);
-	TEST_ASSERT_EQUAL(ret, false);
-	TEST_ASSERT_EQUAL(cbret, FDO_SI_CONTENT_ERROR);
-	free(invalid_psi);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_mod_data_kv", "[fdo_types][fdo]")
-#else
-void test_fdo_mod_data_kv(void)
-#endif
-{
-	fdo_sdk_si_key_value sv_kv;
-	int ret = 0;
-	int res_indicator = 0;
-	sv_kv.key = "pubkey";
-	sv_kv.value = "pubkey sample of 1024 bytes";
-	char mod_name[] = "keypair";
-	ret = fdo_mod_data_kv(mod_name, &sv_kv);
-	TEST_ASSERT_TRUE(ret);
-	strcmp_s(sv_kv.key, 18, "keypair:pubkey", &res_indicator);
-	TEST_ASSERT_TRUE(res_indicator == 0);
-	strcmp_s(sv_kv.value, 27, "pubkey sample of 1024 bytes",
-		 &res_indicator);
-	TEST_ASSERT_TRUE(res_indicator == 0);
-
-	// Negative Test cases
-	ret = fdo_mod_data_kv(mod_name, NULL);
-	TEST_ASSERT_FALSE(ret);
-	if (sv_kv.key)
-		fdo_free(sv_kv.key);
-	if (sv_kv.value)
-		fdo_free(sv_kv.value);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_osi_parsing", "[fdo_types][fdo]")
-#else
-void test_fdo_osi_parsing(void)
-#endif
-{
-	fdor_t test_fdor;
-	fdo_sdk_si_key_value kv;
-	fdo_sdk_service_info_module_list_t module_list = {0};
-	bool ret;
-	int retval = 0;
-
-	test_fdor.need_comma = 0;
-	test_fdor.b.cursor = 0;
-	test_fdor.b.block_max = 100;
-	test_fdor.b.block_size = 51;
-	test_fdor.need_comma = 0;
-
-	char in[100] =
-	    "{\"mcu_service:read\":\"abcde\",\"devname:maxver\":\"1.11\"}";
-	test_fdor.b.block = (uint8_t *)in;
-
-	fdor_begin_object(&test_fdor);
-	ret = fdo_osi_parsing(&test_fdor, &module_list, &kv, &retval);
-	TEST_ASSERT_TRUE(ret);
-
-	ret = fdo_osi_parsing(NULL, NULL, NULL, &retval);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_osi_parsing(NULL, NULL, NULL, NULL);
-	TEST_ASSERT_FALSE(ret);
-}
-
-static int cb(fdo_sdk_si_type type, int *count, fdo_sdk_si_key_value *si)
-{
-	(void)type;
-	(void)count;
-	(void)si;
-	return FDO_SI_CONTENT_ERROR;
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_get_dsi_count", "[fdo_types][fdo]")
-#else
-void test_fdo_get_dsi_count(void)
-#endif
-{
-	fdo_sdk_service_info_module_list_t module_list = {0};
-	bool ret = false;
-	int mod_mes_count = 2;
-	int cb_return_val = 0;
-
-	ret = fdo_get_dsi_count(&module_list, NULL, &cb_return_val);
-	TEST_ASSERT_FALSE(ret);
-
-	module_list.module.service_info_callback = cb;
-	ret = fdo_get_dsi_count(&module_list, &mod_mes_count, &cb_return_val);
-	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_supply_moduleOSI", "[fdo_types][fdo]")
-#else
-void test_fdo_supply_moduleOSI(void)
-#endif
-{
-	bool ret = 0;
-	int cb_return_val = 0;
-
-	ret = fdo_supply_moduleOSI(NULL, NULL, NULL, &cb_return_val);
-	TEST_ASSERT_FALSE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_supply_modulePSI", "[fdo_types][fdo]")
-#else
-void test_fdo_supply_modulePSI(void)
-#endif
-{
-	bool ret = 0;
-	int cb_return_val = 0;
-	fdo_sdk_si_key_value sv_kv;
-	char mod_name;
-
-	ret = fdo_supply_modulePSI(NULL, NULL, NULL, &cb_return_val);
-	TEST_ASSERT_FALSE(ret);
-
-	ret = fdo_supply_modulePSI(NULL, &mod_name, &sv_kv, &cb_return_val);
-	TEST_ASSERT_TRUE(ret);
-}
-
-#ifdef TARGET_OS_FREERTOS
-TEST_CASE("fdo_construct_module_dsi", "[fdo_types][fdo]")
-#else
-void test_fdo_construct_module_dsi(void)
-#endif
-{
-	bool ret = 0;
-	int cb_return_val = 0;
-	fdo_sdk_service_info_module_list_t list_dsi;
-	fdo_sv_info_dsi_info_t dsi_info;
-
-	ret = fdo_construct_module_dsi(NULL, NULL, &cb_return_val);
-	TEST_ASSERT_FALSE(ret);
-
-	dsi_info.list_dsi = &list_dsi;
-	dsi_info.list_dsi->module.service_info_callback = cb;
-	ret = fdo_construct_module_dsi(&dsi_info, NULL, &cb_return_val);
-	TEST_ASSERT_FALSE(ret);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -1720,15 +1495,15 @@ void test_fdo_compare_hashes(void)
 	h2 = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_SHA_256, 50);
 	TEST_ASSERT_NOT_EQUAL(h2, NULL);
 
-	/* same hash content */
+	// same hash content
 	ret = memcpy_s(h2->hash->bytes, 50, (uint8_t *)hash1,
 		       strnlen_s(hash1, 50));
 	TEST_ASSERT_EQUAL(ret, 0);
 
-	/* positive case */
+	// positive case
 	TEST_ASSERT_EQUAL(fdo_compare_hashes(h1, h2), true);
 
-	/* Negative cases */
+	// Negative cases
 	TEST_ASSERT_EQUAL(fdo_compare_hashes(NULL, NULL), false);
 	TEST_ASSERT_EQUAL(fdo_compare_hashes(NULL, h2), false);
 	TEST_ASSERT_EQUAL(fdo_compare_hashes(h1, NULL), false);
@@ -1736,7 +1511,7 @@ void test_fdo_compare_hashes(void)
 	h1->hash_type = FDO_CRYPTO_HASH_TYPE_SHA_384;
 	TEST_ASSERT_EQUAL(fdo_compare_hashes(h1, h2), false);
 
-	/* different hash content */
+	// different hash content
 	ret = memcpy_s(h2->hash->bytes, 50, (uint8_t *)hash2,
 		       strnlen_s(hash2, 50));
 	TEST_ASSERT_EQUAL(ret, 0);
@@ -1769,20 +1544,20 @@ void test_fdo_compare_byte_arrays(void)
 	ba2 = fdo_byte_array_alloc(50);
 	TEST_ASSERT_NOT_EQUAL(ba2, NULL);
 
-	/* same array content */
+	// same array content
 	ret =
 	    memcpy_s(ba2->bytes, 50, (uint8_t *)array1, strnlen_s(array1, 50));
 	TEST_ASSERT_EQUAL(ret, 0);
 
-	/* positive case */
+	// positive case
 	TEST_ASSERT_EQUAL(fdo_compare_byte_arrays(ba1, ba2), true);
 
-	/* Negative cases */
+	// Negative cases
 	TEST_ASSERT_EQUAL(fdo_compare_byte_arrays(NULL, NULL), false);
 	TEST_ASSERT_EQUAL(fdo_compare_byte_arrays(NULL, ba2), false);
 	TEST_ASSERT_EQUAL(fdo_compare_byte_arrays(ba1, NULL), false);
 
-	/* different array content */
+	// different array content
 	ret =
 	    memcpy_s(ba2->bytes, 50, (uint8_t *)array2, strnlen_s(array2, 50));
 	TEST_ASSERT_EQUAL(ret, 0);
@@ -1801,10 +1576,10 @@ void test_fdo_compare_rvLists(void)
 	fdo_rendezvous_list_t list1 = {0};
 	fdo_rendezvous_list_t list2 = {0};
 
-	/* positive case */
+	// positive case
 	TEST_ASSERT_EQUAL(fdo_compare_rv_lists(&list1, &list2), true);
 
-	/* Negative cases */
+	// Negative cases
 	TEST_ASSERT_EQUAL(fdo_compare_rv_lists(NULL, NULL), false);
 	TEST_ASSERT_EQUAL(fdo_compare_rv_lists(NULL, &list2), false);
 	TEST_ASSERT_EQUAL(fdo_compare_rv_lists(&list1, NULL), false);
