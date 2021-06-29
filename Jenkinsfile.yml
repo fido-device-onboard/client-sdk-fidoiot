@@ -43,9 +43,12 @@ node('ccode'){
         echo $TINYCBOR_ROOT
         cd $WORKSPACE/client-sdk
         $WORKSPACE/client-sdk/build.sh
-        tar -cvzf x86_ecdsa256_bin.tar.gz x86_ecdsa256_bin
-        tar -cvzf x86_ecdsa384_bin.tar.gz x86_ecdsa384_bin
-        tar -cvzf tpm_ecdsa256_bin.tar.gz tpm_ecdsa256_bin
+        tar -cvzf x86_ecdsa256_gcm_bin.tar.gz x86_ecdsa256_gcm_bin
+        tar -cvzf x86_ecdsa256_ccm_bin.tar.gz x86_ecdsa256_ccm_bin
+        tar -cvzf x86_ecdsa384_gcm_bin.tar.gz x86_ecdsa384_gcm_bin
+        tar -cvzf x86_ecdsa384_ccm_bin.tar.gz x86_ecdsa384_ccm_bin
+        tar -cvzf tpm_ecdsa256_gcm_bin.tar.gz tpm_ecdsa256_gcm_bin
+        tar -cvzf tpm_ecdsa256_ccm_bin.tar.gz tpm_ecdsa256_ccm_bin
       '''
       print "Archive the artifacts"
       archiveArtifacts artifacts: 'client-sdk/*_bin.tar.gz', fingerprint: true, allowEmptyArchive: false
@@ -71,8 +74,8 @@ node('ccode'){
       sh '''
         tar -xvzf test-fidoiot/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* test-fidoiot/binaries/pri-fidoiot/
-        cp client-sdk/x86_ecdsa256_bin/linux-client test-fidoiot/binaries/client-sdk-fidoiot/
-        cp -r client-sdk/x86_ecdsa256_bin/data test-fidoiot/
+        cp client-sdk/x86_ecdsa256_gcm_bin/linux-client test-fidoiot/binaries/client-sdk-fidoiot/
+        cp -r client-sdk/x86_ecdsa256_gcm_bin/data test-fidoiot/
       '''
 
       // Updating the TO0 scheduling time interval
