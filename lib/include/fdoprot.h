@@ -156,6 +156,7 @@ typedef struct fdo_prot_s {
 	fdo_rendezvous_t *rv;
 	fdo_cose_t *to1d_cose;
 	uint16_t serv_req_info_num;
+	fdo_string_t *serviceinfo_invalid_modname;
 	int maxOwnerServiceInfoSz;
 	int maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
