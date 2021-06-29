@@ -130,7 +130,7 @@ int32_t msg68(fdo_prot_t *ps)
 	}
 
 	if (!fdo_encrypted_packet_windup(
-		&ps->fdow, FDO_TO2_GET_NEXT_OWNER_SERVICE_INFO, ps->iv)) {
+		&ps->fdow, FDO_TO2_GET_NEXT_OWNER_SERVICE_INFO)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to create Encrypted Message\n");
 		goto err;
 	}

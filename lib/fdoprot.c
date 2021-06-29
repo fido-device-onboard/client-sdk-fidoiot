@@ -19,11 +19,6 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 
-/* This is a test mode to skip the CEC1702 signing and present a constant nonce_to1proof
- * nonce and signature.  These were generated in the server.
- */
-//#define CONSTANT_N4
-
 #ifndef asizeof
 #define asizeof(x) (sizeof(x) / sizeof(x)[0])
 #endif
@@ -80,14 +75,6 @@ static state_func to2_state_fn[] = {
  */
 static void ps_free(fdo_prot_t *ps)
 {
-	if (ps->fdo_redirect.plain_text) {
-		fdo_byte_array_free(ps->fdo_redirect.plain_text);
-		ps->fdo_redirect.plain_text = NULL;
-	}
-	if (ps->fdo_redirect.obsig) {
-		fdo_byte_array_free(ps->fdo_redirect.obsig);
-		ps->fdo_redirect.obsig = NULL;
-	}
 	if (ps->nonce_to2proveov) {
 		fdo_byte_array_free(ps->nonce_to2proveov);
 		ps->nonce_to2proveov = NULL;
@@ -289,11 +276,6 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 	ps->dev_cred = dev_cred;
 	ps->g2 = dev_cred->owner_blk->guid;
 	ps->round_trip_count = 0;
-	ps->iv = fdo_alloc(sizeof(fdo_iv_t));
-	if (!ps->iv) {
-		LOG(LOG_ERROR, "Malloc failed!\n");
-		return false;
-	}
 
 	/* Initialize svinfo related data */
 	if (module_list) {
@@ -311,7 +293,6 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 					      FDO_SI_START)) {
 			LOG(LOG_ERROR,
 			    "Sv_info: One or more module's START failed\n");
-			fdo_free(ps->iv);
 			fdo_free(ps->dsi_info);
 			return false;
 		}

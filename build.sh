@@ -108,11 +108,11 @@ function run_unit_test
   make -j$(nproc) | tee -a $TEST_OUTPUT
 }
 
-run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=ctr
-run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=cbc
-run_unit_test -DDA=ecdsa384 -DKEX=ecdh384 -DAES_MODE=ctr
-run_unit_test -DDA=ecdsa384 -DKEX=ecdh384 -DAES_MODE=cbc
-run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=ctr -DDA_FILE=pem
+run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=gcm
+run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=ccm
+run_unit_test -DDA=ecdsa384 -DKEX=ecdh384 -DAES_MODE=gcm
+run_unit_test -DDA=ecdsa384 -DKEX=ecdh384 -DAES_MODE=ccm
+run_unit_test -DDA=ecdsa256 -DKEX=ecdh -DAES_MODE=gcm -DDA_FILE=pem
 
 # DO NOT change the AWK search string, the spaces has been kept deliberately.
 fail_count=$(awk '/Tests Failed  :/ {split($0,a,": "); count+=a[2]} END{print count}' $TEST_OUTPUT)

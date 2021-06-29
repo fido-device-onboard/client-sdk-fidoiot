@@ -37,11 +37,6 @@ int isalnum(int c);
 	}
 #endif
 
-#define b64char_check(y)                                                       \
-	if (!(isalnum(y) || '+' == y || '/' == y || '=' == y)) {               \
-		return -1;                                                     \
-	}
-
 /* Printing priorities. */
 typedef enum log_level {
 	LOG_ERROR,
@@ -80,11 +75,9 @@ typedef enum log_level {
 #define ATTRIBUTE_FALLTHROUGH
 #endif /* TARGET_OS_MBEDOS */
 
-#define BUFF_SIZE_0_BYTES 0
 #define BUFF_SIZE_4_BYTES 4
 #define BUFF_SIZE_8_BYTES 8
 #define BUFF_SIZE_10_BYTES 10
-#define BUFF_SIZE_12_BYTES 12
 #define BUFF_SIZE_16_BYTES 16
 #define BUFF_SIZE_32_BYTES 32
 #define BUFF_SIZE_48_BYTES 48
@@ -103,8 +96,7 @@ typedef enum log_level {
    - as a replacement for strlen()/strcat()
 */
 #define FDO_MAX_STR_SIZE BUFF_SIZE_512_BYTES
-#define FDO_DEBUG_BUF_SIZE BUFF_SIZE_2K_BYTES
-#define BIT7_MASK 0x80
+
 /// Test if file exists
 /*!
   \param[in] filename
@@ -122,23 +114,6 @@ bool file_exists(char const *filename);
   \returns size of the file in bytes
 */
 size_t get_file_size(char const *filename);
-
-#if 0
-/// Allocate a buffer to hold the content of a file and load
-/*!
-  Logs an error message on failure.
-
-  \param[in] filename
-  The file path.
-  \param[out] size
-  The allocated size of the buffer in bytes (same as file size).
-
-  \returns
-  A pointer to the allocated buffer or NULL if the allocation failed.
-
-*/
-void *new_buffer_from_file(const char *filename, size_t *size);
-#endif
 
 /// print a buffer to standard out using default options
 /*!

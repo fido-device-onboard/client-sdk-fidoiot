@@ -173,153 +173,6 @@ bool fdo_bits_fill(fdo_bits_t **bits)
 	return true;
 }
 
-#if 0
-/**
- * Initialize the bits with the specified data
- * @param b - pointer to the struct bits which has to be initialized
- * @param data - data to be initialized
- * @param data_len - length of the data
- * @return true if initialized else false
- */
-bool fdo_bits_fill_with(fdo_bits_t *b, uint8_t *data, uint32_t data_len)
-{
-	b->byte_sz = data_len;
-	if (!fdo_bits_fill(b))
-		return false;
-	if (data != NULL && data_len <= b->byte_sz) {
-		if (memcpy_s(b->bytes, data_len, data, data_len) != 0) {
-			LOG(LOG_ERROR, "Memcpy Failed\n");
-			return false;
-		}
-
-		return true;
-	} else
-		return false;
-}
-
-/**
- * Resize and initialize with the specified data
- * @param b - pointer to the struct bits
- * @param new_byte_sz - resized value of struct bits
- * @param data = data to be initialized
- * @return true if success else false
- */
-bool fdo_bits_resize_with(fdo_bits_t *b, int new_byte_sz, uint8_t *data)
-{
-	return fdo_bits_fill_with(b, data, new_byte_sz);
-}
-
-/**
- * Check of the struct bits are equal
- * @param b1 - pointer to the first struct bits
- * @param b2 - pointer to the second struct bits
- * @return true if success else false
- */
-bool fdo_bits_equal(fdo_bits_t *b1, fdo_bits_t *b2)
-{
-	int result_memcmp = 0;
-
-	memcmp_s(b1->bytes, b1->byte_sz, b2->bytes, b2->byte_sz,
-		 &result_memcmp);
-	if ((b1->byte_sz == b2->byte_sz) && (result_memcmp == 0)) {
-		return true;
-	}
-
-	return false;
-}
-
-/**
- * Iniaialize the struct bits and fill some random data
- * @param b - pointer to the struct bits which has to be initialized
- * @return  0 if success else -1 on failure
- */
-int fdo_bits_randomize(fdo_bits_t *b)
-{
-	if ((b->bytes == NULL) || !fdo_bits_fill(b))
-		return -1;
-
-	return fdo_crypto_random_bytes(b->bytes, b->byte_sz);
-}
-#endif
-
-#if 0
-/**
- * Convert string to hexadecimal
- * @param b - pointer to the struct bits
- * @param buf - converted string
- * @param buf_sz - size of the converted string
- * return pointer to the converted string
- */
-char *fdo_bits_to_string_hex(fdo_bits_t *b, char *buf, int buf_sz)
-{
-	int i, n;
-	char *buf0 = buf;
-	char hbuf[5];
-
-	i = 0;
-	while (i < b->byte_sz && buf_sz > 1) {
-		// Do it this way to fill up the string completely
-		// else the truncated public key will be terminated below.
-
-		if (snprintf_s_i(hbuf, sizeof(hbuf), "%02X", b->bytes[i++]) <
-		    0) {
-			LOG(LOG_ERROR, "snprintf() failed!\n");
-			return NULL;
-		}
-
-		if (strncpy_s(buf, buf_sz, hbuf, buf_sz) != 0) {
-			LOG(LOG_ERROR, "strcpy() failed!\n");
-			return NULL;
-		}
-		n = strnlen_s(buf, buf_sz);
-
-		if (!n || n == buf_sz) {
-			LOG(LOG_ERROR, "strlen() failed!\n");
-			return NULL;
-		}
-
-		buf += n;
-		buf_sz -= n;
-	}
-	if (buf_sz > 1) {
-		*buf++ = 0;
-	}
-	return buf0;
-}
-
-#if 0 // Deprecated
-/**
- * Internal API
- */
-void fdo_bits_write(fdow_t *fdow, fdo_bits_t *b)
-{
-	fdo_write_big_num_field(fdow, b->bytes, b->byte_sz);
-	//    fdo_write_byte_array_field(fdow, b->bytes, b->byte_sz);
-}
-
-/**
- * Internal API
- */
-bool fdo_bits_read(fdor_t *fdor, fdo_bits_t *b)
-{
-	if (b->bytes == NULL)
-		if (!fdo_bits_fill(b))
-			return false;
-	return fdo_read_big_num_field(fdor, b->bytes, b->byte_sz) == b->byte_sz;
-}
-#endif
-//==============================================================================
-// Byte Array is FDOBits but read and written as base64
-
-/**
- * Internal API
- */
-fdo_byte_array_t *fdo_byte_array_init(fdo_byte_array_t *bn, int byte_sz)
-{
-	return fdo_bits_init(bn, byte_sz);
-}
-#endif
-
 /**
  * Allocate the number of bytes specified
  * @param byte_sz - size of the bytes to be allocated
@@ -361,25 +214,6 @@ void fdo_byte_array_free(fdo_byte_array_t *ba)
 		fdo_bits_free(ba);
 }
 
-#if 0
-/**
- * Internal API
- */
-void fdo_byte_array_empty(fdo_byte_array_t *ba)
-{
-	fdo_bits_empty(ba);
-}
-
-/**
- * Internal API
- */
-bool fdo_byte_array_resize_with(fdo_byte_array_t *b, int new_byte_sz,
-				uint8_t *data)
-{
-	return fdo_bits_resize_with(b, new_byte_sz, data);
-}
-#endif
-
 /**
  * Resize the byte array
  * @param b - pointer to he struct of byte array that has to be resized
@@ -400,19 +234,6 @@ fdo_byte_array_t *fdo_byte_array_clone(fdo_byte_array_t *bn)
 {
 	return fdo_bits_clone(bn);
 }
-
-#if 0
-/**
- * compare the byte array
- * @param bn1 - pointer to the first byte array struct
- * @param bn2 - pointer to the second byte array struct
- * @return true if equal else false
- */
-bool fdo_byte_array_equal(fdo_byte_array_t *bn1, fdo_byte_array_t *bn2)
-{
-	return fdo_bits_equal(bn1, bn2);
-}
-#endif
 
 /**
  * Append one byte array onto another and return the resulting byte array
@@ -451,64 +272,6 @@ fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
 
 	return baAB;
 }
-
-//------------------------------------------------------------------------------
-// Bignum Routines
-//
-
-#if 0
-/**
- * Allocate the struct of type bignum
- */
-fdo_bignum_t *fdo_big_num_alloc()
-{
-	fdo_bignum_t *bn = fdo_alloc(sizeof(fdo_bignum_t));
-
-	if (!bn)
-		return NULL;
-
-	bn->sign = BN_POSITIVE;
-	bn->value = NULL;
-	return bn;
-}
-
-/**
- * Free the allocated struct of type bignum
- * @param bn - pointer to the struct of type bignum
- */
-void fdo_big_num_free(fdo_bignum_t *bn)
-{
-	fdo_bits_free(bn->value);
-	fdo_free(bn);
-}
-#endif
-
-#if 0
-/**
- * Compare the struct of type bignum
- * @param bn1 - pointer to struct of type bignum1
- * @param bn2 - pointer to struct of type bignum2
- * @return true if equal else false
- */
-bool fdo_bignum_equal(fdo_bignum_t *bn1, fdo_bignum_t *bn2)
-{
-	if (bn1->sign != bn2->sign)
-		return false;
-	return fdo_bits_equal(bn1->value, bn2->value);
-}
-
-/**
- * Convert bignum to string
- * @param bn - pointer to struct of type bignum
- * @param buf - pointer to the converted string
- * @param buf_sz - size of the converted string
- * @return pointer to the converted string
- */
-char *fdo_bignum_to_string(fdo_bignum_t *bn, char *buf, int buf_sz)
-{
-	return fdo_bits_to_string_hex(bn->value, buf, buf_sz);
-}
-#endif
 
 //------------------------------------------------------------------------------
 // String handler Routines
@@ -1050,28 +813,6 @@ bool fdo_hash_write(fdow_t *fdow, fdo_hash_t *hp)
 }
 
 //------------------------------------------------------------------------------
-// Key Exchange Routines
-//
-
-#if 0
-/**
- * Internal API
- */
-fdo_key_exchange_t *FDOKey_ex_alloc()
-{
-	return (fdo_key_exchange_t *)fdo_byte_array_alloc(8);
-}
-
-/**
- * Internal API
- */
-fdo_key_exchange_t *FDOKey_ex_alloc_with(int size, uint8_t *content)
-{
-	return fdo_byte_array_alloc_with_byte_array(content, size);
-}
-#endif
-
-//------------------------------------------------------------------------------
 // IP Address Routines
 //
 
@@ -1116,27 +857,6 @@ void fdo_init_ipv4_address(fdo_ip_address_t *fdoip, uint8_t *ipv4)
 		return;
 	}
 }
-
-#if 0
-/**
- * Internal API
- */
-void fdo_init_ipv6_address(fdo_ip_address_t *fdoip, uint8_t *ipv6)
-{
-	fdoip->length = 16;
-	memcpy(fdoip->addr, ipv6, fdoip->length);
-	// memset(&fdoip->addr, 0, sizeof fdoip->addr - fdoip->length);
-}
-
-/**
- * Internal API
- */
-int fdo_ipaddress_to_mem(fdo_ip_address_t *fdoip, uint8_t *copyto)
-{
-	memcpy(copyto, &fdoip->addr[0], fdoip->length);
-	return fdoip->length;
-}
-#endif
 
 /**
  * Reset the IP address
@@ -2686,15 +2406,14 @@ err:
  * @param iv - pointer to the IV struct
  * @return true if all goes well, otherwise false
  */
-bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt,
-				 fdo_iv_t *iv)
+bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 {
 	bool ret = false;
 	fdo_byte_array_t *cleartext = NULL;
 	fdow_t temp_fdow = {0};
 
 	// Decrypt the Encrypted Body
-	if (!fdor || !pkt || !iv) {
+	if (!fdor || !pkt) {
 		LOG(LOG_ERROR, "Encrypted Message (decrypt): Invalid params\n");
 		goto err;
 	}
@@ -2846,13 +2565,13 @@ exit:
 
  * @param fdow - pointer to the message buffer
  * @param type - message type
- * @param iv - Pointer to the iv to fill Encrypted Packet pkt.
  * @return true if all goes well, otherwise false
  */
-bool fdo_encrypted_packet_windup(fdow_t *fdow, int type, fdo_iv_t *iv)
+bool fdo_encrypted_packet_windup(fdow_t *fdow, int type)
 {
-	if (!fdow || !iv)
+	if (!fdow) {
 		return false;
+	}
 
 	fdo_block_t *fdob = &fdow->b;
 	bool ret = false;

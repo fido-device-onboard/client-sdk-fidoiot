@@ -54,7 +54,7 @@ FILE *__wrap_fopen(const char *filename, const char *mode)
 	else
 		return WRAPPER_FN_TEST_VAR;
 }
-#define WRAPPER_STR_SIZE 20
+
 int fread_normal = 1;
 int __real_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int __wrap_fread(void *ptr, size_t size, size_t nmemb, FILE *stream)

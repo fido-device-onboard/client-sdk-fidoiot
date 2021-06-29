@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include "util.h"
 #include "fdoCrypto.h"
-#define verbose_dump_packets 0
 
 /**
  * Write the Device Credentials blob, contains our state
@@ -396,32 +395,6 @@ end:
 	return ret;
 }
 
-#if 0
-/**
- * Internal API
- */
-static int fdoRFile_recv(fdor_t *fdor, int nbytes)
-{
-	fdo_block_t *fdob = &fdor->b;
-	FILE *f = fdor->receive_data;
-	int nread, limit;
-
-	limit = fdob->cursor + nbytes;
-	fdo_resize_block(fdob, limit + 1);
-	nread = fread(&fdob->block[fdob->cursor], 1, nbytes, f);
-
-	if (verbose_dump_packets)
-		LOG(LOG_DEBUG,
-		    "FDOR Read_file, cursor %u block_size:%u block_max:%u\n",
-		    fdob->cursor, fdob->block_size, fdob->block_max);
-	limit = fdob->cursor + nread;
-	fdob->block[limit] = 0;
-	if (verbose_dump_packets)
-		LOG(LOG_DEBUG, "%s\n", fdob->block);
-
-	return nread;
-}
-#endif
 /**
  * Write and save the device credentials passed as an parameter ocred of type
  * fdo_dev_cred_t.

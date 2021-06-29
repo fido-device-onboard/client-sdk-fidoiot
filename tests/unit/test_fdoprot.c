@@ -25,8 +25,6 @@ fdo_dev_cred_t *__wrap_app_get_credentials(void);
 bool __wrap_fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name,
 			     int *statep);
 fdo_cred_mfg_t *__wrap_fdo_cred_mfg_alloc(void);
-bool __wrap_fdo_begin_write_signature(fdow_t *fdow, fdo_sig_t *sig,
-				      fdo_public_key_t *pk);
 void __wrap_fdo_byte_array_write_chars(fdow_t *fdow, fdo_byte_array_t *ba);
 void test_fdo_protDIRun(void);
 void test_fdo_protTO2Run(void);
@@ -91,17 +89,6 @@ fdo_cred_mfg_t *__wrap_fdo_cred_mfg_alloc(void)
 		return NULL;
 	else
 		return __real_fdo_cred_mfg_alloc();
-}
-bool fdobeginwrite = false;
-extern bool __real_fdo_begin_write_signature(fdow_t *fdow, fdo_sig_t *sig,
-					     fdo_public_key_t *pk);
-bool __wrap_fdo_begin_write_signature(fdow_t *fdow, fdo_sig_t *sig,
-				      fdo_public_key_t *pk)
-{
-	if (fdobeginwrite)
-		return true;
-	else
-		return __real_fdo_begin_write_signature(fdow, sig, pk);
 }
 
 bool fdobytearraywrite = false;

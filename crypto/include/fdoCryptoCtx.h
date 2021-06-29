@@ -22,15 +22,6 @@ typedef struct fdo_to2Sym_enc_ctx {
 	uint32_t ctr_value;
 } fdo_to2Sym_enc_ctx_t;
 
-typedef struct fdo_oa_crypto_ctx {
-	uint8_t *rsa_mod;
-	uint32_t rsa_mod_len;
-	uint8_t *rsa_exp;
-	uint32_t rsa_exp_len;
-	const uint8_t *ecdsa_pubkey;
-
-} fdo_oa_crypto_ctx_t;
-
 typedef struct fdo_kex_ctx {
 	fdo_string_t *kx;
 	fdo_string_t *cs;

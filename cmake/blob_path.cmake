@@ -16,8 +16,6 @@ if(TARGET_OS MATCHES linux)
     -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
     -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
     -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
-    -DEPID_PRIVKEY=\"${BLOB_PATH}/data/epidprivkey.dat\"
-    -DFDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
     -DMANUFACTURER_ADDR=\"${BLOB_PATH}/data/manufacturer_addr.bin\"
     -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
     )
@@ -99,8 +97,6 @@ if(TARGET_OS MATCHES linux)
       -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
       -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
       -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
-      -DEPID_PRIVKEY=\"${BLOB_PATH}/data/epidprivkey.dat\"
-      -DFDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
       -DMANUFACTURER_ADDR=\"${BLOB_PATH}/data/manufacturer_addr.bin\"
       -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
       )

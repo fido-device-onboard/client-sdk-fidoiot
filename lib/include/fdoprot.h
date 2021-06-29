@@ -25,28 +25,15 @@
 #define FDO_DEVICE_STATE_DN 7     // Transfer Disabled
 
 // Ports
-#define FDO_PORT_TO1 8041
-#define FDO_PORT_TO2 8042
-#define FDO_PORT_REST 8085
-#define FDO_PORT_REPORTED 980
 #define FDO_PORT_MAX_LEN 5 // max value of port is 65535 i.e. length 5
 #define FDO_PORT_MIN_VALUE 1
 #define FDO_PORT_MAX_VALUE 65535
 
 // States
-#define FDO_STATE_RCV_ERROR 80
 #define FDO_STATE_ERROR 81
 #define FDO_STATE_DONE 82
 
-// Operational States for the device
-#define FDO_OP_STATE_APPLICATION 2 // FDO Complete, running customer application
-
 // Note states are sequential to make fdo_state_toURL work
-
-// Protocol Report: Device => Reporter Server
-#define FDO_STATE_MGR_AGENT_INIT 17
-#define FDO_STATE_SND_REPORT 18
-#define FDO_STATE_RCV_REPORT_ACK 19
 
 // DI
 #define FDO_DI_APP_START 10
@@ -108,54 +95,16 @@
 // Protocol message types
 #define FDO_TYPE_ERROR 255
 
-// Persistent
-#define FDO_TYPE_CRED_OWNER 1
-#define FDO_TYPE_CRED_MFG 2
-#define FDO_TYPE_OWNERSHIP_VOUCHER 3
-#define FDO_TYPE_PUBLIC_KEY 4
-#define FDO_TYPE_SERVICE_INFO 5
-#define FDO_TYPE_DEVICE_CRED 6
-#define FDO_TYPE_HMAC 7
-
-// Report
-#define FDO_MGR_AGENT_SND_REPORT 52
-#define FDO_MGR_AGENT_RCV_REPORT_ACK 53
-
-// For restful URL mapping
-#define FDOMsg_typeMIN FDO_TO1_TYPE_HELLO_FDO
-#define FDOMsg_typeMAX FDO_TO2_DONE2
-
-// Protocol version
-#define FDO_VER_MAJOR 1
-#define FDO_VER_MINOR 10
-
 // Error Message
-#define INVALID_JWT_TOKEN 1
-#define INVALID_OWNERSHIP_VOUCHER 2
-#define INVALID_OWNER_SIGN_BODY 3
-#define INVALID_IP_ADDRESS 4
-#define INVALID_GUID 5
-#define RESOURCE_NOT_FOUND 6
-#define INVALID_PROVE_REQUEST_EXCEPTION 7
-#define INVALID_EPID_SIGNATURE 8
+// TODO: Additional macros should be created to map different error conditions
+// specified in the spec.
 #define MESSAGE_BODY_ERROR 100
-#define INVALID_MESSAGE_ERROR 101
 #define INTERNAL_SERVER_ERROR 500
 
 #define MAX_TO2_ROUND_TRIPS 1000000
 
 // Current protocol version
 #define FDO_PROT_SPEC_VERSION 100
-
-/*
- * Set size of buffer for generating debugging messages.
- * The messages will be truncated appropriately, so this can be
- * any size.  To see an entire public key, you need more than 512 bytes,
- * which may be too much for a constrained system to put on the stack.
- *
- * An alternative is to declare the buffer global
- */
-#define DEBUGBUFSZ 1024
 
 // minimum ServiceInfo size
 #define MIN_SERVICEINFO_SZ 1300
@@ -198,7 +147,6 @@ typedef struct fdo_prot_s {
 	// Installed during manufacturing is a hash of this
 	fdo_public_key_t *
 	    owner_public_key; // TO2.ProveOVHdr bo.pk - The new Owner Public key
-	fdo_iv_t *iv;	 // IV store
 	fdo_service_info_t *service_info;
 	fdo_public_key_t *tls_key;
 	fdo_public_key_t *local_key_pair;
@@ -222,7 +170,6 @@ typedef struct fdo_prot_s {
 	fdo_byte_array_t *nonce_to2provedv;
 	fdo_byte_array_t *nonce_to2setupdv;
 	fdo_byte_array_t *nonce_to2setupdv_rcv;
-	fdo_redirect_t fdo_redirect;
 	uint32_t round_trip_count;
 	//	void *key_ex_data;
 	fdo_sdk_service_info_module_list_t
