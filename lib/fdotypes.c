@@ -4452,14 +4452,16 @@ void fdo_kv_free(fdo_key_value_t *kv)
  * @param fdor - fdor_t object containing the buffer to read
  * @param module_list - Owner ServiceInfo module list
  * @param cb_return_val - out value to hold the return value from the registered modules.
+ * @param serviceinfo_invalid_modname - Out buffer to store the unsupported module name
+ * for which an access request was made by the Owner.
  * @return true if read was a success, false otherwise
  */
 bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
-		int *cb_return_val) {
+		int *cb_return_val, fdo_string_t **serviceinfo_invalid_modname) {
 
 	char *serviceinfokey = NULL;
-	char module_name[FDO_MODULE_NAME_LEN];
-	char module_message[FDO_MODULE_MSG_LEN];
+	char module_name[FDO_MODULE_NAME_LEN] = {0};
+	char module_message[FDO_MODULE_MSG_LEN] = {0};
 
 	size_t num_serviceinfo = 0;
 	if (!fdor_array_length(fdor, &num_serviceinfo)) {
@@ -4560,6 +4562,14 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 		LOG(LOG_ERROR, "ServiceInfo read: Failed to end array\n");
 		goto exit;
 	}
+
+	if (*cb_return_val == FDO_SI_INVALID_MOD_ERROR) {
+		*serviceinfo_invalid_modname = fdo_string_alloc_with_str(module_name);
+		if (!(*serviceinfo_invalid_modname)) {
+			LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc unsupported module name\n");
+			goto exit;
+		}
+	}
 	return true;
 exit:
 	if (serviceinfokey) {
@@ -4625,6 +4635,11 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 					module_list->module.active = active;
 					LOG(LOG_DEBUG, "ServiceInfo: Activated module %s\n",
 						module_list->module.module_name);
+				} else {
+					// now de-activate the current module
+					module_list->module.active = active;
+					LOG(LOG_DEBUG, "ServiceInfo: De-activated module %s\n",
+						module_list->module.module_name);
 				}
 
 				retval = true;
@@ -4664,6 +4679,7 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 				"ServiceInfo: Received ServiceInfo for an unsupported module %s\n",
 			    module_name);
 			fdor_next(fdor);
+			*cb_return_val = FDO_SI_INVALID_MOD_ERROR;
 			retval = true;
 	}
 
@@ -5017,10 +5033,15 @@ bool fdo_service_info_add_kv(fdo_service_info_t *si, fdo_key_value_t *kvs)
  * 
  * @param fdow - Pointer to the writer.
  * @param si - Pointer to the fdo_service_info_t list containing all platform
- * Device ServiceInfos (only 'devmod' for now).
+ * Device ServiceInfos.
+ * @param write_devmod_modules - Flag that determines whether devmod:modules flag
+ * is to be written (true), or not (false).
  * @return true if the opration was a success, false otherwise
+ *
+ * TO-DO: Remove write_devmod_modules flag and move the subsequent write operation
+ * elsewhere when multi-module support is added.
  */
-bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, bool write_devmod_modules)
 {
 	int num = 0;
 	fdo_key_value_t **kvp = NULL;
@@ -5037,7 +5058,7 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
 	}
 
 	// +1 for writing "devmod:modules" at the end
-	if (!fdow_start_array(fdow, si->numKV + 1)) {
+	if (!fdow_start_array(fdow, write_devmod_modules ? si->numKV + 1 : si->numKV)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write start array\n");
 		goto end;
 	}
@@ -5094,13 +5115,14 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
 		}
 		num++;
 	}
-	// write the "devmod:modules" with value "[1,1,"fdo_sys"]"
-	// TO-DO: Update this when multi-module support is added.
-	if (!fdo_serviceinfo_modules_list_write(fdow)) {
-		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write modules\n");
-		goto end;
+	if (write_devmod_modules) {
+		// write the "devmod:modules" with value "[1,1,"fdo_sys"]"
+		// TO-DO: Update this when multi-module support is added.
+		if (!fdo_serviceinfo_modules_list_write(fdow)) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write modules\n");
+			goto end;
+		}
 	}
-
 	if (!fdow_end_array(fdow)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write end array\n");
 		goto end;
