@@ -104,7 +104,8 @@ int32_t msg69(fdo_prot_t *ps)
 		if ((int)(ps->fdor.b.block_size - 3) <= ps->maxOwnerServiceInfoSz) {
 			// process the received ServiceInfo
 			module_list_itr = ps->sv_info_mod_list_head;
-			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val)) {
+			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val,
+				&ps->serviceinfo_invalid_modname)) {
 				LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
 				goto err;
 			}
@@ -122,7 +123,7 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (isDone) {
+	if (isDone && !ps->serviceinfo_invalid_modname) {
 		ps->state = FDO_STATE_TO2_SND_DONE;
 	} else {
 		ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
