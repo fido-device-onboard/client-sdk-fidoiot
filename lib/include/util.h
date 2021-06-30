@@ -58,7 +58,7 @@ typedef enum log_level {
 	{                                                                      \
 		if (level <= LOG_LEVEL) {                                      \
 			if (level == LOG_ERROR) {                              \
-				printf("ERROR:[%s:%d] ", __FILE__, __LINE__);  \
+				printf("ERROR:[%s():%d] ", __func__, __LINE__);\
 			}                                                      \
 			if (level == LOG_DEBUG) {                              \
 				if (print_timestamp() != 0)                    \
