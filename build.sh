@@ -63,28 +63,27 @@ function copy_build_artifacts()
 
 ## Common build configurations
 nproc=$(cat /proc/cpuinfo | grep processor | wc -l)
-COMMON_BUILD_CONFIG="-DBUILD=${BUILDTYPE} -DMANUFACTURER_TOOLKIT=true -DMODULES=true -DPK_ENC=ecdsa"
+COMMON_BUILD_CONFIG="-DBUILD=${BUILDTYPE} -DMANUFACTURER_TOOLKIT=true -DMODULES=true"
 
-## ECDSA256 build configurations
-echo "***** Building with ECDSA256 support *****"
-make pristine || true
-cmake ${COMMON_BUILD_CONFIG} -DDA=ecdsa256 -DKEX=ecdh .
-make -j$(nproc)
-copy_build_artifacts x86_ecdsa256_bin
+# Generic build function
+function build_bin()
+{
+  target_dir=$1
+  build_flag=${@:2}
 
-# Build configurations for ECDSA384
-echo "***** Building with ECDSA384 support *****"
-make pristine || true
-cmake ${COMMON_BUILD_CONFIG} -DDA=ecdsa384 -DKEX=ecdh384 .
-make -j$(nproc)
-copy_build_artifacts x86_ecdsa384_bin
+  echo "***** Building configuration: $build_flag"
+  make pristine || true
+  cmake ${COMMON_BUILD_CONFIG} $build_flag .
+  make -j$(nproc)
+  copy_build_artifacts $target_dir
+}
 
-# Build configurations for TPM based devices
-echo "***** Building with TPM (ECDSA256) support *****"
-make pristine || true
-cmake ${COMMON_BUILD_CONFIG} -DDA=tpm20_ecdsa256 -DPK_ENC=ecdsa .
-make -j$(nproc)
-copy_build_artifacts tpm_ecdsa256_bin
+build_bin x86_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=ecdsa256 -DKEX=ecdh
+build_bin x86_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=ecdsa256 -DKEX=ecdh
+build_bin x86_ecdsa384_gcm_bin -DAES_MODE=gcm -DDA=ecdsa384 -DKEX=ecdh
+build_bin x86_ecdsa384_ccm_bin -DAES_MODE=ccm -DDA=ecdsa384 -DKEX=ecdh
+build_bin tpm_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=tpm20_ecdsa256 -DKEX=ecdh
+build_bin tpm_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=tpm20_ecdsa256 -DKEX=ecdh
 
 ######################
 ### Run Unit Tests ###
