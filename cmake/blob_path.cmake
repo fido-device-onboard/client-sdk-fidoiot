@@ -37,7 +37,7 @@ if(TARGET_OS MATCHES linux)
     if (${unit-test} MATCHES true)
       if (${DA_FILE} MATCHES pem)
 	client_sdk_compile_definitions(
-          -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\"
+          -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\"
           )
       else()
 	client_sdk_compile_definitions(
@@ -57,7 +57,7 @@ if(TARGET_OS MATCHES linux)
       if (${DA} MATCHES ecdsa256)	#ecdsa 256 selected
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.dat\")
@@ -65,7 +65,7 @@ if(TARGET_OS MATCHES linux)
       else() 				# ecdsa 384 selected
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.dat\")
@@ -112,7 +112,7 @@ if(TARGET_OS MATCHES linux)
 	)
       if (${DA_FILE} MATCHES pem)
 	client_sdk_compile_definitions(
-	  -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\")
+	  -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\")
       else()
 	client_sdk_compile_definitions(
 	  -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.dat\")
@@ -131,7 +131,7 @@ if(TARGET_OS MATCHES linux)
       if (${DA} MATCHES ecdsa256)
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.dat\")
@@ -139,7 +139,7 @@ if(TARGET_OS MATCHES linux)
       else()
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.dat\")
