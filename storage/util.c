@@ -210,8 +210,8 @@ void *fdo_alloc(size_t size)
 	void *buf = NULL;
 
 	if (size > R_MAX_SIZE) {
-		LOG(LOG_ERROR, "Requested to allocated more than limit\n");
-		goto err;
+		LOG(LOG_ERROR, "Requested to allocate more than limit\n");
+		goto end;
 	}
 
 	buf = malloc(size);
