@@ -69,14 +69,16 @@ err:
 	if (privkey) {
 		if (memset_s(privkey, privkey_size, 0)) {
 			LOG(LOG_ERROR, "clearing ecdsa privkey failed\n");
-			ret = -1;
+			ret = -1; /* Mark as fail */
 		}
 		fdo_free(privkey);
 	}
-	if (ecprivkey_evp)
+	if (ecprivkey_evp) {
 		EVP_PKEY_free(ecprivkey_evp);
-	if (ecprivkey_bio)
+	}
+	if (ecprivkey_bio) {
 		BIO_free(ecprivkey_bio);
+	}
 	if (ec_key && ret) {
 		EC_KEY_free(ec_key);
 		ec_key = NULL;
@@ -87,8 +89,8 @@ err:
 EC_KEY *get_ec_key(void)
 {
 	int ret = 0;
-	uint8_t *privkey;
-	size_t privkey_size;
+	uint8_t *privkey = NULL;
+	size_t privkey_size = 0;
 	EC_KEY *ec_key = NULL;
 	BIGNUM *ec_key_bn = NULL;
 	int32_t curve = NID_X9_62_prime256v1;
@@ -136,8 +138,9 @@ err:
 		EC_KEY_free(ec_key);
 		ec_key = NULL;
 	}
-	if (ec_key_bn)
+	if (ec_key_bn) {
 		BN_free(ec_key_bn);
+	}
 
 	return ec_key;
 }
