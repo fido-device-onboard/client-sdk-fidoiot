@@ -209,7 +209,7 @@ end:
  */
 int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl)
 {
-	if (ssl) {// SSL disconnect
+	if (ssl) { // SSL disconnect
 		fdo_ssl_close(ssl);
 	}
 

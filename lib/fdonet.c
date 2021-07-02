@@ -422,7 +422,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		}
 	}
 end:
-	if (ip_list) {// free ip_list
+	if (ip_list) { // free ip_list
 		fdo_free(ip_list);
 	}
 	return ret;

@@ -250,7 +250,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	}
 
 	tmp = bn_num_bytes(x);
-	if (tmp & 0xffff0000) {// check size more than 2 byte size space
+	if (tmp & 0xffff0000) { // check size more than 2 byte size space
 		goto exit;
 	}
 	temp[0] = tmp >> 8;
@@ -259,7 +259,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	size += 1;
 	size += BN_bn2bin(x, &temp[size]);
 	tmp = bn_num_bytes(y);
-	if (tmp & 0xffff0000) {// check size more than 2 byte size space
+	if (tmp & 0xffff0000) { // check size more than 2 byte size space
 		goto exit;
 	}
 	temp[size] = tmp >> 8;
@@ -268,7 +268,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	size += 1;
 	size += BN_bn2bin(y, &temp[size]);
 	tmp = bn_num_bytes(key_ex_data->_Device_random);
-	if (tmp & 0xffff0000) {// check size more than 2 byte size space
+	if (tmp & 0xffff0000) { // check size more than 2 byte size space
 		goto exit;
 	}
 	temp[size] = tmp >> 8;
