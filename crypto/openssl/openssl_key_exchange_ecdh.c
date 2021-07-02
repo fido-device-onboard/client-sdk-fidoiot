@@ -90,14 +90,16 @@ int32_t crypto_hal_kex_init(void **context)
 
 	key_ex_data->_key = key;
 
-	if (compute_publicBECDH(key_ex_data) == false)
+	if (compute_publicBECDH(key_ex_data) == false) {
 		goto error;
+	}
 
 	*context = (void *)key_ex_data;
 	return 0;
 error:
-	if (NULL != key_ex_data)
+	if (NULL != key_ex_data) {
 		crypto_hal_kex_close((void *)&key_ex_data);
+	}
 	return -1;
 }
 
@@ -116,15 +118,18 @@ int32_t crypto_hal_kex_close(void **context)
 	}
 
 	key_ex_data = *(ecdh_context_t **)context;
-	if (key_ex_data->_publicB)
+	if (key_ex_data->_publicB) {
 		BN_clear_free(key_ex_data->_publicB);
-	if (key_ex_data->_publicA)
+	}
+	if (key_ex_data->_publicA) {
 		BN_clear_free(key_ex_data->_publicA);
-	if (key_ex_data->_shared_secret)
+	}
+	if (key_ex_data->_shared_secret) {
 		BN_clear_free(key_ex_data->_shared_secret);
-	if (key_ex_data->_Device_random)
+	}
+	if (key_ex_data->_Device_random) {
 		BN_clear_free(key_ex_data->_Device_random);
-
+	}
 	if (key_ex_data->_key != NULL) {
 		EC_KEY_free(key_ex_data->_key);
 		key_ex_data->_key = NULL;
@@ -245,24 +250,27 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	}
 
 	tmp = bn_num_bytes(x);
-	if (tmp & 0xffff0000) // check size more than 2 byte size space
+	if (tmp & 0xffff0000) {// check size more than 2 byte size space
 		goto exit;
+	}
 	temp[0] = tmp >> 8;
 	size = 1;
 	temp[size] = (tmp & 0x00ff);
 	size += 1;
 	size += BN_bn2bin(x, &temp[size]);
 	tmp = bn_num_bytes(y);
-	if (tmp & 0xffff0000) // check size more than 2 byte size space
+	if (tmp & 0xffff0000) {// check size more than 2 byte size space
 		goto exit;
+	}
 	temp[size] = tmp >> 8;
 	size += 1;
 	temp[size] = (tmp & 0x00ff);
 	size += 1;
 	size += BN_bn2bin(y, &temp[size]);
 	tmp = bn_num_bytes(key_ex_data->_Device_random);
-	if (tmp & 0xffff0000) // check size more than 2 byte size space
+	if (tmp & 0xffff0000) {// check size more than 2 byte size space
 		goto exit;
+	}
 	temp[size] = tmp >> 8;
 	size += 1;
 	temp[size] = (tmp & 0x00ff);
@@ -297,15 +305,19 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 #endif
 	ret = true;
 exit:
-	if (temp)
+	if (temp) {
 		fdo_free(temp);
-	if (x)
+	}
+	if (x) {
 		BN_clear(x);
-	if (y)
+	}
+	if (y) {
 		BN_clear(y);
+	}
 	/* Consider using the bn cache in ctx. */
-	if (ctx)
+	if (ctx) {
 		BN_CTX_free(ctx);
+	}
 	return ret;
 }
 
@@ -465,8 +477,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 	}
 	EC_POINT_set_affine_coordinates_GFp(group, point, Ax_bn, Ay_bn, ctx);
 	shx = fdo_alloc(bn_num_bytes(Ax_bn));
-	if (!shx)
+	if (!shx) {
 		goto error;
+	}
 #if defined OPENSSL_2_0_1
 	if (ECDH_compute_key(shx, 32, point, key, NULL) == 0) {
 		LOG(LOG_ERROR, "ECDH compute key failed\n");
@@ -474,8 +487,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 	}
 	size_t shx_len = strlen_s(shx, FDO_MAX_STR_SIZE);
 
-	if (!shx_len || shx_len == FDO_MAX_STR_SIZE)
+	if (!shx_len || shx_len == FDO_MAX_STR_SIZE) {
 		goto error;
+	}
 	if (BN_bin2bn(shx, shx_len, Shx_bn) == NULL) {
 		LOG(LOG_ERROR, "BN bin to bn conversion failed\n");
 		goto error;
@@ -483,8 +497,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 
 #else
 	Sh_se_point = EC_POINT_new(group);
-	if (!Sh_se_point)
+	if (!Sh_se_point) {
 		goto error;
+	}
 	if (EC_POINT_mul(group, Sh_se_point, NULL, point, key_ex_data->_secretb,
 			 ctx) == 0) {
 		EC_POINT_free(Sh_se_point);
@@ -534,24 +549,33 @@ int32_t crypto_hal_set_peer_random(void *context,
 
 	ret = 0;
 error:
-	if (point)
+	if (point) {
 		EC_POINT_free(point);
-	if (shse)
+	}
+	if (shse) {
 		fdo_free(shse);
-	if (Ax_bn)
+	}
+	if (Ax_bn) {
 		BN_clear_free(Ax_bn);
-	if (Ay_bn)
+	}
+	if (Ay_bn) {
 		BN_clear_free(Ay_bn);
-	if (owner_random_bn)
+	}
+	if (owner_random_bn) {
 		BN_clear_free(owner_random_bn);
-	if (Shx_bn)
+	}
+	if (Shx_bn) {
 		BN_clear_free(Shx_bn);
-	if (Shy_bn)
+	}
+	if (Shy_bn) {
 		BN_clear_free(Shy_bn);
-	if (ctx)
+	}
+	if (ctx) {
 		BN_CTX_free(ctx);
-	if (shx)
+	}
+	if (shx) {
 		fdo_free(shx);
+	}
 
 	return ret;
 }
@@ -588,8 +612,9 @@ int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
 #if defined(KEX_ASYM_ENABLED)
 	shared_secret = key_ex_data->_shared_secret;
 #else
-	if (0 >= bn_bn2bin(key_ex_data->_shared_secret, secret))
+	if (0 >= bn_bn2bin(key_ex_data->_shared_secret, secret)) {
 		return -1;
+	}
 #endif
 
 	return 0;

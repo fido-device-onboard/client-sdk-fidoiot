@@ -70,12 +70,14 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 #if defined(ECDSA256_DA)
 	hash_length = SHA256_DIGEST_SIZE;
-	if (SHA256(data, data_len, hash) == NULL)
+	if (SHA256(data, data_len, hash) == NULL) {
 		goto end;
+	}
 #elif defined(ECDSA384_DA)
 	hash_length = SHA384_DIGEST_SIZE;
-	if (SHA384(data, data_len, hash) == NULL)
+	if (SHA384(data, data_len, hash) == NULL) {
 		goto end;
+	}
 #endif
 
 	// ECDSA_sign return 1 on success, 0 on failure
@@ -95,9 +97,11 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	ret = 0;
 
 end:
-	if (signature)
+	if (signature) {
 		OPENSSL_free(signature);
-	if (eckey)
+	}
+	if (eckey) {
 		EC_KEY_free(eckey);
+	}
 	return ret;
 }

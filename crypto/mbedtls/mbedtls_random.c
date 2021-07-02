@@ -44,8 +44,9 @@ static int entropy_source(void *data, unsigned char *output, size_t len,
 
 	(void)data; /* Warning fix */
 
-	if (!output || !olen)
+	if (!output || !olen) {
 		return -1;
+	}
 
 	*olen = 0;
 
@@ -64,8 +65,9 @@ static int entropy_source(void *data, unsigned char *output, size_t len,
 	(void)fp;
 	(void)result;
 
-	if (fdo_crypto_random_bytes(output, len))
+	if (fdo_crypto_random_bytes(output, len)) {
 		return -1;
+	}
 	*olen = len;
 #endif
 

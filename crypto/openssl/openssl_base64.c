@@ -19,10 +19,11 @@
 int bin_toB64Length(int bin_length)
 {
 	/* Base64 length is ceil(4*(n/3)). */
-	if (bin_length)
+	if (bin_length) {
 		return (((bin_length + 2) / 3) * 4);
-	else
+	} else {
 		return 0;
+	}
 }
 
 /**
@@ -34,10 +35,11 @@ int bin_toB64Length(int bin_length)
  */
 int b64To_bin_length(int b64Len)
 {
-	if (b64Len)
+	if (b64Len) {
 		return ((b64Len / 4) * 3 + 2);
-	else
+	} else {
 		return 0;
+	}
 }
 
 /**
@@ -58,8 +60,9 @@ int bin_toB64(size_t bin_length, uint8_t *bin_bytes, size_t bin_offset,
 {
 	int ret = -1;
 
-	if (!bin_length || !bin_bytes || !b64Bytes)
+	if (!bin_length || !bin_bytes || !b64Bytes) {
 		return -1;
+	}
 
 	BIO *b64 = BIO_new(BIO_f_base64());
 	BIO *bio = BIO_new(BIO_s_mem());
@@ -74,8 +77,9 @@ int bin_toB64(size_t bin_length, uint8_t *bin_bytes, size_t bin_offset,
 	}
 	BIO_free_all(b64);
 
-	if (ret <= 0)
+	if (ret <= 0) {
 		ret = -1;
+	}
 
 	return ret;
 }
@@ -98,8 +102,9 @@ int b64To_bin(size_t b64Len, uint8_t *b64bytes, size_t b64Offset,
 {
 	int ret = -1;
 
-	if (!bin_len || !bin_bytes || !b64bytes)
+	if (!bin_len || !bin_bytes || !b64bytes) {
 		return -1;
+	}
 
 	size_t b64Len_check = b64Len;
 
@@ -121,8 +126,9 @@ int b64To_bin(size_t b64Len, uint8_t *b64bytes, size_t b64Offset,
 	}
 
 	BIO_free_all(b64);
-	if (ret <= 0)
+	if (ret <= 0) {
 		ret = -1;
+	}
 
 	return ret;
 }

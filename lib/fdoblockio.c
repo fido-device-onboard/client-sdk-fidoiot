@@ -26,11 +26,13 @@
  */
 void fdo_block_reset(fdo_block_t *fdob)
 {
-	if (!fdob)
+	if (!fdob) {
 		return;
+	}
 	if (fdob->block) {
-		if (fdob->block_size && memset_s(fdob->block, fdob->block_size, 0))
+		if (fdob->block_size && memset_s(fdob->block, fdob->block_size, 0)) {
 			LOG(LOG_ERROR, "Failed to clear memory\n");
+		}
 	}
 }
 
@@ -57,11 +59,13 @@ bool fdo_block_alloc(fdo_block_t *fdob)
  */
 bool fdo_block_alloc_with_size(fdo_block_t *fdob, size_t block_sz)
 {
-	if (!fdob)
+	if (!fdob) {
 		return false;
+	}
 	// if block exists, free it first, then alloc
-	if (fdob->block != NULL)
+	if (fdob->block != NULL) {
 		fdo_free(fdob->block);
+	}
 
 	fdob->block = fdo_alloc(block_sz * sizeof(uint8_t));
 	fdob->block_size = block_sz;
@@ -558,8 +562,9 @@ bool fdor_text_string(fdor_t *fdor, char *buffer, size_t buffer_length) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to read Major Type 3 (tstr)\n");
 		return false;
 	}
-	if (!fdor_next(fdor))
+	if (!fdor_next(fdor)) {
 		return false;
+	}
 	return true;
 }
 
@@ -597,8 +602,9 @@ bool fdor_signed_int(fdor_t *fdor, int *result) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to read Major Type 1 (negative int)\n");
 		return false;
 	}
-	if (!fdor_next(fdor))
+	if (!fdor_next(fdor)) {
 		return false;
+	}
 	return true;
 }
 
@@ -616,8 +622,9 @@ bool fdor_unsigned_int(fdor_t *fdor, uint64_t *result) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to read Major Type 0 (uint)\n");
 		return false;
 	}
-	if (!fdor_next(fdor))
+	if (!fdor_next(fdor)) {
 		return false;
+	}
 	return true;
 }
 
@@ -635,8 +642,9 @@ bool fdor_boolean(fdor_t *fdor, bool *result) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to start Major Type 7 (bool)\n");
 		return false;
 	}
-	if (!fdor_next(fdor))
+	if (!fdor_next(fdor)) {
 		return false;
+	}
 	return true;
 }
 

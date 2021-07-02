@@ -29,8 +29,9 @@ bool file_exists(char const *filename)
 	}
 	fp = fopen(filename, "rb");
 	if (fp) {
-		if (fclose(fp) == EOF)
+		if (fclose(fp) == EOF) {
 			LOG(LOG_INFO, "Fclose Failed");
+		}
 		return true;
 	}
 	return false;
@@ -47,8 +48,9 @@ size_t get_file_size(char const *filename)
 	if (fp) {
 		fseek(fp, 0, SEEK_END);
 		file_length = ftell(fp);
-		if (fclose(fp) == EOF)
+		if (fclose(fp) == EOF) {
 			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	return file_length;
 }
@@ -68,13 +70,15 @@ int read_buffer_from_file(const char *filename, void *buffer, size_t size)
 
 	bytes_read = fread(buffer, 1, size, file);
 	if (bytes_read != size) {
-		if (fclose(file) == EOF)
+		if (fclose(file) == EOF) {
 			LOG(LOG_INFO, "Fclose Failed");
+		}
 		return -1;
 	}
 
-	if (fclose(file) == EOF)
+	if (fclose(file) == EOF) {
 		LOG(LOG_INFO, "Fclose Failed");
+	}
 	return 0;
 }
 

@@ -126,7 +126,8 @@ int32_t msg70(fdo_prot_t *ps)
 	ret = 0; /*Mark as success */
 
 err:
-	if (hmac)
+	if (hmac) {
 		fdo_hash_free(hmac);
+	}
 	return ret;
 }

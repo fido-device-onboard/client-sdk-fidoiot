@@ -127,15 +127,20 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	ret = 0;
 
 end:
-	if (eckey)
+	if (eckey) {
 		EC_KEY_free(eckey);
-	if (x)
+	}
+	if (x) {
 		BN_free(x);
-	if (y)
+	}
+	if (y) {
 		BN_free(y);
-	if (pub_key_affinex)
+	}
+	if (pub_key_affinex) {
 		fdo_free(pub_key_affinex);
-	if (pub_key_affiney)
+	}
+	if (pub_key_affiney) {
 		fdo_free(pub_key_affiney);
+	}
 	return ret;
 }

@@ -187,8 +187,9 @@ bool fdo_process_states(fdo_prot_t *ps)
 		 * FIXME: ps->state cannot start with a junk state. It is for
 		 * unit test to pass
 		 */
-		if (!state_fn)
+		if (!state_fn) {
 			break;
+		}
 
 		if (ps->state != FDO_STATE_DONE && state_fn && state_fn(ps)) {
 			char err_msg[64];
@@ -435,14 +436,17 @@ void fdo_receive_error_message(fdor_t *fdor, int *ecode, int *msgnum,
 		      errmsg_sz) != 0) {
 		LOG(LOG_ERROR, "strcpy() failed!\n");
 	}
-	if (!fdo_read_expected_tag(fdor, "ec"))
+	if (!fdo_read_expected_tag(fdor, "ec")) {
 		goto fail;
+	}
 	*ecode = fdo_read_uint(fdor);
-	if (!fdo_read_expected_tag(fdor, "emsg"))
+	if (!fdo_read_expected_tag(fdor, "emsg")) {
 		goto fail;
+	}
 	*msgnum = fdo_read_uint(fdor);
-	if (!fdo_read_expected_tag(fdor, "em"))
+	if (!fdo_read_expected_tag(fdor, "em")) {
 		goto fail;
+	}
 	if (!fdo_read_string(fdor, errmsg, errmsg_sz)) {
 		LOG(LOG_ERROR, "%s(): fdo_read_string() "
 		    "returned NULL!\n", __func__);

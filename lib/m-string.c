@@ -147,21 +147,28 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 #endif
-	if (!fdow_start_array(&ps->fdow, DEVICE_MFG_STRING_ARRAY_SZ))
+	if (!fdow_start_array(&ps->fdow, DEVICE_MFG_STRING_ARRAY_SZ)) {
 		goto err;
-	if (!fdow_signed_int(&ps->fdow, key_id))
+	}
+	if (!fdow_signed_int(&ps->fdow, key_id)) {
 		goto err;
-	if (!fdow_text_string(&ps->fdow, (char *) device_serial, device_serial_len))
+	}
+	if (!fdow_text_string(&ps->fdow, (char *) device_serial, device_serial_len)) {
 		goto err;
-	if (!fdow_text_string(&ps->fdow, (char *) model_number, model_number_len))
+	}
+	if (!fdow_text_string(&ps->fdow, (char *) model_number, model_number_len)) {
 		goto err;
-	if (!fdow_byte_string(&ps->fdow, csr->bytes, csr->byte_sz))
+	}
+	if (!fdow_byte_string(&ps->fdow, csr->bytes, csr->byte_sz)) {
 		goto err;
-	if (!fdow_end_array(&ps->fdow))
+	}
+	if (!fdow_end_array(&ps->fdow)) {
 		goto err;
+	}
 	LOG(LOG_DEBUG, "Generated device CSR successfully\n");
 err:
-	if (csr)
+	if (csr) {
 		fdo_byte_array_free(csr);
+	}
 	return ret;
 }

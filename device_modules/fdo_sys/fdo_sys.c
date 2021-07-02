@@ -108,8 +108,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 			}
 
 			goto end;
-		}
-		else if (strcmp_write == 0) {
+		} else if (strcmp_write == 0) {
 
 			if (!fdor_string_length(fdor, &bin_len)) {
 #ifdef DEBUG_LOGS
@@ -162,8 +161,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 			}
 			result = FDO_SI_SUCCESS;
 			goto end;
-		}
-		else if (strcmp_exec == 0) {
+		} else if (strcmp_exec == 0) {
 
 			bin_data = ModuleAlloc(max_bin_len * sizeof(uint8_t));
 			if (!bin_data) {
@@ -252,7 +250,8 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 		result = FDO_SI_FAILURE;
 	}
 end:
-	if (bin_data)
+	if (bin_data) {
 		ModuleFree(bin_data);
+	}
 	return result;
 }

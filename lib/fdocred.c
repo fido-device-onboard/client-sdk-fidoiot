@@ -42,12 +42,15 @@ void fdo_cred_owner_free(fdo_cred_owner_t *ocred)
 		fdo_rendezvous_list_free(ocred->rvlst);
 		ocred->rvlst = NULL;
 	}
-	if (ocred->pkh)
+	if (ocred->pkh) {
 		fdo_hash_free(ocred->pkh);
-	if (ocred->guid)
+	}
+	if (ocred->guid) {
 		fdo_byte_array_free(ocred->guid);
-	if (ocred->pk)
+	}
+	if (ocred->pk) {
 		fdo_public_key_free(ocred->pk);
+	}
 
 	fdo_free(ocred);
 }
@@ -73,8 +76,9 @@ fdo_cred_mfg_t *fdo_cred_mfg_alloc(void)
  */
 void fdo_cred_mfg_free(fdo_cred_mfg_t *ocred_mfg)
 {
-	if (ocred_mfg->d)
+	if (ocred_mfg->d) {
 		fdo_string_free(ocred_mfg->d);
+	}
 
 	fdo_free(ocred_mfg);
 	ocred_mfg = NULL;
@@ -116,8 +120,9 @@ void fdo_dev_cred_init(fdo_dev_cred_t *dev_cred)
  */
 void fdo_dev_cred_free(fdo_dev_cred_t *dev_cred)
 {
-	if (!dev_cred)
+	if (!dev_cred) {
 		return;
+	}
 
 	if (dev_cred->owner_blk) {
 		fdo_cred_owner_free(dev_cred->owner_blk);
@@ -145,8 +150,9 @@ fdo_hash_t *fdo_pub_key_hash(fdo_public_key_t *pub_key)
 	}
 
 	fdo_hash_t *hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
-	if (!hash)
+	if (!hash) {
 		return NULL;
+	}
 	fdo_public_key_write(fdow, pub_key);
 	size_t encoded_pk_length = 0;
 	if (!fdow_encoded_length(fdow, &encoded_pk_length) || encoded_pk_length == 0) {
@@ -190,12 +196,15 @@ fdo_ov_entry_t *fdo_ov_entry_alloc_empty(void)
  */
 fdo_ov_entry_t *fdo_ov_entry_free(fdo_ov_entry_t *e)
 {
-	if (e->pk)
+	if (e->pk) {
 		fdo_public_key_free(e->pk);
-	if (e->hp_hash)
+	}
+	if (e->hp_hash) {
 		fdo_hash_free(e->hp_hash);
-	if (e->hc_hash)
+	}
+	if (e->hc_hash) {
 		fdo_hash_free(e->hc_hash);
+	}
 	fdo_ov_entry_t *next = e->next;
 
 	fdo_free(e);
@@ -229,18 +238,24 @@ void fdo_ov_free(fdo_ownership_voucher_t *ov)
 {
 	fdo_ov_entry_t *e;
 
-	if (ov->rvlst2 != NULL)
+	if (ov->rvlst2 != NULL) {
 		fdo_rendezvous_list_free(ov->rvlst2);
-	if (ov->dev_info != NULL)
+	}
+	if (ov->dev_info != NULL) {
 		fdo_string_free(ov->dev_info);
-	if (ov->mfg_pub_key != NULL)
+	}
+	if (ov->mfg_pub_key != NULL) {
 		fdo_public_key_free(ov->mfg_pub_key);
-	if (ov->ovoucher_hdr_hash != NULL)
+	}
+	if (ov->ovoucher_hdr_hash != NULL) {
 		fdo_hash_free(ov->ovoucher_hdr_hash);
-	if (ov->g2)
+	}
+	if (ov->g2) {
 		fdo_byte_array_free(ov->g2);
-	if (ov->hdc)
+	}
+	if (ov->hdc) {
 		fdo_hash_free(ov->hdc);
+	}
 
 	// Free all listed OVEntries
 	while ((e = ov->ov_entries) != NULL) {
@@ -260,8 +275,9 @@ void fdo_ov_free(fdo_ownership_voucher_t *ov)
 fdo_ownership_voucher_t *fdo_ov_hdr_read(fdor_t *fdor, fdo_hash_t **hmac)
 {
 
-	if (!fdor || !hmac)
+	if (!fdor || !hmac) {
 		return NULL;
+	}
 
 	fdo_ownership_voucher_t *ov = fdo_ov_alloc();
 	size_t num_ov_items = 0;
@@ -279,8 +295,9 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdor_t *fdor, fdo_hash_t **hmac)
 	}
 
 	LOG(LOG_DEBUG, "%s OVHeader read started!\n", __func__);
-	if (!fdor_start_array(fdor))
+	if (!fdor_start_array(fdor)) {
 		goto exit;
+	}
 
 	if (!fdor_signed_int(fdor, &ov->prot_version) || ov->prot_version != FDO_PROT_SPEC_VERSION) {
 		// Protocol Version
@@ -333,8 +350,9 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdor_t *fdor, fdo_hash_t **hmac)
 	ov->dev_info->bytes[dev_info_length] = '\0';
 
 	// Mfg Public key
-	if (ov->mfg_pub_key != NULL)
+	if (ov->mfg_pub_key != NULL) {
 		fdo_public_key_free(ov->mfg_pub_key);
+	}
 	ov->mfg_pub_key =
 	    fdo_public_key_read(fdor); // Creates a Public key and fills it in
 	if (ov->mfg_pub_key == NULL) {
@@ -514,8 +532,9 @@ bool fdo_ove_hash_hdr_info_save(fdo_ownership_voucher_t *ov) {
 	}
 	ret = true;
 exit:
-	if (hash_hdr_info)
+	if (hash_hdr_info) {
 		fdo_free(hash_hdr_info);
+	}
 	if (!ret && ov->ov_entries->hc_hash) {
 		fdo_hash_free(ov->ov_entries->hc_hash);
 	}
@@ -627,8 +646,9 @@ exit:
 	if (enc_hmac) {
 		fdo_byte_array_free(enc_hmac);
 	}
-	if (hash_prev_entry)
+	if (hash_prev_entry) {
 		fdo_free(hash_prev_entry);
+	}
 	if (!ret && ov->ov_entries->hp_hash) {
 		fdo_hash_free(ov->ov_entries->hp_hash);
 	}
@@ -677,10 +697,11 @@ exit:
 		fdow_flush(fdow);
 		fdo_free(fdow);
 	}
-	if (ret)
+	if (ret) {
 		return hmac;
-	else
+	} else {
 		return NULL;
+	}
 }
 
 /**

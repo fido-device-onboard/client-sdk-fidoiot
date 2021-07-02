@@ -62,8 +62,9 @@ int32_t crypto_hal_kex_init(void **context)
 	_g15_t _g15 = {0};
 
 	key_ex_data = fdo_alloc(sizeof(dh_context_t));
-	if (!key_ex_data)
+	if (!key_ex_data) {
 		return -1;
+	}
 	/*
 	 * Start by memory allocation so then all pointers will be initialized
 	 * in case of fdo_crypto_init error.
@@ -83,14 +84,16 @@ int32_t crypto_hal_kex_init(void **context)
 	/* Create our _g15 value. */
 	bn_bin2bn(_g15.as_bytes, sizeof(int), key_ex_data->_g15);
 
-	if (compute_publicBDH(key_ex_data) == false)
+	if (compute_publicBDH(key_ex_data) == false) {
 		goto err;
+	}
 
 	*context = (void *)key_ex_data;
 	return 0;
 err:
-	if (NULL != key_ex_data)
+	if (NULL != key_ex_data) {
 		crypto_hal_kex_close((void *)&key_ex_data);
+	}
 	return -1;
 }
 
@@ -104,8 +107,9 @@ int32_t crypto_hal_kex_close(void **context)
 {
 	dh_context_t *key_ex_data = *(dh_context_t **)context;
 
-	if (!key_ex_data)
+	if (!key_ex_data) {
 		return -1;
+	}
 #define BN_FREE(n)                                                             \
 	if (n) {                                                               \
 		BN_clear_free(n);                                              \
@@ -210,8 +214,9 @@ int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
 		return 0;
 	}
 
-	if (0 >= bn_bn2bin(key_ex_data->_publicB, dev_rand_value))
+	if (0 >= bn_bn2bin(key_ex_data->_publicB, dev_rand_value)) {
 		return -1;
+	}
 
 	return 0;
 }
@@ -305,8 +310,9 @@ int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
 		return 0;
 	}
 
-	if (0 >= bn_bn2bin(key_ex_data->_shared_secret, secret))
+	if (0 >= bn_bn2bin(key_ex_data->_shared_secret, secret)) {
 		return -1;
+	}
 
 	return 0;
 }

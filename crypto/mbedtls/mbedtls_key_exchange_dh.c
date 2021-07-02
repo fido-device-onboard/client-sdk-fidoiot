@@ -118,14 +118,17 @@ int32_t crypto_hal_kex_close(void **context)
 {
 	dh_context_t *key_ex_data = *(dh_context_t **)context;
 
-	if (!key_ex_data)
+	if (!key_ex_data) {
 		return -1;
+	}
 
 	mbedtls_dhm_free(&key_ex_data->dhm);
-	if (key_ex_data->_shared_secret)
+	if (key_ex_data->_shared_secret) {
 		fdo_free(key_ex_data->_shared_secret);
-	if (key_ex_data->_publicB)
+	}
+	if (key_ex_data->_publicB) {
 		fdo_free(key_ex_data->_publicB);
+	}
 
 	fdo_free(key_ex_data);
 	return 0;
@@ -150,8 +153,9 @@ static bool compute_publicBDH(dh_context_t *key_ex_data)
 
 	LOG(LOG_DEBUG, "compute_publicB started\n");
 	retval = mbedtls_mpi_size(&key_ex_data->dhm.P);
-	if (retval == 0)
+	if (retval == 0) {
 		goto err;
+	}
 	key_ex_data->dhm.len = retval;
 	key_ex_data->_publicB = fdo_alloc(key_ex_data->dhm.len);
 	if (!key_ex_data->_publicB) {
@@ -252,13 +256,15 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto err;
 	}
 	key_ex_data->dhm.len = mbedtls_mpi_size(&key_ex_data->dhm.P);
-	if (key_ex_data->dhm.len == 0)
+	if (key_ex_data->dhm.len == 0) {
 		goto err;
+	}
 
 	key_ex_data->_shared_secret_length = key_ex_data->dhm.len;
 	key_ex_data->_shared_secret = fdo_alloc(key_ex_data->dhm.len);
-	if (NULL == key_ex_data->_shared_secret)
+	if (NULL == key_ex_data->_shared_secret) {
 		goto err;
+	}
 	ret = mbedtls_dhm_calc_secret(
 	    &key_ex_data->dhm, key_ex_data->_shared_secret,
 	    key_ex_data->_shared_secret_length, &olen, NULL, NULL);

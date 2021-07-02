@@ -31,12 +31,14 @@ static int getSDfilepath(char *filepath, const char *name)
 	/* convert "data/filename" to "/sd/data/filename" */
 	ret = strncat_s(filepath, MAX_FILE_PATH, (const char *)SD_MOUNT_POINT,
 			sizeof(SD_MOUNT_POINT));
-	if (ret)
+	if (ret) {
 		return -1;
+	}
 	ret = strncat_s(filepath, MAX_FILE_PATH - sizeof(SD_MOUNT_POINT),
 			(const char *)(name), strnlen_s(name, MAX_FILE_PATH));
-	if (ret)
+	if (ret) {
 		return -1;
+	}
 	return 0;
 }
 
@@ -160,8 +162,9 @@ end:
 int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		    uint32_t n_bytes)
 {
-	if (!name || !buf)
+	if (!name || !buf) {
 		return -1;
+	}
 
 	if (n_bytes == 0) {
 		LOG(LOG_ERROR, "Can not read 0 bytes!\n");
@@ -170,8 +173,9 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 
 	int retval = -1;
 	char filepath[MAX_FILE_PATH + 1] = {0};
-	if (getSDfilepath(filepath, name) == -1)
+	if (getSDfilepath(filepath, name) == -1) {
 		return -1;
+	}
 
 	uint8_t *data = NULL;
 	uint32_t data_length = 0;
@@ -362,10 +366,12 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 	retval = (int32_t)n_bytes;
 
 exit:
-	if (sealed_data)
+	if (sealed_data) {
 		fdo_free(sealed_data);
-	if (encrypted_data)
+	}
+	if (encrypted_data) {
 		fdo_free(encrypted_data);
+	}
 	if (memset_s(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN, 0)) {
                 LOG(LOG_ERROR, "Failed to clear HMAC key\n");
 		retval = -1;
@@ -392,8 +398,9 @@ exit:
 int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		     const uint8_t *buf, uint32_t n_bytes)
 {
-	if (!buf || !name)
+	if (!buf || !name) {
 		return -1;
+	}
 
 	if (n_bytes == 0) {
 		LOG(LOG_ERROR, "Can not write 0 bytes!\n");
@@ -401,8 +408,9 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 	}
 
 	char filepath[MAX_FILE_PATH + 1] = {0};
-	if (getSDfilepath(filepath, name) == -1)
+	if (getSDfilepath(filepath, name) == -1) {
 		return -1;
+	}
 
 	/*File content to be stored as HMAC_DIGEST+Sizeof_cipher_text+Cipher_text
 	 * for FDO_SDK_SECURE_DATA flag,
@@ -576,13 +584,15 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 	retval = (int32_t)n_bytes;
 
 exit:
-	if (write_context)
+	if (write_context) {
 		fdo_free(write_context);
-	if (f)
+	}
+	if (f) {
 		if (fclose(f) == EOF) {
 			LOG(LOG_ERROR, "fclose() Failed in fdo_blob_write\n");
 			retval = -1;
 		}
+	}
 	if (memset_s(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN, 0)) {
 		LOG(LOG_ERROR, "Failed to clear HMAC key\n");
 		retval = -1;
