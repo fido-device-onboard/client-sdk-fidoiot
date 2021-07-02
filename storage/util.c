@@ -209,8 +209,9 @@ void *fdo_alloc(size_t size)
 {
 	void *buf = NULL;
 
-	if (size > R_MAX_SIZE) {
-		LOG(LOG_ERROR, "Requested to allocate more than limit\n");
+	if (size == 0 || size > R_MAX_SIZE) {
+		LOG(LOG_ERROR, "Failed, size should be between 1 and %d\n",
+			R_MAX_SIZE);
 		goto end;
 	}
 
