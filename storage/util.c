@@ -207,10 +207,16 @@ void hexdump(const char *message, const void *buffer, size_t size)
  */
 void *fdo_alloc(size_t size)
 {
-	void *buf = malloc(size);
+	void *buf = NULL;
 
+	if (size > R_MAX_SIZE) {
+		LOG(LOG_ERROR, "Requested to allocated more than limit\n");
+		goto err;
+	}
+
+	buf = malloc(size);
 	if (!buf) {
-		LOG(LOG_ERROR, "%s failed to allocate\n",__func__);
+		LOG(LOG_ERROR, "failed to allocate\n");
 		goto end;
 	}
 
