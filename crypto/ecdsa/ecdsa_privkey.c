@@ -18,6 +18,7 @@
  * Convert the stored ecdsa privkey to buffer
  * @param keybuf: valid pointer to receive the pointer to key buffer
  * @param length: length of the key buffer
+ * @return 0 on success, else error
  */
 int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 {
