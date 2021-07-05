@@ -252,21 +252,26 @@ bool setup_http_proxy(const char *filename, fdo_ip_address_t *fdoip,
 
 	nread = fdo_blob_size((char *)filename, FDO_SDK_RAW_DATA);
 	if (nread > 0) {
-		proxydata = fdo_alloc(nread);
+		proxydata = fdo_alloc(nread + 1);
+		if (!proxydata) {
+			LOG(LOG_ERROR, "Could not allocate memory to read proxy information.\n");
+			goto err;
+		}
 		if (fdo_blob_read((char *)filename, FDO_SDK_RAW_DATA, proxydata,
 				  nread) == -1) {
 			LOG(LOG_ERROR, "Could not read %s file\n", filename);
-			return false;
+			goto err;
 		}
+		proxydata[nread] = '\0';
 	} else {
 		LOG(LOG_INFO, "'%s' with proxy info absent\n", filename);
-		return false;
+		goto err;
 	}
 
 	if (!nread) {
 		LOG(LOG_DEBUG,
 		    "HTTP Proxy enabled but properties file missing !!\n");
-		return false;
+		goto err;
 	}
 
 	if (get_netip_port((const char *)proxydata, nread, proxy,
@@ -375,8 +380,9 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 
 		if (!cache_host_dns(dn)) {
 			LOG(LOG_ERROR, "REST DNS caching failed!\n");
-		} else
+		} else {
 			ret = true;
+		}
 		goto end;
 	}
 	// get list of IPs resolved to given DNS
