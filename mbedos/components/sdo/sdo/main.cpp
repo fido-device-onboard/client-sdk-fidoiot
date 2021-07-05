@@ -73,10 +73,11 @@ int init_eth(void)
 	printf("IP address: %s\n", ip ? ip : "None");
 	printf("Netmask: %s\n", netmask ? netmask : "None");
 	printf("Gateway: %s\n", gateway ? gateway : "None");
-	if (!ip && !netmask && !gateway)
+	if (!ip && !netmask && !gateway) {
 		return 1;
-	else
+	} else {
 		return 0;
+	}
 
 } // end init_eth()
 

@@ -68,8 +68,9 @@ int32_t fdo_kex_init(void)
 
 	/* Allocate buffer for Session Encryption Key (SEK) */
 	to2sym_ctx->keyset.sek = fdo_byte_array_alloc(SEK_KEY_SIZE);
-	if (!to2sym_ctx->keyset.sek)
+	if (!to2sym_ctx->keyset.sek) {
 		goto err;
+	}
 
 	if (crypto_hal_kex_init(&(kex_ctx->context))) {
 		goto err;
@@ -214,10 +215,11 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray)
 	if (BArray && BArray->bytes) {
 		if (BArray->bytes[0] == 0x00) {
 			if (!memmove_s(BArray->bytes, BArray->byte_sz - 1,
-				       &BArray->bytes[1], BArray->byte_sz - 1))
+				       &BArray->bytes[1], BArray->byte_sz - 1)) {
 				BArray->byte_sz--;
-			else
+			} else {
 				return -1;
+			}
 		}
 		return 0;
 		// BArray->bytes[0] != 0x00 is also valid array
@@ -246,11 +248,9 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 
 	if (index == 1) {
 		idx0_val = 0x01;
-	}
-	else if (index == 2) {
+	} else if (index == 2) {
 		idx0_val = 0x02;
-	}
-	else {
+	} else {
 		// for now, we cannot go beyond 2
 		LOG(LOG_ERROR, "Invalid i\n");
 		goto err;

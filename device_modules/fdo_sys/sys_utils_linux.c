@@ -21,8 +21,9 @@ static bool is_valid_filename(const char *fname)
 	char *substring = NULL, *t1 = NULL;
 	char filenme_woextension[FILE_NAME_LEN] = {0};
 
-	if (fname == NULL)
+	if (fname == NULL) {
 		goto end;
+	}
 
 	if (strncpy_s(filenme_woextension, FILE_NAME_LEN, fname,
 		      strnlen_s(fname, FILE_NAME_LEN))) {
@@ -209,8 +210,9 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 	}
 
 end:
-	if (command)
+	if (command) {
 		ModuleFree(command);
+	}
 
 	if (fp) {
 		if (fclose(fp) == EOF) {

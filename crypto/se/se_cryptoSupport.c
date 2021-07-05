@@ -245,8 +245,9 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 		return -1;
 	}
 
-	if (output_length < SHA256_DIGEST_SIZE)
+	if (output_length < SHA256_DIGEST_SIZE) {
 		return -1;
+	}
 
 	if (0 != se_key_write(key)) {
 		return -1;

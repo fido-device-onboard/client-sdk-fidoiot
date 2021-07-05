@@ -435,8 +435,9 @@ int load_credential(void)
 {
 	fdo_dev_cred_t *ocred = app_alloc_credentials();
 
-	if (!ocred)
+	if (!ocred) {
 		return -1;
+	}
 
 	fdo_dev_cred_init(ocred);
 
@@ -460,8 +461,9 @@ int load_mfg_secret(void)
 {
 	fdo_dev_cred_t *ocred = app_get_credentials();
 
-	if (!ocred)
+	if (!ocred) {
 		return -1;
+	}
 
 #if !defined(DEVICE_TPM20_ENABLED)
 	// ReadHMAC Credentials

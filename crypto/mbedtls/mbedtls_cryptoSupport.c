@@ -28,8 +28,9 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 	mbedtls_mpi iv_bn_cur, iv_bn_first, iv_bn_new, comparison_iv;
 	size_t new_bit_length;
 
-	if (!first_iv || !new_iv)
+	if (!first_iv || !new_iv) {
 		return -1;
+	}
 
 	(void)aesblocks;
 
@@ -123,8 +124,9 @@ int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 {
 	void *dbrg_ctx = get_mbedtls_random_ctx();
 
-	if (!is_mbedtls_random_init() || !dbrg_ctx)
+	if (!is_mbedtls_random_init() || !dbrg_ctx) {
 		return -1;
+	}
 
 	if (NULL == random_buffer) {
 		return -1;
@@ -203,13 +205,15 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 
 	switch (hash_type) {
 	case FDO_CRYPTO_HASH_TYPE_SHA_256:
-		if (output_length < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE) {
 			return -1;
+		}
 		mbedhash_type = MBEDTLS_MD_SHA256;
 		break;
 	case FDO_CRYPTO_HASH_TYPE_SHA_384:
-		if (output_length < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE) {
 			return -1;
+		}
 		mbedhash_type = MBEDTLS_MD_SHA384;
 		break;
 
@@ -254,16 +258,18 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 
 	switch (hmac_type) {
 	case FDO_CRYPTO_HMAC_TYPE_SHA_256:
-		if (output_length < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE) {
 			return -1;
+		}
 		return mbedtls_md_hmac(
 		    mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
 		    (const uint8_t *)key, key_length, buffer, buffer_length,
 		    output);
 		break;
 	case FDO_CRYPTO_HMAC_TYPE_SHA_384:
-		if (output_length < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE) {
 			return -1;
+		}
 		return mbedtls_md_hmac(
 		    mbedtls_md_info_from_type(MBEDTLS_MD_SHA384),
 		    (const uint8_t *)key, key_length, buffer, buffer_length,

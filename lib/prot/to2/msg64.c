@@ -161,7 +161,8 @@ int32_t msg64(fdo_prot_t *ps)
 	ps->state = FDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.ProveDevice comleted successfully\n");
 err:
-	if (eat)
+	if (eat) {
 		fdo_eat_free(eat);
+	}
 	return ret;
 }

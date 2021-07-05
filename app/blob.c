@@ -159,8 +159,9 @@ int32_t configure_normal_blob(void)
 	if (0 != mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
 				 (const uint8_t *)hmac_key,
 				 PLATFORM_HMAC_KEY_DEFAULT_LEN, raw_normal_blob,
-				 raw_normal_blob_size, signed_normal_blob))
+				 raw_normal_blob_size, signed_normal_blob)) {
 		goto err;
+	}
 #else // USE_OPENSSL
 	if (NULL == HMAC(EVP_sha256(), hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN,
 			 raw_normal_blob, (int)raw_normal_blob_size,
@@ -195,9 +196,11 @@ int32_t configure_normal_blob(void)
 	}
 	ret = 0;
 err:
-	if (raw_normal_blob)
+	if (raw_normal_blob) {
 		fdo_free(raw_normal_blob);
-	if (signed_normal_blob)
+	}
+	if (signed_normal_blob) {
 		fdo_free(signed_normal_blob);
+	}
 	return ret;
 }

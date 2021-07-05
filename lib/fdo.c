@@ -301,8 +301,9 @@ fdo_dev_cred_t *app_alloc_credentials(void)
 	}
 	g_fdo_data->devcred = fdo_dev_cred_alloc();
 
-	if (!g_fdo_data->devcred)
+	if (!g_fdo_data->devcred) {
 		LOG(LOG_ERROR, "Device Credentials allocation failed !!");
+	}
 
 	return g_fdo_data->devcred;
 }
@@ -331,8 +332,9 @@ static fdo_sdk_status app_initialize(void)
 	char *buffer = NULL;
 	char *eptr = NULL;
 
-	if (!g_fdo_data)
+	if (!g_fdo_data) {
 		return FDO_ERROR;
+	}
 
 	/* Initialize service_info to NULL in case of early error. */
 	g_fdo_data->service_info = NULL;
@@ -392,8 +394,7 @@ static fdo_sdk_status app_initialize(void)
 
 			if (max_serviceinfo_sz <= MIN_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
-			}
-			else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
+			} else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MAX_SERVICEINFO_SZ;
 			}
 			g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
@@ -513,8 +514,9 @@ fdo_sdk_device_state fdo_sdk_get_status(void)
 {
 	fdo_sdk_device_state status = FDO_STATE_ERROR;
 
-	if (g_fdo_data == NULL)
+	if (g_fdo_data == NULL) {
 		return FDO_STATE_ERROR;
+	}
 
 	g_fdo_data->err = 0;
 
@@ -546,8 +548,9 @@ fdo_sdk_device_state fdo_sdk_get_status(void)
 
 void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module)
 {
-	if (module == NULL)
+	if (module == NULL) {
 		return;
+	}
 
 	fdo_sdk_service_info_module_list_t *new =
 	    fdo_alloc(sizeof(fdo_sdk_service_info_module_list_t));
@@ -571,8 +574,9 @@ void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module)
 		fdo_sdk_service_info_module_list_t *list =
 		    g_fdo_data->module_list;
 
-		while (list->next != NULL)
+		while (list->next != NULL) {
 			list = list->next;
+		}
 
 		list->next = new;
 	}
@@ -678,8 +682,9 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 #ifdef MODULES_ENABLED
 	if ((num_modules == 0) || (num_modules > FDO_MAX_MODULES) ||
 	    (module_information == NULL) ||
-	    (module_information->service_info_callback == NULL))
+	    (module_information->service_info_callback == NULL)) {
 		return FDO_ERROR;
+	    }
 
 	/* register service-info modules */
 	for (uint32_t i = 0; i < num_modules; i++) {
@@ -847,11 +852,13 @@ fdo_sdk_status fdo_sdk_resale(void)
 	return FDO_RESALE_NOT_SUPPORTED;
 #endif
 
-	if (!g_fdo_data)
+	if (!g_fdo_data) {
 		return FDO_ERROR;
+	}
 
-	if (!g_fdo_data->devcred)
+	if (!g_fdo_data->devcred) {
 		return FDO_ERROR;
+	}
 
 	if (g_fdo_data->devcred->ST == FDO_DEVICE_STATE_IDLE) {
 		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_READYN;
@@ -893,8 +900,9 @@ static void app_close(void)
 {
 	fdo_block_t *fdob = NULL;
 
-	if (!g_fdo_data)
+	if (!g_fdo_data) {
 		return;
+	}
 
 	if (g_fdo_data->service_info) {
 		fdo_service_info_free(g_fdo_data->service_info);
