@@ -28,14 +28,27 @@
 static int getSDfilepath(char *filepath, const char *name)
 {
 	int ret = -1;
+	size_t name_len = 0;
+
+	if (!filepath || !name) {
+		LOG(LOG_ERROR, "Received NULL input arguments\n");
+		return -1;
+	}
 	/* convert "data/filename" to "/sd/data/filename" */
 	ret = strncat_s(filepath, MAX_FILE_PATH, (const char *)SD_MOUNT_POINT,
 			sizeof(SD_MOUNT_POINT));
 	if (ret) {
 		return -1;
 	}
+
+	name_len = strnlen_s(name, MAX_FILE_PATH);
+	if (!name_len || name_len == MAX_FILE_PATH) {
+		LOG(LOG_ERROR, "name is not NULL terminated\n")
+		return -1;
+	}
+
 	ret = strncat_s(filepath, MAX_FILE_PATH - sizeof(SD_MOUNT_POINT),
-			(const char *)(name), strnlen_s(name, MAX_FILE_PATH));
+			(const char *)(name), name_len);
 	if (ret) {
 		return -1;
 	}

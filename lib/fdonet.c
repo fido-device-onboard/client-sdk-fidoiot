@@ -180,6 +180,10 @@ static bool discover_proxy(fdo_ip_address_t *fdoip, uint16_t *port_num)
 	// Iterate over the returned proxies, attemping to fetch the URL
 	for (int i = 0; proxies[i]; i++) {
 		nread = strnlen_s(proxies[i], FDO_MAX_STR_SIZE);
+		if (!nread || nread == FDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR, "Couldn't find a valid string.\n");
+			continue;
+		}
 		if (get_netip_port(proxies[i], nread, proxy, &proxy_port) ==
 		    false) {
 			LOG(LOG_ERROR, "cant getip/ port\n");
