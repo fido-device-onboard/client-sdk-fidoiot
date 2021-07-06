@@ -418,7 +418,8 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	char tmp[512] = {0};
 	char *eptr = NULL;
 	size_t tmplen = 0;
-	int rcode = 0, result_strcmpcase = 0;
+	long rcode = 0;
+	int result_strcmpcase = 0;
 
 	/* REST context must be active */
 	if (!isRESTContext_active()) {
@@ -475,10 +476,10 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		}
 
 		if(strstr_s(p1, p1_len, " ", 1, &p2)) {
-			LOG(LOG_DEBUG, "Response code %03d\n", rcode);
+			LOG(LOG_DEBUG, "Response code %03ld\n", rcode);
 		} else {
 			*p2++ = 0;
-			LOG(LOG_DEBUG, "Response code %03d received (%s)\n",
+			LOG(LOG_DEBUG, "Response code %03ld received (%s)\n",
 			    rcode, p2);
 		}
 
