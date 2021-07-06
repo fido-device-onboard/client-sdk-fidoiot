@@ -1,17 +1,17 @@
 #!/bin/bash
 
-CSDK_REPO=$1
-CSDK_DATA=$CSDK_REPO/data
+CLIENTSDK_REPO=$1
+CLIENTSDK_DATA=$CLIENTSDK_REPO/data
 
-EC256_DAT=$CSDK_DATA/ecdsa256privkey.dat
-EC256_PEM=$CSDK_DATA/ecdsa256privkey.pem
-EC384_DAT=$CSDK_DATA/ecdsa384privkey.dat
-EC384_PEM=$CSDK_DATA/ecdsa384privkey.pem
+EC256_DAT=$CLIENTSDK_DATA/ecdsa256privkey.dat
+EC256_PEM=$CLIENTSDK_DATA/ecdsa256privkey.pem
+EC384_DAT=$CLIENTSDK_DATA/ecdsa384privkey.dat
+EC384_PEM=$CLIENTSDK_DATA/ecdsa384privkey.pem
 
 usage()
 {
   echo -e "Usage:
-    $0 <absolute_path_of_CSDK_repo>\n"
+    $0 </path/to/client-sdk-fidoiot>\n"
 }
 
 gen_csdk_keys()
