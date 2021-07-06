@@ -233,11 +233,11 @@ err:
  *
  * @param rest_ctx - current REST context.
  * @param g_URL - post URL output.
- * @param POST_URL_LEN - post URL max length.
+ * @param post_url_len - post URL max length.
  * @retval true if header onstruction was successful, false otherwise.
  */
 bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
-			   size_t POST_URL_LEN)
+			   size_t post_url_len)
 {
 	char *ip_ascii = NULL;
 	char temp[HTTP_MAX_URL_SIZE] = {0};
@@ -245,7 +245,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	char msgequals[] = "";
 	bool ret = false;
 
-	if (!rest_ctx || !g_URL || !POST_URL_LEN) {
+	if (!rest_ctx || !g_URL || !post_url_len) {
 		LOG(LOG_ERROR, "Invalid input!\n");
 		goto err;
 	}
@@ -262,12 +262,12 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	}
 
 	if (rest_ctx->tls) {
-		if (strcpy_s(g_URL, POST_URL_LEN, "POST https://") != 0) {
+		if (strcpy_s(g_URL, post_url_len, "POST https://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	} else {
-		if (strcpy_s(g_URL, POST_URL_LEN, "POST http://") != 0) {
+		if (strcpy_s(g_URL, post_url_len, "POST http://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
@@ -292,7 +292,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -303,7 +303,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -314,12 +314,12 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, " HTTP/1.1\r\n") != 0) {
+	if (strcat_s(g_URL, post_url_len, " HTTP/1.1\r\n") != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -345,7 +345,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		}
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -358,35 +358,35 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp1) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp1) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
 	if (rest_ctx->authorization) {
-		if (strcat_s(g_URL, POST_URL_LEN, "Authorization:") != 0) {
+		if (strcat_s(g_URL, post_url_len, "Authorization:") != 0) {
 			LOG(LOG_ERROR, "Strcpy() failed!\n");
 			goto err;
 		}
 
-		if (strcat_s(g_URL, POST_URL_LEN, rest_ctx->authorization) !=
+		if (strcat_s(g_URL, post_url_len, rest_ctx->authorization) !=
 		    0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 
-		if (strcat_s(g_URL, POST_URL_LEN, "\r\n") != 0) {
+		if (strcat_s(g_URL, post_url_len, "\r\n") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, "\r\n") != 0) {
+	if (strcat_s(g_URL, post_url_len, "\r\n") != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, msgequals) != 0) {
+	if (strcat_s(g_URL, post_url_len, msgequals) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
