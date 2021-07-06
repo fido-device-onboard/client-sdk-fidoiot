@@ -191,7 +191,7 @@ static fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 	int key_buf_len = 0;
 	EC_GROUP *ecgroup = NULL;
 	BIGNUM *x = BN_new();
-    BIGNUM *y = BN_new();
+	BIGNUM *y = BN_new();
 	int x_len = 0;
 	int y_len = 0;
 	fdo_public_key_t *pk = NULL;

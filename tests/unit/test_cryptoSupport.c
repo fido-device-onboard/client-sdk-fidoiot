@@ -309,7 +309,7 @@ fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 		key_buf_len = x_len + y_len;
 		key_buf = fdo_alloc(key_buf_len);
 		TEST_ASSERT_NOT_NULL(key_buf);
-        BN_bn2bin(x, key_buf);
+		BN_bn2bin(x, key_buf);
 		BN_bn2bin(y, key_buf + x_len);
 
 #if defined(ECDSA256_DA)

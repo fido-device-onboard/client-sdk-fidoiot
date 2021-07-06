@@ -115,8 +115,7 @@ bool fdow_init(fdow_t *fdow)
  */
 int fdow_next_block(fdow_t *fdow, int type)
 {
-	// type is the same as FDO message types
-	if (!fdow || type < 10 || type > 71) {
+	if (!fdow) {
 		LOG(LOG_ERROR, "CBOR Encoder: Invalid params\n");
 		return false;
 	}
