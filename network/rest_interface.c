@@ -427,6 +427,11 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		goto err;
 	}
 
+	if (!hdr || !hdrlen || !cont_len) {
+		LOG(LOG_ERROR, "Input argument can't be NULL or 0.\n");
+		goto err;
+	}
+
 	rest->msg_type = 0;
 
 	// GET HTTP reponse from header
