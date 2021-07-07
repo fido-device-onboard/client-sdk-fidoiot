@@ -318,6 +318,9 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 	return sock_hdl;
 
 end:
+	if (ssl && *ssl) {
+		fdo_ssl_close(*ssl);
+	}
 	if (sock_hdl) {
 		close(sock_hdl->sockfd);
 		fdo_free(sock_hdl);

@@ -1099,30 +1099,19 @@ static bool _STATE_TO1(void)
 			if (rv->bypass && *rv->bypass == true) {
 				rvbypass = true;
 				break;
-			}
-			if (rv->owner_only && *rv->owner_only == true) {
+			} else if (rv->owner_only && *rv->owner_only == true) {
 				rvowner_only = true;
 				break;
-			}
-
-			if (rv->ip) {
+			} else if (rv->ip) {
 				ip = rv->ip;
-				rv = rv->next;
-				continue;
-			}
-			if (rv->dn) {
+			} else if (rv->dn) {
 				dns = rv->dn;
-				rv = rv->next;
-				continue;
-			}
-			if (rv->po) {
+			} else if (rv->po) {
 				port = *rv->po;
-				rv = rv->next;
-				continue;
-			}
-			if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
+			} else if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
 				tls = true;
 			}
+			// ignore the other RendezvousInstr as they are not used for making requests
 			rv = rv->next;
 		}
 
@@ -1252,20 +1241,20 @@ static bool _STATE_TO2(void)
 		// otherwise, pick the address from RVTO2AddrEntry.
 		if (rvbypass) {
 			fdo_rendezvous_t *rv = g_fdo_data->current_rvdirective->rv_entries;
-			if (rv->ip) {
-				ip = rv->ip;
+			while (rv) {
+				if (rv->ip) {
+					ip = rv->ip;
+				} else if (rv->dn) {
+					dns = rv->dn;
+				} else if (rv->po) {
+					port = *rv->po;
+				} else if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
+					tls = true;
+				}
+				// no need to check for RVBYPASS here again, since we used it
+				// to get here in the first place
+				// ignore the other RendezvousInstr as they are not used for making requests
 				rv = rv->next;
-			}
-			if (rv->dn) {
-				dns = rv->dn;
-				rv = rv->next;
-			}
-			if (rv->po) {
-				port = *rv->po;
-				rv = rv->next;
-			}
-			if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
-				tls = true;
 			}
 
 			// Found the  needed entries of the current directive.
