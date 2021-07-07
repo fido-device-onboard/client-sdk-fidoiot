@@ -1,16 +1,17 @@
 /*
- * Copyright (C) 2017 Intel Corporation All Rights Reserved
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
  */
 
 /*!
  * \file
- * \brief Unit tests for RSA abstraction routines of FDO library.
+ * \brief Unit tests for ECDSA signature generation abstraction routines of FDO library.
  */
 
-#include "test_RSARoutines.h"
 #include "safe_lib.h"
 #include "fdoCryptoHal.h"
 #include "storage_al.h"
+#include "unity.h"
 
 //#define HEXDEBUG 1
 
