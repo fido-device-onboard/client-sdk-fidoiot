@@ -107,7 +107,6 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 
-#ifdef MODULES_ENABLED
 	module_info = malloc(FDO_MAX_MODULES * (sizeof(*module_info)));
 
 	if (!module_info) {
@@ -123,38 +122,6 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 		return NULL;
 	}
 	module_info[0].service_info_callback = fdo_sys;
-
-#if defined(EXTRA_MODULES)
-	/* module#2: devconfig */
-	if (strncpy_s(module_info[1].module_name, FDO_MODULE_NAME_LEN,
-		      "devconfig", FDO_MODULE_NAME_LEN) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
-		return NULL;
-	}
-	module_info[1].service_info_callback = devconfig;
-
-	/* module#3: keypair */
-	if (strncpy_s(module_info[2].module_name, FDO_MODULE_NAME_LEN,
-		      "keypair", FDO_MODULE_NAME_LEN) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
-		return NULL;
-	}
-	module_info[2].service_info_callback = keypair;
-
-#ifdef TARGET_OS_LINUX
-	/* module#4: pelionconfig (only supported on linux as of now) */
-	if (strncpy_s(module_info[3].module_name, FDO_MODULE_NAME_LEN,
-		      "pelionconfig", FDO_MODULE_NAME_LEN) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
-		return NULL;
-	}
-	module_info[3].service_info_callback = pelionconfig;
-#endif // #ifdef TARGET_OS_LINUX
-#endif
-#endif
 
 	return module_info;
 }

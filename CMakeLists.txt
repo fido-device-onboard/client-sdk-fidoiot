@@ -74,9 +74,7 @@ add_subdirectory(lib)
 add_subdirectory(network)
 add_subdirectory(storage)
 add_subdirectory(crypto)
-if (${MODULES} MATCHES true)
-  add_subdirectory(device_modules)
-endif()
+add_subdirectory(device_modules)
 
 endif()
 

@@ -19,11 +19,6 @@
 #include "safe_lib.h"
 #include "fdotypes.h"
 
-#if defined(KEX_DH_ENABLED) //(m size =2048)
-#define DH_PEER_RANDOM_SIZE 256
-#else // KEX_DH_3072_ENABLED  (m size 3072)
-#define DH_PEER_RANDOM_SIZE 768
-#endif
 #define PLAIN_TEXT_SIZE BUFF_SIZE_1K_BYTES
 #define DER_PUBKEY_LEN_MAX 512
 #define ECDSA_PK_MAX_LENGTH 200
