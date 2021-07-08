@@ -50,7 +50,7 @@ $ cmake -DTARGET_OS=linux -DBUILD=debug .
 $ make
 ```
 
-Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and SSL support (TLS).
+Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section. [FDO Build configurations](build_conf.md)
 
 <a name="run_linux_fdo"></a>

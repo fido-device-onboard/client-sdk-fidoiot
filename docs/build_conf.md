@@ -3,7 +3,7 @@ There following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
 - DA: Device Attestation Algorithm
 - AES_MODE: Advanced Encryption Standard (AES) encryption mode
-- TLS: SSL support
+- TLS: Underlying cryptography library to use
 
 ## Default Configuration
 

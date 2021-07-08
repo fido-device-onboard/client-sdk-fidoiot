@@ -153,10 +153,16 @@ elseif(DA STREQUAL tpm20_ecdsa256)
   elseif(${TPM2_TCTI_TYPE} MATCHES tabrmd)
     client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"tabrmd\")
   else()
-    message(WARNING "Supported TPM2_TCTI_TYPE values are 'tabrmd' and 'tpmrm0'")
+    message(WARNING "Incorrect TPM2_TCTI_TYPE selected. Supported values are 'tabrmd' and 'tpmrm0'. \
+    Defaulting to 'tabrmd'")
+    set (TPM2_TCTI_TYPE tabrmd)
+    client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"tabrmd\")
   endif()
 else()
-  message(WARNING "Supported DA values are 'ecdsa256', 'ecdsa384' and 'tpm20_ecdsa256'")
+  message(WARNING "Incorrect DA selected. Supported values are 'ecdsa256', 'ecdsa384' and 'tpm20_ecdsa256'. \
+  Defaulting to 'ecdsa384'")
+  set (DA ecdsa384)
+  client_sdk_compile_definitions(-DECDSA384_DA)
 endif()
 
 if(TLS MATCHES openssl)
@@ -178,7 +184,11 @@ elseif(${AES_MODE} STREQUAL ccm)
   client_sdk_compile_definitions(
     -DAES_MODE_CCM_ENABLED)
 else()
-  message(WARNING "Incorrect AES_MODE selected")
+  message(WARNING "Incorrect AES_MODE selected. Supported values are: 'gcm' and 'ccm'. \
+  Defaulting to 'gcm'")
+  set (AES_MODE gcm)
+  client_sdk_compile_definitions(
+    -DAES_MODE_GCM_ENABLED)
 endif()
 
 
