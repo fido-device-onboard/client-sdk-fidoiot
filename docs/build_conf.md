@@ -3,7 +3,6 @@ There following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
 - DA: Device Attestation Algorithm
 - AES_MODE: Advanced Encryption Standard (AES) encryption mode
-- KEX: Key Exchange method
 - TLS: SSL support
 
 ## Default Configuration
@@ -11,11 +10,9 @@ There following are some of the options to choose when building the device:
 ```shell
   BUILD = debug #build mode
   TARGET_OS = linux #target OS. (`linux` denotes the Linux* OS.)
-  KEX = ecdh #key-exchange method
   AES_MODE = gcm #AES encryption type
   DA = ecdsa384 #device attestation method
   TLS = openssl #underlying cryptography library to use. (`openssl` denotes the OpenSSL* toolkit.)
-  MODULES = false #whether to use FIDO Device Onboard (FDO) ServiceInfo functionality
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
 
@@ -27,9 +24,8 @@ For example, to build the `STM32F429ZI` device:
 - BUILD: Debug mode
 - DA: ECDSA-256
 - AES_MODE: GCM
-- KEX: Diffie-Hellman
 ```shell
-$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=gcm -DKEX=dh -DDA=ecdsa256 .
+$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=gcm -DDA=ecdsa256 .
 $ make -j4
 ```
 
@@ -47,15 +43,9 @@ List of supported boards (valid only when TARGET_OS=mbedos):
 BOARD=NUCLEO_F767ZI   # (When building for STM32F767ZI MCU)
 BOARD=NUCLEO_F429ZI   # (When building for STM32F429ZI MCU)
 
-List of key exchange options:
-KEX=dh                # use Diffie-Hellman key exchange mechanism during TO2 (Not supported)
-KEX=asym              # use Asymmetric key exchange mechanism during TO2 (Not supported)
-KEX=ecdh              # use Elliptic-curve Diffie–Hellman key exchange mechanism during TO2 (default)
-KEX=ecdh384           # use Elliptic-curve Diffie–Hellman 384 bit key exchange mechanism during TO2
-
 List of AES encryption modes:
-AES_MODE=gcm          # use Counter mode encryption during TO2 (default)
-AES_MODE=ccm          # use Code-Block-Chaining mode encryption during TO2
+AES_MODE=gcm          # use Galois/Counter Mode encryption during TO2 (default)
+AES_MODE=ccm          # use Counter with CBC-MAC encryption during TO2
 
 List of Device Attestation options:
 DA=ecdsa256           # Use ECDSA P256 based device attestation
@@ -72,10 +62,6 @@ Option to enable network-proxy:
 HTTPPROXY=true        # http-proxy enabled (default)
 HTTPPROXY=false       # http-proxy disabled
 PROXY_DISCOVERY=true  # network discovery enabled (default = false)
-
-Option to enable FDO ServiceInfo functionality:
-MODULES=false         # ServiceInfo modules are not present (default)
-MODULES=true          # ServiceInfo modules are present
 
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)

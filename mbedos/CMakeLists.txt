@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache 2.0
 #
 
-# TO-DO: Revisit and remove the use of PK_ENC and KEX=asym
+# TO-DO: Revisit and remove the use of PK_ENC and KEX
 set (MBED_OS_DIR ${BASE_DIR}/mbedos/components/fdo)
 
 if (${HTTPPROXY} STREQUAL true)
@@ -68,11 +68,9 @@ execute_process(COMMAND
   ${CMAKE_COMMAND} -E create_symlink
   ${BASE_DIR}/data ${MBED_OS_DIR}/data)
 
-if (${MODULES} STREQUAL true)
-  execute_process(COMMAND
-    ${CMAKE_COMMAND} -E create_symlink
-    ${BASE_DIR}/device_modules/fdo_sys/ ${MBED_OS_DIR}/fdo_sys)
-endif()
+execute_process(COMMAND
+  ${CMAKE_COMMAND} -E create_symlink
+  ${BASE_DIR}/device_modules/fdo_sys/ ${MBED_OS_DIR}/fdo_sys)
 
 list (APPEND MBED_FLAGS -DSTDC_HEADERS)
 
@@ -84,12 +82,6 @@ endif()
 if (${STORAGE} STREQUAL false)
   list (APPEND MBED_FLAGS -DNO_PERSISTENT_STORAGE)
 endif()
-
-# Manufacturer toolkit
-if (${MANUFACTURER_TOOLKIT} STREQUAL true)
-  list (APPEND MBED_FLAGS -DMANUFACTURER_TOOLKIT)
-endif()
-
 
 
 set( SAFESTRING_IGNORE "unittests/*
@@ -105,26 +97,12 @@ else()
   list (APPEND MBEDOS_STORAGE_IGNORE "storage_if_mbedSD.cpp\n")
 endif()
 
-if (${KEX} STREQUAL dh)
-  list (APPEND MBEDTLS_IGNORE "mbedtls_key_exchange_ecdh.c\n")
-  list (APPEND COMMON_IGNORE "fdokeyexchange_asym.c\n")
-endif()
-
 if (${KEX} MATCHES ecdh)
   list (APPEND MBEDTLS_IGNORE "mbedtls_key_exchange_dh.c\n")
   list (APPEND MBEDTLS_IGNORE "mbedtls_RSARoutines.c\n")
   list (APPEND COMMON_IGNORE "fdokeyexchange_asym.c\n")
 endif()
 
-if (${KEX} STREQUAL asym)
-  list (APPEND MBEDTLS_IGNORE "mbedtls_key_exchange_dh.c\n")
-  list (APPEND MBEDTLS_IGNORE "mbedtls_ECDSARoutines.c\n")
-  list (APPEND MBEDTLS_IGNORE "mbedtls_key_exchange_ecdh.c\n")
-endif()
-
-if (${PK_ENC} STREQUAL rsa)
-  list (APPEND MBEDTLS_IGNORE "mbedtls_ECDSAVerifyRoutines.c\n")
-endif()
 if (${PK_ENC} STREQUAL ecdsa)
   list (APPEND MBEDTLS_IGNORE "mbedtls_RSAVerifyRoutines.c\n")
 endif()
@@ -164,7 +142,8 @@ file(WRITE ${MBED_OS_DIR}/storage/mbedos/.mbedignore ${MBEDOS_STORAGE_IGNORE})
 file(WRITE ${MBED_OS_DIR}/storage/freertos/.mbedignore ${FREERTOS_STORAGE_IGNORE})
 
 
-
+# TO-DO : Look at the usage of this flag and remove later
+# since this flag has been removed from the source.
 if (${MODULES} MATCHES true)
   add_custom_command(
     OUTPUT mbed_json_update

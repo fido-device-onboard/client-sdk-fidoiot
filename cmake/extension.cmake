@@ -142,20 +142,12 @@ elseif (${TARGET_OS} STREQUAL mbedos)
   set(TLS mbedtls)
 endif()
 
-if(DA MATCHES ecdsa256)
-  client_sdk_compile_definitions(
-    -DECDSA256_DA)
-elseif(DA MATCHES ecdsa384)
-    client_sdk_compile_definitions(
-      -DECDSA384_DA)
-    #Move KEX to higher crypto
-    if (NOT(${KEX} STREQUAL ecdh384))
-      set(KEX ecdh384)
-      message("KEX moved to higher crypto")
-    endif()
-endif()
-
-if(DA STREQUAL tpm20_ecdsa256)
+if(DA STREQUAL ecdsa256)
+  client_sdk_compile_definitions(-DECDSA256_DA)
+elseif(DA STREQUAL ecdsa384)
+  client_sdk_compile_definitions(-DECDSA384_DA)
+elseif(DA STREQUAL tpm20_ecdsa256)
+  client_sdk_compile_definitions(-DECDSA256_DA)
   if(${TPM2_TCTI_TYPE} MATCHES tpmrm0)
     client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"device:/dev/tpmrm0\")
   elseif(${TPM2_TCTI_TYPE} MATCHES tabrmd)
@@ -163,6 +155,8 @@ if(DA STREQUAL tpm20_ecdsa256)
   else()
     message(WARNING "Supported TPM2_TCTI_TYPE values are 'tabrmd' and 'tpmrm0'")
   endif()
+else()
+  message(WARNING "Supported DA values are 'ecdsa256', 'ecdsa384' and 'tpm20_ecdsa256'")
 endif()
 
 if(TLS MATCHES openssl)
@@ -177,10 +171,10 @@ elseif(TLS MATCHES mbedtls)
     -DUSE_MBEDTLS)
 endif()
 
-if(${AES_MODE} MATCHES gcm)
+if(${AES_MODE} STREQUAL gcm)
   client_sdk_compile_definitions(
     -DAES_MODE_GCM_ENABLED)
-elseif(${AES_MODE} MATCHES ccm)
+elseif(${AES_MODE} STREQUAL ccm)
   client_sdk_compile_definitions(
     -DAES_MODE_CCM_ENABLED)
 else()
@@ -195,21 +189,8 @@ if(${CRYPTO_HW} MATCHES true)
   client_sdk_compile_definitions(-DSECURE_ELEMENT)
 endif()
 
-if(KEX STREQUAL dh)
-  client_sdk_compile_definitions(
-    -DKEX=\"DHKEXid14\" -DKEX_DH_ENABLED)
-elseif(KEX STREQUAL ecdh)
-  client_sdk_compile_definitions(
-    -DKEX=\"ECDH\" -DKEX_ECDH_ENABLED -DAES_128_BIT)
-elseif(KEX STREQUAL ecdh384)
-  client_sdk_compile_definitions(
-    -DKEX=\"ECDH384\" -DKEX_ECDH384_ENABLED -DAES_256_BIT)
-else()
-    message(WARNING "Incorrect KEX selected")
-endif()
-
-
 if (${BUILD} STREQUAL debug)
+  client_sdk_compile_definitions(-DDEBUG_LOGS)
   if (${TARGET_OS} STREQUAL linux)
     if (${unit-test} STREQUAL true)
       client_sdk_compile_definitions(-DLOG_LEVEL=-1)
@@ -234,18 +215,6 @@ endif()
 
 if (${RETRY} MATCHES false)
   client_sdk_compile_definitions(-DRETRY_FALSE)
-endif()
-
-
-if(${MANUFACTURER_TOOLKIT} STREQUAL true)
-  client_sdk_compile_definitions(-DMANUFACTURER_TOOLKIT)
-endif()
-
-if(${MODULES} STREQUAL true)
-  client_sdk_compile_definitions(-DMODULES_ENABLED)
-  if (${BUILD} STREQUAL debug)
-    client_sdk_compile_definitions(-DDEBUG_LOGS)
-  endif()
 endif()
 
 if(${HTTPPROXY} STREQUAL true)

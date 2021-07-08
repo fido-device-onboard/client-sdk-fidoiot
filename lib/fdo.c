@@ -679,7 +679,6 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 		return FDO_ERROR;
 	}
 
-#ifdef MODULES_ENABLED
 	if ((num_modules == 0) || (num_modules > FDO_MAX_MODULES) ||
 	    (module_information == NULL) ||
 	    (module_information->service_info_callback == NULL)) {
@@ -693,10 +692,6 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 			    &module_information[i]);
 		}
 	}
-#else
-	(void)num_modules;
-	(void)module_information;
-#endif
 
 	/* Get the callback from user */
 	g_fdo_data->error_callback = error_handling_callback;
@@ -815,7 +810,6 @@ end:
 	return false;
 }
 
-#ifdef MODULES_ENABLED
 /**
  * Internal API
  */
@@ -831,7 +825,7 @@ void print_service_info_module_list(void)
 		}
 	}
 }
-#endif
+
 /**
  * Sets device state to Resale if all conditions are met.
  * fdo_sdk_init should be called before calling this function

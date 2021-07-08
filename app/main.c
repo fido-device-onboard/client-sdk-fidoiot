@@ -107,7 +107,6 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 
-#ifdef MODULES_ENABLED
 	module_info = malloc(FDO_MAX_MODULES * (sizeof(*module_info)));
 
 	if (!module_info) {
@@ -153,7 +152,6 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 	}
 	module_info[3].service_info_callback = pelionconfig;
 #endif // #ifdef TARGET_OS_LINUX
-#endif
 #endif
 
 	return module_info;
