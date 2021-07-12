@@ -2667,6 +2667,7 @@ bool fdo_encrypted_packet_windup(fdow_t *fdow, int type)
 		return ret;
 	}
 	fdow->b.block_size = payload_length;
+	// fdo_log_block(&fdow->b);
 
 	fdo_encrypted_packet_t *pkt = fdo_encrypted_packet_alloc();
 	if (!pkt) {
@@ -4630,18 +4631,23 @@ void fdo_kv_free(fdo_key_value_t *kv)
  * @param fdor - fdor_t object containing the buffer to read
  * @param module_list - Owner ServiceInfo module list
  * @param cb_return_val - out value to hold the return value from the registered modules.
- * @param serviceinfo_invalid_modname - Out buffer to store the unsupported module name
+ * @param serviceinfo_invalid_modnames - Structure to store list of unsupported module names
  * for which an access request was made by the Owner.
  * @return true if read was a success, false otherwise
  */
 bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
-		int *cb_return_val, fdo_string_t **serviceinfo_invalid_modname) {
+		int *cb_return_val, fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames) {
 
 	char *serviceinfokey = NULL;
 	char module_name[FDO_MODULE_NAME_LEN] = {0};
 	char module_message[FDO_MODULE_MSG_LEN] = {0};
-
 	size_t num_serviceinfo = 0;
+
+	if (!fdor || !module_list || !cb_return_val) {
+		LOG(LOG_ERROR, "ServiceInfo read: Invalid params\n");
+		return false;
+	}
+
 	if (!fdor_array_length(fdor, &num_serviceinfo)) {
 		LOG(LOG_ERROR, "ServiceInfo read: Failed to find number of items\n");
 		goto exit;
@@ -4664,9 +4670,9 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 		size_t j;
 		for (j = 0; j < num_serviceinfokeyval; j++) {
 			size_t num_serviceinfokv = 0;
-			if (!fdor_array_length(fdor, &num_serviceinfokv) &&
+			if (!fdor_array_length(fdor, &num_serviceinfokv) ||
 				num_serviceinfokv != 2) {
-				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to find number of items\n");
+				LOG(LOG_ERROR, "ServiceInfoKV read: Invalid number of items\n");
 				goto exit;
 			}
 			if (!fdor_start_array(fdor)) {
@@ -4679,6 +4685,13 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to read ServiceInfoKey length\n");
 				goto exit;
 			}
+			if (serviceinfokey_length == 0 ||
+				serviceinfokey_length >= FDO_MODULE_NAME_LEN + FDO_MODULE_MSG_LEN) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Received module name and message "
+					"length is invalid\n");
+				goto exit;
+			}
+
 			serviceinfokey = fdo_alloc(sizeof(char) * serviceinfokey_length);
 			if (!serviceinfokey) {
 				LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc ServiceInfoKey\n");
@@ -4730,6 +4743,13 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 			}
 			// free the entries for reuse
 			fdo_free(serviceinfokey);
+			if (*cb_return_val == FDO_SI_INVALID_MOD_ERROR) {
+				if (!fdo_serviceinfo_invalid_modname_add(module_name,
+					serviceinfo_invalid_modnames)) {
+					LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to add invalid module name\n");
+					goto exit;
+				}
+			}
 		}
 		if (!fdor_end_array(fdor)) {
 			LOG(LOG_ERROR, "ServiceInfoKeyVal read: Failed to end array\n");
@@ -4741,13 +4761,6 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 		goto exit;
 	}
 
-	if (*cb_return_val == FDO_SI_INVALID_MOD_ERROR) {
-		*serviceinfo_invalid_modname = fdo_string_alloc_with_str(module_name);
-		if (!(*serviceinfo_invalid_modname)) {
-			LOG(LOG_ERROR, "ServiceInfoKV read: Failed to alloc unsupported module name\n");
-			goto exit;
-		}
-	}
 	return true;
 exit:
 	if (serviceinfokey) {
@@ -4757,11 +4770,111 @@ exit:
 }
 
 /**
+ * Traverse through the structure containing the list of unsupported/invalid module names
+ * as accessed by the Owner, and add the given module name to the end of the list.
+ *
+ * @param module_name - Name of the unsupported module.
+ * @param serviceinfo_invalid_modnames - Structure to store list of unsupported module names
+ * for which an access request was made by the Owner.
+ * @return true if operations was a success, false otherwise
+ */
+bool fdo_serviceinfo_invalid_modname_add(char *module_name,
+	fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames) {
+
+	int strcmp_diff = 0;
+	size_t modname_sz_rcv = 0;
+	fdo_sv_invalid_modnames_t *temp_next = NULL;
+	fdo_sv_invalid_modnames_t *temp_current = NULL;
+
+	if (!module_name || !serviceinfo_invalid_modnames) {
+		return false;
+	}
+
+	// 1st module name being allocated
+	if (!(*serviceinfo_invalid_modnames)) {
+		*serviceinfo_invalid_modnames = fdo_alloc(sizeof(fdo_sv_invalid_modnames_t));
+		if (!(*serviceinfo_invalid_modnames)) {
+			LOG(LOG_ERROR,
+				"Failed to alloc for unsupported modules\n");
+			return false;
+		}
+		temp_current = *serviceinfo_invalid_modnames;
+	} else {
+		// serach for the key that equals to module_name
+		// if found, don't add it to the list,
+		// else add it to the end of the list
+		temp_next = *serviceinfo_invalid_modnames;
+		while (temp_next) {
+
+			modname_sz_rcv = strnlen_s(temp_next->bytes,
+				FDO_MODULE_NAME_LEN);
+			if (modname_sz_rcv == 0 || modname_sz_rcv == FDO_MODULE_NAME_LEN) {
+				LOG(LOG_ERROR, "Module name may not be NULL-terminated\n");
+				return false;
+			}
+
+			if (0 != strcmp_s(temp_next->bytes,
+					modname_sz_rcv, module_name, &strcmp_diff)) {
+					LOG(LOG_ERROR,
+						"Failed to compare module names for unsupported modules\n");
+					return false;
+			}
+			if (0 == strcmp_diff) {
+				return true;
+			}
+
+			temp_current = temp_next;
+			temp_next = temp_next->next;
+		}
+		temp_current->next = fdo_alloc(sizeof(fdo_sv_invalid_modnames_t));
+		if (!temp_current) {
+			LOG(LOG_ERROR,
+				"Failed to alloc for unsupported modules\n");
+			return false;
+		}
+	}
+
+	if (0 != strncpy_s(temp_current->bytes,
+		FDO_MODULE_NAME_LEN, module_name, FDO_MODULE_NAME_LEN)) {
+		LOG(LOG_ERROR,
+			"Failed to copy unsupported module name\n");
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Traverse through the structure containing the list of unsupported/invalid module names
+ * as accessed by the Owner, and free them one-by-one. The structure itself is not freed.
+ *
+ * @param serviceinfo_invalid_modnames - Structure that contains the list of unsupported module
+ * names to be freed.
+ */
+void fdo_serviceinfo_invalid_modname_free(
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames) {
+
+	fdo_sv_invalid_modnames_t *next = NULL;
+	fdo_sv_invalid_modnames_t *current = NULL;
+
+	if (!serviceinfo_invalid_modnames) {
+		return;
+	}
+
+	current = next = serviceinfo_invalid_modnames;
+	while (current) {
+		next = current->next;
+		fdo_free(current);
+		current = next;
+	}
+}
+
+/**
  * Traverse the Module list to check if the module name is supported and active.
  * If yes, call the registered callback method that processes the ServiceInfoVal
  * within FDOR and return true/false depending on callback's execution.
- * If the module name is not supported, or is not active, skip the ServiceInfoVal
+ * If the module name is not supported, set cb_return_val to 'FDO_SI_INVALID_MOD_ERROR'
  * and return true.
+ * If the module name is not active, skip the ServiceInfoVal and return true.
  * 
  * @param fdor - fdor_t object containing the buffer to read
  * @param module_name - moduleName as received in Owner ServiceInfo
@@ -4843,7 +4956,6 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 				LOG(LOG_ERROR, "ServiceInfo: Received ServiceInfo for an inactive module %s\n",
 				    module_list->module.module_name);
 				// module is present, but is not the active module. skip this ServiceInfoVal
-				// TO-DO : Should we throw an error instead?
 				fdor_next(fdor);
 				retval = true;
 			}
@@ -4852,8 +4964,8 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 		module_list = module_list->next;
 	}
 	if (!module_name_found) {
-			// module is not present. skip this ServiceInfoVal
-			// TO-DO : Should we throw an error instead?
+			// module is not present. skip this ServiceInfoVal and
+			// set cb_return_val to 'FDO_SI_INVALID_MOD_ERROR'
 			LOG(LOG_ERROR,
 				"ServiceInfo: Received ServiceInfo for an unsupported module %s\n",
 			    module_name);

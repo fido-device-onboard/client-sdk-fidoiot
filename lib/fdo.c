@@ -273,6 +273,11 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
 	ps->total_dsi_rounds = 0;
 
+	if (ps->serviceinfo_invalid_modnames) {
+		fdo_serviceinfo_invalid_modname_free(ps->serviceinfo_invalid_modnames);
+		fdo_free(ps->serviceinfo_invalid_modnames);
+	}
+
 	// clear FDOR, FDOW and reset state to start of TO2
 	fdo_block_reset(&ps->fdor.b);
 	ps->fdor.have_block = false;
