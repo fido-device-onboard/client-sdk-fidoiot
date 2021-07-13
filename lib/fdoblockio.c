@@ -94,6 +94,10 @@ bool fdo_block_alloc_with_size(fdo_block_t *fdob, size_t block_sz)
  */
 bool fdow_init(fdow_t *fdow)
 {
+	if (!fdow) {
+		LOG(LOG_ERROR, "CBOR Encoder: Invalid params\n");
+		return false;
+	}
 	if (memset_s(fdow, sizeof(*fdow), 0) != 0) {
 		LOG(LOG_ERROR, "FDOW memset() failed!\n");
 		return false;
@@ -111,6 +115,10 @@ bool fdow_init(fdow_t *fdow)
  */
 int fdow_next_block(fdow_t *fdow, int type)
 {
+	if (!fdow) {
+		LOG(LOG_ERROR, "CBOR Encoder: Invalid params\n");
+		return false;
+	}
 	fdow->msg_type = type;
 	return true;
 }
@@ -128,6 +136,10 @@ int fdow_next_block(fdow_t *fdow, int type)
  */
 bool fdow_encoder_init(fdow_t *fdow)
 {
+	if (!fdow) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	// if there's a current block, free and then alloc
 	if (fdow->current) {
 		fdo_free(fdow->current);
@@ -159,6 +171,10 @@ bool fdow_encoder_init(fdow_t *fdow)
  */
 bool fdow_start_array(fdow_t *fdow, size_t array_items)
 {
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	// create next, create backlink and move forward.
 	fdow->current->next = fdo_alloc(sizeof(fdow_cbor_encoder_t));
 	if (!fdow->current->next) {
@@ -190,6 +206,10 @@ bool fdow_start_array(fdow_t *fdow, size_t array_items)
  */
 bool fdow_start_map(fdow_t *fdow, size_t map_items)
 {
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	// create next, create backlink and move forward.
 	fdow->current->next = fdo_alloc(sizeof(fdow_cbor_encoder_t));
 	if (!fdow->current->next) {
@@ -215,6 +235,11 @@ bool fdow_start_map(fdow_t *fdow, size_t map_items)
  */
 bool fdow_byte_string(fdow_t *fdow, uint8_t *bytes , size_t byte_sz)
 {
+	// bytes can be NULL to write empty bstr
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encode_byte_string(&fdow->current->cbor_encoder, bytes, byte_sz) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 2 (bstr)\n");
 		return false;
@@ -232,6 +257,11 @@ bool fdow_byte_string(fdow_t *fdow, uint8_t *bytes , size_t byte_sz)
  */
 bool fdow_text_string(fdow_t *fdow, char *bytes , size_t byte_sz)
 {
+	// bytes can be NULL to write empty tstr
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encode_text_string(&fdow->current->cbor_encoder, bytes, byte_sz) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 3 (tstr)\n");
 		return false;
@@ -248,6 +278,10 @@ bool fdow_text_string(fdow_t *fdow, char *bytes , size_t byte_sz)
  */
 bool fdow_signed_int(fdow_t *fdow, int value)
 {
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encode_int(&fdow->current->cbor_encoder, value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 1 (negative int)\n");
 		return false;
@@ -264,6 +298,10 @@ bool fdow_signed_int(fdow_t *fdow, int value)
  */
 bool fdow_unsigned_int(fdow_t *fdow, uint64_t value)
 {
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encode_uint(&fdow->current->cbor_encoder, value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 0 (uint)\n");
 		return false;
@@ -280,6 +318,10 @@ bool fdow_unsigned_int(fdow_t *fdow, uint64_t value)
  */
 bool fdow_boolean(fdow_t *fdow, bool value)
 {
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encode_boolean(&fdow->current->cbor_encoder, value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 7 (bool)\n");
 		return false;
@@ -295,6 +337,10 @@ bool fdow_boolean(fdow_t *fdow, bool value)
  */
 bool fdow_null(fdow_t *fdow)
 {
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encode_null(&fdow->current->cbor_encoder) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR encoder: Failed to write Major Type 7 (NULL)\n");
 		return false;
@@ -314,6 +360,10 @@ bool fdow_null(fdow_t *fdow)
  */
 bool fdow_end_array(fdow_t *fdow)
 {
+	if (!fdow || !fdow->current || !fdow->current->previous) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encoder_close_container_checked(
 		&fdow->current->previous->cbor_encoder,
 		&fdow->current->cbor_encoder) != CborNoError) {
@@ -338,6 +388,10 @@ bool fdow_end_array(fdow_t *fdow)
  */
 bool fdow_end_map(fdow_t *fdow)
 {
+	if (!fdow || !fdow->current || !fdow->current->previous) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_encoder_close_container_checked(
 		&fdow->current->previous->cbor_encoder,
 		&fdow->current->cbor_encoder) != CborNoError) {
@@ -359,6 +413,10 @@ bool fdow_end_map(fdow_t *fdow)
  * @return true if the operation was a success, false otherwise
  */
 bool fdow_encoded_length(fdow_t *fdow, size_t *length) {
+	if (!fdow || !fdow->current || !length) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
 	*length = cbor_encoder_get_buffer_size(&fdow->current->cbor_encoder, fdow->b.block);
 	return true;
 }
@@ -370,13 +428,15 @@ bool fdow_encoded_length(fdow_t *fdow, size_t *length) {
  */
 void fdow_flush(fdow_t *fdow)
 {
-	fdo_block_t *fdob = &fdow->b;
-	if (fdob) {
-		fdo_block_reset(fdob);
-		fdo_free(fdob->block);
-	}
-	if (fdow->current) {
-		fdo_free(fdow->current);
+	if (fdow) {
+		fdo_block_t *fdob = &fdow->b;
+		if (fdob) {
+			fdo_block_reset(fdob);
+			fdo_free(fdob->block);
+		}
+		if (fdow->current) {
+			fdo_free(fdow->current);
+		}
 	}
 }
 
@@ -393,6 +453,10 @@ void fdow_flush(fdow_t *fdow)
  */
 bool fdor_init(fdor_t *fdor)
 {
+	if (!fdor) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (memset_s(fdor, sizeof(*fdor), 0) != 0) {
 		LOG(LOG_ERROR, "FDOR memset() failed!\n");
 		return false;
@@ -414,6 +478,10 @@ bool fdor_init(fdor_t *fdor)
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_parser_init(fdor_t *fdor) {
+	if (!fdor) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	// if there's a current block, free and then alloc
 	if (fdor->current){
 		fdo_free(fdor->current);
@@ -446,6 +514,10 @@ bool fdor_parser_init(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_start_array(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	// create next, create backlink and move forward.
 	fdor->current->next = fdo_alloc(sizeof(fdor_cbor_decoder_t));
 	if (!fdor->current->next) {
@@ -475,6 +547,10 @@ bool fdor_start_array(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_start_map(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	// create next, create backlink and move forward.
 	fdor->current->next = fdo_alloc(sizeof(fdor_cbor_decoder_t));
 	if (!fdor->current->next) {
@@ -499,6 +575,10 @@ bool fdor_start_map(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_array_length(fdor_t *fdor, size_t *length) {
+	if (!fdor || !fdor->current || !length) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_array(&fdor->current->cbor_value) ||
 		cbor_value_get_array_length(&fdor->current->cbor_value,
 		length) != CborNoError) {
@@ -516,6 +596,10 @@ bool fdor_array_length(fdor_t *fdor, size_t *length) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_string_length(fdor_t *fdor, size_t *length) {
+	if (!fdor || !fdor->current || !length) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if ((!cbor_value_is_byte_string(&fdor->current->cbor_value) &&
 		!cbor_value_is_text_string(&fdor->current->cbor_value)) ||
 		cbor_value_calculate_string_length(&fdor->current->cbor_value,
@@ -535,6 +619,11 @@ bool fdor_string_length(fdor_t *fdor, size_t *length) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_byte_string(fdor_t *fdor, uint8_t *buffer, size_t buffer_length) {
+	// buffer can be NULL to read empty bstr
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_byte_string(&fdor->current->cbor_value) ||
 		cbor_value_copy_byte_string(&fdor->current->cbor_value, buffer, &buffer_length, NULL)
 			!= CborNoError) {
@@ -556,6 +645,11 @@ bool fdor_byte_string(fdor_t *fdor, uint8_t *buffer, size_t buffer_length) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_text_string(fdor_t *fdor, char *buffer, size_t buffer_length) {
+	// buffer can be NULL to read empty tstr
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_text_string(&fdor->current->cbor_value) ||
 		cbor_value_copy_text_string(&fdor->current->cbor_value, buffer, &buffer_length, NULL)
 			!= CborNoError) {
@@ -575,6 +669,10 @@ bool fdor_text_string(fdor_t *fdor, char *buffer, size_t buffer_length) {
  * @return true if value is CBOR NULL, false otherwise
  */
 bool fdor_is_value_null(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	return cbor_value_is_null(&fdor->current->cbor_value);
 }
 
@@ -585,6 +683,10 @@ bool fdor_is_value_null(fdor_t *fdor) {
  * @return true if the current value is integer, false otherwise
  */
 bool fdor_is_value_signed_int(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	return cbor_value_is_integer(&fdor->current->cbor_value);
 }
 
@@ -596,6 +698,10 @@ bool fdor_is_value_signed_int(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_signed_int(fdor_t *fdor, int *result) {
+	if (!fdor || !fdor->current || !result) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_integer(&fdor->current->cbor_value) ||
 		cbor_value_get_int(&fdor->current->cbor_value, result)
 			!= CborNoError) {
@@ -616,6 +722,10 @@ bool fdor_signed_int(fdor_t *fdor, int *result) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_unsigned_int(fdor_t *fdor, uint64_t *result) {
+	if (!fdor || !fdor->current || !result) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_unsigned_integer(&fdor->current->cbor_value) ||
 		cbor_value_get_uint64(&fdor->current->cbor_value, result)
 			!= CborNoError) {
@@ -636,6 +746,10 @@ bool fdor_unsigned_int(fdor_t *fdor, uint64_t *result) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_boolean(fdor_t *fdor, bool *result) {
+	if (!fdor || !fdor->current || !result) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_boolean(&fdor->current->cbor_value) ||
 		cbor_value_get_boolean(&fdor->current->cbor_value, result)
 			!= CborNoError) {
@@ -659,6 +773,10 @@ bool fdor_boolean(fdor_t *fdor, bool *result) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_end_array(fdor_t *fdor) {
+	if (!fdor || !fdor->current || !fdor->current->previous) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_array(&fdor->current->previous->cbor_value) ||
 		!cbor_value_at_end(&fdor->current->cbor_value) ||
 		cbor_value_leave_container(&fdor->current->previous->cbor_value, 
@@ -683,6 +801,10 @@ bool fdor_end_array(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_end_map(fdor_t *fdor) {
+	if (!fdor || !fdor->current || !fdor->current->previous) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (!cbor_value_is_map(&fdor->current->previous->cbor_value) ||
 		!cbor_value_at_end(&fdor->current->cbor_value) ||
 		cbor_value_leave_container(&fdor->current->previous->cbor_value, 
@@ -703,6 +825,10 @@ bool fdor_end_map(fdor_t *fdor) {
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_next(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
 	if (cbor_value_advance(&fdor->current->cbor_value) != CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to advance element\n");
 		return false;
@@ -717,12 +843,14 @@ bool fdor_next(fdor_t *fdor) {
  */
 void fdor_flush(fdor_t *fdor)
 {
-	fdo_block_t *fdob = &fdor->b;
-	if (fdob) {
-		fdo_block_reset(fdob);
-		fdo_free(fdob->block);
-	}
-	if (fdor->current) {
-		fdo_free(fdor->current);
+	if (fdor) {
+		fdo_block_t *fdob = &fdor->b;
+		if (fdob) {
+			fdo_block_reset(fdob);
+			fdo_free(fdob->block);
+		}
+		if (fdor->current) {
+			fdo_free(fdor->current);
+		}
 	}
 }

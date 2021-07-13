@@ -13,53 +13,7 @@
 #include "snprintf_s.h"
 #include "base64.h"
 #include "fdoCryptoCtx.h"
-
-#if defined(KEX_ECDH384_ENABLED)
-#define SEK_KEY_SIZE 32 /* KEX_ECDH384_ENABLED */
-#else
-#define SEK_KEY_SIZE 16
-#endif
-
-/* Cipher suite "cs" for msg60 in TO2 */
-#if defined(AES_256_BIT)
-#define AES_BITS 256
-#else
-#define AES_BITS 128
-#endif /* AES_256_BIT */
-
-#if !defined(KEX_ECDH384_ENABLED) /*TODO : replace with generic flag 256/384*/
-#define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_32_BYTES
-#else
-#define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_48_BYTES
-#endif
-
-#define FDO_AES_BLOCK_SIZE BUFF_SIZE_16_BYTES /* 128 bits */
-#define FDO_AES_IV_SIZE BUFF_SIZE_16_BYTES    /* 128 bits */
-#define HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES    /* 256 bits */
-#if defined(AES_256_BIT)
-#define FDO_AES_KEY_LENGTH BUFF_SIZE_32_BYTES /* 256 bits */
-#else					      // defined(AES_128_BIT)
-#define FDO_AES_KEY_LENGTH BUFF_SIZE_16_BYTES /* 128 bits */
-#endif
-
-// default Owner attestation
-#define FDO_OWNER_ATTEST_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509
-
-#if defined(ECDSA256_DA)
-#define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256
-#elif defined(ECDSA384_DA)
-#define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384
-#endif
-
-#if defined(AES_MODE_GCM_ENABLED) && AES_BITS == 128
-#define COSE_ENC_TYPE FDO_CRYPTO_A128GCM
-#elif defined(AES_MODE_GCM_ENABLED) && AES_BITS == 256
-#define COSE_ENC_TYPE FDO_CRYPTO_A256GCM
-#elif defined(AES_MODE_CCM_ENABLED) && AES_BITS == 128
-#define COSE_ENC_TYPE FDO_CRYPTO_A128CCM
-#elif defined(AES_MODE_CCM_ENABLED) && AES_BITS == 256
-#define COSE_ENC_TYPE FDO_CRYPTO_A256CCM
-#endif
+#include "fdoCryptoCommons.h"
 
 /* Function declarations */
 int32_t fdo_crypto_init(void);
