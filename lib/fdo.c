@@ -1035,7 +1035,8 @@ end:
 static bool _STATE_TO1(void)
 {
 	bool ret = false;
-	bool tls = false;
+	bool tls = true;
+	bool skip_rv = false;
 	fdo_prot_ctx_t *prot_ctx = NULL;
 
 	LOG(LOG_DEBUG, "\n-------------------------------------------"
@@ -1070,7 +1071,6 @@ static bool _STATE_TO1(void)
 	int port = 0;
 	fdo_ip_address_t *ip = NULL;
 	fdo_string_t *dns = NULL;
-	bool rvowner_only = false;
 
 	if (g_fdo_data->current_rvdirective == NULL) {
 		// keep track of current directive in use with the help of stored RendezvousInfo from DI.
@@ -1086,37 +1086,36 @@ static bool _STATE_TO1(void)
 		ip = NULL;
 		dns = NULL;
 		rvbypass = false;
-		rvowner_only = false;
-		tls = false;
+		tls = true;
+		skip_rv = false;
 		while (rv) {
 
 			if (rv->bypass && *rv->bypass == true) {
 				rvbypass = true;
 				break;
-			}
-			if (rv->owner_only && *rv->owner_only == true) {
-				rvowner_only = true;
+			} else if (rv->owner_only && *rv->owner_only) {
+				LOG(LOG_DEBUG, "Found RVOwnerOnly. Skipping the directive...\n");
+				skip_rv = true;
 				break;
-			}
-
-			if (rv->ip) {
+			} else if (rv->ip) {
 				ip = rv->ip;
-				rv = rv->next;
-				continue;
-			}
-			if (rv->dn) {
+			} else if (rv->dn) {
 				dns = rv->dn;
-				rv = rv->next;
-				continue;
-			}
-			if (rv->po) {
+			} else if (rv->po) {
 				port = *rv->po;
-				rv = rv->next;
-				continue;
+			} else if (rv->pr) {
+				if (*rv->pr == RVPROTHTTP) {
+					tls = false;
+				} else if (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS) {
+					// nothing to do. TLS is already set
+				} else {
+					LOG(LOG_ERROR, "Unsupported/Invalid value found for RVProtocolValue. "
+						"Skipping the directive...\n");
+					skip_rv = true;
+					break;
+				}
 			}
-			if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
-				tls = true;
-			}
+			// ignore the other RendezvousInstr as they are not used for making requests
 			rv = rv->next;
 		}
 
@@ -1130,9 +1129,10 @@ static bool _STATE_TO1(void)
 		// Found the  needed entries of the current directive. Prepare to move to next.
 		g_fdo_data->current_rvdirective = g_fdo_data->current_rvdirective->next;
 
-		if (rvowner_only || (!ip && !dns) || port == 0) {
+		if (skip_rv || (!ip && !dns) || port == 0) {
 			// If any of the IP/DNS/Port values are missing, or
-			// if RVOwnerOnly is prsent in the current directive,
+			// if RVOwnerOnly is present in the current directive, or
+			// if unsupported/invalid RVProtocolValue was found
 			// skip the current directive and check for the same in the next directives.
 			continue;
 		}
@@ -1231,7 +1231,8 @@ static bool _STATE_TO2(void)
 	int port = 0;
 	fdo_ip_address_t *ip = NULL;
 	fdo_string_t *dns = NULL;
-	bool tls = false;
+	bool tls = true;
+	bool skip_rv = false;
 
 	// if thers is RVBYPASS enabled, we enter the loop and set 'rvbypass' flag to false
 	// otherwise, there'll be RVTO2AddrEntry(s), and we iterate through it.
@@ -1241,25 +1242,35 @@ static bool _STATE_TO2(void)
 	// Run the TO2 protocol regardless.
 	while (rvbypass || g_fdo_data->current_rvto2addrentry) {
 
-		tls = false;
+		tls = true;
+		skip_rv = false;
 		// if rvbypass is set by TO1, then pick the Owner's address from RendezvousInfo.
 		// otherwise, pick the address from RVTO2AddrEntry.
 		if (rvbypass) {
 			fdo_rendezvous_t *rv = g_fdo_data->current_rvdirective->rv_entries;
-			if (rv->ip) {
-				ip = rv->ip;
+			while (rv) {
+				if (rv->ip) {
+					ip = rv->ip;
+				} else if (rv->dn) {
+					dns = rv->dn;
+				} else if (rv->po) {
+					port = *rv->po;
+				} else if (rv->pr) {
+					if (*rv->pr == RVPROTHTTP) {
+						tls = false;
+					} else if (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS) {
+						// nothing to do. TLS is already set
+					} else {
+						LOG(LOG_ERROR, "Unsupported/Invalid value found for RVProtocolValue. "
+							"Skipping the directive...\n");
+						skip_rv = true;
+						break;
+					}
+				}
+				// no need to check for RVBYPASS here again, since we used it
+				// to get here in the first place
+				// ignore the other RendezvousInstr as they are not used for making requests
 				rv = rv->next;
-			}
-			if (rv->dn) {
-				dns = rv->dn;
-				rv = rv->next;
-			}
-			if (rv->po) {
-				port = *rv->po;
-				rv = rv->next;
-			}
-			if (rv->pr && (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS)) {
-				tls = true;
 			}
 
 			// Found the  needed entries of the current directive.
@@ -1282,13 +1293,39 @@ static bool _STATE_TO2(void)
 			}
 			dns = g_fdo_data->current_rvto2addrentry->rvdns;
 			port = g_fdo_data->current_rvto2addrentry->rvport;
-			if (g_fdo_data->current_rvto2addrentry->rvprotocol == PROTHTTPS ||
+			if (g_fdo_data->current_rvto2addrentry->rvprotocol == PROTHTTP) {
+				tls = false;
+			} else if (g_fdo_data->current_rvto2addrentry->rvprotocol == PROTHTTPS ||
 				g_fdo_data->current_rvto2addrentry->rvprotocol == PROTTLS) {
-				tls = true;
+				// nothing to do. TLS is already set
+			} else {
+				LOG(LOG_ERROR, "Unsupported/Invalid value found for RVProtocol. "
+					"Skipping the RVTO2AddrEntry...\n");
+				skip_rv = true;
 			}
 			// prepare for next iteration beforehand
 			g_fdo_data->current_rvto2addrentry = g_fdo_data->current_rvto2addrentry->next;
 
+		}
+
+		if (skip_rv || (!ip && !dns) || port == 0) {
+			// If any of the IP/DNS/Port values are missing, or
+			// if RVOwnerOnly is present in the current directive, or
+			// if unsupported/invalid RVProtocolValue/RVProtocol was found
+			// for rvbypass, goto TO1
+			// else, skip the directive
+			if (!rvbypass) {
+				// free only when rvbypass is false, since the allocation was done then.
+				fdo_free(ip);
+				ip = NULL;
+			} else {
+				// set the global rvbypass flag to false so that we don't continue the loop
+				// because of rvbypass
+				rvbypass = false;
+				g_fdo_data->state_fn = &_STATE_TO1;
+				return ret;
+			}
+			continue;
 		}
 
 		prot_ctx = fdo_prot_ctx_alloc(
@@ -1313,13 +1350,12 @@ static bool _STATE_TO2(void)
 
 			fdo_sleep(3);
 
+			// Repeat the same operation as the failure case above
+			// when processing RendezvousInfo/RVTO2Addr and they need to be skipped
 			if (!rvbypass) {
-				// free only when rvbypass is false, since the allocation was done then.
 				fdo_free(ip);
 				ip = NULL;
 			} else {
-				// set the global rvbypass flag to false so that we don't continue the loop
-				// because of rvbypass
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
 				return ret;
