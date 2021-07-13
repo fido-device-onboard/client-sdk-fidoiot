@@ -230,7 +230,7 @@ int32_t msg61(fdo_prot_t *ps)
 
 	/*
 	 * Read the key exchange info. This is the first part of key exchange of
-	 * info. xA is used based on KEX selected.
+	 * info. xA is used based on DA selected.
 	 */
 	size_t xA_length = 8;
 	if (!fdor_string_length(&ps->fdor, &xA_length)) {

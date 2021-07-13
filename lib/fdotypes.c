@@ -1212,7 +1212,7 @@ void fdo_public_key_free(fdo_public_key_t *pk)
  */
 bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
 {
-	if (!fdow) {
+	if (!fdow || !pk) {
 		return false;
 	}
 
@@ -2490,7 +2490,7 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 	// Decrypt the Encrypted Body
 	if (!fdor || !pkt) {
 		LOG(LOG_ERROR, "Encrypted Message (decrypt): Invalid params\n");
-		goto err;
+		return false;
 	}
 
 	cleartext = fdo_byte_array_alloc(0);
@@ -2541,7 +2541,7 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decrytion done\n");
 	ret = true;
 err:
-	if (temp_fdow.current) {
+	if (temp_fdow.b.block || temp_fdow.current) {
 		fdow_flush(&temp_fdow);
 	}
 	if (pkt) {
@@ -2566,9 +2566,15 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz) {
 
 	bool ret = false;
+	// create temporary FDOW, use it to create Protected header map and then clear it.
 	fdow_t temp_fdow = {0};
 
-	// create temporary FDOW, use it to create Protected header map and then clear it.
+	if (!pkt || ! fdow) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
@@ -2612,7 +2618,7 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	}
 	ret = true;
 exit:
-	if (temp_fdow.current) {
+	if (temp_fdow.b.block || temp_fdow.current) {
 		fdow_flush(&temp_fdow);
 	}
 	if (!ret) {
@@ -2774,6 +2780,11 @@ void fdo_eat_free(fdo_eat_t *eat) {
  */
 bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat) {
 
+	if (!fdow || !eat) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_start_array(fdow, 4)) {
 		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write start array\n");
 		return false;
@@ -2817,9 +2828,15 @@ bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *ea
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !eat_ph) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
@@ -2874,8 +2891,9 @@ bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *ea
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
 	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
 	}
@@ -2891,6 +2909,13 @@ end:
  * Return true, if write was a success. False otherwise.
  */
 bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t *eat_uph) {
+
+	if (!fdow || !eat_uph) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Invalid params\n");
+		return false;
+	}
+
 	// calculate the size of map.
 	int num_uph_elements = 0;
 	if (eat_uph->euphnonce) {
@@ -2955,7 +2980,15 @@ bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t
  * Return true, if write was a success. False otherwise.
  */
 bool fdo_eat_write_payloadbasemap(fdow_t *fdow, fdo_eat_payload_base_map_t *eat_payload) {
+
 	size_t num_payload_elements = 2;
+
+	if (!fdow) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Invalid params\n");
+		return false;
+	}
+
 	if (eat_payload->eatpayloads) {
 		LOG(LOG_DEBUG,
 			"Entity Attestation Token PayloadBaseMap: EATPayload to be written\n");
@@ -3056,6 +3089,11 @@ bool fdo_cose_free(fdo_cose_t *cose) {
  */
 bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *cose_ph) {
 
+	if (!fdor || !cose_ph) {
+		LOG(LOG_ERROR, "COSE Protected header: Invalid params\n");
+		return false;
+	}
+
 	fdor_t temp_fdor;
 	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
 		LOG(LOG_ERROR, "COSE Protected header: Failed to intialize temporary FDOR\n");
@@ -3144,6 +3182,11 @@ end:
  */
 bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_t *cose_uph) {
 
+	if (!fdor) {
+		LOG(LOG_ERROR, "COSE Unprotected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdor_start_map(fdor)) {
 		LOG(LOG_ERROR,
 			"COSE Unprotected header: Failed to read start map\n");
@@ -3202,10 +3245,15 @@ bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_
  */
 bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph) {
 
+	if (!fdor || !cose) {
+		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
 	size_t num_cose_items = 4;
 	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 4) {
 		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
-		return false;		
+		return false;
 	}
 
 	if (!fdor_start_array(fdor)) {
@@ -3292,9 +3340,14 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !cose_ph) {
+		LOG(LOG_ERROR, "COSE Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
@@ -3347,8 +3400,9 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
 	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
 	}
@@ -3362,6 +3416,12 @@ end:
  * Return true, if write was a success. False otherwise.
  */
 bool fdo_cose_write_unprotected_header(fdow_t *fdow) {
+	if (!fdow) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Invalid params\n");
+		return false;
+	}
+
 	// empty map for now
 	if (!fdow_start_map(fdow, 0)) {
 		LOG(LOG_ERROR,
@@ -3390,6 +3450,11 @@ bool fdo_cose_write_unprotected_header(fdow_t *fdow) {
  * @return true, if write was a success. False otherwise.
  */
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose) {
+	if (!fdow || !cose) {
+		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_start_array(fdow, 4)) {
 		LOG(LOG_ERROR, "COSE: Failed to write start array\n");
 		return false;
@@ -3648,9 +3713,14 @@ bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !protected_header) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE_Mac0 Protected header: FDOW Initialization/Allocation failed!\n");
@@ -3704,8 +3774,9 @@ bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
 	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
 	}
@@ -3989,9 +4060,15 @@ bool fdo_cose_encrypt0_read_unprotected_header(fdor_t *fdor,
  */
 bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0) {
 	size_t num_cose_items = 3;
+
+	if (!fdor || !cose_encrypt0) {
+		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
 	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 3) {
 		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
-		return false;		
+		return false;
 	}
 
 	if (!fdor_start_array(fdor)) {
@@ -4042,7 +4119,6 @@ bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0) {
 	return true;
 
 end:
-	fdo_cose_encrypt0_free(cose_encrypt0);
 	return false;
 }
 
@@ -4059,9 +4135,14 @@ bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !protected_header) {
+		LOG(LOG_ERROR, "COSE Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
@@ -4115,8 +4196,9 @@ bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
 	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
 	}

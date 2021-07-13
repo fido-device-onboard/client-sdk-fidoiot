@@ -454,18 +454,20 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 
 	LOG(LOG_DEBUG, "Connecting to manufacturer Server\n");
 
+	if (!ip) {
+		goto end;
+	}
+
 	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
 	/* cache ip/dns and port to REST */
-	if (ip) {
-		if (!cache_host_ip(ip)) {
-			LOG(LOG_ERROR,
-			    "Mfg IP-address caching to REST failed!\n");
-			goto end;
-		}
+	if (!cache_host_ip(ip)) {
+		LOG(LOG_ERROR,
+		    "Mfg IP-address caching to REST failed!\n");
+		goto end;
 	}
 
 	if (!cache_host_port(port)) {
@@ -537,17 +539,19 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 
 	LOG(LOG_DEBUG, "Connecting to Rendezvous server\n");
 
+	if (!ip) {
+		goto end;
+	}
+
 	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
 	/* cache ip/dns and port to REST */
-	if (ip) {
-		if (!cache_host_ip(ip)) {
-			LOG(LOG_ERROR, "REST IP-address caching failed!\n");
-			goto end;
-		}
+	if (!cache_host_ip(ip)) {
+		LOG(LOG_ERROR, "REST IP-address caching failed!\n");
+		goto end;
 	}
 
 	if (!cache_host_port(port)) {
@@ -624,23 +628,32 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 
 	LOG(LOG_DEBUG, "Connecting to owner server\n");
 
+	if (!ip) {
+		goto end;
+	}
+
 	if (!sock_hdl) {
 		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
 	/* cache ip/dns and port to REST */
-	if (ip) {
-		if (!cache_host_ip(ip)) {
-			LOG(LOG_ERROR,
-			    "Owner IP-address caching to REST failed!\n");
-			goto end;
-		}
+	if (!cache_host_ip(ip)) {
+		LOG(LOG_ERROR,
+		    "Owner IP-address caching to REST failed!\n");
+		goto end;
 	}
 
 	if (!cache_host_port(port)) {
 		LOG(LOG_ERROR, "Owner portno caching to REST failed!\n");
 		goto end;
+	}
+
+	if (ssl) {
+		if (!cache_tls_connection()) {
+			LOG(LOG_ERROR, "REST TLS caching failed!\n");
+			goto end;
+		}
 	}
 
 	if (is_owner_proxy_defined()) {
