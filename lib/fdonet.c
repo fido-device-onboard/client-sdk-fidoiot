@@ -41,8 +41,9 @@ static uint16_t ownerproxy_port;
 bool is_rv_proxy_defined(void)
 {
 #if defined HTTPPROXY
-	if (rvproxy_port != 0)
+	if (rvproxy_port != 0) {
 		return true;
+	}
 	LOG(LOG_DEBUG, "Proxy enabled but Not set\n");
 #endif // defined HTTPPROXY
 	return false;
@@ -54,8 +55,9 @@ bool is_rv_proxy_defined(void)
 bool is_mfg_proxy_defined(void)
 {
 #if defined HTTPPROXY
-	if (mfgproxy_port != 0)
+	if (mfgproxy_port != 0) {
 		return true;
+	}
 	LOG(LOG_DEBUG, "Proxy enabled but Not set\n");
 #endif // defined HTTPPROXY
 	return false;
@@ -67,8 +69,9 @@ bool is_mfg_proxy_defined(void)
 bool is_owner_proxy_defined(void)
 {
 #if defined HTTPPROXY
-	if (ownerproxy_port != 0)
+	if (ownerproxy_port != 0) {
 		return true;
+	}
 	LOG(LOG_DEBUG, "Proxy enabled but Not set\n");
 #endif // defined HTTPPROXY
 	return false;
@@ -97,13 +100,15 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 
 	ret =
 	    strstr_s((char *)proxydata, proxydatsize, "://", 3, (char **)&pch);
-	if (ret != 0 && ret != ESNOTFND)
+	if (ret != 0 && ret != ESNOTFND) {
 		return false;
+	}
 
-	if (pch)
+	if (pch) {
 		proxy = (uint8_t *)pch + 3;
-	else
+	} else {
 		proxy = (uint8_t *)proxydata;
+	}
 
 	while (proxy[i] != 0 && proxy[i] != ':') {
 		proxy_url[i] = proxy[i];
@@ -135,10 +140,12 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 	}
 	ret = 0;
 err:
-	if (ip_list)
+	if (ip_list) {
 		fdo_free(ip_list);
-	if (ret)
+	}
+	if (ret) {
 		return false;
+	}
 	return true;
 }
 
@@ -162,8 +169,9 @@ static bool discover_proxy(fdo_ip_address_t *fdoip, uint16_t *port_num)
 	// Create a proxy factory instance
 	px_proxy_factory *pf = px_proxy_factory_new();
 
-	if (!pf)
+	if (!pf) {
 		return 1;
+	}
 
 	// Get which proxies to use in order to fetch "http://www.google.com"
 	char **proxies =
@@ -190,8 +198,9 @@ static bool discover_proxy(fdo_ip_address_t *fdoip, uint16_t *port_num)
 	fdo_init_ipv4_address(fdoip, proxy);
 #else
 	if (strncpy_s((char *)fdoip->addr, sizeof(fdoip->addr), proxy,
-		      sizeof(proxy)))
+		      sizeof(proxy))) {
 		return false;
+	}
 	fdoip->length = sizeof(fdoip->addr);
 #endif
 	*port_num = proxy_port;
@@ -200,17 +209,20 @@ static bool discover_proxy(fdo_ip_address_t *fdoip, uint16_t *port_num)
 err:
 	// Free the proxy list
 	for (int i = 0; proxies[i]; i++) {
-		if (proxies[i])
+		if (proxies[i]) {
 			fdo_free(proxies[i]);
+		}
 	}
-	if (proxies)
+	if (proxies) {
 		fdo_free(proxies);
+	}
 
 	// Free the proxy factory
 	px_proxy_factory_free(pf);
 
-	if (ret)
+	if (ret) {
 		return false;
+	}
 	return true;
 }
 #endif
@@ -268,10 +280,12 @@ bool setup_http_proxy(const char *filename, fdo_ip_address_t *fdoip,
 
 	ret = 0;
 err:
-	if (proxydata)
+	if (proxydata) {
 		fdo_free(proxydata);
-	if (ret)
+	}
+	if (ret) {
 		return false;
+	}
 	return true;
 }
 #endif
@@ -287,9 +301,10 @@ void fdo_net_init(void)
 #if defined(PROXY_DISCOVERY)
 
 	else {
-		if (discover_proxy(&mfgproxy_ip, &mfgproxy_port))
+		if (discover_proxy(&mfgproxy_ip, &mfgproxy_port)) {
 			LOG(LOG_INFO, "Manufacturer HTTP proxy has been "
 				      "discovered & configured\n");
+		}
 	}
 #endif
 
@@ -298,9 +313,10 @@ void fdo_net_init(void)
 	}
 #if defined(PROXY_DISCOVERY)
 	else {
-		if (discover_proxy(&rvproxy_ip, &rvproxy_port))
+		if (discover_proxy(&rvproxy_ip, &rvproxy_port)) {
 			LOG(LOG_INFO, "Rendezvous HTTP proxy has been "
 				      "discovered & configured\n");
+		}
 	}
 #endif
 
@@ -309,9 +325,10 @@ void fdo_net_init(void)
 	}
 #if defined(PROXY_DISCOVERY)
 	else {
-		if (discover_proxy(&ownerproxy_ip, &ownerproxy_port))
+		if (discover_proxy(&ownerproxy_ip, &ownerproxy_port)) {
 			LOG(LOG_INFO, "Owner HTTP proxy has been discovered & "
 				      "configured\n");
+		}
 	}
 #endif
 
@@ -405,8 +422,9 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		}
 	}
 end:
-	if (ip_list) // free ip_list
+	if (ip_list) { // free ip_list
 		fdo_free(ip_list);
+	}
 	return ret;
 }
 
@@ -524,7 +542,6 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 			LOG(LOG_ERROR, "REST IP-address caching failed!\n");
 			goto end;
 		}
-	} else {
 	}
 
 	if (!cache_host_port(port)) {
@@ -532,11 +549,12 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (ssl)
+	if (ssl) {
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
 			goto end;
 		}
+	}
 
 	if (is_rv_proxy_defined()) {
 #if defined HTTPPROXY
@@ -681,6 +699,7 @@ int fdo_connection_restablish(fdo_prot_ctx_t *prot_ctx)
 	if (prot_ctx->sock_hdl == FDO_CON_INVALID_HANDLE) {
 		LOG(LOG_ERROR, "Failed reconnecting to server: Giving up...");
 		return -1;
-	} else
+	} else {
 		return 0;
+	}
 }

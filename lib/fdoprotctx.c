@@ -51,13 +51,16 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 
 	fdo_prot_ctx_t *prot_ctx = fdo_alloc(sizeof(fdo_prot_ctx_t));
 
-	if (prot_ctx == NULL)
+	if (prot_ctx == NULL) {
 		return NULL;
+	}
 
-	if (host_ip)
+	if (host_ip) {
 		prot_ctx->host_ip = host_ip;
-	if (host_dns)
+	}
+	if (host_dns) {
 		prot_ctx->host_dns = host_dns;
+	}
 
 	prot_ctx->protdata = protdata;
 	prot_ctx->protrun = protrun;
@@ -73,8 +76,9 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 void fdo_prot_ctx_free(fdo_prot_ctx_t *prot_ctx)
 {
 	if (prot_ctx) {
-		if (prot_ctx->host_dns)
+		if (prot_ctx->host_dns) {
 			fdo_free(prot_ctx->resolved_ip);
+		}
 		fdo_free(prot_ctx);
 	}
 }
@@ -87,8 +91,9 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	bool ret = false;
 	static int prevstate;
 
-	if (prot_ctx->protdata->state == FDO_STATE_ERROR)
+	if (prot_ctx->protdata->state == FDO_STATE_ERROR) {
 		prot_ctx->protdata->state = prevstate;
+	}
 
 	switch (prot_ctx->protdata->state) {
 	case FDO_STATE_DI_APP_START: /* type 10 */
@@ -208,8 +213,9 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 	fdor_t *fdor = NULL;
 	fdow_t *fdow = NULL;
 
-	if (!prot_ctx || !prot_ctx->protdata)
+	if (!prot_ctx || !prot_ctx->protdata) {
 		return -1;
+	}
 	fdor = &prot_ctx->protdata->fdor;
 	fdow = &prot_ctx->protdata->fdow;
 
@@ -227,9 +233,9 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			return -1;
 		}
 
-		if (prot_ctx->protrun)
+		if (prot_ctx->protrun) {
 			(*prot_ctx->protrun)(prot_ctx->protdata);
-		else {
+		} else {
 			ret = -1;
 			break;
 		}

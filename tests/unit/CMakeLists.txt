@@ -26,23 +26,19 @@ client_sdk_get_compile_options(c_ops)
 # rules for per test file
 # note sequence needs to be maintained for proper execution.
 set (UNIT_TEST_SOURCES
-  # test_ECDSAVerifyRoutines.c
-  # test_sample.c
+  test_ECDSAVerifyRoutines.c
   test_hal_os.c
-  # test_fdoprot.c
-  test_base64.c
-  # test_fdotypes.c
+  test_fdotypes.c
   test_fdonet.c
-  # test_fdo.c
-  # test_credentials.c
-  # test_cryptoSupport.c
+  test_credentials.c
+  test_cryptoSupport.c
   test_bn_support.c
   test_utils.c
   test_cryptoUtils.c
-  # test_AESRoutines.c
-  # test_protctx.c
+  test_AESRoutines.c
+  test_protctx.c
   test_SSLRoutines.c
-  # test_ECDSASignRoutines.c
+  test_ECDSASignRoutines.c
   test_fdoblockio.c
 )
 

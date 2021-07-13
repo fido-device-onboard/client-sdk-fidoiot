@@ -35,15 +35,8 @@ if (${TLS} STREQUAL openssl)
     openssl/openssl_cryptoSupport.c
     openssl/openssl_SSLRoutines.c
     openssl/openssl_base64.c
-    openssl/BN_support.c)
-
-    if (${KEX} STREQUAL dh)
-      ### DH key exchange
-        client_sdk_sources_with_lib( crypto openssl/openssl_key_exchange_dh.c)
-    elseif (${KEX} MATCHES ecdh)
-    ### ECDH key exchange
-        client_sdk_sources_with_lib( crypto openssl/openssl_key_exchange_ecdh.c)
-    endif()
+    openssl/BN_support.c
+    openssl/openssl_key_exchange_ecdh.c)
 
     ### Signature verifications types
     if (${CRYPTO_HW} STREQUAL false)
@@ -87,19 +80,11 @@ if (${TLS} STREQUAL mbedtls)
     mbedtls/mbedtls_SSLRoutines.c
     mbedtls/mbedtls_base64.c
     mbedtls/mbedtls_RSAEncryptRoutines.c
-    mbedtls/mbedtls_random.c)
+    mbedtls/mbedtls_random.c
+    mbedtls/mbedtls_key_exchange_ecdh.c)
 
     if (${CRYPTO_HW} MATCHES false)
         client_sdk_sources_with_lib( crypto mbedtls/mbedtls_AESGCMRoutines.c)
-    endif()
-
-
-    if (${KEX} STREQUAL dh)
-      ### DH key exchange
-        client_sdk_sources_with_lib( crypto mbedtls/mbedtls_key_exchange_dh.c)
-    elseif (${KEX} MATCHES ecdh)
-    ### ECDH key exchange
-        client_sdk_sources_with_lib( crypto mbedtls/mbedtls_key_exchange_ecdh.c)
     endif()
 
     ### Signature verifications types

@@ -63,13 +63,15 @@ bool cache_host_dns(const char *dns)
 {
 	bool ret = false;
 
-	if (!dns)
+	if (!dns) {
 		goto err;
+	}
 
 	size_t len = strnlen_s(dns, FDO_MAX_STR_SIZE);
 
-	if (!len || len == FDO_MAX_STR_SIZE)
+	if (!len || len == FDO_MAX_STR_SIZE) {
 		goto err;
+	}
 
 	if (!isRESTContext_active()) {
 		LOG(LOG_ERROR, "Rest Context is not active!\n");
@@ -85,8 +87,9 @@ bool cache_host_dns(const char *dns)
 		goto err;
 	}
 
-	if (strcpy_s(rest->host_dns, len + 1, dns) != 0)
+	if (strcpy_s(rest->host_dns, len + 1, dns) != 0) {
 		goto err;
+	}
 
 	ret = true;
 
@@ -105,8 +108,9 @@ bool cache_host_ip(fdo_ip_address_t *ip)
 {
 	bool ret = false;
 
-	if (!ip)
+	if (!ip) {
 		goto err;
+	}
 
 	if (!isRESTContext_active()) {
 		LOG(LOG_ERROR, "Rest Context is not active!\n");
@@ -187,8 +191,9 @@ static bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
 	char temp[IP_TAG_LEN] = {0};
 	uint8_t octlet_size = 4; // e.g 192.168.0.100, max 3char +1 null/oct.
 
-	if (!ip || !ip_ascii)
+	if (!ip || !ip_ascii) {
 		goto err;
+	}
 
 	if ((snprintf_s_i(temp, octlet_size, "%d", ip->addr[0]) < 0) ||
 	    (snprintf_s_i((temp + strnlen_s(temp, IP_TAG_LEN)), octlet_size + 1,
@@ -237,11 +242,13 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	if (rest_ctx->host_ip) {
 		ip_ascii = fdo_alloc(IP_TAG_LEN);
 
-		if (!ip_ascii)
+		if (!ip_ascii) {
 			goto err;
+		}
 
-		if (!ip_bin_to_ascii(rest_ctx->host_ip, ip_ascii))
+		if (!ip_bin_to_ascii(rest_ctx->host_ip, ip_ascii)) {
 			goto err;
+		}
 	}
 
 	// TLS needed ?
@@ -378,8 +385,9 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	ret = true;
 
 err:
-	if (ip_ascii)
+	if (ip_ascii) {
 		fdo_free(ip_ascii);
+	}
 	return ret;
 }
 
@@ -525,8 +533,9 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		} else if (strcasecmp_s(tmp, tmplen, "authorization",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
-			if (rest->authorization)
+			if (rest->authorization) {
 				fdo_free(rest->authorization);
+			}
 			rest->authorization = strdup(p1);
 			if (rest->authorization) {
 				LOG(LOG_DEBUG, "Authorization: %s\n",
@@ -563,8 +572,9 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			 * if
 			 * allocated
 			 */
-			if (rest->x_token_authorization)
+			if (rest->x_token_authorization) {
 				fdo_free(rest->x_token_authorization);
+			}
 			rest->x_token_authorization = strdup(p1);
 			LOG(LOG_DEBUG, "Body: %s\n", tmp);
 		}
@@ -602,14 +612,18 @@ char get_rest_hdr_body_separator(void)
 void exit_rest_context(void)
 {
 	if (rest) {
-		if (rest->authorization)
+		if (rest->authorization) {
 			fdo_free(rest->authorization);
-		if (rest->x_token_authorization)
+		}
+		if (rest->x_token_authorization) {
 			fdo_free(rest->x_token_authorization);
-		if (rest->host_ip)
+		}
+		if (rest->host_ip) {
 			fdo_free(rest->host_ip);
-		if (rest->host_dns)
+		}
+		if (rest->host_dns) {
 			fdo_free(rest->host_dns);
+		}
 		fdo_free(rest);
 	}
 }

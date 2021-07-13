@@ -198,8 +198,9 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	size_t dev_cred_len = 0;
 	fdor_t *fdor = NULL;
 
-	if (!our_dev_cred) {
-		goto end;
+	if (!dev_cred_file || !our_dev_cred) {
+		LOG(LOG_ERROR, "Invalid params\n");
+		return false;
 	}
 
 	if (our_dev_cred->owner_blk != NULL) {
@@ -343,6 +344,11 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 	size_t dev_cred_len = 0;
 	fdo_byte_array_t *secret = NULL;
 
+	if (!dev_cred_file || !our_dev_cred) {
+		LOG(LOG_DEBUG, "Invalid params\n");
+		return false;
+	}
+
 	(void)our_dev_cred; /* Unused Warning */
 
 	dev_cred_len = fdo_blob_size((char *)dev_cred_file, flags);
@@ -435,8 +441,9 @@ int load_credential(void)
 {
 	fdo_dev_cred_t *ocred = app_alloc_credentials();
 
-	if (!ocred)
+	if (!ocred) {
 		return -1;
+	}
 
 	fdo_dev_cred_init(ocred);
 
@@ -460,8 +467,9 @@ int load_mfg_secret(void)
 {
 	fdo_dev_cred_t *ocred = app_get_credentials();
 
-	if (!ocred)
+	if (!ocred) {
 		return -1;
+	}
 
 #if !defined(DEVICE_TPM20_ENABLED)
 	// ReadHMAC Credentials

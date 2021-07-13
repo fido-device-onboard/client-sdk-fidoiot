@@ -33,13 +33,15 @@ int keyfromstring(const char *key);
  */
 fdo_bits_t *fdo_bits_init(fdo_bits_t *b, size_t byte_sz)
 {
-	if (!b)
+	if (!b) {
 		return NULL;
+	}
 
 	if (byte_sz > 0) {
 		b->bytes = fdo_alloc(byte_sz * sizeof(uint8_t));
-		if (b->bytes == NULL)
+		if (b->bytes == NULL) {
 			return NULL;
+		}
 		b->byte_sz = byte_sz;
 		return b;
 	}
@@ -62,13 +64,15 @@ fdo_bits_t *fdo_bits_alloc(size_t byte_sz)
 {
 	fdo_bits_t *b = fdo_alloc(sizeof(fdo_bits_t));
 
-	if (b == NULL)
+	if (b == NULL) {
 		return NULL;
+	}
 
-	if (byte_sz > 0)
+	if (byte_sz > 0) {
 		return fdo_bits_init(b, byte_sz);
-	else
+	} else {
 		return b;
+	}
 }
 
 /**
@@ -81,8 +85,9 @@ fdo_bits_t *fdo_bits_alloc_with(size_t byte_sz, uint8_t *data)
 {
 	fdo_bits_t *b = fdo_bits_alloc(byte_sz);
 
-	if (b == NULL)
+	if (b == NULL) {
 		return NULL;
+	}
 	if (!fdo_bits_fill(&b)) {
 		fdo_bits_free(b);
 		return NULL;
@@ -113,11 +118,13 @@ void fdo_bits_free(fdo_bits_t *b)
  */
 void fdo_bits_empty(fdo_bits_t *b)
 {
-	if (!b)
+	if (!b) {
 		return;
+	}
 	if (b->bytes) {
-		if (b->byte_sz && memset_s(b->bytes, b->byte_sz, 0))
+		if (b->byte_sz && memset_s(b->bytes, b->byte_sz, 0)) {
 			LOG(LOG_ERROR, "Failed to clear memory\n");
+		}
 		fdo_free(b->bytes);
 		b->bytes = NULL;
 	}
@@ -131,8 +138,9 @@ void fdo_bits_empty(fdo_bits_t *b)
  */
 fdo_bits_t *fdo_bits_clone(fdo_bits_t *b)
 {
-	if (!b)
+	if (!b) {
 		return NULL;
+	}
 	return fdo_bits_alloc_with(b->byte_sz, b->bytes);
 }
 
@@ -159,8 +167,9 @@ bool fdo_bits_fill(fdo_bits_t **bits)
 {
 	fdo_bits_t *b;
 
-	if (!bits || !*bits)
+	if (!bits || !*bits) {
 		return false;
+	}
 
 	b = *bits;
 	if (b->bytes != NULL) {
@@ -168,8 +177,9 @@ bool fdo_bits_fill(fdo_bits_t **bits)
 		b->bytes = NULL;
 	}
 	b->bytes = fdo_alloc(b->byte_sz);
-	if (b->bytes == NULL)
+	if (b->bytes == NULL) {
 		return false;
+	}
 	return true;
 }
 
@@ -210,8 +220,9 @@ fdo_byte_array_t *fdo_byte_array_alloc_with_byte_array(uint8_t *ba, int ba_len)
  */
 void fdo_byte_array_free(fdo_byte_array_t *ba)
 {
-	if (ba)
+	if (ba) {
 		fdo_bits_free(ba);
+	}
 }
 
 /**
@@ -244,8 +255,9 @@ fdo_byte_array_t *fdo_byte_array_clone(fdo_byte_array_t *bn)
 fdo_byte_array_t *fdo_byte_array_append(fdo_byte_array_t *baA,
 					fdo_byte_array_t *baB)
 {
-	if (!baA || !baB)
+	if (!baA || !baB) {
 		return NULL;
+	}
 
 	int buf_szAB = baA->byte_sz + baB->byte_sz;
 	fdo_byte_array_t *baAB = fdo_byte_array_alloc(buf_szAB);
@@ -294,14 +306,16 @@ fdo_string_t *fdo_string_alloc(void)
  */
 fdo_string_t *fdo_string_alloc_size(size_t byte_sz) {
 
-	if (byte_sz == 0)
+	if (byte_sz == 0) {
 		return NULL;
+	}
 
 	// Buffer would store NULL terminated string, adding +1 for '\0'
 	int total_size = byte_sz + 1;
 	fdo_string_t *s = (fdo_string_t *)fdo_alloc(sizeof(fdo_string_t));
-	if (!s)
+	if (!s) {
 		return NULL;
+	}
 
 	s->bytes = fdo_alloc(total_size * sizeof(char));
 	if (!s->bytes) {
@@ -325,16 +339,19 @@ fdo_string_t *fdo_string_alloc_with(const char *data, int byte_sz)
 	// Buffer would store NULL terminated string, adding +1 for '\0'
 	int total_size = byte_sz + 1;
 
-	if (!data)
+	if (!data) {
 		goto err1;
+	}
 
 	temp_str = fdo_string_alloc();
-	if (!temp_str)
+	if (!temp_str) {
 		goto err1;
+	}
 
 	temp_str->bytes = fdo_alloc(total_size * sizeof(char));
-	if (temp_str->bytes == NULL)
+	if (temp_str->bytes == NULL) {
 		goto err2;
+	}
 
 	// byte_sz contains the number of characters
 	temp_str->byte_sz = byte_sz;
@@ -361,8 +378,9 @@ err1:
  */
 fdo_string_t *fdo_string_alloc_with_str(const char *data)
 {
-	if (!data)
+	if (!data) {
 		return NULL;
+	}
 
 	int str_sz = strnlen_s(data, FDO_MAX_STR_SIZE);
 
@@ -412,17 +430,19 @@ void fdo_string_init(fdo_string_t *b)
  */
 bool fdo_string_resize(fdo_string_t *b, int byte_sz)
 {
-	if (!b)
+	if (!b) {
 		return false;
+	}
 
 	fdo_string_init(b);
 	if (byte_sz > 0) {
 		b->byte_sz = byte_sz;
 		b->bytes = fdo_alloc(byte_sz * sizeof(char));
-		if (b->bytes)
+		if (b->bytes) {
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
 	return true;
 }
@@ -438,21 +458,23 @@ bool fdo_string_resize(fdo_string_t *b, int byte_sz)
  */
 bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data)
 {
-	if (!b || !data)
+	if (!b || !data) {
 		return NULL;
+	}
 
 	if (fdo_string_resize(b, new_byte_sz + 1)) {
-		if (new_byte_sz > 0)
+		if (new_byte_sz > 0) {
 			if (memcpy_s(b->bytes, new_byte_sz, data,
 				     new_byte_sz) != 0) {
 				LOG(LOG_ERROR, "Memcpy Failed\n");
 				fdo_free(b->bytes);
 				return false;
 			}
-
+		}
 		return true;
-	} else
+	} else {
 		return false;
+	}
 }
 
 /**
@@ -515,8 +537,9 @@ bool fdo_siginfo_read(fdor_t *fdor)
 	int exptype = 0;
 	uint8_t *buf = {0};
 
-	if (!fdor)
+	if (!fdor) {
 		goto end;
+	}
 
 	if (!fdor_start_array(fdor)) {
 		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
@@ -584,15 +607,17 @@ bool fdo_nonce_equal(fdo_byte_array_t *n1, fdo_byte_array_t *n2)
 {
 	int result_memcmp = 0;
 
-	if (!n1 || !n2)
+	if (!n1 || !n2) {
 		return false;
+	}
 
 	if (!memcmp_s(n1->bytes, FDO_NONCE_BYTES, n2->bytes, FDO_NONCE_BYTES,
 		      &result_memcmp) &&
-	    !result_memcmp)
+	    !result_memcmp) {
 		return true;
-	else
+	} else {
 		return false;
+	}
 }
 
 /**
@@ -609,8 +634,9 @@ char *fdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz)
 
 	(void)buf_sz; /* FIXME: Change the signature as its unused */
 
-	if (!n || !buf)
+	if (!n || !buf) {
 		return NULL;
+	}
 
 	while (i < FDO_NONCE_BYTES) {
 		buf[i] = INT2HEX(((*a >> 4) & 0xf));
@@ -671,8 +697,9 @@ fdo_hash_t *fdo_hash_alloc_empty(void)
 {
 	fdo_hash_t *hp = fdo_alloc(sizeof(fdo_hash_t));
 
-	if (hp == NULL)
+	if (hp == NULL) {
 		return NULL;
+	}
 	hp->hash_type = FDO_CRYPTO_HASH_TYPE_NONE;
 	return hp;
 }
@@ -687,8 +714,9 @@ fdo_hash_t *fdo_hash_alloc(int hash_type, int size)
 {
 	fdo_hash_t *hp = fdo_alloc(sizeof(fdo_hash_t));
 
-	if (hp == NULL)
+	if (hp == NULL) {
 		return NULL;
+	}
 	hp->hash_type = hash_type;
 	hp->hash = fdo_byte_array_alloc(size);
 	if (hp->hash == NULL) {
@@ -727,8 +755,9 @@ void fdo_hash_free(fdo_hash_t *hp)
 int fdo_hash_read(fdor_t *fdor, fdo_hash_t *hp)
 {
 
-	if (!fdor || !hp)
+	if (!fdor || !hp) {
 		return 0;
+	}
 
 	size_t num_hash_items = 0;
 	if (!fdor_array_length(fdor, &num_hash_items) || num_hash_items != 2) {
@@ -842,8 +871,9 @@ fdo_ip_address_t *fdo_ipaddress_alloc(void)
  */
 void fdo_init_ipv4_address(fdo_ip_address_t *fdoip, uint8_t *ipv4)
 {
-	if (!fdoip || !ipv4)
+	if (!fdoip || !ipv4) {
 		return;
+	}
 
 	fdoip->length = 4;
 	if (memset_s(&fdoip->addr[0], sizeof(fdoip->addr), 0) != 0) {
@@ -870,8 +900,9 @@ bool fdo_null_ipaddress(fdo_ip_address_t *fdoip)
 	if (memset_s(&fdoip->addr[0], sizeof(fdoip->addr), 0) != 0) {
 		LOG(LOG_ERROR, "Memset Failed\n");
 		return false;
-	} else
+	} else {
 		return true;
+	}
 }
 
 /**
@@ -886,8 +917,9 @@ char *fdo_ipaddress_to_string(fdo_ip_address_t *fdoip, char *buf, int buf_sz)
 	int n;
 	char *buf0 = buf;
 
-	if (!fdoip || !buf)
+	if (!fdoip || !buf) {
 		return NULL;
+	}
 
 	if (fdoip->length == 4) {
 		int temp;
@@ -984,12 +1016,14 @@ bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip)
 {
 	fdo_byte_array_t *IP;
 
-	if (!fdor || !fdoip)
+	if (!fdor || !fdoip) {
 		return false;
+	}
 
 	IP = fdo_byte_array_alloc_with_int(0);
-	if (!IP)
+	if (!IP) {
 		return false;
+	}
 
 	size_t ip_length;
 	if (!fdor_string_length(fdor, &ip_length) || ip_length != IPV4_ADDR_LEN) {
@@ -1024,8 +1058,9 @@ bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip)
  */
 bool fdo_convert_to_ipaddress(fdo_byte_array_t *ip_bytes, fdo_ip_address_t *fdoip)
 {
-	if (!ip_bytes || !fdoip)
+	if (!ip_bytes || !fdoip) {
 		return false;
+	}
 
 	fdoip->length = ip_bytes->byte_sz;
 	if (memcpy_s(&fdoip->addr[0], fdoip->length, ip_bytes->bytes, ip_bytes->byte_sz) !=
@@ -1079,11 +1114,13 @@ fdo_public_key_t *fdo_public_key_alloc(int pkalg, int pkenc, int pklen,
  */
 fdo_public_key_t *fdo_public_key_clone(fdo_public_key_t *pk)
 {
-	if (pk == NULL)
+	if (pk == NULL) {
 		return NULL;
+	}
 
-	if (!pk->key1 || !pk->pkenc || !pk->pkalg)
+	if (!pk->key1 || !pk->pkenc || !pk->pkalg) {
 		return NULL;
+	}
 
 	fdo_public_key_t *npk = fdo_public_key_alloc(
 	    pk->pkalg, pk->pkenc, pk->key1->byte_sz, pk->key1->bytes);
@@ -1110,31 +1147,37 @@ bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2)
 {
 	int result_memcmp = 0;
 
-	if (!pk1 || !pk2)
+	if (!pk1 || !pk2) {
 		return false;
+	}
 
 	if (!pk1->key1 || !pk2->key1 || !pk1->pkenc || !pk2->pkenc ||
-	    !pk1->pkalg || !pk2->pkalg)
+	    !pk1->pkalg || !pk2->pkalg) {
 		return false;
+	}
 
-	if (pk1->pkalg != pk2->pkalg)
+	if (pk1->pkalg != pk2->pkalg) {
 		return false;
+	}
 
-	if (pk1->pkenc != pk2->pkenc)
+	if (pk1->pkenc != pk2->pkenc) {
 		return false;
+	}
 
 	if (memcmp_s(pk1->key1->bytes, pk1->key1->byte_sz, pk2->key1->bytes,
 		     pk2->key1->byte_sz, &result_memcmp) ||
-	    result_memcmp)
+	    result_memcmp) {
 		return false;
+	}
 
 	/* X.509 encoded pubkeys only have key1 parameter */
 	if (pk1->key2 && pk2->key2) {
 		if (memcmp_s(pk1->key2->bytes, pk1->key2->byte_sz,
 			     pk2->key2->bytes, pk2->key2->byte_sz,
 			     &result_memcmp) ||
-		    result_memcmp)
+		    result_memcmp) {
 			return false;
+		}
 	}
 	return true;
 }
@@ -1145,8 +1188,9 @@ bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2)
  */
 void fdo_public_key_free(fdo_public_key_t *pk)
 {
-	if (!pk)
+	if (!pk) {
 		return;
+	}
 	fdo_byte_array_free(pk->key1);
 	if (pk->key2) {
 		fdo_byte_array_free(pk->key2);
@@ -1168,8 +1212,9 @@ void fdo_public_key_free(fdo_public_key_t *pk)
  */
 bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
 {
-	if (!fdow)
+	if (!fdow || !pk) {
 		return false;
+	}
 
 	if (!fdow_start_array(fdow, 3)) {
 		LOG(LOG_ERROR, "PublicKey write: Failed to start array.\n");
@@ -1208,8 +1253,9 @@ bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
  */
 fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 {
-	if (!fdor)
+	if (!fdor) {
 		return NULL;
+	}
 
 	size_t num_public_key_items, public_key_length = 0;
 	fdo_public_key_t *pk = fdo_public_key_alloc_empty(); // Create a Public Key
@@ -1273,56 +1319,73 @@ fdo_rendezvous_t *fdo_rendezvous_alloc(void)
  */
 void fdo_rendezvous_free(fdo_rendezvous_t *rv)
 {
-	if (!rv)
+	if (!rv) {
 		return;
+	}
 
-	if (rv->dev_only != NULL)
+	if (rv->dev_only != NULL) {
 		fdo_free(rv->dev_only);
+	}
 
-	if (rv->owner_only != NULL)
+	if (rv->owner_only != NULL) {
 		fdo_free(rv->owner_only);
+	}
 
-	if (rv->ip != NULL)
+	if (rv->ip != NULL) {
 		fdo_free(rv->ip);
+	}
 
-	if (rv->po != NULL)
+	if (rv->po != NULL) {
 		fdo_free(rv->po);
+	}
 
-	if (rv->pow != NULL)
+	if (rv->pow != NULL) {
 		fdo_free(rv->pow);
+	}
 
-	if (rv->dn != NULL)
+	if (rv->dn != NULL) {
 		fdo_string_free(rv->dn);
+	}
 
-	if (rv->sch != NULL)
+	if (rv->sch != NULL) {
 		fdo_hash_free(rv->sch);
+	}
 
-	if (rv->cch != NULL)
+	if (rv->cch != NULL) {
 		fdo_hash_free(rv->cch);
+	}
 
-	if (rv->ui != NULL)
+	if (rv->ui != NULL) {
 		fdo_free(rv->ui);
+	}
 
-	if (rv->ss != NULL)
+	if (rv->ss != NULL) {
 		fdo_string_free(rv->ss);
+	}
 
-	if (rv->pw != NULL)
+	if (rv->pw != NULL) {
 		fdo_string_free(rv->pw);
+	}
 
-	if (rv->wsp != NULL)
+	if (rv->wsp != NULL) {
 		fdo_string_free(rv->wsp);
+	}
 
-	if (rv->me != NULL)
+	if (rv->me != NULL) {
 		fdo_free(rv->me);
+	}
 
-	if (rv->pr != NULL)
+	if (rv->pr != NULL) {
 		fdo_free(rv->pr);
+	}
 
-	if (rv->delaysec != NULL)
+	if (rv->delaysec != NULL) {
 		fdo_free(rv->delaysec);
+	}
 
-	if (rv->bypass != NULL)
+	if (rv->bypass != NULL) {
 		fdo_free(rv->bypass);
+	}
 
 	fdo_free(rv);
 }
@@ -1340,8 +1403,9 @@ void fdo_rendezvous_free(fdo_rendezvous_t *rv)
  */
 bool fdo_rendezvous_write(fdow_t *fdow, fdo_rendezvous_t *rv)
 {
-	if (!fdow || !rv)
+	if (!fdow || !rv) {
 		return false;
+	}
 	
 	if (!fdow_start_array(fdow, rv->num_params)) {
 		LOG(LOG_ERROR, "RendezvousInstr: Failed to start array\n");
@@ -1487,8 +1551,9 @@ bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv)
 {
 	int ret = true;
 
-	if (!fdor || !rv)
+	if (!fdor || !rv) {
 		return false;
+	}
 
 	size_t num_rv_instr_items = 0;
 	if (!fdor_array_length(fdor, &num_rv_instr_items) || num_rv_instr_items <= 0) {
@@ -1850,8 +1915,9 @@ void fdo_rendezvous_list_free(fdo_rendezvous_list_t *list)
  */
 int fdo_rendezvous_directive_add(fdo_rendezvous_list_t *list,
 	fdo_rendezvous_directive_t *directive) {
-	if (list == NULL || directive == NULL)
+	if (list == NULL || directive == NULL) {
 		return 0;
+	}
 
 	if (list->num_rv_directives == 0) {
 		// List empty, add the first entry
@@ -1881,8 +1947,9 @@ int fdo_rendezvous_directive_add(fdo_rendezvous_list_t *list,
  */
 int fdo_rendezvous_list_add(fdo_rendezvous_directive_t *directives, fdo_rendezvous_t *rv)
 {
-	if (directives == NULL || rv == NULL)
+	if (directives == NULL || rv == NULL) {
 		return 0;
+	}
 
 	if (directives->num_entries == 0) {
 		// List empty, add the first entry
@@ -1914,15 +1981,16 @@ fdo_rendezvous_directive_t *fdo_rendezvous_directive_get(fdo_rendezvous_list_t *
 {
 	int index;
 
-	if (list == NULL || list->rv_directives == NULL)
+	if (list == NULL || list->rv_directives == NULL) {
 		return NULL;
+	}
 
 	fdo_rendezvous_directive_t *entry_ptr = list->rv_directives;
 
 	for (index = 0; index < num; index++) {
-		if (entry_ptr->next != NULL)
+		if (entry_ptr->next != NULL) {
 			entry_ptr = entry_ptr->next;
-		else {
+		} else {
 			// this should ideally no happen since for 'num' times,
 			// there should be a directive present.
 			LOG(LOG_DEBUG, "RendezvousDirective not found for index %d\n", index);
@@ -1942,15 +2010,16 @@ fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *directive,
 {
 	int index;
 
-	if (directive == NULL || directive->rv_entries == NULL)
+	if (directive == NULL || directive->rv_entries == NULL) {
 		return NULL;
+	}
 
 	fdo_rendezvous_t *entry_ptr = directive->rv_entries;
 
 	for (index = 0; index < num; index++) {
-		if (entry_ptr->next != NULL)
+		if (entry_ptr->next != NULL) {
 			entry_ptr = entry_ptr->next;
-		else {
+		} else {
 			// this should ideally no happen since for 'num' times,
 			// there should be a directive present.
 			LOG(LOG_DEBUG, "RendezvousInstr not found for index %d\n", index);
@@ -1979,8 +2048,9 @@ fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *directive,
 
 int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
 {
-	if (!fdor || !list)
+	if (!fdor || !list) {
 		return false;
+	}
 
 	// Find out the number of RendezvousDirective(s)
 	size_t num_rv_directives = 0;
@@ -2034,9 +2104,9 @@ int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
 
 			fdo_rendezvous_t *rv_entry = fdo_rendezvous_alloc();
 
-			if (fdo_rendezvous_read(fdor, rv_entry))
+			if (fdo_rendezvous_read(fdor, rv_entry)) {
 				fdo_rendezvous_list_add(rv_directive, rv_entry);
-			else {
+			} else {
 				fdo_rendezvous_free(rv_entry);
 				// TO-DO: free directive here?
 				return false;
@@ -2045,7 +2115,7 @@ int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
 		if (!fdor_end_array(fdor)) {
 			LOG(LOG_ERROR,
 		    	"%s : RendezvousDirective end array not found\n", __func__);
-		return false;
+			return false;
 		}
 		fdo_rendezvous_directive_add(list, rv_directive);
 	}
@@ -2078,8 +2148,9 @@ int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list)
  */
 bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list)
 {
-	if (!fdow || !list)
+	if (!fdow || !list) {
 		return false;
+	}
 
 	fdow_start_array(fdow, list->num_rv_directives);
 
@@ -2129,12 +2200,15 @@ void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt)
 	if (pkt == NULL) {
 		return;
 	}
-	if (pkt->em_body)
+	if (pkt->em_body) {
 		fdo_byte_array_free(pkt->em_body);
-	if (pkt->hmac)
+	}
+	if (pkt->hmac) {
 		fdo_hash_free(pkt->hmac);
-	if (pkt->ct_string)
+	}
+	if (pkt->ct_string) {
 		fdo_byte_array_free(pkt->ct_string);
+	}
 	fdo_free(pkt);
 }
 
@@ -2334,8 +2408,9 @@ err:
  */
 bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
 {
-	if (!fdow || !pkt)
+	if (!fdow || !pkt) {
 		return false;
+	}
 
 	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
 
@@ -2415,7 +2490,7 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 	// Decrypt the Encrypted Body
 	if (!fdor || !pkt) {
 		LOG(LOG_ERROR, "Encrypted Message (decrypt): Invalid params\n");
-		goto err;
+		return false;
 	}
 
 	cleartext = fdo_byte_array_alloc(0);
@@ -2466,7 +2541,7 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decrytion done\n");
 	ret = true;
 err:
-	if (temp_fdow.current) {
+	if (temp_fdow.b.block || temp_fdow.current) {
 		fdow_flush(&temp_fdow);
 	}
 	if (pkt) {
@@ -2491,9 +2566,15 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	fdow_t *fdow, size_t fdow_buff_default_sz) {
 
 	bool ret = false;
+	// create temporary FDOW, use it to create Protected header map and then clear it.
 	fdow_t temp_fdow = {0};
 
-	// create temporary FDOW, use it to create Protected header map and then clear it.
+	if (!pkt || ! fdow) {
+		LOG(LOG_ERROR,
+			"Encrypted Message write: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
@@ -2537,7 +2618,7 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 	}
 	ret = true;
 exit:
-	if (temp_fdow.current) {
+	if (temp_fdow.b.block || temp_fdow.current) {
 		fdow_flush(&temp_fdow);
 	}
 	if (!ret) {
@@ -2652,8 +2733,9 @@ fdo_eat_t* fdo_eat_alloc(void) {
 	eat->eat_signature = NULL;
 	return eat;
 err:
-	if (eat)
+	if (eat) {
 		fdo_eat_free(eat);
+	}
 	return NULL;
 }
 
@@ -2666,10 +2748,12 @@ void fdo_eat_free(fdo_eat_t *eat) {
 		fdo_free(eat->eat_ph);
 	}
 	if (eat->eat_uph) {
-		if (eat->eat_uph->eatmaroeprefix)
+		if (eat->eat_uph->eatmaroeprefix) {
 			fdo_byte_array_free(eat->eat_uph->eatmaroeprefix);
-		if (eat->eat_uph->euphnonce)
+		}
+		if (eat->eat_uph->euphnonce) {
 			fdo_byte_array_free(eat->eat_uph->euphnonce);
+		}
 		fdo_free(eat->eat_uph);
 	}
 	if (eat->eat_payload) {
@@ -2695,6 +2779,11 @@ void fdo_eat_free(fdo_eat_t *eat) {
  * @return true, if write was a success. False otherwise.
  */
 bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat) {
+
+	if (!fdow || !eat) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Invalid params\n");
+		return false;
+	}
 
 	if (!fdow_start_array(fdow, 4)) {
 		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write start array\n");
@@ -2739,9 +2828,15 @@ bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *ea
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !eat_ph) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
@@ -2796,10 +2891,12 @@ bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *ea
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
-	if (enc_ph)
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
+	}
 	return ret;
 }
 
@@ -2812,6 +2909,13 @@ end:
  * Return true, if write was a success. False otherwise.
  */
 bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t *eat_uph) {
+
+	if (!fdow || !eat_uph) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token Unprotected header: Invalid params\n");
+		return false;
+	}
+
 	// calculate the size of map.
 	int num_uph_elements = 0;
 	if (eat_uph->euphnonce) {
@@ -2876,7 +2980,15 @@ bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t
  * Return true, if write was a success. False otherwise.
  */
 bool fdo_eat_write_payloadbasemap(fdow_t *fdow, fdo_eat_payload_base_map_t *eat_payload) {
+
 	size_t num_payload_elements = 2;
+
+	if (!fdow) {
+		LOG(LOG_ERROR,
+			"Entity Attestation Token PayloadBaseMap: Invalid params\n");
+		return false;
+	}
+
 	if (eat_payload->eatpayloads) {
 		LOG(LOG_DEBUG,
 			"Entity Attestation Token PayloadBaseMap: EATPayload to be written\n");
@@ -2977,6 +3089,11 @@ bool fdo_cose_free(fdo_cose_t *cose) {
  */
 bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *cose_ph) {
 
+	if (!fdor || !cose_ph) {
+		LOG(LOG_ERROR, "COSE Protected header: Invalid params\n");
+		return false;
+	}
+
 	fdor_t temp_fdor;
 	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
 		LOG(LOG_ERROR, "COSE Protected header: Failed to intialize temporary FDOR\n");
@@ -3049,8 +3166,9 @@ bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *c
 end:
 	fdor_flush(&temp_fdor);
 	fdo_free(temp_fdor.b.block);
-	if (ph_as_bstr)
+	if (ph_as_bstr) {
 		fdo_byte_array_free(ph_as_bstr);
+	}
 	return true;
 }
 
@@ -3063,6 +3181,11 @@ end:
  * TO-DO : Update when Simple Encrypted Message is implemented to parse COSEUnProtFields
  */
 bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_t *cose_uph) {
+
+	if (!fdor) {
+		LOG(LOG_ERROR, "COSE Unprotected header: Invalid params\n");
+		return false;
+	}
 
 	if (!fdor_start_map(fdor)) {
 		LOG(LOG_ERROR,
@@ -3122,10 +3245,15 @@ bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_
  */
 bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph) {
 
+	if (!fdor || !cose) {
+		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
 	size_t num_cose_items = 4;
 	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 4) {
 		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
-		return false;		
+		return false;
 	}
 
 	if (!fdor_start_array(fdor)) {
@@ -3212,9 +3340,14 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !cose_ph) {
+		LOG(LOG_ERROR, "COSE Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
@@ -3267,10 +3400,12 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
-	if (enc_ph)
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
+	}
 	return ret;
 }
 
@@ -3281,6 +3416,12 @@ end:
  * Return true, if write was a success. False otherwise.
  */
 bool fdo_cose_write_unprotected_header(fdow_t *fdow) {
+	if (!fdow) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Invalid params\n");
+		return false;
+	}
+
 	// empty map for now
 	if (!fdow_start_map(fdow, 0)) {
 		LOG(LOG_ERROR,
@@ -3309,6 +3450,11 @@ bool fdo_cose_write_unprotected_header(fdow_t *fdow) {
  * @return true, if write was a success. False otherwise.
  */
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose) {
+	if (!fdow || !cose) {
+		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_start_array(fdow, 4)) {
 		LOG(LOG_ERROR, "COSE: Failed to write start array\n");
 		return false;
@@ -3442,8 +3588,9 @@ bool fdo_cose_mac0_read_protected_header(fdor_t *fdor,
 end:
 	fdor_flush(&temp_fdor);
 	fdo_free(temp_fdor.b.block);
-	if (ph_as_bstr)
+	if (ph_as_bstr) {
 		fdo_byte_array_free(ph_as_bstr);
+	}
 	return true;
 }
 
@@ -3566,9 +3713,14 @@ bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !protected_header) {
+		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE_Mac0 Protected header: FDOW Initialization/Allocation failed!\n");
@@ -3622,10 +3774,12 @@ bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
-	if (enc_ph)
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
+	}
 	return ret;
 }
 
@@ -3745,8 +3899,9 @@ fdo_cose_encrypt0_t* fdo_cose_encrypt0_alloc(void) {
 
 	return cose_encrypt0;
 err:
-	if (cose_encrypt0)
+	if (cose_encrypt0) {
 		fdo_cose_encrypt0_free(cose_encrypt0);
+	}
 	return NULL;
 }
 
@@ -3905,9 +4060,15 @@ bool fdo_cose_encrypt0_read_unprotected_header(fdor_t *fdor,
  */
 bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0) {
 	size_t num_cose_items = 3;
+
+	if (!fdor || !cose_encrypt0) {
+		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
 	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 3) {
 		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
-		return false;		
+		return false;
 	}
 
 	if (!fdor_start_array(fdor)) {
@@ -3958,7 +4119,6 @@ bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0) {
 	return true;
 
 end:
-	fdo_cose_encrypt0_free(cose_encrypt0);
 	return false;
 }
 
@@ -3975,9 +4135,14 @@ bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ph = NULL;
-
 	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow;
+	fdow_t temp_fdow = {0};
+
+	if (!fdow || !protected_header) {
+		LOG(LOG_ERROR, "COSE Protected header: Invalid params\n");
+		return false;
+	}
+
 	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
@@ -4031,10 +4196,12 @@ bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
 	}
 	ret = true;
 end:
-	fdow_flush(&temp_fdow);
-	fdo_free(temp_fdow.b.block);
-	if (enc_ph)
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	if (enc_ph) {
 		fdo_byte_array_free(enc_ph);
+	}
 	return ret;
 }
 
@@ -4119,10 +4286,12 @@ bool fdo_cose_encrypt0_write(fdow_t *fdow, fdo_cose_encrypt0_t *cose_encrypt0) {
  * Free the given RVTO2AddrEntry object for which memory has been allocated previously.
  */
 void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry) {
-	if (rvto2addr_entry->rvip)
+	if (rvto2addr_entry->rvip) {
 		fdo_byte_array_free(rvto2addr_entry->rvip);
-	if (rvto2addr_entry->rvdns)
+	}
+	if (rvto2addr_entry->rvdns) {
 		fdo_string_free(rvto2addr_entry->rvdns);
+	}
 	fdo_free(rvto2addr_entry);	
 }
 
@@ -4305,10 +4474,12 @@ bool fdo_signature_verification(fdo_byte_array_t *plain_text,
 	int ret;
 	bool signature_verify = false;
 
-	if (!plain_text || !sg || !pk || !pk->key1)
+	if (!plain_text || !sg || !pk || !pk->key1) {
 		return false;
-	if (!plain_text->bytes || !sg->bytes)
+	}
+	if (!plain_text->bytes || !sg->bytes) {
 		return false;
+	}
 
 	ret = fdo_ov_verify(plain_text->bytes, plain_text->byte_sz, sg->bytes,
 			    sg->byte_sz, pk, &signature_verify);
@@ -4343,8 +4514,9 @@ fdo_key_value_t *fdo_kv_alloc(void)
  */
 fdo_key_value_t *fdo_kv_alloc_with_str(const char *key, const char *val)
 {
-	if (!key || !val)
+	if (!key || !val) {
 		return NULL;
+	}
 
 	fdo_key_value_t *kv = fdo_kv_alloc();
 
@@ -4388,8 +4560,9 @@ fdo_key_value_t *fdo_kv_alloc_with_str(const char *key, const char *val)
  */
 fdo_key_value_t *fdo_kv_alloc_key_only(const char *key)
 {
-	if (!key)
+	if (!key) {
 		return NULL;
+	}
 
 	fdo_key_value_t *kv = fdo_kv_alloc();
 
@@ -4419,16 +4592,21 @@ fdo_key_value_t *fdo_kv_alloc_key_only(const char *key)
  */
 void fdo_kv_free(fdo_key_value_t *kv)
 {
-	if (kv->key != NULL)
+	if (kv->key != NULL) {
 		fdo_string_free(kv->key);
-	if (kv->str_val != NULL)
+	}
+	if (kv->str_val != NULL) {
 		fdo_string_free(kv->str_val);
-	if (kv->bin_val != NULL)
+	}
+	if (kv->bin_val != NULL) {
 		fdo_byte_array_free(kv->bin_val);
-	if (kv->bool_val != NULL)
+	}
+	if (kv->bool_val != NULL) {
 		fdo_free(kv->bool_val);
-	if (kv->int_val != NULL)
+	}
+	if (kv->int_val != NULL) {
 		fdo_free(kv->int_val);
+	}
 	fdo_free(kv);
 }
 
@@ -4601,8 +4779,9 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 	bool active = false;
 	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
 
-	if (!cb_return_val)
+	if (!cb_return_val) {
 		return retval;
+	}
 
 	if (!fdor || !module_name || !module_message) {
 		*cb_return_val = FDO_SI_INTERNAL_ERROR;
@@ -4704,8 +4883,9 @@ void fdo_service_info_free(fdo_service_info_t *si)
 {
 	fdo_key_value_t *kv = NULL;
 
-	if (!si)
+	if (!si) {
 		return;
+	}
 	while ((kv = si->kv) != NULL) {
 		si->kv = kv->next;
 		fdo_kv_free(kv);
@@ -4737,8 +4917,9 @@ fdo_key_value_t **fdo_service_info_fetch(fdo_service_info_t *si,
 
 		if ((strcasecmp_s(key, keylen, (char *)(kv->key->bytes),
 				  &res) == 0) &&
-		    res == 0)
+		    res == 0) {
 			break;
+		}
 	}
 	return kvp;
 }
@@ -4757,8 +4938,9 @@ fdo_key_value_t **fdo_service_info_get(fdo_service_info_t *si, int key_num)
 
 	for (kvp = &si->kv, index = 0; (kv = *kvp) != NULL;
 	     kvp = &kv->next, index++) {
-		if (index == key_num)
+		if (index == key_num) {
 			break;
+		}
 	}
 	return kvp;
 }
@@ -4779,16 +4961,18 @@ bool fdo_service_info_add_kv_str(fdo_service_info_t *si, const char *key,
 {
 	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
-	if (!si || !key || !val)
+	if (!si || !key || !val) {
 		return false;
+	}
 
 	kvp = fdo_service_info_fetch(si, key);
 	kv = *kvp;
 	if (kv == NULL) {
 		 /* Not found, at end of linked list, add a new entry */
 		kv = fdo_kv_alloc_with_str(key, val);
-		if (kv == NULL)
+		if (kv == NULL) {
 			return false;
+		}
 		*kvp = kv;  /* Use this pointer to update the next value */
 		si->numKV++;
 		return true;
@@ -4814,13 +4998,15 @@ bool fdo_service_info_add_kv_str(fdo_service_info_t *si, const char *key,
 		fdo_string_resize_with(kv->str_val, val_len, val);
 	}
 	// free other values of other type
-	if (kv->bin_val)
+	if (kv->bin_val) {
 		fdo_byte_array_free(kv->bin_val);
-	if (kv->int_val)
+	}
+	if (kv->int_val) {
 		fdo_free(kv->int_val);
-	if (kv->bool_val)
+	}
+	if (kv->bool_val) {
 		fdo_free(kv->bool_val);
-
+	}
 
 	return true;
 }
@@ -4841,16 +5027,18 @@ bool fdo_service_info_add_kv_bin(fdo_service_info_t *si, const char *key,
 {
 	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
-	if (!si || !key || !val)
+	if (!si || !key || !val) {
 		return false;
+	}
 
 	kvp = fdo_service_info_fetch(si, key);
 	kv = *kvp;
 	if (kv == NULL) {
 		 /* Not found, at end of linked list, add a new entry */
 		kv = fdo_kv_alloc_key_only(key);
-		if (kv == NULL)
+		if (kv == NULL) {
 			return false;
+		}
 		kv->bin_val = fdo_byte_array_alloc_with_byte_array(val->bytes, val->byte_sz);
 
 		*kvp = kv;  /* Use this pointer to update the next value */
@@ -4865,12 +5053,15 @@ bool fdo_service_info_add_kv_bin(fdo_service_info_t *si, const char *key,
 	kv->bin_val = fdo_byte_array_alloc_with_byte_array(val->bytes, val->byte_sz);
 
 	// free other values of other type
-	if (kv->str_val)
+	if (kv->str_val) {
 		fdo_string_free(kv->str_val);
-	if (kv->int_val)
+	}
+	if (kv->int_val) {
 		fdo_free(kv->int_val);
-	if (kv->bool_val)
+	}
+	if (kv->bool_val) {
 		fdo_free(kv->bool_val);
+	}
 
 	return true;
 }
@@ -4891,16 +5082,18 @@ bool fdo_service_info_add_kv_bool(fdo_service_info_t *si, const char *key,
 {
 	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
-	if (!si || !key)
+	if (!si || !key) {
 		return false;
+	}
 
 	kvp = fdo_service_info_fetch(si, key);
 	kv = *kvp;
 	if (kv == NULL) {
 		 /* Not found, at end of linked list, add a new entry */
 		kv = fdo_kv_alloc_key_only(key);
-		if (kv == NULL)
+		if (kv == NULL) {
 			return false;
+		}
 		kv->bool_val = fdo_alloc(sizeof(bool));
 		if (!kv->bool_val) {
 			LOG(LOG_ERROR, "Failed to alloc bool Device ServiceInfoVal");
@@ -4920,12 +5113,15 @@ bool fdo_service_info_add_kv_bool(fdo_service_info_t *si, const char *key,
 	*kv->bool_val = val;
 
 	// free any other type of value, if present
-	if (kv->str_val)
+	if (kv->str_val) {
 		fdo_string_free(kv->str_val);
-	if (kv->bin_val)
+	}
+	if (kv->bin_val) {
 		fdo_byte_array_free(kv->bin_val);
-	if (kv->int_val)
+	}
+	if (kv->int_val) {
 		fdo_free(kv->int_val);
+	}
 
 	return true;
 }
@@ -4946,16 +5142,18 @@ bool fdo_service_info_add_kv_int(fdo_service_info_t *si, const char *key,
 {
 	fdo_key_value_t **kvp = NULL, *kv = NULL;
 
-	if (!si || !key)
+	if (!si || !key) {
 		return false;
+	}
 
 	kvp = fdo_service_info_fetch(si, key);
 	kv = *kvp;
 	if (kv == NULL) {
 		 /* Not found, at end of linked list, add a new entry */
 		kv = fdo_kv_alloc_key_only(key);
-		if (kv == NULL)
+		if (kv == NULL) {
 			return false;
+		}
 		kv->int_val = fdo_alloc(sizeof(int));
 		if (!kv->int_val) {
 			LOG(LOG_ERROR, "Failed to alloc int Device ServiceInfoVal");
@@ -4975,12 +5173,15 @@ bool fdo_service_info_add_kv_int(fdo_service_info_t *si, const char *key,
 	*kv->int_val = val;
 
 	// free any other type of value, if present
-	if (kv->str_val)
+	if (kv->str_val) {
 		fdo_string_free(kv->str_val);
-	if (kv->bin_val)
+	}
+	if (kv->bin_val) {
 		fdo_byte_array_free(kv->bin_val);
-	if (kv->bool_val)
+	}
+	if (kv->bool_val) {
 		fdo_free(kv->bool_val);
+	}
 
 	return true;
 }
@@ -4996,8 +5197,9 @@ bool fdo_service_info_add_kv(fdo_service_info_t *si, fdo_key_value_t *kvs)
 {
 	fdo_key_value_t *kv = NULL;
 
-	if (!si || !kvs)
+	if (!si || !kvs) {
 		return false;
+	}
 
 	// Is the list empty?  If it is, add this to the head of the list
 	if (si->kv == NULL) {
@@ -5006,8 +5208,9 @@ bool fdo_service_info_add_kv(fdo_service_info_t *si, fdo_key_value_t *kvs)
 		kvs->next = NULL;
 	} else {
 		// Find the last entry
-		for (kv = si->kv; kv->next != NULL; kv = kv->next)
-			;
+		for (kv = si->kv; kv->next != NULL; kv = kv->next) {
+			// Iterate till the last entry
+		}
 		kv->next = kvs;
 		si->numKV++;
 		kvs->next = NULL;
@@ -5049,8 +5252,9 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, bool write_devm
 
 	bool ret = false;
 
-	if (!fdow || !si)
+	if (!fdow || !si) {
 		goto end;
+	}
 
 	if (!fdow_start_array(fdow, 1)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write start array\n");
@@ -5086,20 +5290,17 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, bool write_devm
 				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Text ServiceInfoVal\n");
 				goto end;
 			}
-		}
-		else if (kv->bin_val) {
+		} else if (kv->bin_val) {
 			if (!fdow_byte_string(fdow, kv->bin_val->bytes, kv->bin_val->byte_sz)) {
 				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Binary ServiceInfoVal\n");
 				goto end;
 			}
-		}
-		else if (kv->bool_val) {
+		} else if (kv->bool_val) {
 			if (!fdow_boolean(fdow, *kv->bool_val)) {
 				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Bool ServiceInfoVal\n");
 				goto end;
 			}
-		}
-		else if (kv->int_val) {
+		} else if (kv->int_val) {
 			if (!fdow_signed_int(fdow, *kv->int_val)) {
 				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Int ServiceInfoVal\n");
 				goto end;

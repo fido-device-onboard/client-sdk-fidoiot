@@ -42,8 +42,9 @@ int32_t fdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
 	svk = keyset->svk->bytes;
 	svk_len = keyset->svk->byte_sz;
 
-	if (!svk || !svk_len || !to2Msg_len || !hmac_len)
+	if (!svk || !svk_len || !to2Msg_len || !hmac_len) {
 		goto error;
+	}
 
 	if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_USED, to2Msg, to2Msg_len,
 				 hmac, hmac_len, svk, svk_len)) {
@@ -130,8 +131,9 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 	uint8_t *hmac_key = (*keyset)->bytes;
 	uint8_t hmac_key_len = (*keyset)->byte_sz;
 
-	if (!hmac_key || !hmac_key_len || !OVHdr_len || !hmac_len)
+	if (!hmac_key || !hmac_key_len || !OVHdr_len || !hmac_len) {
 		goto error;
+	}
 
 	if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_USED, OVHdr, OVHdr_len,
 				 hmac, hmac_len, hmac_key, hmac_key_len)) {

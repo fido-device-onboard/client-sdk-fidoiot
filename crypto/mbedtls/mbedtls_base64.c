@@ -18,10 +18,11 @@
 int bin_toB64Length(int bin_length)
 {
 	/* Base64 length is ceil(4*(n/3)). */
-	if (bin_length)
+	if (bin_length) {
 		return (((bin_length + 2) / 3) * 4);
-	else
+	} else {
 		return 0;
+	}
 }
 
 /**
@@ -33,10 +34,11 @@ int bin_toB64Length(int bin_length)
  */
 int b64To_bin_length(int b64Len)
 {
-	if (b64Len)
+	if (b64Len) {
 		return ((b64Len / 4) * 3 + 2);
-	else
+	} else {
 		return 0;
+	}
 }
 
 /**
@@ -68,12 +70,14 @@ int bin_toB64(size_t bin_length, uint8_t *bin_bytes, size_t bin_offset,
 					bin_bytes, bin_length);
 
 	if (ret == 0) {
-		if (b64OLen)
+		if (b64OLen) {
 			return b64OLen;
-		else
+		} else {
 			return -1;
-	} else
+		}
+	} else {
 		return -1;
+	}
 }
 
 /**
@@ -107,8 +111,9 @@ int b64To_bin(size_t b64Len, uint8_t *b64bytes, size_t b64Offset,
 
 	ret = mbedtls_base64_decode(&bin_bytes[bin_offset], bin_len, &binOLen,
 				    &b64bytes[b64Offset], b64Len);
-	if (ret == 0 && binOLen != 0)
+	if (ret == 0 && binOLen != 0) {
 		return binOLen;
-	else
+	} else {
 		return -1;
+	}
 }

@@ -103,7 +103,7 @@ bool fdo_siginfo_write(fdow_t *fdow);
 // Legacy value, Currently used to represent an empty hash type for now
 #define FDO_CRYPTO_HASH_TYPE_NONE 0
 
-#if !defined(KEX_ECDH384_ENABLED) /* TODO: do more generic */
+#ifdef ECDSA256_DA
 #define FDO_CRYPTO_HASH_TYPE_USED FDO_CRYPTO_HASH_TYPE_SHA_256
 #define FDO_CRYPTO_HMAC_TYPE_USED FDO_CRYPTO_HMAC_TYPE_SHA_256
 #else

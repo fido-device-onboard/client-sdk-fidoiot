@@ -340,10 +340,12 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 	retval = (int32_t)n_bytes;
 
 exit:
-	if (sealed_data)
+	if (sealed_data) {
 		fdo_free(sealed_data);
-	if (encrypted_data)
+	}
+	if (encrypted_data) {
 		fdo_free(encrypted_data);
+	}
 	if (memset_s(aes_key, PLATFORM_AES_KEY_DEFAULT_LEN, 0)) {
 		LOG(LOG_ERROR, "Failed to clear AES key\n");
 		retval = -1;
@@ -542,11 +544,14 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 	retval = (int32_t)n_bytes;
 
 exit:
-	if (write_context)
+	if (write_context) {
 		fdo_free(write_context);
-	if (f)
-		if (fclose(f) == EOF)
+	}
+	if (f) {
+		if (fclose(f) == EOF) {
 			LOG(LOG_ERROR, "fclose() Failed in %s\n", __func__);
+		}
+	}
 	if (memset_s(aes_key, PLATFORM_AES_KEY_DEFAULT_LEN, 0)) {
 		LOG(LOG_ERROR, "Failed to clear AES key\n");
 		retval = -1;
