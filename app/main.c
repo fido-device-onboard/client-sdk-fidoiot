@@ -107,7 +107,7 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 
-	module_info = malloc(FDO_MAX_MODULES * (sizeof(*module_info)));
+	module_info = fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
 
 	if (!module_info) {
 		LOG(LOG_ERROR, "Malloc failed!\n");

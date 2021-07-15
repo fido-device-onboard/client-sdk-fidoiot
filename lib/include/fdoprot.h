@@ -107,9 +107,20 @@
 #define FDO_PROT_SPEC_VERSION 100
 
 // minimum ServiceInfo size
-#define MIN_SERVICEINFO_SZ 1300
+#define MIN_SERVICEINFO_SZ 256
 // maximum ServiceInfo size
 #define MAX_SERVICEINFO_SZ 8192
+// the margin considered while trying to fit Device ServiceInfo within MTU
+// which allows us to avoid sending more than the MTU at all times
+// For large numbers of ServiceInfoKeyVal to be sent, a larger number might be needed
+// However, the current implementation writes only 1 ServiceInfoKeyVal containing
+// any number of ServiceInfoKVs
+#define SERVICEINFO_MTU_FIT_MARGIN 30
+
+// minimum message buffer size to read/write protcol (DI/TO1/TO2)
+// if user-configured MAX_SERVICE_SZ is more than this, that is used as the buffer length
+// else this is used as the message buffer length
+#define MSG_BUFFER_SZ 1300
 // margin that gets added to either max or min ServiceInfo size to create
 // the final buffer to read/write protcol (DI/TO1/TO2)
 #define MSG_METADATA_SIZE 700
