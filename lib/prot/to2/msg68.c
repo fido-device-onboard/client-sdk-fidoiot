@@ -11,6 +11,7 @@
 #include "fdoprot.h"
 #include "fdokeyexchange.h"
 #include "util.h"
+#include "safe_lib.h"
 
 /**
  * msg68() - TO2.DeviceServiceInfo
@@ -36,6 +37,8 @@ int32_t msg68(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_service_info_t *serviceinfo_itr = NULL;
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames_it = NULL;
+	char sv_modname_key[FDO_MODULE_NAME_LEN + FDO_MODULE_MSG_LEN + 1] = "";
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -85,8 +88,11 @@ int32_t msg68(fdo_prot_t *ps)
 		ps->serv_req_info_num++;
 		serviceinfo_itr = NULL;
 
-	} else if (ps->serviceinfo_invalid_modname) {
+	} else if (!ps->owner_serviceinfo_ismore && ps->serviceinfo_invalid_modnames) {
 		// 2. Response for unsuppprted modname
+		// The message to be sent contains a list of unsupported module names
+		// with key/message 'active' and value 'false', something of the form
+		// [[modname1:active, false], [modname2:active, false]]...
 		if (!fdow_boolean(&ps->fdow, ps->device_serviceinfo_ismore)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 			return false;
@@ -97,15 +103,41 @@ int32_t msg68(fdo_prot_t *ps)
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to alloc ServiceInfo\n");
 			return false;
 		}
-		if (!fdo_service_info_add_kv_bool(serviceinfo_itr,
-			ps->serviceinfo_invalid_modname->bytes, false)) {
-			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to create ServiceInfo\n");
-			goto err;
+		serviceinfo_invalid_modnames_it = ps->serviceinfo_invalid_modnames;
+		while (serviceinfo_invalid_modnames_it) {
+
+			// create 'modname:active'
+			if (0 != strncpy_s(sv_modname_key, FDO_MODULE_NAME_LEN,
+				serviceinfo_invalid_modnames_it->bytes, FDO_MODULE_NAME_LEN)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to concatenate module name\n");
+				goto err;
+			}
+			if (0 != strcat_s(sv_modname_key, FDO_MODULE_MSG_LEN,
+				FDO_MODULE_SEPARATOR)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to concatenate module name\n");
+				goto err;
+			}
+			if (0 != strcat_s(sv_modname_key, FDO_MODULE_MSG_LEN,
+				FDO_MODULE_MESSAGE_ACTIVE)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to concatenate module name\n");
+				goto err;
+			}
+
+			// add 'modname:active=false' into the serviceinfo list
+			if (!fdo_service_info_add_kv_bool(serviceinfo_itr,
+				sv_modname_key, false)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to create ServiceInfo\n");
+				goto err;
+			}
+			serviceinfo_invalid_modnames_it = serviceinfo_invalid_modnames_it->next;
 		}
 		if (!fdo_serviceinfo_write(&ps->fdow, serviceinfo_itr, false)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write ServiceInfo\n");
 			goto err;
 		}
+		// clear it here immediately, so we don't use it back in msg/69
+		fdo_serviceinfo_invalid_modname_free(ps->serviceinfo_invalid_modnames);
+		ps->serviceinfo_invalid_modnames = NULL;
 	} else {
 
 		// Empty ServiceInfo. send [false, []]
@@ -142,10 +174,6 @@ err:
 	if (serviceinfo_itr) {
 		fdo_service_info_free(serviceinfo_itr);
 		serviceinfo_itr = NULL;
-	}
-	if (ps->serviceinfo_invalid_modname) {
-		fdo_string_free(ps->serviceinfo_invalid_modname);
-		ps->serviceinfo_invalid_modname = NULL;
 	}
 	return ret;
 }

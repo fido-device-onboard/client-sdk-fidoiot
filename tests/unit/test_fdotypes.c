@@ -65,6 +65,7 @@ void test_fdo_service_info_add_kv_int(void);
 void test_fdo_service_info_add_kv_bool(void);
 void test_fdo_service_info_add_kv_bin(void);
 void test_fdo_service_info_add_kv(void);
+void test_fdo_serviceinfo_invalid_modname_add(void);
 void test_fdo_compare_hashes(void);
 void test_fdo_compare_byte_arrays(void);
 void test_fdo_compare_rvLists(void);
@@ -1470,6 +1471,33 @@ void test_fdo_service_info_add_kv(void)
 
 	ret = fdo_service_info_add_kv(&si, &kvs);
 	TEST_ASSERT_TRUE(ret);
+}
+
+#ifdef TARGET_OS_FREERTOS
+TEST_CASE("_fdo_serviceinfo_invalid_modname_add", "[fdo_types][fdo]")
+#else
+void test_fdo_serviceinfo_invalid_modname_add(void)
+#endif
+{
+	bool ret = false;
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames = NULL;
+
+	ret = fdo_serviceinfo_invalid_modname_add("testmod1", &serviceinfo_invalid_modnames);
+	TEST_ASSERT_TRUE(ret);
+	TEST_ASSERT_NOT_NULL(serviceinfo_invalid_modnames);
+
+	ret = fdo_serviceinfo_invalid_modname_add("testmod1", &serviceinfo_invalid_modnames);
+	TEST_ASSERT_TRUE(ret);
+	TEST_ASSERT_NOT_NULL(serviceinfo_invalid_modnames);
+
+	ret = fdo_serviceinfo_invalid_modname_add("testmod2", &serviceinfo_invalid_modnames);
+	TEST_ASSERT_TRUE(ret);
+	TEST_ASSERT_NOT_NULL(serviceinfo_invalid_modnames->next);
+
+	ret = fdo_serviceinfo_invalid_modname_add("testmod1", NULL);
+	TEST_ASSERT_FALSE(ret);
+
+	fdo_serviceinfo_invalid_modname_free(serviceinfo_invalid_modnames);
 }
 
 #ifdef TARGET_OS_FREERTOS

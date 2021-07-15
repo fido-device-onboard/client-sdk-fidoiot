@@ -38,8 +38,6 @@ int32_t msg69(fdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "FDOProtTO2";
 	fdo_encrypted_packet_t *pkt = NULL;
-	bool IsMoreServiceInfo;
-	bool isDone;
 	int module_ret_val = -1;
 	fdo_sdk_service_info_module_list_t *module_list_itr = NULL;
 
@@ -75,18 +73,19 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdor_boolean(&ps->fdor, &IsMoreServiceInfo)) {
+	if (!fdor_boolean(&ps->fdor, &ps->owner_serviceinfo_ismore)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read IsMoreServiceInfo\n");
 		goto err;
 	}
 
-	if (!fdor_boolean(&ps->fdor, &isDone)) {
+	if (!fdor_boolean(&ps->fdor, &ps->owner_serviceinfo_isdone)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read IsDone\n");
 		goto err;
 	}
 
-	if (ps->device_serviceinfo_ismore && !IsMoreServiceInfo && !isDone) {
-		// Expecting ServiceInfo to be an empty array [].
+	if (ps->device_serviceinfo_ismore) {
+		// TO2.DeviceServiceInfo.IsMoreServiceInfo is true
+		// Expecting received Owner ServiceInfo to be an empty array [].
 		if (!fdor_start_array(&ps->fdor)) {
 			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start empty ServiceInfo array\n");
 			goto err;
@@ -105,7 +104,7 @@ int32_t msg69(fdo_prot_t *ps)
 			// process the received ServiceInfo
 			module_list_itr = ps->sv_info_mod_list_head;
 			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val,
-				&ps->serviceinfo_invalid_modname)) {
+				&ps->serviceinfo_invalid_modnames)) {
 				LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
 				goto err;
 			}
@@ -123,8 +122,18 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (isDone && !ps->serviceinfo_invalid_modname) {
-		ps->state = FDO_STATE_TO2_SND_DONE;
+	if (ps->owner_serviceinfo_isdone) {
+		if (ps->owner_serviceinfo_ismore) {
+			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Both isMoreServiceInfo and isDone are true\n");
+			goto err;
+		}
+		// Device does not have anything else to send
+		if (!ps->serviceinfo_invalid_modnames) {
+			ps->state = FDO_STATE_TO2_SND_DONE;
+		} else {
+			// Device has more ServiceInfo to send
+			ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
+		}
 	} else {
 		ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
 	}
