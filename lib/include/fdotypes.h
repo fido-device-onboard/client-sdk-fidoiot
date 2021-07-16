@@ -455,6 +455,12 @@ fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *list, int 
 int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list);
 bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list);
 
+// List containing string of fixed length (FDO_MODULE_NAME_LEN)
+typedef struct fdo_sv_invalid_modnames_s {
+	char bytes[FDO_MODULE_NAME_LEN];
+	struct fdo_sv_invalid_modnames_s *next;
+} fdo_sv_invalid_modnames_t;
+
 typedef struct fdo_service_info_s {
 	int numKV;
 	fdo_key_value_t *kv;
@@ -512,9 +518,13 @@ void fdo_sv_info_clear_module_psi_osi_index(
     fdo_sdk_service_info_module_list_t *module_list);
 
 bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
-	int *cb_return_val, fdo_string_t **serviceinfo_invalid_modname);
+	int *cb_return_val, fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
 bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_message,
 	fdo_sdk_service_info_module_list_t *module_list, int *cb_return_val);
+bool fdo_serviceinfo_invalid_modname_add(char *module_name,
+	fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
+void fdo_serviceinfo_invalid_modname_free(
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames);
 
 bool fdo_compare_hashes(fdo_hash_t *hash1, fdo_hash_t *hash2);
 bool fdo_compare_byte_arrays(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
