@@ -3060,6 +3060,115 @@ bool fdo_eat_write_payloadbasemap(fdow_t *fdow, fdo_eat_payload_base_map_t *eat_
 }
 
 /**
+ * Create Sig_structure of the form:
+ * Sig_structure = [
+ * context : "Signature1",
+ * body_protected : empty_or_serialized_map,	// EAT Protected header as bstr
+ * external_aad : bstr,
+ * payload : bstr
+ * ]
+ * Only to be used Sig_sturcture for EAT.
+ *
+ * @param eat_ph - EAT protected header
+ * @param eat_payload - EAT Payload
+ * @param external_aad - External AAD. If NULL, empty bstr will be written, else
+ * the AAD bytes will be written
+ * @param sig_structure - Out buffer to store the constructred CBOR encoded Sig_structure.
+ * Memory allocation will be done inside this method, if the operation is successful.
+ * It will be NULL otherwise.
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
+	fdo_byte_array_t *eat_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure) {
+
+	bool ret = false;
+	char context[] = "Signature1";
+	fdo_byte_array_t *empty_byte_array = NULL;
+	fdow_t temp_fdow = {0};
+	size_t enc_length = 0;
+
+	if (!eat_ph || !eat_payload || !sig_structure) {
+		return false;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_array(&temp_fdow, 4)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdow_text_string(&temp_fdow, context, sizeof(context) - 1)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write Context\n");
+		return false;
+	}
+
+	if (!fdo_eat_write_protected_header(&temp_fdow, eat_ph)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write protected header\n");
+		return false;
+	}
+
+	if (external_aad) {
+		if (!fdow_byte_string(&temp_fdow, external_aad->bytes, external_aad->byte_sz)) {
+			LOG(LOG_ERROR, "EAT Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	} else {
+		empty_byte_array = fdo_byte_array_alloc(0);
+		if (!empty_byte_array) {
+			LOG(LOG_ERROR, "EAT Sig_structure: Byte Array Alloc failed\n");
+			return false;
+		}
+
+		if (!fdow_byte_string(&temp_fdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
+			LOG(LOG_ERROR, "EAT Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	}
+
+	if (!fdow_byte_string(&temp_fdow, eat_payload->bytes, eat_payload->byte_sz)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write payload\n");
+		goto end;
+	}
+
+	if (!fdow_end_array(&temp_fdow)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write end array\n");
+		goto end;
+	}
+
+	enc_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_length) || enc_length == 0) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to find encoded length of "
+			"Sig_structure array as bstr\n");
+		goto end;
+	}
+
+	// Alocate and copy the encoded Sig_sturcture bstr
+	*sig_structure =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, enc_length);
+	if (!(*sig_structure)) {
+		LOG(LOG_ERROR,
+			"EAT Sig_structure: Failed to alloc output Sig_structure\n");
+		goto end;
+	}
+
+	ret = true;
+end:
+	if (empty_byte_array) {
+		fdo_byte_array_free(empty_byte_array);
+	}
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	return ret;
+}
+
+/**
  * Free the given COSE_Sign1 object for which memory has been allocated previously.
  */
 bool fdo_cose_free(fdo_cose_t *cose) {
@@ -3486,6 +3595,115 @@ bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose) {
 		return false;
 	}
 	return true;
+}
+
+/**
+ * Create Sig_structure of the form:
+ * Sig_structure = [
+ * context : "Signature1",
+ * body_protected : empty_or_serialized_map,	// COSE Protected header as bstr
+ * external_aad : bstr,
+ * payload : bstr
+ * ]
+ * Only to be used Sig_sturcture for COSE.
+ *
+ * @param cose_ph - COSE protected header
+ * @param cose_payload - COSE Payload
+ * @param external_aad - External AAD. If NULL, empty bstr will be written, else
+ * the AAD bytes will be written
+ * @param sig_structure - Out buffer to store the constructred CBOR encoded Sig_structure.
+ * Memory allocation will be done inside this method, if the operation is successful.
+ * It will be NULL otherwise.
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
+	fdo_byte_array_t *cose_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure) {
+
+	bool ret = false;
+	char context[] = "Signature1";
+	fdo_byte_array_t *empty_byte_array = NULL;
+	fdow_t temp_fdow = {0};
+	size_t enc_length = 0;
+
+	if (!cose_ph || !cose_payload || !sig_structure) {
+		return false;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_array(&temp_fdow, 4)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdow_text_string(&temp_fdow, context, sizeof(context) - 1)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write Context\n");
+		return false;
+	}
+
+	if (!fdo_cose_write_protected_header(&temp_fdow, cose_ph)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write protected header\n");
+		return false;
+	}
+
+	if (external_aad) {
+		if (!fdow_byte_string(&temp_fdow, external_aad->bytes, external_aad->byte_sz)) {
+			LOG(LOG_ERROR, "COSE Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	} else {
+		empty_byte_array = fdo_byte_array_alloc(0);
+		if (!empty_byte_array) {
+			LOG(LOG_ERROR, "COSE Sig_structure: Byte Array Alloc failed\n");
+			return false;
+		}
+
+		if (!fdow_byte_string(&temp_fdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
+			LOG(LOG_ERROR, "COSE Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	}
+
+	if (!fdow_byte_string(&temp_fdow, cose_payload->bytes, cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write payload\n");
+		goto end;
+	}
+
+	if (!fdow_end_array(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write end array\n");
+		goto end;
+	}
+
+	enc_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_length) || enc_length == 0) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to find encoded length of "
+			"Sig_structure array as bstr\n");
+		goto end;
+	}
+
+	// Alocate and copy the encoded Sig_sturcture bstr
+	*sig_structure =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, enc_length);
+	if (!(*sig_structure)) {
+		LOG(LOG_ERROR,
+			"COSE Sig_structure: Failed to alloc output Sig_structure\n");
+		goto end;
+	}
+
+	ret = true;
+end:
+	if (empty_byte_array) {
+		fdo_byte_array_free(empty_byte_array);
+	}
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	return ret;
 }
 
 /**
