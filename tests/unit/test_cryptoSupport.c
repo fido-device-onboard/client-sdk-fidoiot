@@ -258,6 +258,11 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 	uint8_t hash[SHA512_DIGEST_SIZE] = {0};
 	size_t hashlength = 0;
 	int result = -1;
+	ECDSA_SIG *sig = NULL;
+	unsigned char *sig_r = NULL;
+	int sig_r_len = 0;
+	unsigned char *sig_s = NULL;
+	int sig_s_len = 0;
 
 #if defined(ECDSA256_DA)
 	if (SHA256(msg, mlen, hash) == NULL)
@@ -269,11 +274,46 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 	hashlength = SHA384_DIGEST_SIZE;
 #endif
 
-	result = ECDSA_sign(0, hash, hashlength, out, outlen, eckey);
-	if (result == 0)
+	sig = ECDSA_do_sign(hash, hashlength, eckey);
+	TEST_ASSERT_NOT_NULL(sig);
+
+	// both r and s are maintained by sig, no need to free explicitly
+	const BIGNUM *r = ECDSA_SIG_get0_r(sig);
+	const BIGNUM *s = ECDSA_SIG_get0_s(sig);
+	TEST_ASSERT_NOT_NULL(r);
+	TEST_ASSERT_NOT_NULL(s);
+
+	sig_r_len = BN_num_bytes(r);
+	sig_r = fdo_alloc(sig_r_len);
+	TEST_ASSERT_NOT_NULL(sig_r);
+	BN_bn2bin(r, sig_r);
+
+	sig_s_len = BN_num_bytes(s);
+	sig_s = fdo_alloc(sig_s_len);
+	TEST_ASSERT_NOT_NULL(sig_s);
+	BN_bn2bin(s, sig_s);
+
+	*outlen = sig_r_len + sig_s_len;;
+	if (0 != memcpy_s(out, *outlen, (char *)sig_r,
+		     (size_t)sig_r_len)) {
 		goto done;
+	}
+	if (0 != memcpy_s(out + sig_r_len, *outlen, (char *)sig_s,
+		     (size_t)sig_s_len)) {
+		goto done;
+	}
+	result = 1;
 
 done:
+	if (sig) {
+		ECDSA_SIG_free(sig);
+	}
+	if (sig_r) {
+		fdo_free(sig_r);
+	}
+	if (sig_s) {
+		fdo_free(sig_s);
+	}
 	return result;
 }
 

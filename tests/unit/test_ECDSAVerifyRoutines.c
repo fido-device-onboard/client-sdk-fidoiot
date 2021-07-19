@@ -141,12 +141,17 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	unsigned char hash[SHA512_DIGEST_SIZE] = {0};
 	size_t hashlength = 0;
 	unsigned char *signature = NULL;
-	unsigned int sig_len = 0;
+	unsigned int siglen = 0;
 	// ECDSA_sign return 1 on success, 0 on failure
 	int result = 0;
+	ECDSA_SIG *sig = NULL;
+	unsigned char *sig_r = NULL;
+	int sig_r_len = 0;
+	unsigned char *sig_s = NULL;
+	int sig_s_len = 0;
 
-	sig_len = ECDSA_size(eckey);
-	signature = OPENSSL_malloc(sig_len);
+	siglen = ECDSA_size(eckey);
+	signature = OPENSSL_malloc(siglen);
 
 	if (curve == 256) {
 		if (SHA256(msg, mlen, hash) == NULL)
@@ -166,21 +171,50 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	hexdump("sha_sign:MESSAGE", msg, mlen);
 	hexdump("sha_sign:SHAHASH", hash, hashlength);
 #endif
-	// ECDSA_sign return 1 on success, 0 on failure
-	result = ECDSA_sign(0, hash, hashlength, signature, &sig_len, eckey);
-	if (result == 0)
-		goto done;
 
-	*outlen = sig_len;
-	if (memcpy_s(out, (size_t)sig_len, signature, (size_t)sig_len) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		result = 0;
+	sig = ECDSA_do_sign(hash, hashlength, eckey);
+	TEST_ASSERT_NOT_NULL(sig);
+
+	// both r and s are maintained by sig, no need to free explicitly
+	const BIGNUM *r = ECDSA_SIG_get0_r(sig);
+	const BIGNUM *s = ECDSA_SIG_get0_s(sig);
+	TEST_ASSERT_NOT_NULL(r);
+	TEST_ASSERT_NOT_NULL(s);
+
+	sig_r_len = BN_num_bytes(r);
+	sig_r = fdo_alloc(sig_r_len);
+	TEST_ASSERT_NOT_NULL(sig_r);
+	BN_bn2bin(r, sig_r);
+
+	sig_s_len = BN_num_bytes(s);
+	sig_s = fdo_alloc(sig_s_len);
+	TEST_ASSERT_NOT_NULL(sig_s);
+	BN_bn2bin(s, sig_s);
+
+	*outlen = sig_r_len + sig_s_len;;
+	if (0 != memcpy_s(out, *outlen, (char *)sig_r,
+		     (size_t)sig_r_len)) {
+		goto done;
 	}
+	if (0 != memcpy_s(out + sig_r_len, *outlen, (char *)sig_s,
+		     (size_t)sig_s_len)) {
+		goto done;
+	}
+	result = 1;
 #ifdef HEXDEBUG
 	hexdump("sha256_sign:SIGNEDMESSAGE", out, *outlen);
 #endif
 done:
 	OPENSSL_free(signature);
+	if (sig) {
+		ECDSA_SIG_free(sig);
+	}
+	if (sig_r) {
+		fdo_free(sig_r);
+	}
+	if (sig_s) {
+		fdo_free(sig_s);
+	}
 	return result;
 }
 
@@ -402,7 +436,7 @@ static void ec_sig_verification(int curve)
 	fdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
 	TEST_ASSERT_NOT_NULL(testdata);
 	unsigned int siglen = ECDSA_SIG_MAX_LENGTH;
-	unsigned char *sigtestdata = malloc(siglen);
+	unsigned char *sigtestdata = fdo_alloc(siglen);
 	TEST_ASSERT_NOT_NULL(sigtestdata);
 	fdo_public_key_t *pk = NULL;
 	unsigned char key_buf[DER_PUBKEY_LEN_MAX] = {0};
@@ -420,7 +454,6 @@ static void ec_sig_verification(int curve)
 		key_buf_len = i2d_EC_PUBKEY(avalidkey, &pubkey);
 		TEST_ASSERT_NOT_EQUAL_MESSAGE(0, key_buf_len,
 					      "DER encoding failed!");
-
 		pk = getFDOpk(curve, avalidkey);
 #endif
 
@@ -535,8 +568,9 @@ static void ec_sig_verification(int curve)
 		}
 
 #ifdef USE_OPENSSL
-		if (avalidkey)
+		if (avalidkey) {
 			EC_KEY_free(avalidkey);
+		}
 #endif
 #ifdef USE_MBEDTLS
 		mbedtls_ecdsa_free(&avalidkey);
