@@ -217,10 +217,6 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		ps->rv = NULL;
 	}
 	if (ps->osc != NULL) {
-		if (ps->osc->si != NULL) {
-			fdo_service_info_free(ps->osc->si);
-			ps->osc->si = NULL;
-		}
 		if (ps->osc->guid) {
 			fdo_byte_array_free(ps->osc->guid);
 			ps->osc->guid = NULL;
@@ -378,7 +374,7 @@ static fdo_sdk_status app_initialize(void)
 	if (fsize == 0) {
 		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
-		g_fdo_data->prot.prot_buff_sz = MIN_SERVICEINFO_SZ + MSG_METADATA_SIZE;
+		g_fdo_data->prot.prot_buff_sz = MSG_BUFFER_SZ + MSG_METADATA_SIZE;
 	} else {
 		buffer = fdo_alloc(fsize + 1);
 		if (!buffer) {
@@ -402,7 +398,11 @@ static fdo_sdk_status app_initialize(void)
 			} else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MAX_SERVICEINFO_SZ;
 			}
-			g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
+			if (max_serviceinfo_sz > MSG_BUFFER_SZ) {
+				g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
+			} else {
+				g_fdo_data->prot.prot_buff_sz = MSG_BUFFER_SZ + MSG_METADATA_SIZE;
+			}
 			g_fdo_data->prot.maxDeviceServiceInfoSz = max_serviceinfo_sz;
 			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
 		}
@@ -495,6 +495,12 @@ static fdo_sdk_status app_initialize(void)
 	// support is added.
 	fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
 			    	1);
+	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:modules",
+				    g_fdo_data->module_list->module.module_name);
+
+	g_fdo_data->service_info->sv_index_begin = 0;
+	g_fdo_data->service_info->sv_index_end = 0;
+	g_fdo_data->service_info->sv_val_index = 0;
 
 	if (fdo_null_ipaddress(&g_fdo_data->prot.i1) == false) {
 		return FDO_ERROR;
@@ -903,7 +909,7 @@ static void app_close(void)
 		return;
 	}
 
-	if (g_fdo_data->service_info) {
+	if (g_fdo_data->prot.service_info && g_fdo_data->service_info) {
 		fdo_service_info_free(g_fdo_data->service_info);
 		g_fdo_data->service_info = NULL;
 	}
@@ -1432,7 +1438,7 @@ static bool _STATE_Error(void)
  */
 static bool _STATE_Shutdown(void)
 {
-	if (g_fdo_data->service_info) {
+	if (g_fdo_data->prot.service_info && g_fdo_data->service_info) {
 		fdo_service_info_free(g_fdo_data->service_info);
 		g_fdo_data->service_info = NULL;
 	}

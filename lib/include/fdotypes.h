@@ -468,8 +468,11 @@ typedef struct fdo_sv_invalid_modnames_s {
 } fdo_sv_invalid_modnames_t;
 
 typedef struct fdo_service_info_s {
-	int numKV;
+	size_t numKV;
 	fdo_key_value_t *kv;
+	size_t sv_index_end;
+	size_t sv_index_begin;
+	size_t sv_val_index;
 } fdo_service_info_t;
 
 fdo_service_info_t *fdo_service_info_alloc(void);
@@ -490,9 +493,10 @@ bool fdo_signature_verification(fdo_byte_array_t *plain_text,
 				fdo_byte_array_t *sg, fdo_public_key_t *pk);
 
 bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2);
-bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si,
-				bool write_devmod_modules);
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
+bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num);
 bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
+bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
 
 /*==================================================================*/
 /* Service Info functionality */
