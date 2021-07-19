@@ -43,6 +43,7 @@ int32_t msg61(fdo_prot_t *ps)
 	int result_memcmp = 0;
 	fdo_byte_array_t *xA = NULL;
 	fdo_cose_t *cose = NULL;
+	fdo_byte_array_t *cose_sig_structure = NULL;
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -84,28 +85,41 @@ int32_t msg61(fdo_prot_t *ps)
 	ps->owner_public_key = fdo_public_key_clone(cose->cose_uph->cuphowner_public_key);
 	ps->nonce_to2provedv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->nonce_to2provedv) {
-		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to alloc NonceTO2ProveDv\n");
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc NonceTO2ProveDv\n");
 		goto err;
 	}
 	if (0 != memcpy_s(ps->nonce_to2provedv->bytes, FDO_NONCE_BYTES,
 		&cose->cose_uph->cuphnonce, sizeof(cose->cose_uph->cuphnonce))) {
-		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to copy NonceTO2ProveDv\n");
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to copy NonceTO2ProveDv\n");
+		goto err;
+	}
+
+	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload, NULL,
+		&cose_sig_structure) || !cose_sig_structure) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to write COSE Sig_structure\n");
 		goto err;
 	}
 
 	/* The signature verification over TO2.ProveOVHdr.TO2ProveOVHdrPayload must verify */
-	if (!fdo_signature_verification(cose->cose_payload,
+	if (!fdo_signature_verification(cose_sig_structure,
 					cose->cose_signature,
 					ps->owner_public_key)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: COSE signature verification failed\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: COSE signature verification successful\n");
+	fdo_byte_array_free(cose_sig_structure);
+	cose_sig_structure = NULL;
 
 	// verify the to1d that was received during TO1.RVRedirect, Type 33
 	// Happens only when TO2 was started without RVBypass flow.
 	if (ps->to1d_cose) {
-		if (!fdo_signature_verification(ps->to1d_cose->cose_payload,
+		if (!fdo_cose_write_sigstructure(ps->to1d_cose->cose_ph, ps->to1d_cose->cose_payload,
+			NULL, &cose_sig_structure) || !cose_sig_structure) {
+			LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to write COSE Sig_structure\n");
+			goto err;
+		}
+		if (!fdo_signature_verification(cose_sig_structure,
 					ps->to1d_cose->cose_signature,
 					ps->owner_public_key)) {
 			LOG(LOG_ERROR, "TO2.ProveOVHdr: COSE signature verification failed\n");
@@ -306,6 +320,10 @@ err:
 	if (cose) {
 		fdo_cose_free(cose);
 		cose = NULL;
+	}
+	if (cose_sig_structure) {
+		fdo_byte_array_free(cose_sig_structure);
+		cose_sig_structure = NULL;
 	}
 	if (ps->nonce_to2proveov_rcv != NULL) {
 		fdo_byte_array_free(ps->nonce_to2proveov_rcv);

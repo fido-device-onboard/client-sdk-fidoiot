@@ -297,6 +297,9 @@ void fdo_eat_free(fdo_eat_t *eat);
 bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *eat_ph);
 bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t *eat_uph);
 bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat);
+bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
+	fdo_byte_array_t *eat_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure);
 
 typedef struct {
 	fdo_byte_array_t *eatpayloads;
@@ -330,6 +333,9 @@ bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph);
 bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *cose_ph);
 bool fdo_cose_write_unprotected_header(fdow_t *fdow);
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose);
+bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
+	fdo_byte_array_t *cose_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure);
 
 /*
  * This is a lookup on all possible TransportProtocol values (Section 3.3.12)

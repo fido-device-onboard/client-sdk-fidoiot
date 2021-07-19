@@ -13,7 +13,7 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/sha.h>
-
+#include "safe_lib.h"
 #include "util.h"
 #include "fdoCryptoHal.h"
 
@@ -34,9 +34,14 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	const char *engine_id = "dynamic";
 	EVP_PKEY *pkey = NULL;
 	EC_KEY *eckey = NULL;
+	ECDSA_SIG *sig = NULL;
 	uint8_t digest[SHA384_DIGEST_SIZE] = {0};
 	ENGINE *engine = NULL;
 	size_t hash_length = 0;
+	unsigned char *sig_r = NULL;
+	int sig_r_len = 0;
+	unsigned char *sig_s = NULL;
+	int sig_s_len = 0;
 
 	if (!data || !data_len || !message_signature || !signature_length) {
 		LOG(LOG_ERROR, "Invalid Parameters received.");
@@ -102,9 +107,59 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	LOG(LOG_DEBUG, "ECDSA signature generation - "
 		       "ECC key successfully loaded.\n");
 
-	if (0 == ECDSA_sign(0, digest, hash_length, message_signature,
-			    (unsigned int *)signature_length, eckey)) {
+	sig = ECDSA_do_sign(digest, hash_length, eckey);
+	if (!sig) {
 		LOG(LOG_DEBUG, "Failed to generate ECDSA signature.\n");
+		goto error;
+	}
+
+	// both r and s are maintained by sig, no need to free explicitly
+	const BIGNUM *r = ECDSA_SIG_get0_r(sig);
+	const BIGNUM *s = ECDSA_SIG_get0_s(sig);
+	if (!r || !s) {
+		LOG(LOG_ERROR, "Failed to read r and/or s\n");
+		goto error;
+	}
+
+	sig_r_len = BN_num_bytes(r);
+	if (sig_r_len <= 0) {
+		LOG(LOG_ERROR, "Sig r len invalid\n");
+		goto error;
+	}
+	sig_r = fdo_alloc(sig_r_len);
+	if (!sig_r) {
+		LOG(LOG_ERROR, "Sig r alloc Failed\n");
+		goto error;
+	}
+	if (BN_bn2bin(r, sig_r) <= 0) {
+		LOG(LOG_ERROR, "Sig r conversion Failed\n");
+		goto error;
+	}
+
+	sig_s_len = BN_num_bytes(s);
+	if (sig_r_len <= 0) {
+		LOG(LOG_ERROR, "Sig s len invalid\n");
+		goto error;
+	}
+	sig_s = fdo_alloc(sig_s_len);
+	if (!sig_s) {
+		LOG(LOG_ERROR, "Sig s alloc Failed\n");
+		goto error;
+	}
+	if (BN_bn2bin(s, sig_s) <= 0) {
+		LOG(LOG_ERROR, "Sig s conversion Failed\n");
+		goto error;
+	}
+
+	*signature_length = sig_r_len + sig_s_len;
+	if (memcpy_s(message_signature, *signature_length, (char *)sig_r,
+		     (size_t)sig_r_len) != 0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
+		goto error;
+	}
+	if (memcpy_s(message_signature + sig_r_len, *signature_length, (char *)sig_s,
+		     (size_t)sig_s_len) != 0) {
+		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto error;
 	}
 
@@ -118,6 +173,14 @@ error:
 	if (pkey) {
 		EVP_PKEY_free(pkey);
 	}
-
+	if (sig) {
+		ECDSA_SIG_free(sig);
+	}
+	if (sig_r) {
+		fdo_free(sig_r);
+	}
+	if (sig_s) {
+		fdo_free(sig_s);
+	}
 	return ret;
 }
