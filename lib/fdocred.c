@@ -723,7 +723,6 @@ void fdo_owner_supplied_credentials_free(fdo_owner_supplied_credentials_t *osc)
 	if (osc != NULL) {
 		fdo_rendezvous_list_free(osc->rvlst);
 		osc->rvlst = NULL;
-		fdo_service_info_free(osc->si);
 		fdo_free(osc);
 	}
 }
