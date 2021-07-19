@@ -74,6 +74,9 @@ node('ccode'){
       sh '''
         tar -xvzf test-fidoiot/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* test-fidoiot/binaries/pri-fidoiot/
+        bash test-fidoiot/binaries/pri-fidoiot/scripts/keys_gen.sh test-fidoiot/binaries/pri-fidoiot/
+        cp -r test-fidoiot/binaries/pri-fidoiot/creds/* test-fidoiot/binaries/pri-fidoiot/
+
         cp client-sdk/x86_ecdsa256_gcm_bin/linux-client test-fidoiot/binaries/client-sdk-fidoiot/
         cp -r client-sdk/x86_ecdsa256_gcm_bin/data test-fidoiot/
       '''
