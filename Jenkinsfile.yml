@@ -79,6 +79,7 @@ node('ccode'){
 
         cp client-sdk/x86_ecdsa256_gcm_bin/linux-client test-fidoiot/binaries/client-sdk-fidoiot/
         cp -r client-sdk/x86_ecdsa256_gcm_bin/data test-fidoiot/
+        bash client-sdk/utils/keys_gen.sh test-fidoiot/
       '''
 
       // Updating the TO0 scheduling time interval

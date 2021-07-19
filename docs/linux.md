@@ -48,6 +48,7 @@ For an advanced build configuration, refer to [ Advanced Build Configuration ](b
 $ make pristine
 $ cmake -DTARGET_OS=linux -DBUILD=debug .
 $ make
+$ bash utils/keys_gen.sh .
 ```
 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
