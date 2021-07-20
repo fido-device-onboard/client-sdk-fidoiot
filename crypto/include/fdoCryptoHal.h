@@ -11,6 +11,7 @@ extern "C" {
 
 #include "fdokeyexchange.h"
 #include "util.h"
+#include "fdoCryptoCommons.h"
 #include "fdoCryptoCtx.h"
 #ifdef USE_MBEDTLS
 #if !defined(TARGET_OS_LINUX)
@@ -35,15 +36,6 @@ extern "C" {
 #define SHA384_DIGEST_SIZE BUFF_SIZE_48_BYTES
 #define SHA512_DIGEST_SIZE BUFF_SIZE_64_BYTES
 #define HMACSHA256_KEY_SIZE BUFF_SIZE_32_BYTES
-
-#define FDO_AES_BLOCK_SIZE BUFF_SIZE_16_BYTES /* 128 bits */
-#define FDO_AES_IV_SIZE BUFF_SIZE_16_BYTES    /* 128 bits */
-#define HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES    /* 256 bits */
-#if defined(AES_256_BIT)
-#define FDO_AES_KEY_LENGTH BUFF_SIZE_32_BYTES /* 256 bits */
-#else					      // defined(AES_128_BIT)
-#define FDO_AES_KEY_LENGTH BUFF_SIZE_16_BYTES /* 128 bits */
-#endif
 
 /* Initialize randomization library. */
 int random_init(void);
@@ -192,12 +184,6 @@ int fdo_ssl_close(void *ssl);
 
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks);
-
-#if defined(KEX_DH_ENABLED) //(m size =2048)
-#define DH_PEER_RANDOM_SIZE 256
-#else // KEX_DH_3072_ENABLED  (m size 3072)
-#define DH_PEER_RANDOM_SIZE 768
-#endif
 
 #define FDO_ECDH256_DEV_RANDOM BUFF_SIZE_16_BYTES // 128bits
 #define FDO_ECDH384_DEV_RANDOM BUFF_SIZE_48_BYTES // 384bits

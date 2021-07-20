@@ -62,7 +62,6 @@ typedef struct FDOOwner_supplied_credentials_s {
 	fdo_rendezvous_list_t *rvlst;	// replacement RendezvousInfo
 	fdo_byte_array_t *guid;	// replacement GUID
 	fdo_public_key_t *pubkey;	// replacement PublicKey
-	fdo_service_info_t *si;
 } fdo_owner_supplied_credentials_t;
 
 fdo_owner_supplied_credentials_t *fdo_owner_supplied_credentials_alloc(void);

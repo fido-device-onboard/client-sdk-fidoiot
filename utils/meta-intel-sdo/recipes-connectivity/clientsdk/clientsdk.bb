@@ -26,11 +26,8 @@ FILES_${PN} += "/opt \
 # make command parameters
 BUILD = "debug"
 HTTPPROXY = "false"
-MODULES = "true"
-KEX = "ecdh384"
-AES_MODE = "cbc"
+AES_MODE = "gcm"
 DA = "ecdsa384"
-PK_ENC = "ecdsa"
 
 do_configure(){
 }
@@ -53,11 +50,11 @@ make
 cp libsafestring_static.a libsafestring.a
 
 echo " >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< "
-echo "${S}":"${DA}":"${BUILD}":"${PK_ENC}":"${AES_MODE}":"${KEX}"
+echo "${S}":"${DA}":"${BUILD}":"${AES_MODE}"
 echo " >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< "
 
 cd ${S}
-cmake -DHTTPPROXY=${HTTPPROXY} -DMODULES=${MODULES} -DBUILD=${BUILD} -DDA=${DA} -DPK_ENC=${PK_ENC} -DAES_MODE=${AES_MODE} -DKEX=${KEX} -DOPTIMIZE=1 .
+cmake -DHTTPPROXY=${HTTPPROXY} -DBUILD=${BUILD} -DDA=${DA} -DAES_MODE=${AES_MODE} -DOPTIMIZE=1 .
 make -j$(nproc)
 }
 

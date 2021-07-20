@@ -72,7 +72,7 @@ FDO implementation for ARM devices uses Microchip AT608A as the secure element.
    ***NOTE***: Only ECDSA is supported from SE.
    ```bash
    $ cd <client-sdk folder>
-   $ cmake -DCRYPTO_HW=true -DPK_ENC=ecdsa -DKEX=ecdh .
+   $ cmake -DCRYPTO_HW=true .
    $ make
    $ ./build/linux/debug/linux-client
    ```
