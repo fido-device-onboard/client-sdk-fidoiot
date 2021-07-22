@@ -2743,6 +2743,10 @@ err:
  */
 void fdo_eat_free(fdo_eat_t *eat) {
 
+	if (!eat) {
+		return;
+	}
+
 	if (eat->eat_ph) {
 		fdo_free(eat->eat_ph);
 	}
@@ -3169,7 +3173,10 @@ end:
 /**
  * Free the given COSE_Sign1 object for which memory has been allocated previously.
  */
-bool fdo_cose_free(fdo_cose_t *cose) {
+void fdo_cose_free(fdo_cose_t *cose) {
+	if (!cose) {
+		return;
+	}
 	if (cose->cose_ph) {
 		cose->cose_ph->ph_sig_alg = 0;
 		fdo_free(cose->cose_ph);
@@ -3185,7 +3192,6 @@ bool fdo_cose_free(fdo_cose_t *cose) {
 		fdo_byte_array_free(cose->cose_signature);
 	}
 	fdo_free(cose);
-	return true;
 }
 
 /**
@@ -3285,13 +3291,30 @@ end:
  * Reads an empty map if cose_uph is NULL.
  * Reads and pushes the fields CUPHOWNER and CUPHNONCE otherwise.
  * Return true, if read was a success. False otherwise.
- * 
- * TO-DO : Update when Simple Encrypted Message is implemented to parse COSEUnProtFields
  */
 bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_t *cose_uph) {
 
+	int result = 0;
+	size_t map_items = 0;
+
 	if (!fdor) {
 		LOG(LOG_ERROR, "COSE Unprotected header: Invalid params\n");
+		return false;
+	}
+
+	if (!fdor_map_length(fdor, &map_items) || (map_items != 0 && map_items != 2)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Invalid map length.\n");
+		return false;
+	}
+
+	// either the header is expected to ne non-NULL and hold 2 items, or
+	// the header is expected to be NULL and hold 0 items
+	// anything else means that the expectation from the header is not fulfilled, or
+	// the method is not called with correct parameters
+	if ((cose_uph && map_items != 2) || (!cose_uph && map_items != 0)) {
+		LOG(LOG_ERROR,
+			"COSE Unprotected header: Unexpected map parameters.\n");
 		return false;
 	}
 
@@ -3301,29 +3324,39 @@ bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_
 		return false;
 	}
 
-	if (cose_uph) {
-		int result = 0;
-		if (!fdor_signed_int(fdor, &result) || result != FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY) {
-			LOG(LOG_ERROR,
-				"COSE Unprotected header: Failed to read CUPHOWNERPUBKEY key\n");
-			return false;
-		}
-		cose_uph->cuphowner_public_key = fdo_public_key_read(fdor);
-		if (!cose_uph->cuphowner_public_key) {
-			LOG(LOG_ERROR, "COSE: Failed to read CUPHOWNERPUBKEY value\n");
-			return false;
-		}
-
-		result = 0;
-		if (!fdor_signed_int(fdor, &result) || result != FDO_COSE_SIGN1_CUPHNONCE_KEY) {
-			LOG(LOG_ERROR,
-				"COSE Unprotected header: Failed to read CUPHNONCE key\n");
-			return false;
-		}
-		if (!fdor_byte_string(fdor, cose_uph->cuphnonce, sizeof(cose_uph->cuphnonce))) {
-			LOG(LOG_ERROR,
-				"COSE Unprotected header: Failed to read CUPHNONCE value\n");
-			return false;			
+	// if unprotected header is not an empty map, it will contain 2 items (key-value pairs)
+	if (cose_uph && map_items == 2) {
+		// iterate through the map and look for 2 keys specifically
+		// if any other key is found, throw an error
+		while (fdor_map_has_more(fdor)) {
+			if (!fdor_is_value_signed_int(fdor)) {
+				LOG(LOG_ERROR,
+					"COSE Unprotected header: Found a non-integer unknown/unsupported key.\n");
+				return false;
+			}
+			result = 0;
+			if (!fdor_signed_int(fdor, &result) || result == 0) {
+				LOG(LOG_ERROR,
+					"COSE Unprotected header: Failed to read key\n");
+				return false;
+			}
+			if (result == FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY) {
+				cose_uph->cuphowner_public_key = fdo_public_key_read(fdor);
+				if (!cose_uph->cuphowner_public_key) {
+					LOG(LOG_ERROR, "COSE: Failed to read CUPHOWNERPUBKEY value\n");
+					return false;
+				}
+			} else if (result == FDO_COSE_SIGN1_CUPHNONCE_KEY) {
+				if (!fdor_byte_string(fdor, cose_uph->cuphnonce, sizeof(cose_uph->cuphnonce))) {
+					LOG(LOG_ERROR,
+						"COSE Unprotected header: Failed to read CUPHNONCE value\n");
+					return false;
+				}
+			} else {
+				LOG(LOG_ERROR,
+					"COSE Unprotected header: Found unknown/unsupported key\n");
+				return false;
+			}
 		}
 	}
 
@@ -3432,7 +3465,6 @@ bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph) {
 	return true;
 
 end:
-	fdo_cose_free(cose);
 	return false;
 }
 
@@ -4068,13 +4100,15 @@ bool fdo_cose_mac0_write(fdow_t *fdow, fdo_cose_mac0_t *cose_mac0) {
 /**
  * Free the given COSE_Encrypt0 object for which memory has been allocated previously.
  */
-bool fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0) {
+void fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0) {
+	if (!cose_encrypt0) {
+		return;
+	}
 	if (cose_encrypt0->protected_header) {
 		cose_encrypt0->protected_header->aes_plain_type = 0;
 		fdo_free(cose_encrypt0->protected_header);
 	}
 	if (cose_encrypt0->unprotected_header) {
-		// do memset to 0 here.
 		fdo_free(cose_encrypt0->unprotected_header);
 	}
 	if (cose_encrypt0->payload) {
@@ -4083,7 +4117,6 @@ bool fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0) {
 
 	fdo_free(cose_encrypt0);
 	cose_encrypt0 = NULL;
-	return true;
 }
 
 /**
