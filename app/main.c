@@ -118,7 +118,7 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
 		      "fdo_sys", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
+		fdo_free(module_info);
 		return NULL;
 	}
 	module_info[0].service_info_callback = fdo_sys;
@@ -253,7 +253,7 @@ int app_main(bool is_resale)
 	if (FDO_SUCCESS !=
 	    fdo_sdk_init(error_cb, FDO_MAX_MODULES, module_info)) {
 		LOG(LOG_ERROR, "fdo_sdk_init failed!!\n");
-		free(module_info);
+		fdo_free(module_info);
 		ret = -1;
 		goto end;
 	}
@@ -297,7 +297,9 @@ end:
 	/* free the module related info
 	 * FDO has created the required DB
 	 */
-	free(module_info);
+	if (module_info) {
+		fdo_free(module_info);
+	}
 
 	fdo_sdk_deinit();
 	// Return 0 on success
