@@ -103,7 +103,7 @@ bool fdo_siginfo_write(fdow_t *fdow);
 // Legacy value, Currently used to represent an empty hash type for now
 #define FDO_CRYPTO_HASH_TYPE_NONE 0
 
-#if !defined(KEX_ECDH384_ENABLED) /* TODO: do more generic */
+#ifdef ECDSA256_DA
 #define FDO_CRYPTO_HASH_TYPE_USED FDO_CRYPTO_HASH_TYPE_SHA_256
 #define FDO_CRYPTO_HMAC_TYPE_USED FDO_CRYPTO_HMAC_TYPE_SHA_256
 #else
@@ -297,6 +297,9 @@ void fdo_eat_free(fdo_eat_t *eat);
 bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *eat_ph);
 bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t *eat_uph);
 bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat);
+bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
+	fdo_byte_array_t *eat_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure);
 
 typedef struct {
 	fdo_byte_array_t *eatpayloads;
@@ -330,6 +333,9 @@ bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph);
 bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *cose_ph);
 bool fdo_cose_write_unprotected_header(fdow_t *fdow);
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose);
+bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
+	fdo_byte_array_t *cose_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure);
 
 /*
  * This is a lookup on all possible TransportProtocol values (Section 3.3.12)
@@ -455,9 +461,18 @@ fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *list, int 
 int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list);
 bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list);
 
+// List containing string of fixed length (FDO_MODULE_NAME_LEN)
+typedef struct fdo_sv_invalid_modnames_s {
+	char bytes[FDO_MODULE_NAME_LEN];
+	struct fdo_sv_invalid_modnames_s *next;
+} fdo_sv_invalid_modnames_t;
+
 typedef struct fdo_service_info_s {
-	int numKV;
+	size_t numKV;
 	fdo_key_value_t *kv;
+	size_t sv_index_end;
+	size_t sv_index_begin;
+	size_t sv_val_index;
 } fdo_service_info_t;
 
 fdo_service_info_t *fdo_service_info_alloc(void);
@@ -478,9 +493,10 @@ bool fdo_signature_verification(fdo_byte_array_t *plain_text,
 				fdo_byte_array_t *sg, fdo_public_key_t *pk);
 
 bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2);
-bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si,
-				bool write_devmod_modules);
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
+bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num);
 bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
+bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
 
 /*==================================================================*/
 /* Service Info functionality */
@@ -512,9 +528,13 @@ void fdo_sv_info_clear_module_psi_osi_index(
     fdo_sdk_service_info_module_list_t *module_list);
 
 bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
-	int *cb_return_val, fdo_string_t **serviceinfo_invalid_modname);
+	int *cb_return_val, fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
 bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_message,
 	fdo_sdk_service_info_module_list_t *module_list, int *cb_return_val);
+bool fdo_serviceinfo_invalid_modname_add(char *module_name,
+	fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
+void fdo_serviceinfo_invalid_modname_free(
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames);
 
 bool fdo_compare_hashes(fdo_hash_t *hash1, fdo_hash_t *hash2);
 bool fdo_compare_byte_arrays(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);

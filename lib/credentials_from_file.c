@@ -198,8 +198,9 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	size_t dev_cred_len = 0;
 	fdor_t *fdor = NULL;
 
-	if (!our_dev_cred) {
-		goto end;
+	if (!dev_cred_file || !our_dev_cred) {
+		LOG(LOG_ERROR, "Invalid params\n");
+		return false;
 	}
 
 	if (our_dev_cred->owner_blk != NULL) {
@@ -342,6 +343,11 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 	bool ret = false;
 	size_t dev_cred_len = 0;
 	fdo_byte_array_t *secret = NULL;
+
+	if (!dev_cred_file || !our_dev_cred) {
+		LOG(LOG_DEBUG, "Invalid params\n");
+		return false;
+	}
 
 	(void)our_dev_cred; /* Unused Warning */
 

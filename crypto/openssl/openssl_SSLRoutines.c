@@ -129,10 +129,11 @@ int fdo_ssl_close(void *ssl)
 			LOG(LOG_ERROR,
 			    "SSL Connection shutdown error: %d, ret = %d\n",
 			    SSL_get_error((SSL *)ssl, ret), ret);
-			return -1;
+			ret = -1;
+			goto end;
 		}
 	}
-
+end:
 	SSL_free((SSL *)ssl);
 	if(ctx) {
 		SSL_CTX_free(ctx);

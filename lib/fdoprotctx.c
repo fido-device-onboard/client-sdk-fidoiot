@@ -29,9 +29,8 @@
  * fdo_prot_ctx_alloc responsible for allocation of required protocol context.
  * @param protrun - pointer to function for intended protocol (DI/TO1/TO2).
  * @param protdata - pointer of type fdo_prot_t, hold protocol related data.
- * @param host_ip, - Pointer to intended HOST's IP address (null if DNS is
- * present).
- * @param host_dns - Pointer to intended HOST's DNS (null if IP is present).
+ * @param host_ip, - Pointer to intended HOST's IP address.
+ * @param host_dns - Pointer to intended HOST's DNS.
  * @param host_port - port no of intended HOST.
  * @param tls - boolean denoting if transport level security is applicable.
  * @return pointer to required protocol context on success, NULL if any error
@@ -55,9 +54,24 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 		return NULL;
 	}
 
+	// copy the IP, instead of using it directly, since the IP might be
+	// coming in from DeviceCredentials that gets cleared at msg/70
 	if (host_ip) {
-		prot_ctx->host_ip = host_ip;
+		prot_ctx->host_ip = fdo_ipaddress_alloc();
+		if (!prot_ctx->host_ip) {
+			LOG(LOG_ERROR, "Failed to alloc host IP\n");
+			goto err;
+		}
+		prot_ctx->host_ip->length = host_ip->length;
+		if (0 != memcpy_s(prot_ctx->host_ip->addr, sizeof(host_ip->addr),
+			host_ip->addr, sizeof(host_ip->addr))) {
+			LOG(LOG_ERROR, "Failed to copy host IP\n");
+			goto err;
+		}
 	}
+
+	// use the DNS directly, since the DNS is resolved and cached,
+	// and the resolved IP is used directly
 	if (host_dns) {
 		prot_ctx->host_dns = host_dns;
 	}
@@ -68,6 +82,11 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 	prot_ctx->host_port = host_port;
 	prot_ctx->tls = tls;
 	return prot_ctx;
+err:
+	if (prot_ctx->host_ip) {
+		fdo_free(prot_ctx->host_ip);
+	}
+	return NULL;
 }
 
 /**
@@ -76,8 +95,11 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 void fdo_prot_ctx_free(fdo_prot_ctx_t *prot_ctx)
 {
 	if (prot_ctx) {
-		if (prot_ctx->host_dns) {
+		if (prot_ctx->resolved_ip) {
 			fdo_free(prot_ctx->resolved_ip);
+		}
+		if (prot_ctx->host_ip) {
+			fdo_free(prot_ctx->host_ip);
 		}
 		fdo_free(prot_ctx);
 	}
@@ -111,16 +133,16 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 				ret = false;
 				break;
 			}
-			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_DI_SET_HMAC: /* type 12 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_DI_DONE: /* type 13 */
-		ret = connect_to_manufacturer(prot_ctx->host_ip,
-					      prot_ctx->host_port,
-					      &prot_ctx->sock_hdl,
-					      (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+		ret = connect_to_manufacturer(
+			      prot_ctx->resolved_ip ? prot_ctx->resolved_ip : prot_ctx->host_ip,
+			      prot_ctx->host_port,
+			      &prot_ctx->sock_hdl,
+			      (prot_ctx->tls ? &prot_ctx->ssl : NULL));
 		break;
 	case FDO_STATE_T01_SND_HELLO_FDO: /* type 30 */
 		ATTRIBUTE_FALLTHROUGH;
@@ -135,17 +157,22 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
 					is_rv_proxy_defined())) {
 				ret = false;
-				break;
+				fdo_free(prot_ctx->resolved_ip);
 			}
-			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO1_SND_PROVE_TO_FDO: /* type 32 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO1_RCV_FDO_REDIRECT: /* type 33 */
+		// try DNS's resolved IP first, if it fails, try given IP address
 		ret = connect_to_rendezvous(
-		    prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
+		    prot_ctx->resolved_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
 		    (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+		if (!ret) {
+			ret = connect_to_rendezvous(
+				prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
+				(prot_ctx->tls ? &prot_ctx->ssl : NULL));
+		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
 		ATTRIBUTE_FALLTHROUGH;
@@ -160,9 +187,8 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
 					is_owner_proxy_defined())) {
 				ret = false;
-				break;
+				fdo_free(prot_ctx->resolved_ip);
 			}
-			prot_ctx->host_ip = prot_ctx->resolved_ip;
 		}
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO2_SND_GET_OP_NEXT_ENTRY: /* type 62 */
@@ -184,8 +210,13 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO2_SND_DONE: /* type 70 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
-		ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
+		// try DNS's resolved IP first, if it fails, try given IP address
+		ret = connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_port,
 				       &prot_ctx->sock_hdl, (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+		if (!ret) {
+			ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
+				       &prot_ctx->sock_hdl, (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+		}
 		break;
 	default:
 		LOG(LOG_ERROR, "%s reached unknown state\n", __func__);
@@ -409,7 +440,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		 */
 		if (!fdor_parser_init(fdor)) {
 			LOG(LOG_ERROR, "Failed to initilize FDOR parser\n");
-			return -1;
+			ret = -1;
 		}
 		fdor->have_block = true;
 	}

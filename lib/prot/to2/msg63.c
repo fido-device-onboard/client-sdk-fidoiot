@@ -48,6 +48,7 @@ int32_t msg63(fdo_prot_t *ps)
 	int entry_num;
 	fdo_cose_t *cose = NULL;
 	fdo_byte_array_t *cose_encoded = NULL;
+	fdo_byte_array_t *cose_sig_structure = NULL;
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -102,8 +103,13 @@ int32_t msg63(fdo_prot_t *ps)
 		goto err;
 	}
 
+	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload, NULL,
+		&cose_sig_structure) || !cose_sig_structure) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to write COSE Sig_structure\n");
+		goto err;
+	}
 	// verify the received COSE signature
-	if (!fdo_signature_verification(cose->cose_payload,
+	if (!fdo_signature_verification(cose_sig_structure,
 					cose->cose_signature,
 					ps->ovoucher->ov_entries->pk)) {
 		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to verify OVEntry signature\n");
@@ -315,6 +321,9 @@ err:
 	if (cose_encoded) {
 		fdo_byte_array_free(cose_encoded);
 	}
-
+	if (cose_sig_structure) {
+		fdo_byte_array_free(cose_sig_structure);
+		cose_sig_structure = NULL;
+	}
 	return ret;
 }

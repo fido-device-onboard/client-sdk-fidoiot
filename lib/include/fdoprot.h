@@ -107,9 +107,20 @@
 #define FDO_PROT_SPEC_VERSION 100
 
 // minimum ServiceInfo size
-#define MIN_SERVICEINFO_SZ 1300
+#define MIN_SERVICEINFO_SZ 256
 // maximum ServiceInfo size
 #define MAX_SERVICEINFO_SZ 8192
+// the margin considered while trying to fit Device ServiceInfo within MTU
+// which allows us to avoid sending more than the MTU at all times
+// For large numbers of ServiceInfoKeyVal to be sent, a larger number might be needed
+// However, the current implementation writes only 1 ServiceInfoKeyVal containing
+// any number of ServiceInfoKVs
+#define SERVICEINFO_MTU_FIT_MARGIN 30
+
+// minimum message buffer size to read/write protcol (DI/TO1/TO2)
+// if user-configured MAX_SERVICE_SZ is more than this, that is used as the buffer length
+// else this is used as the message buffer length
+#define MSG_BUFFER_SZ 1300
 // margin that gets added to either max or min ServiceInfo size to create
 // the final buffer to read/write protcol (DI/TO1/TO2)
 #define MSG_METADATA_SIZE 700
@@ -156,10 +167,12 @@ typedef struct fdo_prot_s {
 	fdo_rendezvous_t *rv;
 	fdo_cose_t *to1d_cose;
 	uint16_t serv_req_info_num;
-	fdo_string_t *serviceinfo_invalid_modname;
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames;
 	int maxOwnerServiceInfoSz;
 	int maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
+	bool owner_serviceinfo_ismore;
+	bool owner_serviceinfo_isdone;
 	size_t prot_buff_sz;
 	int owner_supplied_service_info_num;
 	int owner_supplied_service_info_rcv;
