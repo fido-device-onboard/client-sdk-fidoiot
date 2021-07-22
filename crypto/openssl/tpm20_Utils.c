@@ -336,6 +336,10 @@ err:
 	}
 	TPM2_ZEROISE_FREE(validation);
 	TPM2_ZEROISE_FREE(outHMAC);
+	memset_s(&unmarshalHMACPriv_key, sizeof(unmarshalHMACPriv_key), 0);
+	memset_s(&unmarshalHMACPub_key, sizeof(unmarshalHMACPub_key), 0);
+	memset_s(bufferTPMHMACPriv_key, sizeof(bufferTPMHMACPriv_key), 0);
+	memset_s(bufferTPMHMACPub_key, sizeof(bufferTPMHMACPub_key), 0);
 
 	return ret;
 }
@@ -619,6 +623,7 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 {
 	int ret = -1, is_failed = 0;
 	TSS2_TCTI_CONTEXT *tcti_context = NULL;
+	TSS2_RC rc;
 
 	if (!esys_context || !*esys_context) {
 		LOG(LOG_ERROR, "Invalid parameter received.\n");
@@ -650,11 +655,19 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 		}
 	}
 
-	Esys_GetTcti(*esys_context, &tcti_context);
+	rc = Esys_GetTcti(*esys_context, &tcti_context);
+	if (rc != TPM2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to cleanup TCTI.\n");
+		is_failed = 1;
+	}
 	Esys_Finalize(esys_context);
 
 	if (tcti_context) {
 		Tss2_TctiLdr_Finalize(&tcti_context);
+		if (tcti_context) {
+			LOG(LOG_ERROR, "Failed to finalize context.\n");
+			is_failed = 1;
+		}
 	}
 
 	if (is_failed) {
