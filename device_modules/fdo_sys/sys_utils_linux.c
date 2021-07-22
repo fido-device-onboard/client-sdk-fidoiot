@@ -20,13 +20,21 @@ static bool is_valid_filename(const char *fname)
 	static const char * const whitelisted[] = {"sh", "py"};
 	char *substring = NULL, *t1 = NULL;
 	char filenme_woextension[FILE_NAME_LEN] = {0};
+	size_t fname_len = 0;
+	size_t ext_len = 0;
+	const size_t EXT_MAX_LEN = 3;
 
 	if (fname == NULL) {
 		goto end;
 	}
 
-	if (strncpy_s(filenme_woextension, FILE_NAME_LEN, fname,
-		      strnlen_s(fname, FILE_NAME_LEN))) {
+	fname_len = strnlen_s(fname, FILE_NAME_LEN);
+	if (!fname_len || fname_len == FILE_NAME_LEN) {
+		printf("ERROR: Didn't receive valid filename\n");
+		goto end;
+	}
+
+	if (strncpy_s(filenme_woextension, FILE_NAME_LEN, fname, fname_len)) {
 		goto end;
 	}
 
@@ -42,7 +50,13 @@ static bool is_valid_filename(const char *fname)
 	// check the whitelisted extension type
 	substring++;
 	for (i = 0; i < (sizeof(whitelisted) / sizeof(whitelisted[0])); i++) {
-		strcmp_s(substring, strnlen_s(substring, 3), whitelisted[i],
+		ext_len = strnlen_s(substring, EXT_MAX_LEN);
+		if (!ext_len || ext_len == EXT_MAX_LEN) {
+			printf("Couldn't find file extension");
+			ret = false;
+			break;
+		}
+		strcmp_s(substring, ext_len, whitelisted[i],
 			 &strcmp_result);
 		if (!strcmp_result) {
 			// extension matched

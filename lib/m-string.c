@@ -69,6 +69,12 @@ static int read_fill_modelserial(void)
 		LOG(LOG_INFO, "No serialno file present!\n");
 
 		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
+		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_ERROR, "Default serial number string isn't "
+					"NULL terminated\n");
+			goto err;
+		}
+		
 		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ, DEF_SERIAL_NO,
 				def_serial_sz);
 		if (ret) {
@@ -88,6 +94,12 @@ static int read_fill_modelserial(void)
 
 		LOG(LOG_INFO, "No model number file present!\n");
 		def_model_sz = strnlen_s(DEF_MODEL_NO, MAX_MODEL_NO_SZ);
+		if (!def_model_sz || def_model_sz == MAX_MODEL_NO_SZ) {
+			LOG(LOG_ERROR, "Default model number string isn't "
+					"NULL terminated\n");
+			goto err;
+		}
+
 		ret = strncpy_s(model_number, MAX_MODEL_NO_SZ, DEF_MODEL_NO,
 				def_model_sz);
 		if (ret) {
@@ -120,7 +132,16 @@ int ps_get_m_string(fdo_prot_t *ps)
 	}
 
 	size_t device_serial_len = strnlen_s(device_serial, MAX_DEV_SERIAL_SZ);
+	if (!device_serial_len || device_serial_len == MAX_DEV_SERIAL_SZ) {
+		LOG(LOG_ERROR, "device_serial isn't a NULL terminated.\n");
+		goto err;
+	}
+
 	size_t model_number_len = strnlen_s(model_number, MAX_MODEL_NO_SZ);
+	if (!model_number_len || model_number_len == MAX_MODEL_NO_SZ) {
+		LOG(LOG_ERROR, "model_number isn't a NULL terminated.\n");
+		goto err;
+	}
 
 	/* Get the CSR data */
 #if defined(DEVICE_TPM20_ENABLED)
