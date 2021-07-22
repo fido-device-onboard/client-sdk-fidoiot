@@ -245,6 +245,26 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
 	size_t ofs = 0;
 	uint8_t idx0_val;
+	size_t kdf_label_len = 0;
+	size_t context_label_len = 0;
+
+	if (!kex_ctx) {
+		LOG(LOG_ERROR, "Key exchange context is not initialized.\n");
+		goto err;
+	}
+
+	kdf_label_len = strnlen_s(kex_ctx->kdf_label, FDO_MAX_STR_SIZE);
+	if (!kdf_label_len || kdf_label_len == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "KDF Label is not NULL terminated.\n");
+		goto err;
+	}
+
+	context_label_len = strnlen_s(kex_ctx->context_label,
+					FDO_MAX_STR_SIZE);
+	if (!context_label_len || context_label_len == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "Context Label is not NULL terminated.\n");
+		goto err;
+	}
 
 	if (index == 1) {
 		idx0_val = 0x01;
@@ -259,22 +279,20 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 	kdf_input[ofs++] = idx0_val;
 	// Fill in the kdflabel
 	if (strncpy_s((char *)&kdf_input[ofs], kdf_input_len - ofs,
-		kex_ctx->kdf_label,
-		strnlen_s(kex_ctx->kdf_label, FDO_MAX_STR_SIZE))) {
+		kex_ctx->kdf_label, kdf_label_len)) {
 		LOG(LOG_ERROR, "Failed to fill kdf label in key Material\n");
 		goto err;
 	}
-	ofs += strnlen_s(kex_ctx->kdf_label, FDO_MAX_STR_SIZE);
+	ofs += kdf_label_len;
 	// Separation indicator
 	kdf_input[ofs++] = 0x00;
 	// Fill in the context
 	if (strncpy_s((char *)&kdf_input[ofs], kdf_input_len - ofs,
-		kex_ctx->context_label,
-		strnlen_s(kex_ctx->context_label, FDO_MAX_STR_SIZE))) {
+		kex_ctx->context_label, context_label_len)) {
 		LOG(LOG_ERROR, "Failed to fill svk label\n");
 		goto err;
 	}
-	ofs += strnlen_s(kex_ctx->context_label, FDO_MAX_STR_SIZE);
+	ofs += context_label_len;
 	kdf_input[ofs++] = (keymat_bit_length >> 8) & 0xff;
 	kdf_input[ofs++] = keymat_bit_length & 0xff;
 
@@ -369,6 +387,26 @@ static int32_t kex_kdf(void)
 	size_t keymat_bytes_to_copy = 0;
 	uint8_t *hmac = NULL;
 	size_t hmac_sha256_sz = BUFF_SIZE_32_BYTES;
+	size_t kdf_label_len = 0;
+	size_t context_label_len = 0;
+
+	if (!kex_ctx) {
+		LOG(LOG_ERROR, "Key exchange context is not initialized.\n");
+		goto err;
+	}
+
+	kdf_label_len = strnlen_s(kex_ctx->kdf_label, FDO_MAX_STR_SIZE);
+	if (!kdf_label_len || kdf_label_len == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "KDF Label is not NULL terminated.\n");
+		goto err;
+	}
+
+	context_label_len = strnlen_s(kex_ctx->context_label,
+					FDO_MAX_STR_SIZE);
+	if (!context_label_len || context_label_len == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "Context Label is not NULL terminated.\n");
+		goto err;
+	}
 
 	if (!shse) {
 		LOG(LOG_ERROR, "Failed to get the shared secret\n");
@@ -386,8 +424,7 @@ static int32_t kex_kdf(void)
 	// Lstr = (byte)L1||(byte)L2, i.e, 16-bit number, depending on L=key-bits to generate
 	// Therefore, KDFInput size = 1 for byte (i) + length of Label + 1 for byte (0) +
 	// length of Context + 2 bytes for Lstr
-	kdf_input_len = 1 + strnlen_s(kex_ctx->kdf_label, FDO_MAX_STR_SIZE) + 1 +
-		    strnlen_s(kex_ctx->context_label, FDO_MAX_STR_SIZE) + 1 + 1;
+	kdf_input_len = 1 + kdf_label_len + 1 + context_label_len + 2;
 	// Allocate memory for KDFInput
 	kdf_input = fdo_alloc(kdf_input_len);
 	if (!kdf_input) {

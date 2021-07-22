@@ -145,6 +145,11 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 
 	/* Allocate CSR byte array */
 	pem_buf_size = strnlen_s((const char *)csr_buf, CSR_BUFFER_SIZE);
+	if (!pem_buf_size || pem_buf_size == CSR_BUFFER_SIZE) {
+		LOG(LOG_ERROR, "Memory corruption in CSR buffer\n");
+		goto csr_err;
+	}
+
 	pem_byte_arr = fdo_byte_array_alloc(pem_buf_size);
 	if (!pem_byte_arr) {
 		LOG(LOG_ERROR, "Out of memory for CSR byte array\n");
