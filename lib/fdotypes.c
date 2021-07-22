@@ -382,12 +382,11 @@ fdo_string_t *fdo_string_alloc_with_str(const char *data)
 		return NULL;
 	}
 
-	int str_sz = strnlen_s(data, FDO_MAX_STR_SIZE);
+	size_t str_sz = strnlen_s(data, FDO_MAX_STR_SIZE);
 
-	if (str_sz == FDO_MAX_STR_SIZE) {
-		LOG(LOG_ERROR, "%s: data"
-		    " is either 'NULL' or 'isn't"
-		    " NULL-terminated'\n", __func__);
+	if (!str_sz || str_sz == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "data is either 'NULL' or 'isn't"
+		    " NULL-terminated'\n");
 		return NULL;
 	}
 	return fdo_string_alloc_with(data, str_sz);
@@ -2667,7 +2666,6 @@ bool fdo_encrypted_packet_windup(fdow_t *fdow, int type)
 		return ret;
 	}
 	fdow->b.block_size = payload_length;
-	// fdo_log_block(&fdow->b);
 
 	fdo_encrypted_packet_t *pkt = fdo_encrypted_packet_alloc();
 	if (!pkt) {
@@ -3057,6 +3055,115 @@ bool fdo_eat_write_payloadbasemap(fdow_t *fdow, fdo_eat_payload_base_map_t *eat_
 		return false;
 	}
 	return true;
+}
+
+/**
+ * Create Sig_structure of the form:
+ * Sig_structure = [
+ * context : "Signature1",
+ * body_protected : empty_or_serialized_map,	// EAT Protected header as bstr
+ * external_aad : bstr,
+ * payload : bstr
+ * ]
+ * Only to be used Sig_sturcture for EAT.
+ *
+ * @param eat_ph - EAT protected header
+ * @param eat_payload - EAT Payload
+ * @param external_aad - External AAD. If NULL, empty bstr will be written, else
+ * the AAD bytes will be written
+ * @param sig_structure - Out buffer to store the constructred CBOR encoded Sig_structure.
+ * Memory allocation will be done inside this method, if the operation is successful.
+ * It will be NULL otherwise.
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
+	fdo_byte_array_t *eat_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure) {
+
+	bool ret = false;
+	char context[] = "Signature1";
+	fdo_byte_array_t *empty_byte_array = NULL;
+	fdow_t temp_fdow = {0};
+	size_t enc_length = 0;
+
+	if (!eat_ph || !eat_payload || !sig_structure) {
+		return false;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_array(&temp_fdow, 4)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdow_text_string(&temp_fdow, context, sizeof(context) - 1)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write Context\n");
+		return false;
+	}
+
+	if (!fdo_eat_write_protected_header(&temp_fdow, eat_ph)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write protected header\n");
+		return false;
+	}
+
+	if (external_aad) {
+		if (!fdow_byte_string(&temp_fdow, external_aad->bytes, external_aad->byte_sz)) {
+			LOG(LOG_ERROR, "EAT Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	} else {
+		empty_byte_array = fdo_byte_array_alloc(0);
+		if (!empty_byte_array) {
+			LOG(LOG_ERROR, "EAT Sig_structure: Byte Array Alloc failed\n");
+			return false;
+		}
+
+		if (!fdow_byte_string(&temp_fdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
+			LOG(LOG_ERROR, "EAT Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	}
+
+	if (!fdow_byte_string(&temp_fdow, eat_payload->bytes, eat_payload->byte_sz)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write payload\n");
+		goto end;
+	}
+
+	if (!fdow_end_array(&temp_fdow)) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to write end array\n");
+		goto end;
+	}
+
+	enc_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_length) || enc_length == 0) {
+		LOG(LOG_ERROR, "EAT Sig_structure: Failed to find encoded length of "
+			"Sig_structure array as bstr\n");
+		goto end;
+	}
+
+	// Alocate and copy the encoded Sig_sturcture bstr
+	*sig_structure =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, enc_length);
+	if (!(*sig_structure)) {
+		LOG(LOG_ERROR,
+			"EAT Sig_structure: Failed to alloc output Sig_structure\n");
+		goto end;
+	}
+
+	ret = true;
+end:
+	if (empty_byte_array) {
+		fdo_byte_array_free(empty_byte_array);
+	}
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	return ret;
 }
 
 /**
@@ -3486,6 +3593,115 @@ bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose) {
 		return false;
 	}
 	return true;
+}
+
+/**
+ * Create Sig_structure of the form:
+ * Sig_structure = [
+ * context : "Signature1",
+ * body_protected : empty_or_serialized_map,	// COSE Protected header as bstr
+ * external_aad : bstr,
+ * payload : bstr
+ * ]
+ * Only to be used Sig_sturcture for COSE.
+ *
+ * @param cose_ph - COSE protected header
+ * @param cose_payload - COSE Payload
+ * @param external_aad - External AAD. If NULL, empty bstr will be written, else
+ * the AAD bytes will be written
+ * @param sig_structure - Out buffer to store the constructred CBOR encoded Sig_structure.
+ * Memory allocation will be done inside this method, if the operation is successful.
+ * It will be NULL otherwise.
+ * @return true, if read was a success. False otherwise.
+ */
+bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
+	fdo_byte_array_t *cose_payload, fdo_byte_array_t *external_aad,
+	fdo_byte_array_t **sig_structure) {
+
+	bool ret = false;
+	char context[] = "Signature1";
+	fdo_byte_array_t *empty_byte_array = NULL;
+	fdow_t temp_fdow = {0};
+	size_t enc_length = 0;
+
+	if (!cose_ph || !cose_payload || !sig_structure) {
+		return false;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+		!fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: FDOW Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (!fdow_start_array(&temp_fdow, 4)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write start array\n");
+		return false;
+	}
+
+	if (!fdow_text_string(&temp_fdow, context, sizeof(context) - 1)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write Context\n");
+		return false;
+	}
+
+	if (!fdo_cose_write_protected_header(&temp_fdow, cose_ph)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write protected header\n");
+		return false;
+	}
+
+	if (external_aad) {
+		if (!fdow_byte_string(&temp_fdow, external_aad->bytes, external_aad->byte_sz)) {
+			LOG(LOG_ERROR, "COSE Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	} else {
+		empty_byte_array = fdo_byte_array_alloc(0);
+		if (!empty_byte_array) {
+			LOG(LOG_ERROR, "COSE Sig_structure: Byte Array Alloc failed\n");
+			return false;
+		}
+
+		if (!fdow_byte_string(&temp_fdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
+			LOG(LOG_ERROR, "COSE Sig_structure: Failed to write external_aad\n");
+			goto end;
+		}
+	}
+
+	if (!fdow_byte_string(&temp_fdow, cose_payload->bytes, cose_payload->byte_sz)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write payload\n");
+		goto end;
+	}
+
+	if (!fdow_end_array(&temp_fdow)) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to write end array\n");
+		goto end;
+	}
+
+	enc_length = 0;
+	if (!fdow_encoded_length(&temp_fdow, &enc_length) || enc_length == 0) {
+		LOG(LOG_ERROR, "COSE Sig_structure: Failed to find encoded length of "
+			"Sig_structure array as bstr\n");
+		goto end;
+	}
+
+	// Alocate and copy the encoded Sig_sturcture bstr
+	*sig_structure =
+		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, enc_length);
+	if (!(*sig_structure)) {
+		LOG(LOG_ERROR,
+			"COSE Sig_structure: Failed to alloc output Sig_structure\n");
+		goto end;
+	}
+
+	ret = true;
+end:
+	if (empty_byte_array) {
+		fdo_byte_array_free(empty_byte_array);
+	}
+	if (temp_fdow.b.block || temp_fdow.current) {
+		fdow_flush(&temp_fdow);
+	}
+	return ret;
 }
 
 /**
@@ -5001,8 +5217,10 @@ void fdo_service_info_free(fdo_service_info_t *si)
 	while ((kv = si->kv) != NULL) {
 		si->kv = kv->next;
 		fdo_kv_free(kv);
+		kv = NULL;
 	}
 	fdo_free(si);
+	si = NULL;
 }
 
 /**
@@ -5349,18 +5567,11 @@ bool fdo_service_info_add_kv(fdo_service_info_t *si, fdo_key_value_t *kvs)
  * @param fdow - Pointer to the writer.
  * @param si - Pointer to the fdo_service_info_t list containing all platform
  * Device ServiceInfos.
- * @param write_devmod_modules - Flag that determines whether devmod:modules flag
- * is to be written (true), or not (false).
  * @return true if the opration was a success, false otherwise
- *
- * TO-DO: Remove write_devmod_modules flag and move the subsequent write operation
- * elsewhere when multi-module support is added.
  */
-bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, bool write_devmod_modules)
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si)
 {
-	int num = 0;
-	fdo_key_value_t **kvp = NULL;
-	fdo_key_value_t *kv = NULL;
+	size_t num = 0;
 
 	bool ret = false;
 
@@ -5374,36 +5585,99 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, bool write_devm
 	}
 
 	// +1 for writing "devmod:modules" at the end
-	if (!fdow_start_array(fdow, write_devmod_modules ? si->numKV + 1 : si->numKV)) {
+	if (!fdow_start_array(fdow, si->sv_index_end - si->sv_index_begin)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write start array\n");
 		goto end;
 	}
+	num = si->sv_index_begin;
 	// fetch all platfrom Device ServiceInfo's one-by-one
-	while (num != si->numKV) {
-		kvp = fdo_service_info_get(si, num);
-
-		kv = *kvp;
-		if (!kv || !kv->key) {
-			LOG(LOG_ERROR, "Platform Device ServiceInfo: Key/Value not found\n");
+	while (num != si->sv_index_end) {
+		if (!fdo_serviceinfo_kv_write(fdow, si, num)) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write end array\n");
 			goto end;
 		}
+		num++;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write end array\n");
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write end array\n");
+		goto end;
+	}
+	ret = true;
+end:
+	return ret;
+}
+
+/**
+ * Write the given ServiceInfoKV contents as CBOR.
+ * ServiceInfoKV = [
+ *   ServiceInfoKey: tstr,
+ *   ServiceInfoVal: cborSimpleType
+ * ]
+ * ServiceInfoKey = moduleName:messageName
+ *
+ * @param fdow - Pointer to the writer.
+ * @param si - Pointer to the fdo_service_info_t list containing all platform
+ * Device ServiceInfos.
+ * @param num - Index of the ServiceInfoKV to write
+ *
+ * @return true if the opration was a success, false otherwise
+ */
+bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num)
+{
+	fdo_key_value_t **kvp = NULL;
+	fdo_key_value_t *kv = NULL;
+	int strcmp_diff = 0;
+
+	bool ret = false;
+
+	if (!fdow || !si) {
+		goto end;
+	}
+
+	kvp = fdo_service_info_get(si, num);
+
+	kv = *kvp;
+	if (!kv || !kv->key) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfo: Key/Value not found\n");
+		goto end;
+	}
+
+	if (0 != strcmp_s(kv->key->bytes, kv->key->byte_sz, "devmod:modules", &strcmp_diff)) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to compare\n");
+		goto end;
+	}
+	if (strcmp_diff == 0) {
+		// write the "devmod:modules" with value "[1,1,"fdo_sys"]"
+		// TO-DO: Update this when multi-module support is added.
+		if (!fdo_serviceinfo_modules_list_write(fdow)) {
+			LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write modules\n");
+			goto end;
+		}
+	} else {
 
 		if (!fdow_start_array(fdow, 2)) {
 			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write start array\n");
 			goto end;
 		}
+
 		// Write KV pair
 		if (!fdow_text_string(fdow, kv->key->bytes, kv->key->byte_sz)) {
 			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write ServiceInfoKey\n");
 			goto end;
 		}
 		if (kv->str_val) {
-			if (!fdow_text_string(fdow, kv->str_val->bytes, kv->str_val->byte_sz)) {
+			if (!fdow_text_string(fdow, kv->str_val->bytes,
+				si->sv_val_index == 0 ? (size_t) kv->str_val->byte_sz : si->sv_val_index)) {
 				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Text ServiceInfoVal\n");
 				goto end;
 			}
 		} else if (kv->bin_val) {
-			if (!fdow_byte_string(fdow, kv->bin_val->bytes, kv->bin_val->byte_sz)) {
+			if (!fdow_byte_string(fdow, kv->bin_val->bytes,
+				si->sv_val_index == 0 ? kv->bin_val->byte_sz : si->sv_val_index)) {
 				LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write Binary ServiceInfoVal\n");
 				goto end;
 			}
@@ -5419,30 +5693,13 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, bool write_devm
 			}
 		} else {
 			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: No ServiceInfoVal found\n");
-			goto end;	
+			goto end;
 		}
 
 		if (!fdow_end_array(fdow)) {
 			LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write end array\n");
 			goto end;
 		}
-		num++;
-	}
-	if (write_devmod_modules) {
-		// write the "devmod:modules" with value "[1,1,"fdo_sys"]"
-		// TO-DO: Update this when multi-module support is added.
-		if (!fdo_serviceinfo_modules_list_write(fdow)) {
-			LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write modules\n");
-			goto end;
-		}
-	}
-	if (!fdow_end_array(fdow)) {
-		LOG(LOG_ERROR, "Platform Device ServiceInfoKeyVal: Failed to write end array\n");
-		goto end;
-	}
-	if (!fdow_end_array(fdow)) {
-		LOG(LOG_ERROR, "Platform Device ServiceInfo: Failed to write end array\n");
-		goto end;
 	}
 	ret = true;
 end:
@@ -5500,6 +5757,100 @@ bool fdo_serviceinfo_modules_list_write(fdow_t *fdow) {
 	}
 	ret = true;
 end:
+	return ret;
+}
+
+/**
+ * Fit as many ServiceInfo as possible in the given MTU.
+ * The key-values are CBOR encoded once to decide how many
+ * key-value pairs (partial/complete), can be fitted within the
+ * current message as per MTU.
+ * NOTE: Might need to be updated when multiple Device ServiceInfo module
+ * aupport is added, since this operation might be module-specific (TO-DO).
+ *
+ * @param fdow - FDOW writer to be used for encoding
+ * @param si - Pointer to the fdo_service_info_t list containing all platform
+ * Device ServiceInfos.
+ * @param mtu - MTU to be used for fitting the values
+ */
+bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu) {
+
+	bool ret = false;
+	fdo_key_value_t *kv = NULL;
+	fdo_key_value_t **kvp = NULL;
+
+	size_t num = 0;
+	size_t encoded_length = 0;
+	size_t fit_so_far = 0;
+
+	if (!si) {
+		return false;
+	}
+
+	num = si->sv_index_end;
+	si->sv_index_begin = si->sv_index_end;
+
+	// just start writing the ServiceInfo till numKV, but don't end it
+	// since it does not matter in finding out encoded length,
+	// and is not going to be used for any other purposes
+	if (!fdow_start_array(fdow, 1)) {
+		LOG(LOG_ERROR, "Failed to write start array\n");
+		goto end;
+	}
+
+	if (!fdow_start_array(fdow, si->numKV)) {
+		LOG(LOG_ERROR, "Failed to write start array\n");
+		goto end;
+	}
+
+	// fetch all Device ServiceInfo's one-by-one
+	while (num != si->numKV) {
+
+		encoded_length = 0;
+		if (!fdo_serviceinfo_kv_write(fdow, si, num)) {
+			LOG(LOG_ERROR, "Failed to write ServiceInfoKV\n");
+			goto end;
+		}
+		if (!fdow_encoded_length(fdow, &encoded_length) || encoded_length == 0) {
+			LOG(LOG_ERROR, "Failed to read ServiceInfoKV length\n");
+			goto end;
+		}
+		if (encoded_length >= mtu) {
+			// this key-value does not fit within the MTU
+			// now, check if atleast the key fits with some room for value
+			kvp = fdo_service_info_get(si, num);
+			kv = *kvp;
+			if ((fit_so_far + kv->key->byte_sz + 10) < mtu) {
+				// the key fits and atleast 10 bytes of value fits
+				// the difference gives the exact length exceeding the MTU
+				// for the given key and partial value
+				si->sv_val_index = encoded_length - mtu;
+				si->sv_index_end++;
+				ret = true;
+				goto end;
+			} else {
+				// key and partial value cannot be fit within the MTU,
+				// ignore this key and value, return
+				si->sv_val_index = 0;
+				ret = true;
+				goto end;
+			}
+		} else {
+			// both key and value fit within the MTU
+			si->sv_index_end++;
+			si->sv_val_index = 0;
+			fit_so_far = encoded_length;
+		}
+		num++;
+	}
+	ret = true;
+end:
+	while (fdow->current->previous) {
+		// recursively move to previous and free current
+		// this is done because we cannot close the arrays created initially
+		fdow->current = fdow->current->previous;
+		fdo_free(fdow->current->next);
+	}
 	return ret;
 }
 

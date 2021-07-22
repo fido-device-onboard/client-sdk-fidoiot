@@ -81,14 +81,14 @@ int32_t msg67(fdo_prot_t *ps)
 
 	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz = %d\n",
 		rec_maxDeviceServiceInfoSz);
-	if (rec_maxDeviceServiceInfoSz <= MIN_SERVICEINFO_SZ) {
+	if (rec_maxDeviceServiceInfoSz < MIN_SERVICEINFO_SZ) {
 		// default to minimum and log it
 		ps->maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		LOG(LOG_DEBUG,
 			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is less than "
 			"the minimum size supported. Defaulting to %d\n",
 			ps->maxDeviceServiceInfoSz);
-	} else if (rec_maxDeviceServiceInfoSz >= ps->maxDeviceServiceInfoSz) {
+	} else if (rec_maxDeviceServiceInfoSz > ps->maxDeviceServiceInfoSz) {
 		// nothing to do, just log it
 		LOG(LOG_DEBUG,
 			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is more than "

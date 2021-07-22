@@ -221,6 +221,24 @@ err:
 	return -1;
 }
 
+static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
+{
+	fdo_sdk_service_info_module *module_info = NULL;
+	module_info = fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
+	if (!module_info) {
+		LOG(LOG_ERROR, "Malloc failed!\n");
+		return NULL;
+	}
+	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
+		      "fdo_sys", FDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		free(module_info);
+		return NULL;
+	}
+	module_info[0].service_info_callback = fdo_sys;
+	return module_info;
+}
+
 #ifdef TARGET_OS_FREERTOS
 TEST_CASE("read_normal_device_credentials", "[credentials][fdo]")
 #else
@@ -232,7 +250,10 @@ void test_read_normal_device_credentials(void)
 #endif
 	int ret = -1;
 
-	ret = fdo_sdk_init(NULL, 0, NULL);
+	fdo_sdk_service_info_module *module_info = NULL;
+	module_info = fdo_sv_info_modules_init();
+	TEST_ASSERT_NOT_NULL(module_info);
+	ret = fdo_sdk_init(NULL, FDO_MAX_MODULES, module_info);
 	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
 	configure_blobs();
@@ -260,6 +281,7 @@ void test_read_normal_device_credentials(void)
 		fdo_dev_cred_free(normal_cred);
 	}
 	fdo_sdk_deinit();
+	fdo_free(module_info);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -273,7 +295,10 @@ void test_read_secure_device_credentials(void)
 #endif
 	int ret = -1;
 
-	ret = fdo_sdk_init(NULL, 0, NULL);
+	fdo_sdk_service_info_module *module_info = NULL;
+	module_info = fdo_sv_info_modules_init();
+	TEST_ASSERT_NOT_NULL(module_info);
+	ret = fdo_sdk_init(NULL, FDO_MAX_MODULES, module_info);
 	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
 	configure_blobs();
@@ -299,6 +324,7 @@ void test_read_secure_device_credentials(void)
 		fdo_dev_cred_free(secure_cred);
 	}
 	fdo_sdk_deinit();
+	fdo_free(module_info);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -310,8 +336,11 @@ void test_load_credential(void)
 #if !defined(AES_MODE_GCM_ENABLED) || AES_BITS != 256
 	TEST_IGNORE();
 #endif
-	int ret;
-	ret = fdo_sdk_init(NULL, 0, NULL);
+	int ret = -1;
+	fdo_sdk_service_info_module *module_info = NULL;
+	module_info = fdo_sv_info_modules_init();
+	TEST_ASSERT_NOT_NULL(module_info);
+	ret = fdo_sdk_init(NULL, FDO_MAX_MODULES, module_info);
 	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
 	/* Negative case*/
@@ -328,6 +357,7 @@ void test_load_credential(void)
 	TEST_ASSERT_EQUAL(0, ret);
 
 	fdo_sdk_deinit();
+	fdo_free(module_info);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -341,7 +371,10 @@ void test_read_write_Device_credentials(void)
 #endif
 	int ret = -1;
 
-	ret = fdo_sdk_init(NULL, 0, NULL);
+	fdo_sdk_service_info_module *module_info = NULL;
+	module_info = fdo_sv_info_modules_init();
+	TEST_ASSERT_NOT_NULL(module_info);
+	ret = fdo_sdk_init(NULL, FDO_MAX_MODULES, module_info);
 	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
 	// write the pre-requisite blobs using file writers,
@@ -378,6 +411,7 @@ void test_read_write_Device_credentials(void)
 	TEST_ASSERT_FALSE(ret);
 
 	fdo_sdk_deinit();
+	fdo_free(module_info);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -391,7 +425,10 @@ void test_store_credential(void)
 #endif
 	int ret = -1;
 
-	ret = fdo_sdk_init(NULL, 0, NULL);
+	fdo_sdk_service_info_module *module_info = NULL;
+	module_info = fdo_sv_info_modules_init();
+	TEST_ASSERT_NOT_NULL(module_info);
+	ret = fdo_sdk_init(NULL, FDO_MAX_MODULES, module_info);
 	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
 	// write the pre-requisite blobs using file writers,
@@ -411,5 +448,6 @@ void test_store_credential(void)
 		fdo_dev_cred_free(ocred);
 	}
 	fdo_sdk_deinit();
+	fdo_free(module_info);
 }
 
