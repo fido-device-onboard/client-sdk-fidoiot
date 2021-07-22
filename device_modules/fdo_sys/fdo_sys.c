@@ -20,6 +20,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 	int strcmp_exec = 1;
 	int result = FDO_SI_INTERNAL_ERROR;
 	uint8_t *bin_data = NULL;
+	size_t bin_data_entry_len = 0;
 	size_t bin_len = 0;
 	size_t max_bin_len = MOD_MAX_EXEC_LEN;
 	size_t exec_array_length = 0;
@@ -225,7 +226,14 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 					goto end;
 				}
 				// length of the command so far
-				bin_len += strnlen_s((char *) bin_data, MOD_MAX_EXEC_ARG_LEN);
+				bin_data_entry_len = strnlen_s((char *) bin_data, MOD_MAX_EXEC_ARG_LEN);
+				if (!bin_data_entry_len || bin_data_entry_len == MOD_MAX_EXEC_ARG_LEN) {
+#ifdef DEBUG_LOGS
+					printf("Input for exec is not a string.\n");
+#endif					
+					goto end;
+				}
+				bin_len += bin_data_entry_len;
 			}
 			// remove the final space by pushing \0 at the position
 			bin_data[bin_len - 1] = exec_terminator;

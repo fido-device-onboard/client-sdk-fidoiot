@@ -297,9 +297,14 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 			fdo_free(ps->dsi_info);
 			return false;
 		}
-	} else
+	} else {
 		LOG(LOG_DEBUG,
 		    "Sv_info: no modules are registered to the FDO!\n");
+	}
+	ps->device_serviceinfo_ismore = false;
+	ps->owner_serviceinfo_ismore = false;
+	ps->owner_serviceinfo_isdone = false;
+	ps->serviceinfo_invalid_modnames = NULL;
 
 	//	LOG(LOG_DEBUG, "Key Exchange Mode: %s\n", ps->kx->bytes);
 	//	LOG(LOG_DEBUG, "Cipher Suite: %s\n", ps->cs->bytes);

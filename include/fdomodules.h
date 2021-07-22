@@ -22,6 +22,7 @@
 #endif
 
 #define FDO_MODULE_MESSAGE_ACTIVE "active"
+#define FDO_MODULE_SEPARATOR ":"
 
 /*==================================================================*/
 /* Service Info module registration functionality */

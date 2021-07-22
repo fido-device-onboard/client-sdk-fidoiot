@@ -1,17 +1,18 @@
 /*
- * Copyright (C) 2017 Intel Corporation All Rights Reserved
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
  */
 
 /*!
  * \file
- * \brief Unit tests for RSA abstraction routines of FDO library.
+ * \brief Unit tests for ECDSA signature verification abstraction routines of FDO library.
  */
 
-#include "test_RSARoutines.h"
 #include "safe_lib.h"
 #include "fdoCryptoHal.h"
 #include "fdoCrypto.h"
 #include "storage_al.h"
+#include "unity.h"
 
 //#define HEXDEBUG 1
 
@@ -37,7 +38,6 @@ void tear_down(void)
 }
 #endif
 
-#if defined(PK_ENC_ECDSA)
 
 #if defined(HEXDEBUG)
 // Helper function to convert binary to hex
@@ -141,12 +141,17 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	unsigned char hash[SHA512_DIGEST_SIZE] = {0};
 	size_t hashlength = 0;
 	unsigned char *signature = NULL;
-	unsigned int sig_len = 0;
+	unsigned int siglen = 0;
 	// ECDSA_sign return 1 on success, 0 on failure
 	int result = 0;
+	ECDSA_SIG *sig = NULL;
+	unsigned char *sig_r = NULL;
+	int sig_r_len = 0;
+	unsigned char *sig_s = NULL;
+	int sig_s_len = 0;
 
-	sig_len = ECDSA_size(eckey);
-	signature = OPENSSL_malloc(sig_len);
+	siglen = ECDSA_size(eckey);
+	signature = OPENSSL_malloc(siglen);
 
 	if (curve == 256) {
 		if (SHA256(msg, mlen, hash) == NULL)
@@ -166,61 +171,111 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	hexdump("sha_sign:MESSAGE", msg, mlen);
 	hexdump("sha_sign:SHAHASH", hash, hashlength);
 #endif
-	// ECDSA_sign return 1 on success, 0 on failure
-	result = ECDSA_sign(0, hash, hashlength, signature, &sig_len, eckey);
-	if (result == 0)
-		goto done;
 
-	*outlen = sig_len;
-	if (memcpy_s(out, (size_t)sig_len, signature, (size_t)sig_len) != 0) {
-		LOG(LOG_ERROR, "Memcpy Failed\n");
-		result = 0;
+	sig = ECDSA_do_sign(hash, hashlength, eckey);
+	TEST_ASSERT_NOT_NULL(sig);
+
+	// both r and s are maintained by sig, no need to free explicitly
+	const BIGNUM *r = ECDSA_SIG_get0_r(sig);
+	const BIGNUM *s = ECDSA_SIG_get0_s(sig);
+	TEST_ASSERT_NOT_NULL(r);
+	TEST_ASSERT_NOT_NULL(s);
+
+	sig_r_len = BN_num_bytes(r);
+	sig_r = fdo_alloc(sig_r_len);
+	TEST_ASSERT_NOT_NULL(sig_r);
+	BN_bn2bin(r, sig_r);
+
+	sig_s_len = BN_num_bytes(s);
+	sig_s = fdo_alloc(sig_s_len);
+	TEST_ASSERT_NOT_NULL(sig_s);
+	BN_bn2bin(s, sig_s);
+
+	*outlen = sig_r_len + sig_s_len;;
+	if (0 != memcpy_s(out, *outlen, (char *)sig_r,
+		     (size_t)sig_r_len)) {
+		goto done;
 	}
+	if (0 != memcpy_s(out + sig_r_len, *outlen, (char *)sig_s,
+		     (size_t)sig_s_len)) {
+		goto done;
+	}
+	result = 1;
 #ifdef HEXDEBUG
 	hexdump("sha256_sign:SIGNEDMESSAGE", out, *outlen);
 #endif
 done:
 	OPENSSL_free(signature);
+	if (sig) {
+		ECDSA_SIG_free(sig);
+	}
+	if (sig_r) {
+		fdo_free(sig_r);
+	}
+	if (sig_s) {
+		fdo_free(sig_s);
+	}
 	return result;
 }
 
 static fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 {
-	size_t pub_len = 0;
-	uint8_t *pub_copy = NULL;
-	uint8_t *pub = NULL;
-
-	pub_len = i2o_ECPublicKey(eckey, NULL);
-	pub = malloc(pub_len * sizeof(uint8_t));
-
-	/* pub_copy is required, because i2o_ECPublicKey alters the input
-	 * pointer */
-	pub_copy = pub;
-	if (i2o_ECPublicKey(eckey, &pub_copy) != (uint8_t)pub_len) {
-		printf("PUB KEY TO DATA FAIL\n");
-		free(pub);
-		return NULL;
-	}
-
+	(void)curve;
+	unsigned char *key_buf = NULL;
+	int key_buf_len = 0;
+	EC_GROUP *ecgroup = NULL;
+	BIGNUM *x = BN_new();
+	BIGNUM *y = BN_new();
+	int x_len = 0;
+	int y_len = 0;
 	fdo_public_key_t *pk = NULL;
-	if (curve == 256)
-		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
-					  pub_len, pub);
-	else if (curve == 384)
-		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
-					  pub_len, pub);
-	else
-		return NULL;
 
-	if (pub)
-		free(pub);
+#if defined(ECDSA256_DA)
+	ecgroup = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+#else
+	ecgroup = EC_GROUP_new_by_curve_name(NID_secp384r1);
+#endif
+	TEST_ASSERT_NOT_NULL_MESSAGE(ecgroup, "Failed to get ECGROUP\n");
+
+	const EC_POINT *pub = EC_KEY_get0_public_key(eckey);
+	TEST_ASSERT_NOT_NULL_MESSAGE(pub, "Failed to get ECPOINT\n");
+	if (EC_POINT_get_affine_coordinates_GFp(ecgroup, pub, x, y, NULL)) {
+		x_len = BN_num_bytes(x);
+		y_len = BN_num_bytes(y);
+		key_buf_len = x_len + y_len;
+		key_buf = fdo_alloc(key_buf_len);
+		TEST_ASSERT_NOT_NULL(key_buf);
+        BN_bn2bin(x, key_buf);
+		BN_bn2bin(y, key_buf + x_len);
+
+#if defined(ECDSA256_DA)
+		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
+				  FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509, key_buf_len,
+				  key_buf);
+#else
+		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
+				  FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509, key_buf_len,
+				  key_buf);
+#endif
+    }
+
 	if (!pk || !pk->key1) {
 		return NULL;
 	}
 
 	pk->key2 = NULL;
+	TEST_ASSERT_NOT_NULL(pk);
+
+	if (ecgroup) {
+		EC_GROUP_free(ecgroup);
+	}
+	if (x) {
+		BN_free(x);
+	}
+	if (y) {
+		BN_free(y);
+	}
+
 #ifdef HEXDEBUG
 	dump_pubkey(" + Public key: ", eckey);
 	hexdump("key1", (unsigned char *)pk->key1, pub_len);
@@ -375,13 +430,13 @@ static fdo_public_key_t *getFDOpk(int curve, mbedtls_ecdsa_context *ctx_sign)
 }
 #endif // USE_MBEDTLS
 
-static void ec_sig_varification(int curve)
+static void ec_sig_verification(int curve)
 {
 	int result = -1;
 	fdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
 	TEST_ASSERT_NOT_NULL(testdata);
 	unsigned int siglen = ECDSA_SIG_MAX_LENGTH;
-	unsigned char *sigtestdata = malloc(siglen);
+	unsigned char *sigtestdata = fdo_alloc(siglen);
 	TEST_ASSERT_NOT_NULL(sigtestdata);
 	fdo_public_key_t *pk = NULL;
 	unsigned char key_buf[DER_PUBKEY_LEN_MAX] = {0};
@@ -399,7 +454,6 @@ static void ec_sig_varification(int curve)
 		key_buf_len = i2d_EC_PUBKEY(avalidkey, &pubkey);
 		TEST_ASSERT_NOT_EQUAL_MESSAGE(0, key_buf_len,
 					      "DER encoding failed!");
-
 		pk = getFDOpk(curve, avalidkey);
 #endif
 
@@ -457,7 +511,7 @@ static void ec_sig_varification(int curve)
 			result = crypto_hal_sig_verify(
 			    pk->pkenc, pk->pkalg, testdata->bytes,
 			    testdata->byte_sz, sigtestdata, siglen,
-			    (uint8_t *)key_buf, (size_t)key_buf_len, NULL, 0);
+			    pk->key1->bytes, pk->key1->byte_sz, NULL, 0);
 
 			TEST_ASSERT_EQUAL(0, result);
 
@@ -514,8 +568,9 @@ static void ec_sig_varification(int curve)
 		}
 
 #ifdef USE_OPENSSL
-		if (avalidkey)
+		if (avalidkey) {
 			EC_KEY_free(avalidkey);
+		}
 #endif
 #ifdef USE_MBEDTLS
 		mbedtls_ecdsa_free(&avalidkey);
@@ -524,42 +579,18 @@ static void ec_sig_varification(int curve)
 		free(sigtestdata);
 	}
 
-#endif // PK_ENC_ECDSA
-
 /*** Test functions. ***/
-#if !defined(PK_ENC_ECDSA)
-#ifndef TARGET_OS_FREERTOS
-	void test_ecdsa256sigverification(void)
-#else
-TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][fdo]")
-#endif
-	{
-		TEST_IGNORE();
-	}
-
-#else
-
 #ifndef TARGET_OS_FREERTOS
 void test_ecdsa256sigverification(void)
 #else
 TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][fdo]")
 #endif
 {
-	ec_sig_varification(256);
+#ifndef ECDSA256_DA
+	TEST_IGNORE();
+#endif
+	ec_sig_verification(256);
 }
-#endif
-
-#if !defined(PK_ENC_ECDSA)
-#ifndef TARGET_OS_FREERTOS
-	void test_ecdsa384sigverification(void)
-#else
-TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][fdo]")
-#endif
-	{
-		TEST_IGNORE();
-	}
-
-#else
 
 #ifndef TARGET_OS_FREERTOS
 void test_ecdsa384sigverification(void)
@@ -567,6 +598,9 @@ void test_ecdsa384sigverification(void)
 TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][fdo]")
 #endif
 {
-	ec_sig_varification(384);
-}
+#ifdef ECDSA256_DA
+	TEST_IGNORE();
 #endif
+	ec_sig_verification(384);
+}
+

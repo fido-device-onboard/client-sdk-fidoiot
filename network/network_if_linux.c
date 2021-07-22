@@ -318,6 +318,9 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 	return sock_hdl;
 
 end:
+	if (ssl && *ssl) {
+		fdo_ssl_close(*ssl);
+	}
 	if (sock_hdl) {
 		close(sock_hdl->sockfd);
 		fdo_free(sock_hdl);
@@ -379,6 +382,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	int32_t ret = -1;
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
 	char tmp[REST_MAX_MSGHDR_SIZE];
+	size_t tmplen;
 	size_t hdrlen;
 	rest_ctx_t *rest = NULL;
 
@@ -404,9 +408,14 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 			break;
 		}
 
+		tmplen = strnlen_s(tmp, REST_MAX_MSGHDR_SIZE);
+		if (!tmplen || tmplen == REST_MAX_MSGHDR_SIZE) {
+			LOG(LOG_ERROR, "Strlen() failed!\n")
+			goto err;
+		}
+
 		// accumulate header content
-		if (strncat_s(hdr, REST_MAX_MSGHDR_SIZE, tmp,
-			      strnlen_s(tmp, REST_MAX_MSGHDR_SIZE)) != 0) {
+		if (strncat_s(hdr, REST_MAX_MSGHDR_SIZE, tmp, tmplen) != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
@@ -419,6 +428,10 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	}
 
 	hdrlen = strnlen_s(hdr, REST_MAX_MSGHDR_SIZE);
+	if (!hdrlen || hdrlen == REST_MAX_MSGHDR_SIZE) {
+		LOG(LOG_ERROR, "hdr is not NULL terminated.\n");
+		goto err;
+	}
 
 	/* Process REST header and get content-length of body */
 	if (!get_rest_content_length(hdr, hdrlen, msglen)) {
