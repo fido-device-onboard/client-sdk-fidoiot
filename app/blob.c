@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "safe_lib.h"
+#include "fdoCryptoHal.h"
 #if defined(USE_OPENSSL)
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -39,12 +40,21 @@
 
 #if !defined(DEVICE_TPM20_ENABLED)
 /* platform level rand no generation reference */
-static int32_t *gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
+static int32_t gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
 {
-	size_t i;
-
-	for (i = 0; i < num_bytes; i++) {
-		random_buffer[i] = (uint8_t)(rand() % 255);
+	// initialize the random now, use it, and then close it
+	// it will be initialized again, when needed later
+	if (0 != random_init()) {
+		LOG(LOG_ERROR, "Failed to init rand\n");
+		return -1;
+	}
+	if (0 != crypto_hal_random_bytes(random_buffer, num_bytes)) {
+		LOG(LOG_ERROR, "Failed to get rand bytes\n");
+		return -1;
+	}
+	if (0 != random_close()) {
+		LOG(LOG_ERROR, "Failed to close rand\n");
+		return -1;
 	}
 	return 0;
 }
