@@ -47,7 +47,7 @@ typedef struct app_data_s {
 } app_data_t;
 
 /* Globals */
-static app_data_t *g_fdo_data;
+static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
 
