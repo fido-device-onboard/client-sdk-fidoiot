@@ -382,12 +382,11 @@ fdo_string_t *fdo_string_alloc_with_str(const char *data)
 		return NULL;
 	}
 
-	int str_sz = strnlen_s(data, FDO_MAX_STR_SIZE);
+	size_t str_sz = strnlen_s(data, FDO_MAX_STR_SIZE);
 
-	if (str_sz == FDO_MAX_STR_SIZE) {
-		LOG(LOG_ERROR, "%s: data"
-		    " is either 'NULL' or 'isn't"
-		    " NULL-terminated'\n", __func__);
+	if (!str_sz || str_sz == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "data is either 'NULL' or 'isn't"
+		    " NULL-terminated'\n");
 		return NULL;
 	}
 	return fdo_string_alloc_with(data, str_sz);

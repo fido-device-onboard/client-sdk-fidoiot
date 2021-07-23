@@ -20,6 +20,7 @@ int mos_resolvedns(char *dn, char *ip)
 	NetworkInterface *net = getNetinterface();
 	SocketAddress addr;
 	const char *tmpip = NULL;
+	size_t tmpip_len = 0;
 
 	if (!net || !dn || !ip) {
 		LOG(LOG_ERROR, "Bad parameters received\n");
@@ -37,9 +38,14 @@ int mos_resolvedns(char *dn, char *ip)
 		return -1;
 	}
 
+	tmpip_len = strnlen_s(tmpip, FDO_MAX_STR_SIZE);
+	if (!tmpip_len || tmpip_len == FDO_MAX_STR_SIZE) {
+		LOG(LOG_ERROR, "Strlen() failed for temp IP data\n");
+		return -1;
+	}
+
 	LOG(LOG_DEBUG, "DNS: query \"%s\" => \"%s\"\n", dn, tmpip);
-	if (strncpy_s(ip, strnlen_s(tmpip, FDO_MAX_STR_SIZE) + 1, tmpip,
-		      strnlen_s(tmpip, FDO_MAX_STR_SIZE) + 1) != 0) {
+	if (strncpy_s(ip, tmpip_len + 1, tmpip, tmpip_len + 1) != 0) {
 		LOG(LOG_ERROR, " ip from dns, copy failed\n");
 		return -1;
 	}
