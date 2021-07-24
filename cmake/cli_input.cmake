@@ -25,7 +25,7 @@ set (STORAGE true)
 set (BOARD NUCLEO_F767ZI)
 set (BLOB_PATH .)
 set (TPM2_TCTI_TYPE tabrmd)
-set (RESALE false)
+set (RESALE true)
 set (REUSE true)
 
 #following are specific to only mbedos
