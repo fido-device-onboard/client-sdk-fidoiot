@@ -118,7 +118,7 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
 		      "fdo_sys", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
+		fdo_free(module_info);
 		return NULL;
 	}
 	module_info[0].service_info_callback = fdo_sys;
@@ -222,7 +222,8 @@ int main(int argc, char **argv)
 int app_main(bool is_resale)
 #endif
 {
-	fdo_sdk_service_info_module *module_info;
+	fdo_sdk_service_info_module *module_info = NULL;
+	int ret = -1;
 
 	bool do_resale = false;
 	LOG(LOG_DEBUG, "Starting FIDO Device Onboard\n");
@@ -237,7 +238,8 @@ int app_main(bool is_resale)
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 
 	/* List and Init all Sv_info modules */
@@ -251,14 +253,10 @@ int app_main(bool is_resale)
 	if (FDO_SUCCESS !=
 	    fdo_sdk_init(error_cb, FDO_MAX_MODULES, module_info)) {
 		LOG(LOG_ERROR, "fdo_sdk_init failed!!\n");
-		free(module_info);
-		return -1;
+		fdo_free(module_info);
+		ret = -1;
+		goto end;
 	}
-
-	/* free the module related info
-	 * FDO has created the required DB
-	 */
-	free(module_info);
 
 #ifdef TARGET_OS_LINUX
 	/* Change stdout to unbuffered mode, without this we don't get logs
@@ -282,16 +280,28 @@ int app_main(bool is_resale)
 
 #endif
 	if (is_ownership_transfer(do_resale)) {
-		return 0;
+		ret = 0;
+		goto end;
 	}
 
 	print_device_status();
 
 	if (FDO_SUCCESS != fdo_sdk_run()) {
 		LOG(LOG_ERROR, "FIDO Device Onboard failed\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 
+	ret = 0;
+end:
+	/* free the module related info
+	 * FDO has created the required DB
+	 */
+	if (module_info) {
+		fdo_free(module_info);
+	}
+
+	fdo_sdk_deinit();
 	// Return 0 on success
-	return 0;
+	return ret;
 }
