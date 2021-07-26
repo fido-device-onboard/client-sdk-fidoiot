@@ -47,7 +47,7 @@ typedef struct app_data_s {
 } app_data_t;
 
 /* Globals */
-static app_data_t *g_fdo_data;
+static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
 
@@ -262,12 +262,14 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	}
 
 	/* clear Sv_info PSI/DSI/OSI related data */
+	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
+	ps->total_dsi_rounds = 0;
 	if (ps->dsi_info) {
 		ps->dsi_info->list_dsi = ps->sv_info_mod_list_head;
 		ps->dsi_info->module_dsi_index = 0;
+		fdo_free(ps->dsi_info);
+		ps->dsi_info = NULL;
 	}
-	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
-	ps->total_dsi_rounds = 0;
 
 	if (ps->serviceinfo_invalid_modnames) {
 		fdo_serviceinfo_invalid_modname_free(ps->serviceinfo_invalid_modnames);
@@ -281,6 +283,7 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	fdo_block_reset(&ps->fdow.b);
 	ps->fdow.b.block_size = ps->prot_buff_sz;
 	ps->state = FDO_STATE_T02_SND_HELLO_DEVICE;
+	fdo_kex_close();
 }
 
 /**

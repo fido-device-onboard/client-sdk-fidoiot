@@ -173,6 +173,9 @@ error:
 	if (pkey) {
 		EVP_PKEY_free(pkey);
 	}
+	if (eckey) {
+		EC_KEY_free(eckey);
+	}
 	if (sig) {
 		ECDSA_SIG_free(sig);
 	}

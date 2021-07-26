@@ -492,7 +492,7 @@ bool fdo_siginfo_write(fdow_t *fdow)
 		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
 		return ret;
 	}
-	if (!fdow_unsigned_int(fdow, FDO_PK_ALGO)) {
+	if (!fdow_signed_int(fdow, FDO_PK_ALGO)) {
 		LOG(LOG_ERROR, "SigInfo: Failed to write sgType\n");
 		return ret;
 	}
