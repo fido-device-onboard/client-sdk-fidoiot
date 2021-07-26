@@ -58,7 +58,7 @@ size_t get_file_size(char const *filename)
 /**
  * Internal API
  */
-int read_buffer_from_file(const char *filename, void *buffer, size_t size)
+int read_buffer_from_file(const char *filename, uint8_t *buffer, size_t size)
 {
 	FILE *file = NULL;
 	size_t bytes_read = 0;

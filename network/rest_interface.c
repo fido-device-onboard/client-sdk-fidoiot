@@ -420,6 +420,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	size_t tmplen = 0;
 	long rcode = 0;
 	int result_strcmpcase = 0;
+	size_t counter = 0;
 
 	/* REST context must be active */
 	if (!isRESTContext_active()) {
@@ -432,6 +433,12 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		goto err;
 	}
 
+	for (counter = 0; counter < hdrlen; counter ++) {
+		if (!ISASCII(hdr[counter])) {
+			LOG(LOG_ERROR, "Header contains non-ASCII values\n");
+			goto err;
+		}
+	}
 	rest->msg_type = 0;
 
 	// GET HTTP reponse from header

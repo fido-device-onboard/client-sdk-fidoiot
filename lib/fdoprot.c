@@ -142,6 +142,9 @@ bool fdo_process_states(fdo_prot_t *ps)
 		 * it means that the data read from network is pending, so, we
 		 * read data and come back here for the same message processing
 		 */
+		if (!ps) {
+			return false;
+		}
 		prev_state = ps->state;
 
 		switch (ps->state) {

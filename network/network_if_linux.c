@@ -71,6 +71,11 @@ static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
 		}
 		if (sz < size) {
 			out[sz++] = c;
+		} else {
+			// error out even if no new-line is encountered
+			// if the sz grows larger than size
+			LOG(LOG_ERROR, "Exceeded expected size while reading socket\n");
+			return false;
 		}
 
 		if (c == '\n') {

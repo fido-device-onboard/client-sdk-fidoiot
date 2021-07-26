@@ -27,6 +27,8 @@
 #define IP_TAG_LEN 16   // e.g. 192.168.111.111
 #define MAX_PORT_SIZE 6 // max port size is 65536 + 1null char
 
+#define ISASCII(ch) ((ch & ~0x7f) == 0)
+
 // REST context
 typedef struct Rest_ctx_s {
 	uint32_t prot_ver;

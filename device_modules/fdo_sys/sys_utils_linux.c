@@ -194,15 +194,6 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #endif
 					goto end;
 				}
-					
-				// Executable permission for current user for the file
-				if (chmod(exec_token, 0700)) {
-#ifdef DEBUG_LOGS
-					printf("fdo_sys exec : Failed to set execute permission in %s\n",
-						file_name);
-#endif
-					goto end;
-				}
 			}
 			exec_token = strtok_s(NULL, &command_len,
 				space_delimeter_str, &exec_token_next);
