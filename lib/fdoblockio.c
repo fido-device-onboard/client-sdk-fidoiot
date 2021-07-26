@@ -142,6 +142,10 @@ bool fdow_encoder_init(fdow_t *fdow)
 	}
 	// if there's a current block, free and then alloc
 	if (fdow->current) {
+		while (fdow->current->previous) {
+			fdow->current = fdow->current->previous;
+			fdo_free(fdow->current->next);
+		}
 		fdo_free(fdow->current);
 	}
 	fdow->current = fdo_alloc(sizeof(fdow_cbor_encoder_t));
@@ -435,6 +439,10 @@ void fdow_flush(fdow_t *fdow)
 			fdo_free(fdob->block);
 		}
 		if (fdow->current) {
+			while (fdow->current->previous) {
+				fdow->current = fdow->current->previous;
+				fdo_free(fdow->current->next);
+			}
 			fdo_free(fdow->current);
 		}
 	}
@@ -484,6 +492,10 @@ bool fdor_parser_init(fdor_t *fdor) {
 	}
 	// if there's a current block, free and then alloc
 	if (fdor->current){
+		while (fdor->current->previous) {
+			fdor->current = fdor->current->previous;
+			fdo_free(fdor->current->next);
+		}
 		fdo_free(fdor->current);
 	}
 	fdor->current = fdo_alloc(sizeof(fdor_cbor_decoder_t));
@@ -850,6 +862,10 @@ void fdor_flush(fdor_t *fdor)
 			fdo_free(fdob->block);
 		}
 		if (fdor->current) {
+			while (fdor->current->previous) {
+				fdor->current = fdor->current->previous;
+				fdo_free(fdor->current->next);
+			}
 			fdo_free(fdor->current);
 		}
 	}
