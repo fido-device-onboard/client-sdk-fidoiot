@@ -37,7 +37,7 @@ typedef struct app_data_s {
 	/* Temp, use the value in the configured rendezvous */
 	fdo_ip_address_t *rendezvousIPAddr;
 	char *rendezvousdns;
-	uint32_t delaysec;
+	uint64_t delaysec;
 	/* Error handling callback */
 	fdo_sdk_errorCB error_callback;
 	/* Global Sv_info Module_list head pointer */
@@ -58,6 +58,9 @@ extern char **g_argv;
 #endif
 
 static const uint16_t g_DI_PORT = 8039;
+static const uint64_t default_delay = 3;
+static const uint64_t default_delay_rvinfo_retries = 120;
+static const uint64_t max_delay = 3600;
 
 static unsigned int error_count;
 static bool rvbypass;
@@ -340,6 +343,7 @@ static fdo_sdk_status app_initialize(void)
 		return FDO_ERROR;
 	}
 
+	g_fdo_data->delaysec = 0;
 	/* Initialize service_info to NULL in case of early error. */
 	g_fdo_data->service_info = NULL;
 
@@ -996,6 +1000,8 @@ static bool _STATE_DI(void)
 		}
 	}
 
+	g_fdo_data->delaysec = default_delay;
+
 	prot_ctx = fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
 				      mfg_ip, mfg_ip ? NULL : mfg_dns, mfg_port, tls);
 	if (prot_ctx == NULL) {
@@ -1008,11 +1014,11 @@ static bool _STATE_DI(void)
 		if (g_fdo_data->error_recovery) {
 			LOG(LOG_INFO, "Retrying.....\n");
 			g_fdo_data->state_fn = &_STATE_DI;
-			fdo_sleep(3);
+			fdo_sleep(g_fdo_data->delaysec);
 			goto end;
 		} else {
 			ERROR()
-			fdo_sleep(g_fdo_data->delaysec + fdo_random() % 25);
+			fdo_sleep(g_fdo_data->delaysec);
 			goto end;
 		}
 	}
@@ -1029,7 +1035,10 @@ static bool _STATE_DI(void)
 	ret = true;
 end:
 	fdo_protDIExit(g_fdo_data);
-	fdo_prot_ctx_free(prot_ctx);
+	if (prot_ctx) {
+		fdo_prot_ctx_free(prot_ctx);
+		fdo_free(prot_ctx);
+	}
 	if (buffer) {
 		fdo_free(buffer);
 	}
@@ -1044,7 +1053,8 @@ end:
  * initializse state variables and runs the TO1 protocol.
  *
  * @return ret
- *         true if DI completes successfully. false in case of error.
+ *         true if TO1 completes successfully, or if RVBypass was encountered in RendezvousInfo
+ *         false if all RendezvousDirectives have been tried and TO1 resulted in failure.
  */
 static bool _STATE_TO1(void)
 {
@@ -1093,6 +1103,10 @@ static bool _STATE_TO1(void)
 		g_fdo_data->current_rvdirective = g_fdo_data->devcred->owner_blk->rvlst->rv_directives;
 	}
 
+	// delay if we came back from RVBypass or re-try RVInfo with some value,
+	// otherwise, delaysec will be 0
+	fdo_sleep(g_fdo_data->delaysec);
+
 	while (!ret && g_fdo_data->current_rvdirective) {
 		fdo_rendezvous_t *rv = g_fdo_data->current_rvdirective->rv_entries;
 		// reset for next use.
@@ -1102,6 +1116,8 @@ static bool _STATE_TO1(void)
 		rvbypass = false;
 		tls = true;
 		skip_rv = false;
+		g_fdo_data->delaysec = 0;
+
 		while (rv) {
 
 			if (rv->bypass && *rv->bypass == true) {
@@ -1128,6 +1144,8 @@ static bool _STATE_TO1(void)
 					skip_rv = true;
 					break;
 				}
+			} else if (rv->delaysec) {
+				g_fdo_data->delaysec = *rv->delaysec;
 			}
 			// ignore the other RendezvousInstr as they are not used for making requests
 			rv = rv->next;
@@ -1165,16 +1183,25 @@ static bool _STATE_TO1(void)
 			// clear contents for a fresh start.
 			fdo_protTO1Exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
-			fdo_sleep(3);
+			fdo_free(prot_ctx);
 
 			// check if there is another RV location to try. if yes, try it
+			// the delay interval is conditional
 			if (g_fdo_data->current_rvdirective) {
+				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+					g_fdo_data->delaysec = default_delay;
+				}
+				fdo_sleep(g_fdo_data->delaysec);
 				continue;
 			}
+
 			// there are no more RV locations left, so check if retry is enabled.
 			// if yes, proceed with retrying all the RV locations
 			// if not, return immediately since there is nothing else left to do.
 			if (g_fdo_data->error_recovery) {
+				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+					g_fdo_data->delaysec = default_delay_rvinfo_retries;
+				}
 				LOG(LOG_INFO, "Retrying.....\n");
 				g_fdo_data->state_fn = &_STATE_TO1;
 				return ret;
@@ -1193,7 +1220,10 @@ static bool _STATE_TO1(void)
 
 end:
 	fdo_protTO1Exit(g_fdo_data);
-	fdo_prot_ctx_free(prot_ctx);
+	if (prot_ctx) {
+		fdo_prot_ctx_free(prot_ctx);
+		fdo_free(prot_ctx);
+	}
 	return ret;
 }
 
@@ -1202,7 +1232,9 @@ end:
  * initializse state variables and runs the TO2 protocol.
  *
  * @return ret
- *         true if DI completes successfully. false in case of error.
+ *         true if TO2 completes successfully, or if there are more RendezvousDirectives that
+ *         need to be processed,
+ *         false if all RendezvousDirectives have been tried and TO2 resulted in failure.
  */
 static bool _STATE_TO2(void)
 {
@@ -1258,6 +1290,7 @@ static bool _STATE_TO2(void)
 
 		tls = true;
 		skip_rv = false;
+		g_fdo_data->delaysec = 0;
 		// if rvbypass is set by TO1, then pick the Owner's address from RendezvousInfo.
 		// otherwise, pick the address from RVTO2AddrEntry.
 		if (rvbypass) {
@@ -1280,6 +1313,8 @@ static bool _STATE_TO2(void)
 						skip_rv = true;
 						break;
 					}
+				} else if (rv->delaysec) {
+					g_fdo_data->delaysec = *rv->delaysec;
 				}
 				// no need to check for RVBYPASS here again, since we used it
 				// to get here in the first place
@@ -1337,6 +1372,8 @@ static bool _STATE_TO2(void)
 				// because of rvbypass
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
+				// return true so that TO1 is processed with the remaining directives
+				ret = true;
 				return ret;
 			}
 			continue;
@@ -1346,7 +1383,6 @@ static bool _STATE_TO2(void)
 			fdo_process_states, &g_fdo_data->prot, ip, dns ? dns->bytes : NULL, port, tls);
 		if (prot_ctx == NULL) {
 			ERROR();
-			fdo_prot_ctx_free(prot_ctx);
 			return FDO_ABORT;
 		}
 
@@ -1361,34 +1397,46 @@ static bool _STATE_TO2(void)
 			}
 			fdo_protTO2Exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
+			fdo_free(prot_ctx);
 
-			fdo_sleep(3);
-
-			// Repeat the same operation as the failure case above
+			// Repeat some of the same operations as the failure case above
 			// when processing RendezvousInfo/RVTO2Addr and they need to be skipped
 			if (!rvbypass) {
 				fdo_free(ip);
 				ip = NULL;
+				fdo_sleep(default_delay);
+				// if there is another Owner location present, try it
+				// the execution reaches here only if rvbypass was never set
+				if (g_fdo_data->current_rvto2addrentry) {
+					LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
+					continue;
+				}
+				// there's no more owner locations left to try,
+				// so start retrying with TO1, if retry is enabled.
+				if (g_fdo_data->error_recovery) {
+					g_fdo_data->state_fn = &_STATE_TO1;
+					LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
+						"Retrying TO1 using the next RendezvousDirective\n");
+				}
 			} else {
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
-				return ret;
+				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+					if (!g_fdo_data->current_rvdirective) {
+						g_fdo_data->delaysec = default_delay_rvinfo_retries;
+					} else {
+						g_fdo_data->delaysec = default_delay;
+					}
+				}
 			}
-			
-			// if there is another Owner location present, try it
-			// the execution reaches here only if rvbypass was never set
-			if (g_fdo_data->current_rvto2addrentry) {
-				LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
-				continue;
+			// if this is last directive (NULL), return false to mark end of 1 retry
+			// else if there are more directives left, return true for trying those
+			if (!g_fdo_data->current_rvdirective) {
+				ret = false;
+			} else {
+				ret = true;
 			}
-			// there's no more owner locations left to try,
-			// so start retrying with TO1, if retry is enabled.
-			if (g_fdo_data->error_recovery) {
-				g_fdo_data->state_fn = &_STATE_TO1;
-				LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
-					"Retrying TO1 using the next RendezvousDirective\n");
-				return ret;
-			}
+			return ret;
 		}
 
 		// if we reach here no failures occurred and TO2 has completed.
@@ -1396,6 +1444,7 @@ static bool _STATE_TO2(void)
 		g_fdo_data->state_fn = &_STATE_Shutdown;
 		fdo_protTO2Exit(g_fdo_data);
 		fdo_prot_ctx_free(prot_ctx);
+		fdo_free(prot_ctx);
 
 		if (!rvbypass) {
 			// free only when rvbypass is false, since the allocation was done then.
