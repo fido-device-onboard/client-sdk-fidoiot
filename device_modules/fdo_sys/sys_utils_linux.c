@@ -70,10 +70,10 @@ static bool is_valid_filename(const char *fname)
 	ret = false;
 	t1 = filenme_woextension;
 
-	// check for only alphanumeric no special char except _
+	// check for only alphanumeric no special char except underscore '_' and hyphen '-'
 	while (*t1 != '\0') {
 		if ((*t1 >= 'a' && *t1 <= 'z') || (*t1 >= 'A' && *t1 <= 'Z') ||
-		    (*t1 >= '0' && *t1 <= '9') || (*t1 == '_')) {
+		    (*t1 >= '0' && *t1 <= '9') || (*t1 == '_') || (*t1 == '-')) {
 			t1++;
 		} else {
 			goto end;
@@ -190,7 +190,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 				// Allow only filename (no absolute path for secure env)
 				if (is_valid_filename((const char *) exec_token) == false) {
 #ifdef DEBUG_LOGS
-					printf("fdo_sys exec : Failed to get file name from command\n");
+					printf("fdo_sys exec : Found invalid filename in command\n");
 #endif
 					goto end;
 				}
@@ -213,9 +213,9 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 		printf("fdo_sys exec: Received command completely. Executing...\n");
 #endif
 		error_code = system((char *) data);
-		if (error_code == -1) {
+		if (error_code != 0) {
 #ifdef DEBUG_LOGS
-			printf("fdo_sys exec : Failed to execute command for file %s\n", file_name);
+			printf("fdo_sys exec : Failed to execute command.\n");
 #endif
 			goto end;
 		}
