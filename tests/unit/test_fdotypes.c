@@ -1147,6 +1147,10 @@ void test_fdo_cose_read(void)
 		fdor_flush(fdor);
 		fdo_free(fdor);
 	}
+	if (cose) {
+		fdo_cose_free(cose);
+		cose = NULL;
+	}
 }
 
 #ifdef TARGET_OS_FREERTOS
