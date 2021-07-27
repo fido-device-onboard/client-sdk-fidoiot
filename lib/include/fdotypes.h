@@ -242,7 +242,7 @@ typedef struct {
 	fdo_byte_array_t *payload;
 } fdo_cose_encrypt0_t;
 
-bool fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0);
+void fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0);
 fdo_cose_encrypt0_t* fdo_cose_encrypt0_alloc(void);
 bool fdo_cose_encrypt0_read_protected_header(fdor_t *fdor,
 	fdo_cose_encrypt0_protected_header_t *protected_header);
@@ -326,7 +326,7 @@ typedef struct {
 	fdo_byte_array_t *cose_signature;
 } fdo_cose_t;
 
-bool fdo_cose_free(fdo_cose_t *cose);
+void fdo_cose_free(fdo_cose_t *cose);
 bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *cose_ph);
 bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_t *cose_uph);
 bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph);

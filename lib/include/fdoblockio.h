@@ -92,6 +92,7 @@ bool fdor_parser_init(fdor_t *fdor_cbor);
 bool fdor_start_array(fdor_t *fdor);
 bool fdor_start_map(fdor_t *fdor);
 bool fdor_array_length(fdor_t *fdor, size_t *length);
+bool fdor_map_length(fdor_t *fdor, size_t *length);
 bool fdor_string_length(fdor_t *fdor, size_t *length);
 bool fdor_byte_string(fdor_t *fdor, uint8_t *buffer, size_t buffer_length);
 bool fdor_text_string(fdor_t *fdor, char *buffer, size_t buffer_length);
@@ -102,6 +103,7 @@ bool fdor_unsigned_int(fdor_t *fdor, uint64_t *result);
 bool fdor_boolean(fdor_t *fdor, bool *result);
 bool fdor_end_array(fdor_t *fdor);
 bool fdor_end_map(fdor_t *fdor);
+bool fdor_map_has_more(fdor_t *fdor);
 bool fdor_next(fdor_t *fdor);
 void fdor_flush(fdor_t *fdor);
 

@@ -522,7 +522,7 @@ bool fdor_parser_init(fdor_t *fdor) {
  * would be done using the newly created CborValue treating them as the items of this array.
  * The array needs to be closed using the method fdor_end_array().
  * 
- * @param fdor_t - struct fdow_t
+ * @param fdor_t - struct fdor_t
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_start_array(fdor_t *fdor) {
@@ -555,7 +555,7 @@ bool fdor_start_array(fdor_t *fdor) {
  * would be done using the newly created CborValue treating them as the items of this map.
  * The map needs to be closed using the method fdor_end_map().
  * 
- * @param fdor_t - struct fdow_t
+ * @param fdor_t - struct fdor_t
  * @return true if the operation was a success, false otherwise
  */
 bool fdor_start_map(fdor_t *fdor) {
@@ -582,7 +582,7 @@ bool fdor_start_map(fdor_t *fdor) {
 /**
  * Store the number of items in the CBOR array (Major Type 4) into the supplied size_t variable.
  * 
- * @param fdor_t - struct fdow_t
+ * @param fdor_t - struct fdor_t
  * @param length - output variable where the array's number of items will be stored
  * @return true if the operation was a success, false otherwise
  */
@@ -601,9 +601,30 @@ bool fdor_array_length(fdor_t *fdor, size_t *length) {
 }
 
 /**
+ * Store the number of items in the CBOR map (Major Type 5) into the supplied size_t variable.
+ *
+ * @param fdor_t - struct fdor_t
+ * @param length - output variable where the array's number of items will be stored
+ * @return true if the operation was a success, false otherwise
+ */
+bool fdor_map_length(fdor_t *fdor, size_t *length) {
+	if (!fdor || !fdor->current || !length) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
+	if (!cbor_value_is_map(&fdor->current->cbor_value) ||
+		cbor_value_get_map_length(&fdor->current->cbor_value,
+		length) != CborNoError) {
+		LOG(LOG_ERROR, "CBOR decoder: Failed to read length of Major Type 5 (map)\n");
+		return false;
+	}
+	return true;
+}
+
+/**
  * Store the CBOR bstr/tstr (Major Type 2/3) length into the supplied size_t variable.
  * 
- * @param fdor_t - struct fdow_t
+ * @param fdor_t - struct fdor_t
  * @param length - output variable where the string length will be stored
  * @return true if the operation was a success, false otherwise
  */
@@ -828,6 +849,25 @@ bool fdor_end_map(fdor_t *fdor) {
 	fdor->current = fdor->current->previous;
 	fdo_free(fdor->current->next);
 	return true;
+}
+
+/**
+ * Determine if the given buffer points to a map and whether it contains unread/unparsed
+ * elements (keys/values).
+ *
+ * @param fdor_t - struct fdor_t
+ * @return true if the map contains keys/values to be read/parsed, false otherwise
+ */
+bool fdor_map_has_more(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
+	if (!cbor_value_is_map(&fdor->current->previous->cbor_value)) {
+		LOG(LOG_ERROR, "CBOR decoder: Not a map\n");
+		return false;
+	}
+	return !cbor_value_at_end(&fdor->current->cbor_value);
 }
 
 /**
