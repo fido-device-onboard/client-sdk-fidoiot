@@ -421,7 +421,7 @@ bool fdo_ov_hdr_hmac(fdo_ownership_voucher_t *ov, fdo_hash_t **hmac) {
 
 	if (0 != fdo_device_ov_hmac(fdow_hmac->b.block, fdow_hmac->b.block_size,
 				    (*hmac)->hash->bytes,
-				    (*hmac)->hash->byte_sz)) {
+				    (*hmac)->hash->byte_sz, false)) {
 		fdo_hash_free(*hmac);
 		LOG(LOG_ERROR, "Failed to generate OVHeaderHmac\n");
 		goto exit;
@@ -687,7 +687,7 @@ fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 
 	if (hmac &&
 	    (0 != fdo_device_ov_hmac(fdow->b.block, fdow->b.block_size,
-				     hmac->hash->bytes, hmac->hash->byte_sz))) {
+				     hmac->hash->bytes, hmac->hash->byte_sz, true))) {
 		fdo_hash_free(hmac);
 		goto exit;
 	}

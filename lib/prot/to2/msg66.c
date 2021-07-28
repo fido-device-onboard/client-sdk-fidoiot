@@ -71,7 +71,7 @@ int32_t msg66(fdo_prot_t *ps)
 		if (resale_supported) {
 			LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: *****Resale triggered.*****\n");
 			/* Generate new HMAC secret for OV header validation */
-			if (0 != fdo_generate_ov_hmac_key()) {
+			if (0 != fdo_generate_ov_replacement_hmac_key()) {
 				LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to refresh OV HMAC Key\n");
 				goto err;
 			}
@@ -127,5 +127,8 @@ int32_t msg66(fdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
+	if (hmac) {
+		fdo_hash_free(hmac);
+	}
 	return ret;
 }

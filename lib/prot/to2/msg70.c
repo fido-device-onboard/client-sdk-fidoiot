@@ -79,6 +79,17 @@ int32_t msg70(fdo_prot_t *ps)
 	}
 	LOG(LOG_DEBUG, "TO2.Done: Data protection key rotated successfully!!\n");
 
+	if (!ps->reuse_enabled) {
+		/* Commit the replacement hmac key only if reuse was not triggered*/
+		if (fdo_commit_ov_replacement_hmac_key() != 0) {
+			LOG(LOG_ERROR, "TO2.Done: Failed to store new device hmac key.\n");
+			goto err;
+		}
+		LOG(LOG_DEBUG, "TO2.Done: Updated device's new hmac key\n");
+	} else {
+		LOG(LOG_DEBUG, "TO2.Done: Device hmac key is unchanged as reuse was triggered.\n");
+	}
+
 	/* Write new device credentials */
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");

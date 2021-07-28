@@ -5227,6 +5227,24 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 }
 
 /**
+ * Deactivate all modules in the given module_list by setting 'active' to false.
+ *
+ * @param module_list - Owner ServiceInfo module list
+ */
+bool fdo_serviceinfo_deactivate_modules(fdo_sdk_service_info_module_list_t *module_list) {
+
+	if (!module_list) {
+		return false;
+	}
+	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
+	while (traverse_list) {
+		traverse_list->module.active = false;
+		traverse_list = traverse_list->next;
+	}
+	return true;
+}
+
+/**
  * Allocate an empty fdo_service_info_t object.
  * @return an allocated fdo_service_info_t object.
  */

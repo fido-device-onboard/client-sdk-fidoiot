@@ -2831,7 +2831,7 @@ TEST_CASE("fdo_device_ov_hmac", "[crypto_support][fdo]")
 	TEST_ASSERT_EQUAL(0, ret);
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, hmac_len);
+	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, hmac_len, false);
 	TEST_ASSERT_EQUAL(0, ret);
 
 	ret = fdo_kex_close();
@@ -2865,7 +2865,7 @@ TEST_CASE("fdo_device_ov_hmac_invalid_OVHdr", "[crypto_support][fdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = fdo_device_ov_hmac(NULL, OVHdr_len, hmac, hmac_len);
+	ret = fdo_device_ov_hmac(NULL, OVHdr_len, hmac, hmac_len, false);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	fdo_hash_free(hmac1);
@@ -2897,7 +2897,7 @@ TEST_CASE("fdo_device_ov_hmac_invalid_OVHdr_len", "[crypto_support][fdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = fdo_device_ov_hmac(OVHdr, 0, hmac, hmac_len);
+	ret = fdo_device_ov_hmac(OVHdr, 0, hmac, hmac_len, false);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	fdo_hash_free(hmac1);
@@ -2929,7 +2929,7 @@ TEST_CASE("fdo_device_ov_hmac_invalid_hmac", "[crypto_support][fdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, NULL, hmac_len);
+	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, NULL, hmac_len, false);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	fdo_hash_free(hmac1);
@@ -2961,7 +2961,7 @@ TEST_CASE("fdo_device_ov_hmac_invalid_hmac_len", "[crypto_support][fdo]")
 	/* Negative test case */
 	ret = set_ov_key(OVkey, OVKey_len);
 	TEST_ASSERT_EQUAL(0, ret);
-	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, 0);
+	ret = fdo_device_ov_hmac(OVHdr, OVHdr_len, hmac, 0, false);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	fdo_hash_free(hmac1);
