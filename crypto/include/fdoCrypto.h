@@ -27,7 +27,10 @@ int32_t fdo_kex_close(void);
 fdo_string_t *fdo_get_device_kex_method(void);
 fdo_string_t *fdo_get_device_crypto_suite(void);
 fdo_byte_array_t **getOVKey(void);
+fdo_byte_array_t **getreplacementOVKey(void);
 int32_t set_ov_key(fdo_byte_array_t *OVkey, size_t OVKey_len);
+int32_t set_ov_replacement_key(fdo_byte_array_t *OVkey, size_t OVKey_len);
+int32_t fdo_commit_ov_replacement_hmac_key(void);
 int32_t fdo_ov_verify(uint8_t *message, uint32_t message_length,
 		      uint8_t *message_signature, uint32_t signature_length,
 		      fdo_public_key_t *pubkey, bool *result);
@@ -47,7 +50,7 @@ int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 int32_t fdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
 		     size_t hmac_len);
 int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
-			   size_t hmac_len);
+			   size_t hmac_len, bool is_replacement_hmac);
 int32_t fdo_crypto_hash(const uint8_t *message, size_t message_length,
 			uint8_t *hash, size_t hash_length);
 int32_t fdo_to2_chained_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
@@ -64,6 +67,7 @@ fdo_to2Sym_enc_ctx_t *get_fdo_to2_ctx(void);
 int32_t dev_attestation_init(void);
 void dev_attestation_close(void);
 int32_t fdo_generate_ov_hmac_key(void);
+int32_t fdo_generate_ov_replacement_hmac_key(void);
 int32_t fdo_compute_storage_hmac(const uint8_t *data, uint32_t data_length,
 				 uint8_t *computed_hmac,
 				 int computed_hmac_size);

@@ -263,6 +263,10 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_byte_array_free(ps->nonce_to2setupdv_rcv);
 		ps->nonce_to2setupdv_rcv = NULL;
 	}
+	if (ps->new_ov_hdr_hmac) {
+		fdo_hash_free(ps->new_ov_hdr_hmac);
+		ps->new_ov_hdr_hmac = NULL;
+	}
 
 	/* clear Sv_info PSI/DSI/OSI related data */
 	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
@@ -272,6 +276,11 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		ps->dsi_info->module_dsi_index = 0;
 		fdo_free(ps->dsi_info);
 		ps->dsi_info = NULL;
+	}
+
+	if (ps->service_info) {
+		fdo_service_info_free(ps->service_info);
+		ps->service_info = NULL;
 	}
 
 	if (ps->serviceinfo_invalid_modnames) {
@@ -459,56 +468,6 @@ static fdo_sdk_status app_initialize(void)
 		return FDO_SUCCESS;
 	}
 
-	// Build up default 'devmod' ServiceInfo list
-	g_fdo_data->service_info = fdo_service_info_alloc();
-
-	if (!g_fdo_data->service_info) {
-		LOG(LOG_ERROR, "Service_info List allocation failed!\n");
-		return FDO_ERROR;
-	}
-
-	fdo_service_info_add_kv_bool(g_fdo_data->service_info, "devmod:active",
-				    true);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:os",
-				    OS_NAME);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:arch",
-				    ARCH);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:version",
-				    OS_VERSION);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:device",
-				    (char *)get_device_model());
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sn",
-				    (char *)get_device_serial_number());
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:pathsep",
-				    PATH_SEPARATOR);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sep",
-				    SEPARATOR);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:nl",
-				    NEWLINE);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:tmp",
-				    "");
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:dir",
-				    "");
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:progenv",
-				    PROGENV);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:bin",
-				    BIN_TYPE);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:mudurl",
-				    "");
-
-	// should ideally contain supported ServiceInfo module list and its count.
-	// for now, set this to 1, since we've only 1 module 'fdo_sys'
-	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo module
-	// support is added.
-	fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
-			    	1);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:modules",
-				    g_fdo_data->module_list->module.module_name);
-
-	g_fdo_data->service_info->sv_index_begin = 0;
-	g_fdo_data->service_info->sv_index_end = 0;
-	g_fdo_data->service_info->sv_val_index = 0;
-
 	if (fdo_null_ipaddress(&g_fdo_data->prot.i1) == false) {
 		return FDO_ERROR;
 	}
@@ -598,6 +557,110 @@ void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module)
 
 		list->next = new;
 	}
+}
+
+/**
+ * Create 'devmod' module and initialize it with the key-value pairs.
+ */
+static bool add_module_devmod(void) {
+	// Build up default 'devmod' ServiceInfo list
+	g_fdo_data->service_info = fdo_service_info_alloc();
+
+	if (!g_fdo_data->service_info) {
+		LOG(LOG_ERROR, "Service_info List allocation failed!\n");
+		return false;
+	}
+
+	if (!fdo_service_info_add_kv_bool(g_fdo_data->service_info, "devmod:active",
+				    true)) {
+		LOG(LOG_ERROR, "Failed to add devmod:active\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:os",
+				    OS_NAME)) {
+		LOG(LOG_ERROR, "Failed to add devmod:os\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:arch",
+				    ARCH)) {
+		LOG(LOG_ERROR, "Failed to add devmod:arch\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:version",
+				    OS_VERSION)) {
+		LOG(LOG_ERROR, "Failed to add devmod:version\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:device",
+				    (char *)get_device_model())) {
+		LOG(LOG_ERROR, "Failed to add devmod:device\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sn",
+				    (char *)get_device_serial_number())) {
+		LOG(LOG_ERROR, "Failed to add devmod:sn\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:pathsep",
+				    PATH_SEPARATOR)) {
+		LOG(LOG_ERROR, "Failed to add devmod:pathsep\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sep",
+				    SEPARATOR)) {
+		LOG(LOG_ERROR, "Failed to add devmod:sep\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:nl",
+				    NEWLINE)) {
+		LOG(LOG_ERROR, "Failed to add devmod:nl\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:tmp",
+				    "")) {
+		LOG(LOG_ERROR, "Failed to add devmod:tmp\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:dir",
+				    "")) {
+		LOG(LOG_ERROR, "Failed to add devmod:dir\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:progenv",
+				    PROGENV)) {
+		LOG(LOG_ERROR, "Failed to add devmod:progenv\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:bin",
+				    BIN_TYPE)) {
+		LOG(LOG_ERROR, "Failed to add devmod:bin\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:mudurl",
+				    "")) {
+		LOG(LOG_ERROR, "Failed to add devmod:mudurl\n");
+		return false;
+	}
+
+	// should ideally contain supported ServiceInfo module list and its count.
+	// for now, set this to 1, since we've only 1 module 'fdo_sys'
+	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo module
+	// support is added.
+	if (!fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
+					1)) {
+		LOG(LOG_ERROR, "Failed to add devmod:nummodules\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:modules",
+				    g_fdo_data->module_list->module.module_name)) {
+		LOG(LOG_ERROR, "Failed to add devmod:modules\n");
+		return false;
+	}
+
+	g_fdo_data->service_info->sv_index_begin = 0;
+	g_fdo_data->service_info->sv_index_end = 0;
+	g_fdo_data->service_info->sv_val_index = 0;
+	return true;
 }
 
 static fdo_sdk_service_info_module_list_t *
@@ -1255,6 +1318,11 @@ static bool _STATE_TO2(void)
 	ret = fdo_kex_init();
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to initialize key exchange algorithm\n");
+		return FDO_ERROR;
+	}
+
+	if (!add_module_devmod()) {
+		LOG(LOG_ERROR, "Failed to create devmod module\n");
 		return FDO_ERROR;
 	}
 

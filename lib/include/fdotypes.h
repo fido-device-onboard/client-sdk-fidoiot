@@ -535,6 +535,7 @@ bool fdo_serviceinfo_invalid_modname_add(char *module_name,
 	fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
 void fdo_serviceinfo_invalid_modname_free(
 	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames);
+bool fdo_serviceinfo_deactivate_modules(fdo_sdk_service_info_module_list_t *module_list);
 
 bool fdo_compare_hashes(fdo_hash_t *hash1, fdo_hash_t *hash2);
 bool fdo_compare_byte_arrays(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
