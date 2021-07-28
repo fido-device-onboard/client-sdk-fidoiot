@@ -10,6 +10,9 @@
 #include "stdlib.h"
 #include "fdoCryptoCtx.h"
 #include "fdoCrypto.h"
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#endif
 
 static fdo_crypto_context_t crypto_ctx;
 static void cleanup_ctx(void);
@@ -49,6 +52,15 @@ fdo_aes_keyset_t *get_keyset(void)
 fdo_byte_array_t **getOVKey(void)
 {
 	return &crypto_ctx.OVKey;
+}
+
+/**
+ * This function returns the address of Ownership voucher replacement hmac key.
+ * @return Byte array which holds the OV replacement hmac key
+ */
+fdo_byte_array_t **getreplacementOVKey(void)
+{
+	return &crypto_ctx.replacement_OVKey;
 }
 
 /**
@@ -102,6 +114,10 @@ int32_t fdo_crypto_close(void)
 	ret = crypto_close();
 	/* CLeanup of context structs */
 	cleanup_ctx();
+#if defined(DEVICE_TPM20_ENABLED)
+	/* clear the replacement hmac key objects */
+	fdo_tpm_clear_replacement_hmac_key();
+#endif
 	return ret;
 }
 
@@ -117,6 +133,10 @@ static void cleanup_ctx(void)
 	/* cleanup ovkey */
 	fdo_byte_array_free(crypto_ctx.OVKey);
 	crypto_ctx.OVKey = NULL;
+	if (crypto_ctx.replacement_OVKey) {
+		fdo_byte_array_free(crypto_ctx.replacement_OVKey);
+		crypto_ctx.replacement_OVKey = NULL;
+	}
 }
 
 /**

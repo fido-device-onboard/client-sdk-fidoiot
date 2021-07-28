@@ -83,10 +83,6 @@ static void ps_free(fdo_prot_t *ps)
 		fdo_byte_array_free(ps->nonce_to2proveov_rcv);
 		ps->nonce_to2proveov_rcv = NULL;
 	}
-	if (ps->new_ov_hdr_hmac) {
-		fdo_hash_free(ps->new_ov_hdr_hmac);
-		ps->new_ov_hdr_hmac = NULL;
-	}
 	if (ps->nonce_to2provedv) {
 		fdo_byte_array_free(ps->nonce_to2provedv);
 		ps->nonce_to2provedv = NULL;
@@ -284,6 +280,9 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 	/* Initialize svinfo related data */
 	if (module_list) {
 		ps->sv_info_mod_list_head = module_list;
+		if (!fdo_serviceinfo_deactivate_modules(ps->sv_info_mod_list_head)) {
+			return false;
+		}
 		ps->dsi_info = fdo_alloc(sizeof(fdo_sv_info_dsi_info_t));
 		if (!ps->dsi_info) {
 			return false;

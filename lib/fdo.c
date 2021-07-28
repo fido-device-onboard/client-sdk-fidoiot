@@ -37,7 +37,7 @@ typedef struct app_data_s {
 	/* Temp, use the value in the configured rendezvous */
 	fdo_ip_address_t *rendezvousIPAddr;
 	char *rendezvousdns;
-	uint32_t delaysec;
+	uint64_t delaysec;
 	/* Error handling callback */
 	fdo_sdk_errorCB error_callback;
 	/* Global Sv_info Module_list head pointer */
@@ -58,6 +58,9 @@ extern char **g_argv;
 #endif
 
 static const uint16_t g_DI_PORT = 8039;
+static const uint64_t default_delay = 3;
+static const uint64_t default_delay_rvinfo_retries = 120;
+static const uint64_t max_delay = 3600;
 
 static unsigned int error_count;
 static bool rvbypass;
@@ -260,6 +263,10 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_byte_array_free(ps->nonce_to2setupdv_rcv);
 		ps->nonce_to2setupdv_rcv = NULL;
 	}
+	if (ps->new_ov_hdr_hmac) {
+		fdo_hash_free(ps->new_ov_hdr_hmac);
+		ps->new_ov_hdr_hmac = NULL;
+	}
 
 	/* clear Sv_info PSI/DSI/OSI related data */
 	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
@@ -269,6 +276,11 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		ps->dsi_info->module_dsi_index = 0;
 		fdo_free(ps->dsi_info);
 		ps->dsi_info = NULL;
+	}
+
+	if (ps->service_info) {
+		fdo_service_info_free(ps->service_info);
+		ps->service_info = NULL;
 	}
 
 	if (ps->serviceinfo_invalid_modnames) {
@@ -340,6 +352,7 @@ static fdo_sdk_status app_initialize(void)
 		return FDO_ERROR;
 	}
 
+	g_fdo_data->delaysec = 0;
 	/* Initialize service_info to NULL in case of early error. */
 	g_fdo_data->service_info = NULL;
 
@@ -455,56 +468,6 @@ static fdo_sdk_status app_initialize(void)
 		return FDO_SUCCESS;
 	}
 
-	// Build up default 'devmod' ServiceInfo list
-	g_fdo_data->service_info = fdo_service_info_alloc();
-
-	if (!g_fdo_data->service_info) {
-		LOG(LOG_ERROR, "Service_info List allocation failed!\n");
-		return FDO_ERROR;
-	}
-
-	fdo_service_info_add_kv_bool(g_fdo_data->service_info, "devmod:active",
-				    true);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:os",
-				    OS_NAME);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:arch",
-				    ARCH);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:version",
-				    OS_VERSION);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:device",
-				    (char *)get_device_model());
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sn",
-				    (char *)get_device_serial_number());
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:pathsep",
-				    PATH_SEPARATOR);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sep",
-				    SEPARATOR);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:nl",
-				    NEWLINE);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:tmp",
-				    "");
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:dir",
-				    "");
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:progenv",
-				    PROGENV);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:bin",
-				    BIN_TYPE);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:mudurl",
-				    "");
-
-	// should ideally contain supported ServiceInfo module list and its count.
-	// for now, set this to 1, since we've only 1 module 'fdo_sys'
-	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo module
-	// support is added.
-	fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
-			    	1);
-	fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:modules",
-				    g_fdo_data->module_list->module.module_name);
-
-	g_fdo_data->service_info->sv_index_begin = 0;
-	g_fdo_data->service_info->sv_index_end = 0;
-	g_fdo_data->service_info->sv_val_index = 0;
-
 	if (fdo_null_ipaddress(&g_fdo_data->prot.i1) == false) {
 		return FDO_ERROR;
 	}
@@ -594,6 +557,110 @@ void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module)
 
 		list->next = new;
 	}
+}
+
+/**
+ * Create 'devmod' module and initialize it with the key-value pairs.
+ */
+static bool add_module_devmod(void) {
+	// Build up default 'devmod' ServiceInfo list
+	g_fdo_data->service_info = fdo_service_info_alloc();
+
+	if (!g_fdo_data->service_info) {
+		LOG(LOG_ERROR, "Service_info List allocation failed!\n");
+		return false;
+	}
+
+	if (!fdo_service_info_add_kv_bool(g_fdo_data->service_info, "devmod:active",
+				    true)) {
+		LOG(LOG_ERROR, "Failed to add devmod:active\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:os",
+				    OS_NAME)) {
+		LOG(LOG_ERROR, "Failed to add devmod:os\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:arch",
+				    ARCH)) {
+		LOG(LOG_ERROR, "Failed to add devmod:arch\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:version",
+				    OS_VERSION)) {
+		LOG(LOG_ERROR, "Failed to add devmod:version\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:device",
+				    (char *)get_device_model())) {
+		LOG(LOG_ERROR, "Failed to add devmod:device\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sn",
+				    (char *)get_device_serial_number())) {
+		LOG(LOG_ERROR, "Failed to add devmod:sn\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:pathsep",
+				    PATH_SEPARATOR)) {
+		LOG(LOG_ERROR, "Failed to add devmod:pathsep\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sep",
+				    SEPARATOR)) {
+		LOG(LOG_ERROR, "Failed to add devmod:sep\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:nl",
+				    NEWLINE)) {
+		LOG(LOG_ERROR, "Failed to add devmod:nl\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:tmp",
+				    "")) {
+		LOG(LOG_ERROR, "Failed to add devmod:tmp\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:dir",
+				    "")) {
+		LOG(LOG_ERROR, "Failed to add devmod:dir\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:progenv",
+				    PROGENV)) {
+		LOG(LOG_ERROR, "Failed to add devmod:progenv\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:bin",
+				    BIN_TYPE)) {
+		LOG(LOG_ERROR, "Failed to add devmod:bin\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:mudurl",
+				    "")) {
+		LOG(LOG_ERROR, "Failed to add devmod:mudurl\n");
+		return false;
+	}
+
+	// should ideally contain supported ServiceInfo module list and its count.
+	// for now, set this to 1, since we've only 1 module 'fdo_sys'
+	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo module
+	// support is added.
+	if (!fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
+					1)) {
+		LOG(LOG_ERROR, "Failed to add devmod:nummodules\n");
+		return false;
+	}
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:modules",
+				    g_fdo_data->module_list->module.module_name)) {
+		LOG(LOG_ERROR, "Failed to add devmod:modules\n");
+		return false;
+	}
+
+	g_fdo_data->service_info->sv_index_begin = 0;
+	g_fdo_data->service_info->sv_index_end = 0;
+	g_fdo_data->service_info->sv_val_index = 0;
+	return true;
 }
 
 static fdo_sdk_service_info_module_list_t *
@@ -996,6 +1063,8 @@ static bool _STATE_DI(void)
 		}
 	}
 
+	g_fdo_data->delaysec = default_delay;
+
 	prot_ctx = fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
 				      mfg_ip, mfg_ip ? NULL : mfg_dns, mfg_port, tls);
 	if (prot_ctx == NULL) {
@@ -1008,11 +1077,11 @@ static bool _STATE_DI(void)
 		if (g_fdo_data->error_recovery) {
 			LOG(LOG_INFO, "Retrying.....\n");
 			g_fdo_data->state_fn = &_STATE_DI;
-			fdo_sleep(3);
+			fdo_sleep(g_fdo_data->delaysec);
 			goto end;
 		} else {
 			ERROR()
-			fdo_sleep(g_fdo_data->delaysec + fdo_random() % 25);
+			fdo_sleep(g_fdo_data->delaysec);
 			goto end;
 		}
 	}
@@ -1029,7 +1098,10 @@ static bool _STATE_DI(void)
 	ret = true;
 end:
 	fdo_protDIExit(g_fdo_data);
-	fdo_prot_ctx_free(prot_ctx);
+	if (prot_ctx) {
+		fdo_prot_ctx_free(prot_ctx);
+		fdo_free(prot_ctx);
+	}
 	if (buffer) {
 		fdo_free(buffer);
 	}
@@ -1044,7 +1116,8 @@ end:
  * initializse state variables and runs the TO1 protocol.
  *
  * @return ret
- *         true if DI completes successfully. false in case of error.
+ *         true if TO1 completes successfully, or if RVBypass was encountered in RendezvousInfo
+ *         false if all RendezvousDirectives have been tried and TO1 resulted in failure.
  */
 static bool _STATE_TO1(void)
 {
@@ -1093,6 +1166,10 @@ static bool _STATE_TO1(void)
 		g_fdo_data->current_rvdirective = g_fdo_data->devcred->owner_blk->rvlst->rv_directives;
 	}
 
+	// delay if we came back from RVBypass or re-try RVInfo with some value,
+	// otherwise, delaysec will be 0
+	fdo_sleep(g_fdo_data->delaysec);
+
 	while (!ret && g_fdo_data->current_rvdirective) {
 		fdo_rendezvous_t *rv = g_fdo_data->current_rvdirective->rv_entries;
 		// reset for next use.
@@ -1102,6 +1179,8 @@ static bool _STATE_TO1(void)
 		rvbypass = false;
 		tls = true;
 		skip_rv = false;
+		g_fdo_data->delaysec = 0;
+
 		while (rv) {
 
 			if (rv->bypass && *rv->bypass == true) {
@@ -1128,6 +1207,8 @@ static bool _STATE_TO1(void)
 					skip_rv = true;
 					break;
 				}
+			} else if (rv->delaysec) {
+				g_fdo_data->delaysec = *rv->delaysec;
 			}
 			// ignore the other RendezvousInstr as they are not used for making requests
 			rv = rv->next;
@@ -1165,16 +1246,25 @@ static bool _STATE_TO1(void)
 			// clear contents for a fresh start.
 			fdo_protTO1Exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
-			fdo_sleep(3);
+			fdo_free(prot_ctx);
 
 			// check if there is another RV location to try. if yes, try it
+			// the delay interval is conditional
 			if (g_fdo_data->current_rvdirective) {
+				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+					g_fdo_data->delaysec = default_delay;
+				}
+				fdo_sleep(g_fdo_data->delaysec);
 				continue;
 			}
+
 			// there are no more RV locations left, so check if retry is enabled.
 			// if yes, proceed with retrying all the RV locations
 			// if not, return immediately since there is nothing else left to do.
 			if (g_fdo_data->error_recovery) {
+				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+					g_fdo_data->delaysec = default_delay_rvinfo_retries;
+				}
 				LOG(LOG_INFO, "Retrying.....\n");
 				g_fdo_data->state_fn = &_STATE_TO1;
 				return ret;
@@ -1193,7 +1283,10 @@ static bool _STATE_TO1(void)
 
 end:
 	fdo_protTO1Exit(g_fdo_data);
-	fdo_prot_ctx_free(prot_ctx);
+	if (prot_ctx) {
+		fdo_prot_ctx_free(prot_ctx);
+		fdo_free(prot_ctx);
+	}
 	return ret;
 }
 
@@ -1202,7 +1295,9 @@ end:
  * initializse state variables and runs the TO2 protocol.
  *
  * @return ret
- *         true if DI completes successfully. false in case of error.
+ *         true if TO2 completes successfully, or if there are more RendezvousDirectives that
+ *         need to be processed,
+ *         false if all RendezvousDirectives have been tried and TO2 resulted in failure.
  */
 static bool _STATE_TO2(void)
 {
@@ -1223,6 +1318,11 @@ static bool _STATE_TO2(void)
 	ret = fdo_kex_init();
 	if (ret) {
 		LOG(LOG_ERROR, "Failed to initialize key exchange algorithm\n");
+		return FDO_ERROR;
+	}
+
+	if (!add_module_devmod()) {
+		LOG(LOG_ERROR, "Failed to create devmod module\n");
 		return FDO_ERROR;
 	}
 
@@ -1258,6 +1358,7 @@ static bool _STATE_TO2(void)
 
 		tls = true;
 		skip_rv = false;
+		g_fdo_data->delaysec = 0;
 		// if rvbypass is set by TO1, then pick the Owner's address from RendezvousInfo.
 		// otherwise, pick the address from RVTO2AddrEntry.
 		if (rvbypass) {
@@ -1280,6 +1381,8 @@ static bool _STATE_TO2(void)
 						skip_rv = true;
 						break;
 					}
+				} else if (rv->delaysec) {
+					g_fdo_data->delaysec = *rv->delaysec;
 				}
 				// no need to check for RVBYPASS here again, since we used it
 				// to get here in the first place
@@ -1337,6 +1440,8 @@ static bool _STATE_TO2(void)
 				// because of rvbypass
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
+				// return true so that TO1 is processed with the remaining directives
+				ret = true;
 				return ret;
 			}
 			continue;
@@ -1346,7 +1451,6 @@ static bool _STATE_TO2(void)
 			fdo_process_states, &g_fdo_data->prot, ip, dns ? dns->bytes : NULL, port, tls);
 		if (prot_ctx == NULL) {
 			ERROR();
-			fdo_prot_ctx_free(prot_ctx);
 			return FDO_ABORT;
 		}
 
@@ -1361,34 +1465,46 @@ static bool _STATE_TO2(void)
 			}
 			fdo_protTO2Exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
+			fdo_free(prot_ctx);
 
-			fdo_sleep(3);
-
-			// Repeat the same operation as the failure case above
+			// Repeat some of the same operations as the failure case above
 			// when processing RendezvousInfo/RVTO2Addr and they need to be skipped
 			if (!rvbypass) {
 				fdo_free(ip);
 				ip = NULL;
+				fdo_sleep(default_delay);
+				// if there is another Owner location present, try it
+				// the execution reaches here only if rvbypass was never set
+				if (g_fdo_data->current_rvto2addrentry) {
+					LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
+					continue;
+				}
+				// there's no more owner locations left to try,
+				// so start retrying with TO1, if retry is enabled.
+				if (g_fdo_data->error_recovery) {
+					g_fdo_data->state_fn = &_STATE_TO1;
+					LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
+						"Retrying TO1 using the next RendezvousDirective\n");
+				}
 			} else {
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
-				return ret;
+				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+					if (!g_fdo_data->current_rvdirective) {
+						g_fdo_data->delaysec = default_delay_rvinfo_retries;
+					} else {
+						g_fdo_data->delaysec = default_delay;
+					}
+				}
 			}
-			
-			// if there is another Owner location present, try it
-			// the execution reaches here only if rvbypass was never set
-			if (g_fdo_data->current_rvto2addrentry) {
-				LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
-				continue;
+			// if this is last directive (NULL), return false to mark end of 1 retry
+			// else if there are more directives left, return true for trying those
+			if (!g_fdo_data->current_rvdirective) {
+				ret = false;
+			} else {
+				ret = true;
 			}
-			// there's no more owner locations left to try,
-			// so start retrying with TO1, if retry is enabled.
-			if (g_fdo_data->error_recovery) {
-				g_fdo_data->state_fn = &_STATE_TO1;
-				LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
-					"Retrying TO1 using the next RendezvousDirective\n");
-				return ret;
-			}
+			return ret;
 		}
 
 		// if we reach here no failures occurred and TO2 has completed.
@@ -1396,6 +1512,7 @@ static bool _STATE_TO2(void)
 		g_fdo_data->state_fn = &_STATE_Shutdown;
 		fdo_protTO2Exit(g_fdo_data);
 		fdo_prot_ctx_free(prot_ctx);
+		fdo_free(prot_ctx);
 
 		if (!rvbypass) {
 			// free only when rvbypass is false, since the allocation was done then.
