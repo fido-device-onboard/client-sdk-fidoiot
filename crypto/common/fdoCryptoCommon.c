@@ -10,7 +10,9 @@
 #include "stdlib.h"
 #include "fdoCryptoCtx.h"
 #include "fdoCrypto.h"
+#if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
+#endif
 
 static fdo_crypto_context_t crypto_ctx;
 static void cleanup_ctx(void);
