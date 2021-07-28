@@ -101,7 +101,6 @@ void fdo_prot_ctx_free(fdo_prot_ctx_t *prot_ctx)
 		if (prot_ctx->host_ip) {
 			fdo_free(prot_ctx->host_ip);
 		}
-		fdo_free(prot_ctx);
 	}
 }
 

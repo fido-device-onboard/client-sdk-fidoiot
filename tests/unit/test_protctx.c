@@ -158,12 +158,14 @@ TEST_CASE("fdo_prot_ctx_alloc", "[protctx][fdo]")
 				      host_dns, host_port, false);
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 	fdo_prot_ctx_free(prot_ctx);
+	fdo_free(prot_ctx);
 
 	// positive test case, prot_ctx is allocated
 	prot_ctx = fdo_prot_ctx_alloc(&fdo_prot_dummy, &protdata, NULL,
 				      host_dns, host_port, true);
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 	fdo_prot_ctx_free(prot_ctx);
+	fdo_free(prot_ctx);
 
 	g_malloc_fail = true;
 	prot_ctx = fdo_prot_ctx_alloc(&fdo_prot_dummy, &protdata, NULL,
