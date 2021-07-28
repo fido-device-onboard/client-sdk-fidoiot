@@ -260,6 +260,10 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_byte_array_free(ps->nonce_to2setupdv_rcv);
 		ps->nonce_to2setupdv_rcv = NULL;
 	}
+	if (ps->new_ov_hdr_hmac) {
+		fdo_hash_free(ps->new_ov_hdr_hmac);
+		ps->new_ov_hdr_hmac = NULL;
+	}
 
 	/* clear Sv_info PSI/DSI/OSI related data */
 	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
