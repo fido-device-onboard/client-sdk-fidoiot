@@ -623,7 +623,7 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 {
 	int ret = -1, is_failed = 0;
 	TSS2_TCTI_CONTEXT *tcti_context = NULL;
-	TSS2_RC rc;
+	TSS2_RC rc = TPM2_RC_FAILURE;
 
 	if (!esys_context || !*esys_context) {
 		LOG(LOG_ERROR, "Invalid parameter received.\n");

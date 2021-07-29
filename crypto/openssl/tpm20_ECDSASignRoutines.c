@@ -168,6 +168,7 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 error:
 	if (engine) {
 		ENGINE_finish(engine);
+		ENGINE_free(engine);
 		ENGINE_cleanup();
 	}
 	if (pkey) {
