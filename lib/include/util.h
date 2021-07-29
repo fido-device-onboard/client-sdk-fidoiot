@@ -127,20 +127,20 @@ void hexdump(const char *message, const void *buffer, size_t size);
 /* Print a non null-terminated buffer. */
 void print_buffer(int log_level, const uint8_t *buffer, size_t length);
 
-/// Read a buffer from content of a file
+/// Read a buffer from content of a file. The buffer returned is non NULL-terminated.
 /*!
   \param[in] filename
   The file path.
   \param[in] buffer
   The buffer to be filled.
-  \param[out] size
+  \param[in] size
   The allocated size of the buffer in bytes.
 
   \returns
   0 on successful read, -1 on error.
 
 */
-int read_buffer_from_file(const char *filename, void *buffer, size_t size);
+int read_buffer_from_file(const char *filename, uint8_t *buffer, size_t size);
 
 /*
  * Allocate a buffer and set its contents to 0 before using it.
