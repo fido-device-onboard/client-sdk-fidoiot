@@ -147,26 +147,17 @@ typedef struct fdo_prot_s {
 	fdow_t fdow;
 	uint8_t gid[GID_SIZE];
 	fdo_byte_array_t *g2; /* Our initial GUID */
-	fdo_ip_address_t i1;
-	uint32_t port1;
-	char *dns1;
 	int key_encoding;
 	fdo_rvto2addr_t *rvto2addr;
-	fdo_public_key_t *new_pk;
 	fdo_dev_cred_t *dev_cred;
-	fdo_public_key_t *mfg_public_key; // TO2.bo.oh.pk & DI.oh.ok
-	// Installed during manufacturing is a hash of this
 	fdo_public_key_t *
-	    owner_public_key; // TO2.ProveOVHdr bo.pk - The new Owner Public key
+	    owner_public_key; // Owner's public key
 	fdo_service_info_t *service_info;
-	fdo_public_key_t *tls_key;
-	fdo_public_key_t *local_key_pair;
+	fdo_public_key_t *tls_key; // unused for now
 	int ov_entry_num;
 	fdo_ownership_voucher_t *ovoucher;
 	fdo_hash_t *new_ov_hdr_hmac;
-	fdo_rendezvous_t *rv;
 	fdo_cose_t *to1d_cose;
-	uint16_t serv_req_info_num;
 	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames;
 	int maxOwnerServiceInfoSz;
 	int maxDeviceServiceInfoSz;
@@ -174,8 +165,6 @@ typedef struct fdo_prot_s {
 	bool owner_serviceinfo_ismore;
 	bool owner_serviceinfo_isdone;
 	size_t prot_buff_sz;
-	int owner_supplied_service_info_num;
-	int owner_supplied_service_info_rcv;
 	fdo_owner_supplied_credentials_t *osc;
 	fdo_byte_array_t *nonce_to1proof;
 	fdo_byte_array_t *nonce_to2proveov;
@@ -189,7 +178,6 @@ typedef struct fdo_prot_s {
 	    *sv_info_mod_list_head; // Global Sv_infomodule list head
 	fdo_sv_info_dsi_info_t *dsi_info;
 	int total_dsi_rounds; // device service infos + module DSI counts
-	uint8_t rv_index;     // keep track of current rv index
 	bool reuse_enabled;   // REUSE protocol flag
 } fdo_prot_t;
 

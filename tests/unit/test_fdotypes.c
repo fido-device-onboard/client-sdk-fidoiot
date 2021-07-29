@@ -6,7 +6,6 @@
 #include "unity.h"
 #include "crypto_utils.h"
 #include "fdoprot.h"
-#include "base64.h"
 #include "fdotypes.h"
 #include "fdoCrypto.h"
 #include "fdoCryptoHal.h"

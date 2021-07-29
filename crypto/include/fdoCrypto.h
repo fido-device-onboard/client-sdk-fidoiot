@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "snprintf_s.h"
-#include "base64.h"
 #include "fdoCryptoCtx.h"
 #include "fdoCryptoCommons.h"
 
@@ -47,8 +46,6 @@ int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			const uint8_t *cipher, uint32_t cipher_length, uint8_t *iv,
 			uint8_t *tag, size_t tag_length,
 			const uint8_t *aad, size_t aad_length);
-int32_t fdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
-		     size_t hmac_len);
 int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 			   size_t hmac_len, bool is_replacement_hmac);
 int32_t fdo_crypto_hash(const uint8_t *message, size_t message_length,
