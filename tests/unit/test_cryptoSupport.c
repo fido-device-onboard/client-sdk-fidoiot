@@ -23,8 +23,8 @@
 #define DER_PUBKEY_LEN_MAX 512
 #define ECDSA_PK_MAX_LENGTH 200
 
-static uint8_t test_buff1[] = {1, 2, 3, 4, 5};
-static uint8_t test_buff2[] = {6, 7, 8, 9, 10};
+static uint8_t test_buff1[] = {1, 2, 3, 4, 5, 6, 7, 8};
+static uint8_t test_buff2[] = {6, 7, 8, 9, 10, 9, 8, 7};
 
 uint8_t pub_key[] = {
     0x00, 0x00, 0x00, 0x0d, 0xdd, 0xdd, 0xcc, 0xcc, 0x00, 0x00, 0x00, 0x00,
@@ -149,8 +149,8 @@ static EC_KEY *Private_key(void);
 
 /*** Function Definitions ***/
 
-static uint8_t key1[] = "test-key";
-static uint8_t key2[] = "key-test";
+static uint8_t key1[] = "testkey";
+static uint8_t key2[] = "keytest";
 
 static uint8_t *get_randomiv(void)
 {
