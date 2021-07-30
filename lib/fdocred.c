@@ -142,9 +142,14 @@ void fdo_dev_cred_free(fdo_dev_cred_t *dev_cred)
  */
 fdo_hash_t *fdo_pub_key_hash(fdo_public_key_t *pub_key)
 {
+	if (!pub_key) {
+		return NULL;
+	}
 	// Calculate the hash of the mfg_pub_key
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
-	if (!fdow_init(fdow) || !fdo_block_alloc(&fdow->b) || !fdow_encoder_init(fdow)) {
+	if (!fdow_init(fdow) ||
+		!fdo_block_alloc_with_size(&fdow->b, pub_key->key1->byte_sz + BUFF_SIZE_128_BYTES) ||
+		!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "Failed to initialize FDOW\n");
 		return NULL;
 	}
@@ -400,7 +405,8 @@ bool fdo_ov_hdr_hmac(fdo_ownership_voucher_t *ov, fdo_hash_t **hmac) {
 
 	// fdow_t to generate CBOR encode OVHeader. Used to generate HMAC.
 	fdow_t *fdow_hmac = fdo_alloc(sizeof(fdow_t));
-	if (!fdow_init(fdow_hmac) || !fdo_block_alloc(&fdow_hmac->b) ||
+	if (!fdow_init(fdow_hmac) ||
+		!fdo_block_alloc_with_size(&fdow_hmac->b, BUFF_SIZE_8K_BYTES) ||
 		!fdow_encoder_init(fdow_hmac)) {
 		LOG(LOG_ERROR, "Failed to initialize FDOW\n");
 		goto exit;
@@ -671,7 +677,8 @@ fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 
 	// fdow_t to generate CBOR encoded OVHeader. Used to generate HMAC.
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
-	if (!fdow_init(fdow) || !fdo_block_alloc(&fdow->b) ||
+	if (!fdow_init(fdow) ||
+		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_8K_BYTES) ||
 		!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "Failed to initialize FDOW\n");
 		goto exit;

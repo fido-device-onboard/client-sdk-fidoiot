@@ -2492,8 +2492,8 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 		goto err;
 	}
 
-	// create temporary FDOW, use it to create Protected header map and then clear it.
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	// create temporary FDOW, use it to create AAD and then clear it.
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_256_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
 			"Encrypted Message write: FDOW Initialization/Allocation failed!\n");
@@ -2568,7 +2568,7 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_256_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
 			"Encrypted Message write: FDOW Initialization/Allocation failed!\n");
@@ -2834,7 +2834,7 @@ bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *ea
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_128_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
 			"Entity Attestation Token Protected header: FDOW Initialization/Allocation failed!\n");
@@ -3083,12 +3083,21 @@ bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
 	fdo_byte_array_t *empty_byte_array = NULL;
 	fdow_t temp_fdow = {0};
 	size_t enc_length = 0;
+	size_t sig_struct_sz = 0;
 
 	if (!eat_ph || !eat_payload || !sig_structure) {
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	// size of the Sigstruct CBOR encoded buffer
+	// provide buffer of 128 bytes for protected header + context + additional CBOR encoding
+	if (external_aad) {
+		sig_struct_sz = eat_payload->byte_sz + external_aad->byte_sz + BUFF_SIZE_128_BYTES;
+	} else {
+		sig_struct_sz = eat_payload->byte_sz + BUFF_SIZE_128_BYTES;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, sig_struct_sz) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "EAT Sig_structure: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -3482,7 +3491,7 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_128_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -3649,12 +3658,21 @@ bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
 	fdo_byte_array_t *empty_byte_array = NULL;
 	fdow_t temp_fdow = {0};
 	size_t enc_length = 0;
+	size_t sig_struct_sz = 0;
 
 	if (!cose_ph || !cose_payload || !sig_structure) {
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	// size of the Sigstruct CBOR encoded buffer
+	// provide buffer of 128 bytes for protected header + context + additional CBOR encoding
+	if (external_aad) {
+		sig_struct_sz = cose_payload->byte_sz + external_aad->byte_sz + BUFF_SIZE_128_BYTES;
+	} else {
+		sig_struct_sz = cose_payload->byte_sz + BUFF_SIZE_128_BYTES;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, sig_struct_sz) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Sig_structure: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -4026,7 +4044,7 @@ bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_128_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
 		goto end;
