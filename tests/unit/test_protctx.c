@@ -212,16 +212,16 @@ TEST_CASE("fdo_prot_ctx_run", "[protctx][fdo]")
 	char host_dns[] = "localhost";
 	uint16_t host_port = 5000;
 
-	fdo_prot_ctx_t *prot_ctx = malloc(sizeof(fdo_prot_ctx_t));
+	fdo_prot_ctx_t *prot_ctx = fdo_alloc(sizeof(fdo_prot_ctx_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 
 	ret = memset_s(prot_ctx, sizeof(fdo_prot_ctx_t), 0);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	prot_ctx->host_ip = malloc(sizeof(fdo_ip_address_t));
+	prot_ctx->host_ip = fdo_alloc(sizeof(fdo_ip_address_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx->host_ip);
 
-	prot_ctx->protdata = malloc(sizeof(fdo_prot_t));
+	prot_ctx->protdata = fdo_alloc(sizeof(fdo_prot_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx->protdata);
 
 	prot_ctx->sock_hdl = FDO_CON_INVALID_HANDLE;
