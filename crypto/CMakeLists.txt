@@ -34,7 +34,6 @@ if (${TLS} STREQUAL openssl)
     openssl/openssl_AESRoutines.c
     openssl/openssl_cryptoSupport.c
     openssl/openssl_SSLRoutines.c
-    openssl/openssl_base64.c
     openssl/BN_support.c
     openssl/openssl_key_exchange_ecdh.c)
 
@@ -78,7 +77,6 @@ if (${TLS} STREQUAL mbedtls)
     mbedtls/mbedtls_AESRoutines.c
     mbedtls/mbedtls_cryptoSupport.c
     mbedtls/mbedtls_SSLRoutines.c
-    mbedtls/mbedtls_base64.c
     mbedtls/mbedtls_RSAEncryptRoutines.c
     mbedtls/mbedtls_random.c
     mbedtls/mbedtls_key_exchange_ecdh.c)

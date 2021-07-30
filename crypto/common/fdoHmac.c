@@ -17,46 +17,6 @@
 #endif
 
 /**
- * This function computes the HMAC of encrypted TO2 messages using SVK as its
- * key. fdo_to2Crypto_context specifies the hmac_type to be used to generate
- * the HMAC of the data contained in to2Msg of size to2Msg_length and places
- * the output in hmac, the size of which is specified by hmac_length.
- * The hmac buffer must be of size FDO_MSG_HMAC_LENGTH or greater.
- * @param to2Msg In Pointer to the message
- * @param to2Msg_len In Size of the message
- * @param hmac Out Pointer to the buffer where the hmac is stored after the HMAC
- * operation is completed. This buffer must be allocated before calling this API
- * @param hmac_len In Size of the buffer pointed to by hmac
- * @return 0 on success and -1 on failure.
- */
-int32_t fdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
-		     size_t hmac_len)
-{
-	fdo_aes_keyset_t *keyset = get_keyset();
-	uint8_t *svk;
-	uint8_t svk_len;
-
-	if (NULL == keyset || (NULL == keyset->svk) || (NULL == to2Msg)) {
-		return -1;
-	}
-	svk = keyset->svk->bytes;
-	svk_len = keyset->svk->byte_sz;
-
-	if (!svk || !svk_len || !to2Msg_len || !hmac_len) {
-		goto error;
-	}
-
-	if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_USED, to2Msg, to2Msg_len,
-				 hmac, hmac_len, svk, svk_len)) {
-		LOG(LOG_ERROR, "Failed to perform HMAC\n");
-		goto error;
-	}
-	return 0;
-error:
-	return -1;
-}
-
-/**
  * This function sets the Ownership Voucher hmac key in the structure.
  * Which will later be used by the OVHMAC function to get the hmac.
  * @param OVkey In Pointer to the Ownership Voucher hmac.

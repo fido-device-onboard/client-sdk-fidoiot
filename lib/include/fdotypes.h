@@ -256,26 +256,6 @@ bool fdo_cose_encrypt0_write_unprotected_header(fdow_t *fdow,
 bool fdo_cose_encrypt0_write(fdow_t *fdow, fdo_cose_encrypt0_t *cose_encrypt0);
 
 typedef struct {
-	int mac_type;
-} fdo_cose_mac0_protected_header_t;
-
-typedef struct {
-	fdo_cose_mac0_protected_header_t *protected_header;
-	fdo_byte_array_t *payload;
-	fdo_byte_array_t *hmac;
-} fdo_cose_mac0_t;
-
-bool fdo_cose_mac0_free(fdo_cose_mac0_t *cose);
-bool fdo_cose_mac0_read_protected_header(fdor_t *fdor,
-	fdo_cose_mac0_protected_header_t *protected_header);
-bool fdo_cose_mac0_read_unprotected_header(fdor_t *fdor);
-bool fdo_cose_mac0_read(fdor_t *fdor, fdo_cose_mac0_t *cose);
-bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
-	fdo_cose_mac0_protected_header_t *protected_header);
-bool fdo_cose_mac0_write_unprotected_header(fdow_t *fdow);
-bool fdo_cose_mac0_write(fdow_t *fdow, fdo_cose_mac0_t *cose);
-
-typedef struct {
 	int ph_sig_alg;
 } fdo_eat_protected_header_t;
 
