@@ -5,7 +5,6 @@
 
 
 #include "fdo_sys.h"
-#include "base64.h"
 #include "safe_lib.h"
 #include <stdio.h>
 #include <stdlib.h>

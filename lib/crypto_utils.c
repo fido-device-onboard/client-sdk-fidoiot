@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "snprintf_s.h"
-#include "base64.h"
 #include "fdoCrypto.h"
 
 /**

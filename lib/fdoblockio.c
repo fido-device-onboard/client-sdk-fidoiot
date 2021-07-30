@@ -10,7 +10,6 @@
  */
 
 #include "fdoblockio.h"
-#include "base64.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
