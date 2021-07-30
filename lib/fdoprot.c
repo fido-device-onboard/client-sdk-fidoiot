@@ -191,12 +191,17 @@ bool fdo_process_states(fdo_prot_t *ps)
 		}
 
 		if (ps->state != FDO_STATE_DONE && state_fn && state_fn(ps)) {
-			char err_msg[64];
+			char err_msg[64] = {0};
+			size_t err_msg_sz = 0;
 
 			(void)snprintf_s_i(err_msg, sizeof(err_msg),
 					   "msg%d: message parse error",
 					   ps->state);
-			ps->state = FDO_STATE_ERROR;
+			err_msg_sz = strnlen_s(err_msg, sizeof(err_msg));
+			if (!err_msg_sz || err_msg_sz == sizeof(err_msg)) {
+				LOG(LOG_ERROR, "Failed to get error message length\n");
+				break;
+			}
 			// clear the block contents to write error message
 			fdo_block_reset(&ps->fdow.b);
 			if (!fdow_encoder_init(&ps->fdow)) {
@@ -204,7 +209,8 @@ bool fdo_process_states(fdo_prot_t *ps)
 				break;
 			}
 			fdo_send_error_message(&ps->fdow, MESSAGE_BODY_ERROR,
-					       ps->state, err_msg, sizeof(err_msg));
+					       ps->state, err_msg, err_msg_sz);
+			ps->state = FDO_STATE_ERROR;
 			ps_free(ps);
 			break;
 		}
@@ -326,13 +332,10 @@ bool fdo_check_to2_round_trips(fdo_prot_t *ps)
 {
 	if (ps->round_trip_count > MAX_TO2_ROUND_TRIPS) {
 		LOG(LOG_ERROR, "Exceeded maximum number of TO2 rounds\n");
-		char err_msg[64];
-		(void)snprintf_s_i(err_msg, sizeof(err_msg),
-				   "Exceeded max number of rounds",
-				   ps->state);
+		char err_msg[] = "Exceeded max number of rounds";
 		fdo_send_error_message(&ps->fdow, INTERNAL_SERVER_ERROR,
 				       ps->state,
-				       "Exceeded max number of rounds", sizeof(err_msg));
+				       err_msg, sizeof(err_msg));
 		ps->state = FDO_STATE_ERROR;
 		return false;
 	}
