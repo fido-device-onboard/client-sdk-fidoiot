@@ -11,7 +11,6 @@
 #include <errno.h>
 #include "util.h"
 #include "unity.h"
-#include "base64.h"
 #include "load_credentials.h"
 #include "safe_lib.h"
 #include "fdoCryptoHal.h"

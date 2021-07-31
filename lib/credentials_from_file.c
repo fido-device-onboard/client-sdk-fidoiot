@@ -42,7 +42,9 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 #ifndef NO_PERSISTENT_STORAGE
 
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
-	if (!fdow || !fdow_init(fdow) || !fdo_block_alloc(&fdow->b) || !fdow_encoder_init(fdow)) {
+	if (!fdow || !fdow_init(fdow) ||
+		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_4K_BYTES) ||
+		!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
@@ -146,7 +148,9 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 #ifndef NO_PERSISTENT_STORAGE
 
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
-	if (!fdow || !fdow_init(fdow) || !fdo_block_alloc(&fdow->b) || !fdow_encoder_init(fdow)) {
+	if (!fdow || !fdow_init(fdow) ||
+		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_128_BYTES) ||
+		!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
