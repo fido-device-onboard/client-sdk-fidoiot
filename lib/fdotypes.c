@@ -4614,8 +4614,14 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 			// find the index of separator ':' in ServiceInfoKey format of 'moduleName:messageName'
 			// copy moduleName:messageName and moduleName:messageName
 			size_t index = 0;
+			if (serviceinfokey[index] == ':') {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Invalid ServiceInfoKey\n");
+				*cb_return_val = MESSAGE_BODY_ERROR;
+				goto exit;
+			}
 			while (':' != serviceinfokey[index]) {
-				if (index >= serviceinfokey_length) {
+				if (index >= sizeof(module_name) - 1) {
+					LOG(LOG_ERROR, "ServiceInfoKV read: Invalid ServiceInfoKey\n");
 					*cb_return_val = MESSAGE_BODY_ERROR;
 					goto exit;
 				}
@@ -4624,10 +4630,15 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 				++index;
 			}
 			++index;
-			size_t module_name_index = 0;
+			size_t module_msg_index = 0;
+			if (serviceinfokey_length - index >= sizeof(module_message) - 1) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Invalid ServiceInfoKey\n");
+				*cb_return_val = MESSAGE_BODY_ERROR;
+				goto exit;
+			}
 			while (index < serviceinfokey_length) {
-				module_message[module_name_index] = serviceinfokey[index];
-				++module_name_index;
+				module_message[module_msg_index] = serviceinfokey[index];
+				++module_msg_index;
 				++index;
 			}
 

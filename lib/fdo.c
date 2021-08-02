@@ -832,7 +832,7 @@ bool parse_manufacturer_address(char *buffer, bool *tls,
 	// if a valid IP is found, return the IP structure conatining IP, that must be freed by caller
 	// if a valid IP is not found, free the IP structure immediately and return NULL IP structure
 	*mfg_ip = fdo_ipaddress_alloc();
-	if (!mfg_ip) {
+	if (!*mfg_ip) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
 		ERROR();
 		goto end;
