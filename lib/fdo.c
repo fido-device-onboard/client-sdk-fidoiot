@@ -9,7 +9,6 @@
  * point to FDO library.
  */
 
-#include "base64.h"
 #include "cli.h"
 #include "fdokeyexchange.h"
 #include "network_al.h"
@@ -207,17 +206,9 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_public_key_free(ps->tls_key);
 		ps->tls_key = NULL;
 	}
-	if (ps->local_key_pair != NULL) {
-		fdo_public_key_free(ps->local_key_pair);
-		ps->local_key_pair = NULL;
-	}
 	if (ps->ovoucher != NULL) {
 		fdo_ov_free(ps->ovoucher);
 		ps->ovoucher = NULL;
-	}
-	if (ps->rv != NULL) {
-		fdo_rendezvous_free(ps->rv);
-		ps->rv = NULL;
 	}
 	if (ps->osc != NULL) {
 		if (ps->osc->guid) {
@@ -238,14 +229,6 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	if (ps->owner_public_key) {
 		fdo_public_key_free(ps->owner_public_key);
 		ps->owner_public_key = NULL;
-	}
-	if (ps->new_pk != NULL) {
-		fdo_public_key_free(ps->new_pk);
-		ps->new_pk = NULL;
-	}
-	if (ps->dns1 != NULL) {
-		fdo_free(ps->dns1);
-		ps->dns1 = NULL;
 	}
 	if (ps->nonce_to2proveov != NULL) {
 		fdo_byte_array_free(ps->nonce_to2proveov);
@@ -466,10 +449,6 @@ static fdo_sdk_status app_initialize(void)
 		    "FDO in Idle State. Device Onboarding already complete\n");
 		g_fdo_data->state_fn = &_STATE_Shutdown;
 		return FDO_SUCCESS;
-	}
-
-	if (fdo_null_ipaddress(&g_fdo_data->prot.i1) == false) {
-		return FDO_ERROR;
 	}
 
 	return FDO_SUCCESS;
