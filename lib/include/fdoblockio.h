@@ -105,6 +105,7 @@ bool fdor_end_array(fdor_t *fdor);
 bool fdor_end_map(fdor_t *fdor);
 bool fdor_map_has_more(fdor_t *fdor);
 bool fdor_next(fdor_t *fdor);
+bool fdor_is_valid_cbor(fdor_t *fdor);
 void fdor_flush(fdor_t *fdor);
 
 #endif /*__FDOBLOCKIO_H__ */

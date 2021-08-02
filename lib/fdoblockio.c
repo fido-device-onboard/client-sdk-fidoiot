@@ -888,6 +888,24 @@ bool fdor_next(fdor_t *fdor) {
 }
 
 /**
+ * Validate if the input data stream is a valid CBOR stream.
+ *
+ * @param fdor_t - struct fdor_t
+ * @return true if the stream is CBOR-encoded correctly, false otherwise
+ */
+bool fdor_is_valid_cbor(fdor_t *fdor) {
+	if (!fdor || !fdor->current) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
+	if (cbor_value_validate(&fdor->current->cbor_value, CborValidateBasic) != CborNoError) {
+		LOG(LOG_ERROR, "CBOR decoder: Incorrectly or non-CBOR encoded stream encountered.\n");
+		return false;
+	}
+	return true;
+}
+
+/**
  * Clear and deallocate the internal buffer (fdor_t.fdo_block_t.block) alongwith the current node.
  * 
  * @param fdor_t - struct fdor_t
