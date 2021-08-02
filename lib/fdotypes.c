@@ -4836,12 +4836,12 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 					}
 					// now activate the current module
 					module_list->module.active = active;
-					LOG(LOG_DEBUG, "ServiceInfo: Activated module %s\n",
+					LOG(LOG_INFO, "ServiceInfo: Activated module %s\n",
 						module_list->module.module_name);
 				} else {
 					// now de-activate the current module
 					module_list->module.active = active;
-					LOG(LOG_DEBUG, "ServiceInfo: De-activated module %s\n",
+					LOG(LOG_INFO, "ServiceInfo: De-activated module %s\n",
 						module_list->module.module_name);
 				}
 
