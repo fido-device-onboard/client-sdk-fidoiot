@@ -21,7 +21,11 @@ $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <{http,https}://{DNS,IP}:port> > data/manufacturer_addr.bin
 ```
 
-The port information is optional. If one is not specified in the network address, `8039` is chosen as the default port.
+The following rules apply while setting the value:
+ a) Atmost, five (5) characters are read for transport protocol and all characters thereafter, until `://`, are completely ignored. Supported values are `http` and `https`. Any other value will result in an error.
+ b) Atmost, five (5) characters are read for port and all characters thereafter, are completely ignored. This information is optional and if one is not specified, or if an invalid value containing five or less characters are specified, `8039` is chosen as the default port.
+ c) The URL separators `://` and `:` are mandatory.
+
 ```shell
 # To set the manufacturer address without the port information
 $ cd <path-to-client-sdk-fidoiot>
@@ -70,7 +74,7 @@ The following are steps to generate the private key file for ECDSA-based devices
 <a name="serviceinfo_mtu"></a>
 ## 5.  Setting the Maximum ServiceInfo Size
 
-The maximum permissible ServiceInfo size (both Device and Owner) that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The value must lie between 1300 and 8192 (both inclusive). If the set value is less than 1300, the value would default to 1300. Similarly, if the value is greater than 8192, the value would default to 8192.
+The maximum permissible ServiceInfo size (both Device and Owner) that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The value must lie between 256 and 8192 (both inclusive). If the set value is less than 256, the value would default to 256. Similarly, if the value is greater than 8192, the value would default to 8192.
 
 This value is sent as TO2.DeviceServiceInfoReady.maxOwnerServiceInfoSz and is compared with the TO2.OwnerServiceInfoReady.maxDeviceServiceInfoSz.
 
@@ -85,16 +89,14 @@ $ echo -n <integer size> > data/max_serviceinfo_sz.bin
 
 The FDO credentials REUSE feature allows FDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
 
-Specifically, if TO2.SetupDevice.TO2SetupDevicePayload.RendezvousInfo, TO2.SetupDevice.TO2SetupDevicePayload.Guid, and TO2.SetupDevice.TO2SetupDevicePayload.Owner2Key match the corresponding values held by the device, the device will not generate a Hash-based Message Authentication Code (HMAC), which then allows the original ownership voucher (OV) to be used for another (and subsequent) onboarding(s) by reusing the same device credentials multiple times.
+Specifically, if `TO2.SetupDevice.TO2SetupDevicePayload.RendezvousInfo`, `TO2.SetupDevice.TO2SetupDevicePayload.Guid`, and `TO2.SetupDevice.TO2SetupDevicePayload.Owner2Key` match the corresponding values held by the device, the device will not generate a Hash-based Message Authentication Code (HMAC), which then allows the original ownership voucher (OV) to be used for another (and subsequent) onboarding(s) by reusing the same device credentials multiple times.
 
-However, device client binary must be generated using -DREUSE=true flag:
+However, device client binary must be generated using -DREUSE=true flag. This flag simply enables/disables the support for REUSE feature for FDO Client SDK and it is upto the Owner to decide whether device is onboarded with the same credentials. For instance, if the REUSE flag is set to true at the device and the Owner decides to NOT perform REUSE, then the device will be continue with the new set of credentials (onboarding then depends on RESALE flag). Conversely, if REUSE flag is set to false, and the above mentioned conditions for credential REUSE are met by the Owner, an error message will be thrown. This can be useful for a scenario where the device credentials should never be reused, once saved.
 
 ```shell
 $ cmake -DREUSE=true
 ```
 Activating the device credentials will in turn, activate the FDO device and configure the FDO device to run multiple onboarding(s). This can be useful in several test and development environments, where multiple onboardings are common.
-
-If REUSE flag is set to false, and the above mentioned conditions for credential REUSE are met, an error message will be thrown. This can be useful for a scenario where the device credentials should never be reused, once saved.
 
 <a name="http_proxy"></a>
 ## 7. HTTP-proxy Configuration (Optional)
