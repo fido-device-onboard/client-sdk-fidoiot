@@ -52,7 +52,7 @@ static bool is_valid_filename(const char *fname)
 	for (i = 0; i < (sizeof(whitelisted) / sizeof(whitelisted[0])); i++) {
 		ext_len = strnlen_s(substring, EXT_MAX_LEN);
 		if (!ext_len || ext_len == EXT_MAX_LEN) {
-			printf("Couldn't find file extension");
+			printf("Couldn't find file extension\n");
 			ret = false;
 			break;
 		}
@@ -123,7 +123,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 
 	if (!data || !data_len) {
 #ifdef DEBUG_LOGS
-		printf("NULL params in Process_data");
+		printf("NULL params in Process_data\n");
 #endif
 		return false;
 	}
@@ -131,6 +131,12 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 	// For writing to a file
 	if (type == FDO_SYS_MOD_MSG_WRITE) {
 
+		if (!file_name) {
+#ifdef DEBUG_LOGS
+			printf("fdo_sys write:No filename present\n");
+#endif
+			return false;
+		}
 		fp = fopen(file_name, "a");
 		if (!fp) {
 #ifdef DEBUG_LOGS
@@ -145,7 +151,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 		if (fwrite(data, sizeof(char), data_len, fp) !=
 		    (size_t)data_len) {
 #ifdef DEBUG_LOGS
-			printf("fdo_sys write: Failed to write");
+			printf("fdo_sys write: Failed to write\n");
 #endif
 			goto end;
 		}
