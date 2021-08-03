@@ -147,6 +147,8 @@ make -j$(nproc)
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section [FDO Build configurations](build_conf.md)
 
+> ***NOTE***: Currently, only Elliptic-Curve (EC) cryptography keys based on `NIST P-256` or `secp256r1` are supported for TPM* enabled FDO Client SDK due to limitations on testing with the available hardware that does not support keys based on `NIST P-384`. Consequently, this configuration only supports usage of 128-bit key for AES operations (GCM/CCM) and generates 256-bit HMAC.
+
 <a name="run_linux_fdo"></a>
 
 ## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
