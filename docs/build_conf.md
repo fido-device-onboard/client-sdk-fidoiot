@@ -16,7 +16,7 @@ There following are some of the options to choose when building the device:
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
 
-> ***NOTE***: The Owner attestation supported is conversely based on the specified `DA`. Additionally, by default `COSEX509 (COSE EC2)` Public Key encoding is supported.
+> ***NOTE***: The Owner attestation supported is conversely based on the specified `DA`. Additionally, only `COSEX509 (COSE EC2)` Public Key encoding is supported.
 
 ## Custom Build
 The default configuration can be overridden by using more options in `cmake`.<br>
@@ -66,8 +66,8 @@ PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
 REUSE=false           # Reuse feature disabled
-RESALE=false          # Resale feature disabled (default)
-RESALE=true           # Resale feature enabled
+RESALE=false          # Resale feature disabled
+RESALE=true           # Resale feature enabled (default)
 
 List of options to clean targets:
 pristine              # cleanup by remove generated files
