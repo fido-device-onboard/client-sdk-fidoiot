@@ -18,7 +18,7 @@ include(cmake/blob_path.cmake)
 
 
 if (NOT(DEFINED ENV{SAFESTRING_ROOT}))
-  message(FATAL_ERROR "SAFESTING_ROOT not set")
+  message(FATAL_ERROR "SAFESTRING_ROOT not set")
 endif()
 
 if (NOT(DEFINED ENV{TINYCBOR_ROOT}))
