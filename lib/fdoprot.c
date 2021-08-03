@@ -191,6 +191,7 @@ bool fdo_process_states(fdo_prot_t *ps)
 		}
 
 		if (ps->state != FDO_STATE_DONE && state_fn && state_fn(ps)) {
+			LOG(LOG_ERROR, "Error occurred while processing Type %d\n", ps->state);
 			char err_msg[64];
 
 			(void)snprintf_s_i(err_msg, sizeof(err_msg),

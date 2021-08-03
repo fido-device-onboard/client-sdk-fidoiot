@@ -139,10 +139,8 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			return false;
 		}
 
-#ifdef DEBUG_LOGS
-	printf("fdo_sys write : %"PRIu32 " bytes being written to the file %s\n",
-		data_len, file_name);
-#endif
+		printf("fdo_sys write : %"PRIu32 " bytes being written to the file %s\n",
+			data_len, file_name);
 
 		if (fwrite(data, sizeof(char), data_len, fp) !=
 		    (size_t)data_len) {
@@ -200,14 +198,10 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			exec_token_index++;
 		}
 
-#ifdef DEBUG_LOGS
 		printf("fdo_sys exec: Received command completely. Executing...\n");
-#endif
 		error_code = system((char *) data);
 		if (error_code != 0) {
-#ifdef DEBUG_LOGS
 			printf("fdo_sys exec : Failed to execute command.\n");
-#endif
 			goto end;
 		}
 

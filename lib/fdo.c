@@ -410,6 +410,11 @@ static fdo_sdk_status app_initialize(void)
 		fdo_free(buffer);
 	}
 
+	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %d bytes\n",
+		g_fdo_data->prot.maxDeviceServiceInfoSz);
+	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %d bytes\n",
+		g_fdo_data->prot.maxOwnerServiceInfoSz);
+
 	/* 
 	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's 
 	* protocol execution. Reuse the allocated memory by emptying the contents.
@@ -451,9 +456,20 @@ static fdo_sdk_status app_initialize(void)
 		return FDO_SUCCESS;
 	}
 
+	if (reuse_supported) {
+		LOG(LOG_INFO, "Reuse support is enabled\n");
+	} else {
+		LOG(LOG_INFO, "Reuse support is disabled\n");
+	}
+
+	if (resale_supported) {
+		LOG(LOG_INFO, "Resale support is enabled\n");
+	} else {
+		LOG(LOG_INFO, "Resale support is disabled\n");
+	}
+
 	return FDO_SUCCESS;
 }
-
 /**
  * Get FDO device state
  * fdo_sdk_init should be called before calling this function
@@ -1064,9 +1080,11 @@ static bool _STATE_DI(void)
 			goto end;
 		}
 	}
-
 	LOG(LOG_DEBUG, "\n------------------------------------ DI Successful "
 		       "--------------------------------------\n");
+	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+	LOG(LOG_INFO, "@FIDO Device Initialization Complete@\n");
+	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 
 #ifdef NO_PERSISTENT_STORAGE
 	g_fdo_data->state_fn = &_STATE_TO1;
