@@ -9,7 +9,6 @@
  * point to FDO library.
  */
 
-#include "base64.h"
 #include "cli.h"
 #include "fdokeyexchange.h"
 #include "network_al.h"
@@ -207,17 +206,9 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_public_key_free(ps->tls_key);
 		ps->tls_key = NULL;
 	}
-	if (ps->local_key_pair != NULL) {
-		fdo_public_key_free(ps->local_key_pair);
-		ps->local_key_pair = NULL;
-	}
 	if (ps->ovoucher != NULL) {
 		fdo_ov_free(ps->ovoucher);
 		ps->ovoucher = NULL;
-	}
-	if (ps->rv != NULL) {
-		fdo_rendezvous_free(ps->rv);
-		ps->rv = NULL;
 	}
 	if (ps->osc != NULL) {
 		if (ps->osc->guid) {
@@ -238,14 +229,6 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	if (ps->owner_public_key) {
 		fdo_public_key_free(ps->owner_public_key);
 		ps->owner_public_key = NULL;
-	}
-	if (ps->new_pk != NULL) {
-		fdo_public_key_free(ps->new_pk);
-		ps->new_pk = NULL;
-	}
-	if (ps->dns1 != NULL) {
-		fdo_free(ps->dns1);
-		ps->dns1 = NULL;
 	}
 	if (ps->nonce_to2proveov != NULL) {
 		fdo_byte_array_free(ps->nonce_to2proveov);
@@ -427,6 +410,11 @@ static fdo_sdk_status app_initialize(void)
 		fdo_free(buffer);
 	}
 
+	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %d bytes\n",
+		g_fdo_data->prot.maxDeviceServiceInfoSz);
+	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %d bytes\n",
+		g_fdo_data->prot.maxOwnerServiceInfoSz);
+
 	/* 
 	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's 
 	* protocol execution. Reuse the allocated memory by emptying the contents.
@@ -468,13 +456,20 @@ static fdo_sdk_status app_initialize(void)
 		return FDO_SUCCESS;
 	}
 
-	if (fdo_null_ipaddress(&g_fdo_data->prot.i1) == false) {
-		return FDO_ERROR;
+	if (reuse_supported) {
+		LOG(LOG_INFO, "Reuse support is enabled\n");
+	} else {
+		LOG(LOG_INFO, "Reuse support is disabled\n");
+	}
+
+	if (resale_supported) {
+		LOG(LOG_INFO, "Resale support is enabled\n");
+	} else {
+		LOG(LOG_INFO, "Resale support is disabled\n");
 	}
 
 	return FDO_SUCCESS;
 }
-
 /**
  * Get FDO device state
  * fdo_sdk_init should be called before calling this function
@@ -853,7 +848,7 @@ bool parse_manufacturer_address(char *buffer, bool *tls,
 	// if a valid IP is found, return the IP structure conatining IP, that must be freed by caller
 	// if a valid IP is not found, free the IP structure immediately and return NULL IP structure
 	*mfg_ip = fdo_ipaddress_alloc();
-	if (!mfg_ip) {
+	if (!*mfg_ip) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
 		ERROR();
 		goto end;
@@ -1085,9 +1080,11 @@ static bool _STATE_DI(void)
 			goto end;
 		}
 	}
-
 	LOG(LOG_DEBUG, "\n------------------------------------ DI Successful "
 		       "--------------------------------------\n");
+	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+	LOG(LOG_INFO, "@FIDO Device Initialization Complete@\n");
+	LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 
 #ifdef NO_PERSISTENT_STORAGE
 	g_fdo_data->state_fn = &_STATE_TO1;

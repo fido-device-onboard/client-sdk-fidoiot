@@ -10,7 +10,6 @@
 
 #include "crypto_utils.h"
 #include "fdoprot.h"
-#include "base64.h"
 #include "fdotypes.h"
 #include "network_al.h"
 #include "fdoCrypto.h"
@@ -2228,7 +2227,6 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 {
 	fdo_encrypted_packet_t *pkt = NULL;
 	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
-	fdo_cose_mac0_t *cose_mac0 = NULL;
 	int expected_aes_alg_type;
 
 	if (!fdor){
@@ -2304,10 +2302,6 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 	return pkt;
 error:
 	fdo_encrypted_packet_free(pkt);
-	if (cose_mac0) {
-		fdo_cose_mac0_free(cose_mac0);
-		cose_mac0 = NULL;
-	}
 	if (cose_encrypt0) {
 		fdo_cose_encrypt0_free(cose_encrypt0);
 		cose_encrypt0 = NULL;
@@ -2498,8 +2492,8 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 		goto err;
 	}
 
-	// create temporary FDOW, use it to create Protected header map and then clear it.
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	// create temporary FDOW, use it to create AAD and then clear it.
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_256_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
 			"Encrypted Message write: FDOW Initialization/Allocation failed!\n");
@@ -2574,7 +2568,7 @@ bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_256_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
 			"Encrypted Message write: FDOW Initialization/Allocation failed!\n");
@@ -2840,7 +2834,7 @@ bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *ea
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_128_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR,
 			"Entity Attestation Token Protected header: FDOW Initialization/Allocation failed!\n");
@@ -3089,12 +3083,21 @@ bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
 	fdo_byte_array_t *empty_byte_array = NULL;
 	fdow_t temp_fdow = {0};
 	size_t enc_length = 0;
+	size_t sig_struct_sz = 0;
 
 	if (!eat_ph || !eat_payload || !sig_structure) {
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	// size of the Sigstruct CBOR encoded buffer
+	// provide buffer of 128 bytes for protected header + context + additional CBOR encoding
+	if (external_aad) {
+		sig_struct_sz = eat_payload->byte_sz + external_aad->byte_sz + BUFF_SIZE_128_BYTES;
+	} else {
+		sig_struct_sz = eat_payload->byte_sz + BUFF_SIZE_128_BYTES;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, sig_struct_sz) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "EAT Sig_structure: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -3488,7 +3491,7 @@ bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_128_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -3655,12 +3658,21 @@ bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
 	fdo_byte_array_t *empty_byte_array = NULL;
 	fdow_t temp_fdow = {0};
 	size_t enc_length = 0;
+	size_t sig_struct_sz = 0;
 
 	if (!cose_ph || !cose_payload || !sig_structure) {
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	// size of the Sigstruct CBOR encoded buffer
+	// provide buffer of 128 bytes for protected header + context + additional CBOR encoding
+	if (external_aad) {
+		sig_struct_sz = cose_payload->byte_sz + external_aad->byte_sz + BUFF_SIZE_128_BYTES;
+	} else {
+		sig_struct_sz = cose_payload->byte_sz + BUFF_SIZE_128_BYTES;
+	}
+
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, sig_struct_sz) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Sig_structure: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -3734,367 +3746,6 @@ end:
 		fdow_flush(&temp_fdow);
 	}
 	return ret;
-}
-
-/**
- * Free the given COSE_Mac0 object for which memory has been allocated previously.
- */
-bool fdo_cose_mac0_free(fdo_cose_mac0_t *cose_mac0) {
-	if (cose_mac0->protected_header) {
-		cose_mac0->protected_header->mac_type = 0;
-		fdo_free(cose_mac0->protected_header);
-	}
-	if (cose_mac0->payload) {
-		fdo_byte_array_free(cose_mac0->payload);
-	}
-	if (cose_mac0->hmac) {
-		fdo_byte_array_free(cose_mac0->hmac);
-	}
-	fdo_free(cose_mac0);
-	return true;
-}
-
-/**
- * Read Cose_Mac0.protected (CBOR map) into the given fdo_cose_mac0_protected_header_t object.
- * This is wrapped in a bstr.
- * {
- * mac_type:<key-alg>
- * }
- * Return true, if read was a success. False otherwise.
- */
-bool fdo_cose_mac0_read_protected_header(fdor_t *fdor,
-	fdo_cose_mac0_protected_header_t *protected_header) {
-
-	fdor_t temp_fdor;
-	if (memset_s(&temp_fdor, sizeof(fdor_t), 0) != 0) {
-		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Failed to intialize temporary FDOR\n");
-		return false;
-	}
-
-	size_t var_length = 0;
-	if (!fdor_string_length(fdor, &var_length) ||
-		var_length == 0) {
-		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Failed to read payload length\n");
-		return false;	
-	}
-	fdo_byte_array_t *ph_as_bstr = fdo_byte_array_alloc(var_length);
-	if (!ph_as_bstr) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to alloc for COSE_Mac0 Protected Header as bstr\n");
-		return false;
-	}
-	if (!fdor_byte_string(fdor, ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to read COSE_Mac0 Protected Header as bstr\n");
-		goto end;
-	}
-
-	// create a temporary FDOR to read (unwrap) the header contents as map
-	if (!fdor_init(&temp_fdor) ||
-		!fdo_block_alloc_with_size(&temp_fdor.b, ph_as_bstr->byte_sz)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to setup temporary FDOR\n");
-		goto end;
-	}
-
-	if (0 != memcpy_s(temp_fdor.b.block, temp_fdor.b.block_size,
-		ph_as_bstr->bytes, ph_as_bstr->byte_sz)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to copy temporary unwrapped Header content\n");
-		goto end;
-	}
-
-	if (!fdor_parser_init(&temp_fdor)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to init temporary FDOR parser\n");
-		goto end;
-	}
-
-	if (!fdor_start_map(&temp_fdor)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to read start map\n");
-		goto end;
-	}
-
-	int mac_type_key = 1;
-	if (!fdor_signed_int(&temp_fdor, &mac_type_key) || mac_type_key != 1) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to read ETMMacType Key\n");
-		goto end;
-	}
-
-	if (!fdor_signed_int(&temp_fdor, &protected_header->mac_type)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to read ETMMacType Value\n");
-		goto end;
-	}
-
-	if (!fdor_end_map(&temp_fdor)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to read end map\n");
-		goto end;
-	}
-end:
-	fdor_flush(&temp_fdor);
-	fdo_free(temp_fdor.b.block);
-	if (ph_as_bstr) {
-		fdo_byte_array_free(ph_as_bstr);
-	}
-	return true;
-}
-
-/**
- * Read Cose_Mac0.unprotected that is an empty map.
- * Return true, if read was a success. False otherwise.
- */
-bool fdo_cose_mac0_read_unprotected_header(fdor_t *fdor) {
-
-	if (!fdor_start_map(fdor)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Unprotected header: Failed to read start map\n");
-		return false;
-	}
-
-	if (!fdor_end_map(fdor)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Unprotected header: Failed to read end map\n");
-		return false;
-	}
-	return true;
-}
-
-/**
- * Read the given COSE_Mac0 into the fdo_cose_mac0_t parameter.
- * The fdo_cose_mac0_t parameter should have memory pre-allocated.
- * However, the internal elements must be un-allocated.
- * The memory allocation for the same would be done in the method.
- * [
- * protected header,
- * unprotected header,
- * payload,				// bstr
- * hmac					// bstr
- * ]
- * @param fdor - fdor_t object containing the buffer to read
- * @param cose_mac0 - fdo_cose_mac0_t object that will hold the read COSE_Mac0 parameters
- * @return true, if read was a success. False otherwise.
- */
-bool fdo_cose_mac0_read(fdor_t *fdor, fdo_cose_mac0_t *cose_mac0) {
-
-	size_t num_items = 4;
-	if (!fdor_array_length(fdor, &num_items) || num_items != 4) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read/Invalid array length\n");
-		return false;		
-	}
-
-	if (!fdor_start_array(fdor)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read start array\n");
-		return false;
-	}
-
-	cose_mac0->protected_header = fdo_alloc(sizeof(fdo_cose_mac0_protected_header_t));
-	if (!cose_mac0->protected_header) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc Protected Header\n");
-		goto end;
-	}
-	if (!fdo_cose_mac0_read_protected_header(fdor, cose_mac0->protected_header)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read protected header\n");
-		goto end;
-	}
-
-	if (!fdo_cose_mac0_read_unprotected_header(fdor)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read unprotected header\n");
-		goto end;
-	}
-
-	size_t var_length = 0;
-	if (!fdor_string_length(fdor, &var_length) ||
-		var_length == 0) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read payload length\n");
-		goto end;	
-	}
-	cose_mac0->payload = fdo_byte_array_alloc(var_length);
-	if (!cose_mac0->payload) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc ETMPayloadTag\n");
-		goto end;
-	}
-	if (!fdor_byte_string(fdor, cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read payload\n");
-		goto end;
-	}
-
-	var_length = 0;
-	if (!fdor_string_length(fdor, &var_length) ||
-		var_length == 0) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read hmac bstr length\n");
-		goto end;	
-	}
-	cose_mac0->hmac = fdo_byte_array_alloc(var_length);
-	if (!cose_mac0->hmac) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to alloc hmac\n");
-		goto end;
-	}
-	if (!fdor_byte_string(fdor, cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read signature\n");
-		goto end;
-	}
-
-	if (!fdor_end_array(fdor)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to read end array\n");
-		goto end;
-	}
-	return true;
-
-end:
-	fdo_cose_mac0_free(cose_mac0);
-	return false;
-}
-
-/**
- * Write Cose_Mac0.protected (CBOR map) as given in the fdo_cose_mac0_protected_header_t object.
- * This is wrapped in a bstr.
- * {
- * mac_type:<key-alg>
- * }
- * Return true, if write was a success. False otherwise.
- */
-bool fdo_cose_mac0_write_protected_header(fdow_t *fdow,
-	fdo_cose_mac0_protected_header_t *protected_header) {
-
-	bool ret = false;
-	fdo_byte_array_t *enc_ph = NULL;
-	// create temporary FDOW, use it to create Protected header map and then clear it.
-	fdow_t temp_fdow = {0};
-
-	if (!fdow || !protected_header) {
-		LOG(LOG_ERROR, "COSE_Mac0 Protected header: Invalid params\n");
-		return false;
-	}
-
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
-		!fdow_encoder_init(&temp_fdow)) {
-		LOG(LOG_ERROR, "COSE_Mac0 Protected header: FDOW Initialization/Allocation failed!\n");
-		goto end;
-	}
-
-	if (!fdow_start_map(&temp_fdow, 1)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to write start map\n");
-		goto end;
-	}
-
-	if (!fdow_signed_int(&temp_fdow, FDO_COSE_ALG_KEY)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to write CoseAlg Key\n");
-		goto end;
-	}
-
-	if (!fdow_signed_int(&temp_fdow, protected_header->mac_type)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to write ETMMacType Value\n");
-		goto end;
-	}
-
-	if (!fdow_end_map(&temp_fdow)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to write end map\n");
-		goto end;
-	}
-
-	size_t enc_ph_length = 0;
-	if (!fdow_encoded_length(&temp_fdow, &enc_ph_length) || enc_ph_length == 0) {
-		LOG(LOG_ERROR, "COSE_Mac0 Protected header:: Failed to find encoded length\n");
-		goto end;
-	}
-	temp_fdow.b.block_size = enc_ph_length;
-	// Set the encoded payload into buffer
-	enc_ph =
-		fdo_byte_array_alloc_with_byte_array(temp_fdow.b.block, temp_fdow.b.block_size);
-	if (!enc_ph) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to alloc for encoded Protected header\n");
-		goto end;
-	}
-
-	// finally, wrap the protected header into a bstr
-	if (!fdow_byte_string(fdow, enc_ph->bytes, enc_ph->byte_sz)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Protected header: Failed to write Protected header as bstr\n");
-		goto end;
-	}
-	ret = true;
-end:
-	if (temp_fdow.b.block || temp_fdow.current) {
-		fdow_flush(&temp_fdow);
-	}
-	if (enc_ph) {
-		fdo_byte_array_free(enc_ph);
-	}
-	return ret;
-}
-
-/**
- * Write Cose_Mac0.unprotected that is an empty map.
- * Return true, if write was a success. False otherwise.
- */
-bool fdo_cose_mac0_write_unprotected_header(fdow_t *fdow) {
-	// empty map
-	if (!fdow_start_map(fdow, 0)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Unprotected header: Failed to write start map\n");
-		return false;
-	}
-
-	if (!fdow_end_map(fdow)) {
-		LOG(LOG_ERROR,
-			"COSE_Mac0 Unprotected header: Failed to write end map\n");
-		return false;
-	}
-	return true;
-}
-
-/**
- * Write the given fdo_cose_mac0_t parameter into COSE_Mac0 structure
- * [
- * protected header,
- * unprotected header,
- * payload,				// bstr
- * hmac					// bstr
- * ]
- * @param fdow - fdow_t object containing the buffer where CBOR data will be written
- * @param cose_mac0 - fdo_cose_mac0_t object that holds the COSE_Mac0 parameters to encode
- * @return true, if write was a success. False otherwise.
- */
-bool fdo_cose_mac0_write(fdow_t *fdow, fdo_cose_mac0_t *cose_mac0) {
-	if (!fdow_start_array(fdow, 4)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to write start array\n");
-		return false;
-	}
-
-	if (!fdo_cose_mac0_write_protected_header(fdow, cose_mac0->protected_header)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to write protected header\n");
-		return false;
-	}
-
-	if (!fdo_cose_mac0_write_unprotected_header(fdow)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to write unprotected header\n");
-		return false;
-	}
-
-	if (!fdow_byte_string(fdow, cose_mac0->payload->bytes, cose_mac0->payload->byte_sz)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to write payload\n");
-		return false;
-	}
-
-	if (!fdow_byte_string(fdow, cose_mac0->hmac->bytes, cose_mac0->hmac->byte_sz)) {
-		LOG(LOG_ERROR, "COSE_Mac0: Failed to write hmac\n");
-		return false;
-	}
-
-	if (!fdow_end_array(fdow)) {
-		LOG(LOG_ERROR, "COSE: Failed to write end array\n");
-		return false;
-	}
-	return true;
 }
 
 /**
@@ -4393,7 +4044,7 @@ bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
 		return false;
 	}
 
-	if (!fdow_init(&temp_fdow) || !fdo_block_alloc(&temp_fdow.b) ||
+	if (!fdow_init(&temp_fdow) || !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_128_BYTES) ||
 		!fdow_encoder_init(&temp_fdow)) {
 		LOG(LOG_ERROR, "COSE Protected header: FDOW Initialization/Allocation failed!\n");
 		goto end;
@@ -4963,8 +4614,14 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 			// find the index of separator ':' in ServiceInfoKey format of 'moduleName:messageName'
 			// copy moduleName:messageName and moduleName:messageName
 			size_t index = 0;
+			if (serviceinfokey[index] == ':') {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Invalid ServiceInfoKey\n");
+				*cb_return_val = MESSAGE_BODY_ERROR;
+				goto exit;
+			}
 			while (':' != serviceinfokey[index]) {
-				if (index >= serviceinfokey_length) {
+				if (index >= sizeof(module_name) - 1) {
+					LOG(LOG_ERROR, "ServiceInfoKV read: Invalid ServiceInfoKey\n");
 					*cb_return_val = MESSAGE_BODY_ERROR;
 					goto exit;
 				}
@@ -4973,10 +4630,15 @@ bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *modu
 				++index;
 			}
 			++index;
-			size_t module_name_index = 0;
+			size_t module_msg_index = 0;
+			if (serviceinfokey_length - index >= sizeof(module_message) - 1) {
+				LOG(LOG_ERROR, "ServiceInfoKV read: Invalid ServiceInfoKey\n");
+				*cb_return_val = MESSAGE_BODY_ERROR;
+				goto exit;
+			}
 			while (index < serviceinfokey_length) {
-				module_message[module_name_index] = serviceinfokey[index];
-				++module_name_index;
+				module_message[module_msg_index] = serviceinfokey[index];
+				++module_msg_index;
 				++index;
 			}
 
@@ -5174,12 +4836,12 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 					}
 					// now activate the current module
 					module_list->module.active = active;
-					LOG(LOG_DEBUG, "ServiceInfo: Activated module %s\n",
+					LOG(LOG_INFO, "ServiceInfo: Activated module %s\n",
 						module_list->module.module_name);
 				} else {
 					// now de-activate the current module
 					module_list->module.active = active;
-					LOG(LOG_DEBUG, "ServiceInfo: De-activated module %s\n",
+					LOG(LOG_INFO, "ServiceInfo: De-activated module %s\n",
 						module_list->module.module_name);
 				}
 

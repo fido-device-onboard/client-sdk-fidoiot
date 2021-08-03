@@ -13,7 +13,6 @@
  */
 #define FDO_MODULE_NAME_LEN 32
 #define FDO_MODULE_MSG_LEN 32
-#define FDO_MODULE_VALUE_LEN 100
 
 #ifdef EXTRA_MODULES
 #define FDO_MAX_MODULES 4
@@ -57,13 +56,5 @@ typedef struct {
 } fdo_sdk_service_info_module;
 
 extern int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message);
-
-// Modules CB
-// TO-DO at a later time
-extern int devconfig(fdo_sdk_si_type type, int *count,
-		     fdo_sdk_si_key_value *si);
-extern int keypair(fdo_sdk_si_type type, int *count, fdo_sdk_si_key_value *si);
-extern int pelionconfig(fdo_sdk_si_type type, int *count,
-			fdo_sdk_si_key_value *si);
 
 #endif /* __FDOTYPES_H__ */

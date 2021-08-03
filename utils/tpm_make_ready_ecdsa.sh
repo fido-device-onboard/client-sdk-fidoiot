@@ -14,21 +14,8 @@ primary_key_type="ecc256:aes128cfb"
 
 usage() 
 {
-    echo "Usage: $0 -p <path of the parent to C-Device data directory> [-v verbose] [-c nist_p256/nist_p384, default:nist_p256] [-i use /dev/tpmrm0 as Resource Manager, if not provided TPM2-ABRMD will be used]"
+    echo "Usage: $0 -p <path of the parent to C-Device data directory> [-v verbose] [-i use /dev/tpmrm0 as Resource Manager, if not provided TPM2-ABRMD will be used]"
     exit 2
-}
-
-check_curve()
-{
-    if [ $curve != "nist_p256" ] && [ $curve != "nist_p384" ]; then
-        echo "Invalid Curve option: $curve"
-        exit 2
-    fi
-    if [ $curve == "nist_p384" ]; then
-        echo "Device Keytype updated to 14 and curve updated to $curve".
-        DEVICE_MSTRING_KEYTYPE=14
-        primary_key_type="ecc384:aes128cfb"
-    fi
 }
 
 parse_args() 
@@ -41,9 +28,6 @@ parse_args()
         case ${opt} in
             p ) found_path=1;
                 PARENT_DIR=$OPTARG
-              ;;
-            c ) curve=$OPTARG;
-                check_curve                
               ;;
             i ) export TPM2TOOLS_TCTI="device:/dev/tpmrm0"
               ;;
