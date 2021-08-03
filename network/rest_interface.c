@@ -415,7 +415,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	bool ret = false;
 	char *rem = NULL, *p1 = NULL, *p2 = NULL;
 	size_t remlen = 0;
-	char tmp[512] = {0};
+	char tmp[BUFF_SIZE_512_BYTES] = {0};
 	char *eptr = NULL;
 	size_t tmplen = 0;
 	long rcode = 0;
