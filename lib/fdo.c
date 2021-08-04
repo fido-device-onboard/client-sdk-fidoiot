@@ -1070,9 +1070,10 @@ static bool _STATE_DI(void)
 	if (fdo_prot_ctx_run(prot_ctx) != 0) {
 		LOG(LOG_ERROR, "DI failed.\n");
 		if (g_fdo_data->error_recovery) {
-			LOG(LOG_INFO, "Retrying.....\n");
 			g_fdo_data->state_fn = &_STATE_DI;
+			LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
 			fdo_sleep(g_fdo_data->delaysec);
+			LOG(LOG_INFO, "Retrying.....\n");
 			goto end;
 		} else {
 			ERROR()
@@ -1206,6 +1207,7 @@ static bool _STATE_TO1(void)
 				}
 			} else if (rv->delaysec) {
 				g_fdo_data->delaysec = *rv->delaysec;
+				LOG(LOG_INFO, "DelaySec set, Delay: %"PRIu64"s\n", g_fdo_data->delaysec);
 			}
 			// ignore the other RendezvousInstr as they are not used for making requests
 			rv = rv->next;
@@ -1251,6 +1253,7 @@ static bool _STATE_TO1(void)
 				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
 					g_fdo_data->delaysec = default_delay;
 				}
+				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
 				fdo_sleep(g_fdo_data->delaysec);
 				continue;
 			}
@@ -1262,11 +1265,12 @@ static bool _STATE_TO1(void)
 				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
 					g_fdo_data->delaysec = default_delay_rvinfo_retries;
 				}
-				LOG(LOG_INFO, "Retrying.....\n");
+				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
 				g_fdo_data->state_fn = &_STATE_TO1;
+				LOG(LOG_INFO, "Retrying.....\n");
 				return ret;
 			} else {
-				LOG(LOG_INFO, "Retry is diabled. Aborting.....\n");
+				LOG(LOG_INFO, "Retry is disabled. Aborting.....\n");
 				return ret;
 			}
 		} else {
@@ -1380,6 +1384,7 @@ static bool _STATE_TO2(void)
 					}
 				} else if (rv->delaysec) {
 					g_fdo_data->delaysec = *rv->delaysec;
+					LOG(LOG_INFO, "DelaySec set, Delay: %"PRIu64"s\n", g_fdo_data->delaysec);
 				}
 				// no need to check for RVBYPASS here again, since we used it
 				// to get here in the first place
@@ -1469,6 +1474,7 @@ static bool _STATE_TO2(void)
 			if (!rvbypass) {
 				fdo_free(ip);
 				ip = NULL;
+				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", default_delay);
 				fdo_sleep(default_delay);
 				// if there is another Owner location present, try it
 				// the execution reaches here only if rvbypass was never set
@@ -1493,6 +1499,7 @@ static bool _STATE_TO2(void)
 						g_fdo_data->delaysec = default_delay;
 					}
 				}
+				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
 			}
 			// if this is last directive (NULL), return false to mark end of 1 retry
 			// else if there are more directives left, return true for trying those

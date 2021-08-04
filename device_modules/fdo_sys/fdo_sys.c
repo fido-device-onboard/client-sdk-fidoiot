@@ -155,7 +155,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 
 			if (!process_data(FDO_SYS_MOD_MSG_WRITE, bin_data, bin_len, filename)) {
 #ifdef DEBUG_LOGS
-				printf("Failed to process value for fdo_sys:write");
+				printf("Failed to process value for fdo_sys:write\n");
 #endif
 				goto end;
 			}
@@ -182,6 +182,15 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 #ifdef DEBUG_LOGS
 				printf("Failed to read fdo_sys:exec array length\n");
 #endif
+				goto end;
+			}
+
+			if (exec_array_length == 0) {
+#ifdef DEBUG_LOGS
+				printf("Empty array received for fdo_sys:exec\n");
+#endif
+				// received exec array cannot be empty
+				result = FDO_SI_CONTENT_ERROR;
 				goto end;
 			}
 
