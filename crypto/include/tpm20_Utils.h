@@ -13,11 +13,7 @@
 #define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160 160
 #define TPM_HMAC_PUB_KEY_CONTEXT_SIZE 48
 
-#if defined(ECDSA256_DA)
 #define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P256
-#else
-#define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P384
-#endif
 
 #define TPM2_ZEROISE_FREE(ref)                                                 \
 	{                                                                      \

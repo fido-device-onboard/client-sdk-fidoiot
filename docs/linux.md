@@ -46,7 +46,7 @@ For an advanced build configuration, refer to [ Advanced Build Configuration ](b
 
 ```shell
 $ make pristine
-$ cmake -DTARGET_OS=linux -DBUILD=debug .
+$ cmake .
 $ make
 $ bash utils/keys_gen.sh .
 ```
