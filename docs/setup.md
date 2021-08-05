@@ -21,15 +21,16 @@ $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <{http,https}://{DNS,IP}:port> > data/manufacturer_addr.bin
 ```
 
-The following rules apply while setting the value:
- a) Atmost, five (5) characters are read for transport protocol and all characters thereafter, until `://`, are completely ignored. Supported values are `http` and `https`. Any other value will result in an error.
- b) Atmost, five (5) characters are read for port and all characters thereafter, are completely ignored. This information is optional and if one is not specified, or if an invalid value containing five or less characters are specified, `8039` is chosen as the default port.
- c) The URL separators `://` and `:` are mandatory.
+The following rules apply while setting the value and all of these are mandatory:
+ a) The transport protocol value must be either `http` or `https` (case-sensitive). Any other value will result in an error.
+ b) Either one of DNS or IP Address can be provided. The maximum value of DNS is 100 characters and must only contain alphanumeric characters (0-9A-za-z), hyphens (-) and dot (.).
+ c) The port should be an integer between (1-65535).
+ d) The URL separators `://` and `:` should be present at appropriate indices as per the indices of the above values.
 
 ```shell
-# To set the manufacturer address without the port information
+# For example, to set the manufacturer address as "https://127.0.0.1:12345"
 $ cd <path-to-client-sdk-fidoiot>
-$ echo -n <{http,https}://{DNS,IP}:> > data/manufacturer_addr.bin
+$ echo -n https://127.0.0.1:12345 > data/manufacturer_addr.bin
 ```
 
 > ***NOTE***: By default, `manufacturer_addr.bin` is configured with "http://localhost:8039".

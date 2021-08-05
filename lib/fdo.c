@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include "safe_lib.h"
 #include "fdodeviceinfo.h"
+#include <ctype.h>
 
 typedef struct app_data_s {
 	bool error_recovery;
@@ -56,7 +57,6 @@ extern char **g_argv;
 #define ERROR_RETRY_COUNT 5
 #endif
 
-static const uint16_t g_DI_PORT = 8039;
 static const uint64_t default_delay = 3;
 static const uint64_t default_delay_rvinfo_retries = 120;
 static const uint64_t max_delay = 3600;
@@ -73,7 +73,7 @@ static bool _STATE_Shutdown_Error(void);
 
 static fdo_sdk_status app_initialize(void);
 static void app_close(void);
-bool parse_manufacturer_address(char *buffer, bool *tls,
+bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	fdo_ip_address_t **mfg_ip, char *mfg_dns, size_t mfg_dns_sz, int *mfg_port);
 
 #define ERROR()                                                                \
@@ -780,6 +780,7 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
  * the TLS/IP/DNS/Port values.
  *
  * @param buffer Buffer containing the network address
+ * @param buffer_sz Size of the above buffer
  * @param tls Output flag describibg whether HTTP (false) or HTTPS (true) is used
  * @param mfg_ip
  * Output structure to store IP. Memory allocation is done in this method.
@@ -791,35 +792,109 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
  *
  * Return true if parse was successful, false otherwise.
  */
-bool parse_manufacturer_address(char *buffer, bool *tls,
+bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	fdo_ip_address_t **mfg_ip, char *mfg_dns, size_t mfg_dns_sz,
 	int *mfg_port) {
 
 	char transport_prot[6] = {0};
 	char port[6] = {0};
-	size_t dns_sz = 100;
+	size_t index = 0;
+	size_t dns_index = 0;
+	size_t port_index = 0;
+	int count_dns_alphabets = 0;
 	int result = 0;
 	char *eptr = NULL;
 	const char transport_http[5] = "http";
 	const char transport_https[6] = "https";
 
-	if (!buffer || !tls || !mfg_ip || !mfg_dns ||
-		mfg_dns_sz < dns_sz || !mfg_port) {
+	if (!buffer || buffer_sz == 0 || !tls || !mfg_ip || !mfg_dns ||
+	mfg_dns_sz == 0 || !mfg_port) {
 		LOG(LOG_ERROR, "Invalid params\n");
 		return false;
 	}
 
-	// the expected format is '{http/https}://{IP/DNS}:port', port is optional
-	result = sscanf(buffer, "%5[^:]://%99[^:]:%5s/", transport_prot, mfg_dns, port);
+	// the expected format is '{http/https}://{IP/DNS}:port'
 
-	// if all 3 are updated, wer're all good,
-	// but if only 2 of these are updated, verify each and decide
-	if (result != 2 && result != 3) {
-		LOG(LOG_ERROR, "Failed to parse manufacturer address\n");
+	// parse transport protocol until ':'
+	while (buffer[index] != ':' && index < sizeof(transport_prot) - 1 && index < buffer_sz) {
+		if (!isalpha(buffer[index])) {
+			LOG(LOG_ERROR, "Invalid Transport protocol or missing separator"
+				" in Manufacturer address\n");
+			goto end;
+		} else {
+			transport_prot[index] = buffer[index];
+		}
+		index++;
+	}
+
+	// parse separator "://"
+	if (buffer[index] != ':' || buffer[index + 1] != '/' || buffer[index + 2] != '/') {
+		LOG(LOG_ERROR, "Invalid/missing DNS/IP separator in Manufacturer address\n");
+		goto end;
+	} else {
+		index += 3;
+	}
+
+	// parse DNS/IP until ':'
+	if (0 != memset_s(mfg_dns, mfg_dns_sz, 0)) {
+		LOG(LOG_ERROR, "memset failed\n");
+		goto end;
+	}
+	while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) && index < buffer_sz) {
+		if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.') {
+			LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in Manufacturer address\n");
+			goto end;
+		} else {
+			mfg_dns[dns_index] = buffer[index];
+			if (isalpha(buffer[index])) {
+				count_dns_alphabets++;
+			}
+		}
+		index++;
+		dns_index++;
+	}
+
+	if (!isalnum(mfg_dns[0]) || !isalnum(mfg_dns[dns_index - 1])) {
+		LOG(LOG_ERROR, "Invalid DNS/IP in Manufacturer address\n");
 		goto end;
 	}
 
-	// parse transport protocol. check for 'http' first, then 'https'
+	// parse separator ':'
+	if (buffer[index] != ':') {
+		LOG(LOG_ERROR, "Missing port separator in Manufacturer address\n");
+		goto end;
+	} else {
+		index += 1;
+	}
+
+	// parse port for atmost 5 characters
+	while (port_index < sizeof(port) -1 && index < buffer_sz && isdigit(buffer[index])) {
+		port[port_index] = buffer[index];
+		index++;
+		port_index++;
+	}
+	if (port_index == 0) {
+		LOG(LOG_ERROR, "No port specified in Manufacturer address\n");
+		goto end;
+	}
+	port[port_index] = '\0';
+
+	// check for trailing '/'
+	if (index < buffer_sz && buffer[index] == '/') {
+		index++;
+	}
+	// check for new-line or EOF or null-character
+	if (index < buffer_sz && (buffer[index] == EOF || buffer[index] == '\n' ||
+		buffer[index] == '\0')) {
+		index++;
+	}
+
+	if (buffer_sz != index) {
+		LOG(LOG_ERROR, "Invalid data in Manufacturer address\n");
+		goto end;
+	}
+
+	// validate transport protocol. check for 'http' first, then 'https'
 	*tls = false;
 	if (memcmp_s(transport_prot, sizeof(transport_prot), transport_http,
 			sizeof(transport_http), &result) != 0) {
@@ -843,7 +918,7 @@ bool parse_manufacturer_address(char *buffer, bool *tls,
 		LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTP\n");
 	}
 
-	// parse IP/DNS, check for IP first, if it fails, treat it as DNS
+	// validate IP/DNS, check for IP first, if it fails, treat it as DNS
 	// allocate IP structure here
 	// if a valid IP is found, return the IP structure conatining IP, that must be freed by caller
 	// if a valid IP is not found, free the IP structure immediately and return NULL IP structure
@@ -862,23 +937,27 @@ bool parse_manufacturer_address(char *buffer, bool *tls,
 		// not an IP address, so treat it as DNS address
 		LOG(LOG_DEBUG, "Manufacturer DNS will be used\n");
 		fdo_free(*mfg_ip);
+		// DNS contains atleast 1 alphabet
+		if (count_dns_alphabets <= 0) {
+			LOG(LOG_DEBUG, "Invalid Manufacturer DNS\n");
+			goto end;
+		}
 	}
 
-	// parse port
+	// validate port
 	// set to 0 explicitly
 	errno = 0;
 	*mfg_port = strtol(port, &eptr, 10);
 	if (!eptr || eptr == port || errno != 0) {
-		LOG(LOG_ERROR, "Failed to parse Manufacturer port.\n");
-		*mfg_port = g_DI_PORT;
+		LOG(LOG_ERROR, "Manufacturer port is not a number.\n");
+		goto end;
 	} else if (!((*mfg_port >= FDO_PORT_MIN_VALUE) &&
 	      (*mfg_port <= FDO_PORT_MAX_VALUE))) {
 		LOG(LOG_ERROR,
 		    "Manufacturer port value should be between "
-		    "[%d-%d]. Using default.\n",
+		    "[%d-%d].\n",
 		    FDO_PORT_MIN_VALUE, FDO_PORT_MAX_VALUE);
-		// set default
-		*mfg_port = g_DI_PORT;
+		goto end;
 	}
 	LOG(LOG_DEBUG, "Manufacturer Port: %d\n", *mfg_port);
 	return true;
@@ -1016,7 +1095,7 @@ static bool _STATE_DI(void)
 
 	fdo_ip_address_t *mfg_ip = NULL;
 	char mfg_dns[100] = {0};
-	int mfg_port = g_DI_PORT;
+	int mfg_port = 0;
 
 	bool tls = false;
 	int32_t fsize = 0;
@@ -1051,11 +1130,14 @@ static bool _STATE_DI(void)
 
 		buffer[fsize] = '\0';
 
-		if (!parse_manufacturer_address(buffer, &tls, &mfg_ip,
+		if (!parse_manufacturer_address(buffer, fsize, &tls, &mfg_ip,
 			mfg_dns, sizeof(mfg_dns), &mfg_port)) {
 			LOG(LOG_ERROR, "Failed to parse Manufacturer Network address.\n");
 			goto end;
 		}
+	} else {
+		LOG(LOG_ERROR, "Manufacturer Network address file is empty.\n");
+		goto end;
 	}
 
 	g_fdo_data->delaysec = default_delay;
