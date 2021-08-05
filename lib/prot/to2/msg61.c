@@ -44,6 +44,7 @@ int32_t msg61(fdo_prot_t *ps)
 	fdo_byte_array_t *xA = NULL;
 	fdo_cose_t *cose = NULL;
 	fdo_byte_array_t *cose_sig_structure = NULL;
+	fdo_hash_t *ovheader_pubkey_hash = NULL;
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -167,6 +168,17 @@ int32_t msg61(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to calculate OVHeader HMac\n");
 		goto err;
 	}
+
+	ovheader_pubkey_hash = fdo_pub_key_hash(ps->ovoucher->mfg_pub_key);
+	if (!ovheader_pubkey_hash) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Hash creation of OVHeader.OVPubKey failed\n");
+		goto err;
+	}
+	if (!fdo_compare_hashes(ovheader_pubkey_hash, ps->dev_cred->owner_blk->pkh)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to verify OVHeader.OVPubKey hash\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "TO2.ProveOVHdr: OVHeader.OVPubKey hash verification successful\n");
 
 	/*
 	 * Read the number of OVEntries present.
@@ -328,6 +340,10 @@ err:
 	if (ps->nonce_to2proveov_rcv != NULL) {
 		fdo_byte_array_free(ps->nonce_to2proveov_rcv);
 		ps->nonce_to2proveov_rcv = NULL;
+	}
+	if (ovheader_pubkey_hash) {
+		fdo_hash_free(ovheader_pubkey_hash);
+		ovheader_pubkey_hash = NULL;
 	}
 	return ret;
 }

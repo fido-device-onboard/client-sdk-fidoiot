@@ -327,7 +327,8 @@ static fdo_sdk_status app_initialize(void)
 {
 	int ret = FDO_ERROR;
 	size_t fsize;
-	int max_serviceinfo_sz;
+	int max_serviceinfo_sz = 0;
+	long buffer_as_long = 0;
 	char *buffer = NULL;
 	char *eptr = NULL;
 
@@ -385,17 +386,19 @@ static fdo_sdk_status app_initialize(void)
 			}
 			// set to 0 explicitly
 			errno = 0;
-			max_serviceinfo_sz = strtol(buffer, &eptr, 10);
+			buffer_as_long = strtol(buffer, &eptr, 10);
 			if (!eptr || eptr == buffer || errno != 0) {
 				LOG(LOG_INFO, "Invalid maximum ServiceInfo size, "
 					"defaulting to %d\n", MIN_SERVICEINFO_SZ);
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
 			}
 
-			if (max_serviceinfo_sz <= MIN_SERVICEINFO_SZ) {
+			if (buffer_as_long <= MIN_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
-			} else if (max_serviceinfo_sz >= MAX_SERVICEINFO_SZ) {
+			} else if (buffer_as_long >= MAX_SERVICEINFO_SZ) {
 				max_serviceinfo_sz = MAX_SERVICEINFO_SZ;
+			} else {
+				max_serviceinfo_sz = buffer_as_long;
 			}
 			if (max_serviceinfo_sz > MSG_BUFFER_SZ) {
 				g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
