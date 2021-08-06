@@ -24,7 +24,6 @@
 int32_t msg70(fdo_prot_t *ps)
 {
 	int ret = -1;
-	fdo_hash_t *hmac = NULL;
 	// GUID needs (2 * 16) + 4 + 1 sized buffer for format 8-4-4-4-12,
 	// simplifying by using a larger buffer
 	char guid_buf[BUFF_SIZE_48_BYTES] = {0};
@@ -63,11 +62,18 @@ int32_t msg70(fdo_prot_t *ps)
 		// Done with FIDO Device Onboard.
 		// As of now moving to done state for resale
 		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
+		// create new Owner's public key hash
+		fdo_hash_free(ps->dev_cred->owner_blk->pkh);
+		ps->dev_cred->owner_blk->pkh = fdo_pub_key_hash(ps->dev_cred->owner_blk->pk);
+		if (!ps->dev_cred->owner_blk->pkh) {
+			LOG(LOG_ERROR, "TO2.Done: Hash creation of TO2.SetupDevice.Owner2Key failed\n");
+			goto err;
+		}
 	}
 
 	// clear and reuse the buffer to print new guid
 	if (0 != memset_s(guid_buf, sizeof(guid_buf), 0)) {
-		LOG(LOG_ERROR, "TO2.Done2: Failed to clear GUID buffer\n");
+		LOG(LOG_ERROR, "TO2.Done: Failed to clear GUID buffer\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "(New) GUID after TO2: %s\n",
@@ -137,8 +143,5 @@ int32_t msg70(fdo_prot_t *ps)
 	ret = 0; /*Mark as success */
 
 err:
-	if (hmac) {
-		fdo_hash_free(hmac);
-	}
 	return ret;
 }
