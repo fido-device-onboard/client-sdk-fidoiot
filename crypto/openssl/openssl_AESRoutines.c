@@ -69,27 +69,27 @@
  * @param clear_text
  *        Input text to be encrypted.
  * @param clear_text_length
- *        Plain text size in bytes.
+ *        Plain text size in BYTES.
  * @param cipher_text
  *        Encrypted text(output).
  * @param cipher_length
- *        Encrypted text size of cipher_text in bytes. [INOUT]
+ *        Encrypted text size of cipher_text in BYTES. [INOUT]
  * @param block_size
- *        AES encryption block size in bytes. always 128 bits.
+ *        AES encryption block size in BYTES. always 128 bits.
  * @param iv
  *        AES encryption initialization vector.
  * @param key
  *        Key in Byte_array format used in encryption.
  * @param key_length
- *        Key size in Bytes.
+ *        Key size in BYTES.
  * @param tag
  *        Tag in Byte_array format (output).
  * @param tag_length
- *        Fixed tag length in Bytes (output).
+ *        Fixed tag length in BYTES (output).
  * @param aad
- *        Additional Authenticated Datac(AAD) in Byte_array format used in encryption.
+ *        Additional Authenticated Data(AAD) in Byte_array format used in encryption.
  * @param aad_length
- *        Additional Authenticated Datac(AAD) size in Bytes.
+ *        Additional Authenticated Data(AAD) size in BYTES.
  * @return ret
  *        return 0 on success. -1 on failure.
  *        fills cipher_length in bytes while cipher_text passed as NULL, & all
@@ -214,27 +214,27 @@ end:
  * @param clear_text
  *        Decrypted text(output).
  * @param clear_text_length
- *        Decrypted text size in Byte. (IN/OUT)
+ *        Decrypted text size in BYTES. (IN/OUT)
  * @param cipher_text
  *        Encrypted text(input).
  * @param cipher_length
- *        Encrypted text size in Byte.
+ *        Encrypted text size in BYTES.
  * @param block_size
- *        AES encryption block size in Byte. FDO_AES_BLOCK_SIZE
+ *        AES encryption block size in BYTES. FDO_AES_BLOCK_SIZE
  * @param iv
  *        AES encryption initialization vector.
  * @param key
  *        Key in Byte_array format used in encryption.
  * @param key_length
- *        Key size in Bytes.
+ *        Key size in BYTES.
  * @param tag
  *        Tag in Byte_array format that will be verified.
  * @param tag_length
- *        Fixed tag length in Bytes.
+ *        Fixed tag length in BYTES.
  * @param aad
- *        Additional Authenticated Datac(AAD) in Byte_array format used in decryption.
+ *        Additional Authenticated Data(AAD) in Byte_array format used in decryption.
  * @param aad_length
- *        Additional Authenticated Datac(AAD) size in Bytes.
+ *        Additional Authenticated Data(AAD) size in BYTES.
  * @return ret
  *        return 0 on success. -1 on failure.
  *        fills clear_text_length in bytes for maximum possible buffer size
