@@ -9,8 +9,16 @@
  * Supported modes are:
  * - AES-GCM-128 (Key = 128 bits)
  * - AES-GCM-256 (Key = 256 bits)
- * - AES-CCM-64-128-128 (L=64 (2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
- * - AES-CCM-64-128-256 (L=64 (2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
+ * - AES-CCM-64-128-128 (L=64 (8 octets,2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
+ * - AES-CCM-64-128-256 (L=64 (8 octets,2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
+ *
+ * \NOTE: The IV/Nonce length 'N' for CCM mode is dependent on the maximum message length 'L' value
+ * and should be equal to 15-L (in octets).
+ * Refer to [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information on
+ * trade-offs between 'L' and 'N' value.
+ * The current implementation uses L=8, and hence the IV/Nonce length N = 15-8 = 7 octets
+ * As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
+ * L=2 could also be used. N=13 MUST be used in this case.
  */
 
 #include "fdoCryptoHal.h"
@@ -55,6 +63,8 @@
 
 #define TAG_LENGTH AES_CCM_TAG_LEN
 #define IV_LENGTH AES_CCM_IV_LEN
+// 'L' value of 8 octets. A change to this value MUST be matched with a corresponding change
+// of IV_LENGTH, 'N' to '15-L'. For example, for L_VALUE_BYTES(L)=2, IV_LENGTH(N)=13
 #define L_VALUE_BYTES 8
 
 #define SET_IV EVP_CTRL_CCM_SET_IVLEN

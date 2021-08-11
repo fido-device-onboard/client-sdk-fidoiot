@@ -197,6 +197,13 @@ fdo_public_key_t *fdo_public_key_clone(fdo_public_key_t *pk);
 #define AES_GCM_TAG_LEN 16
 #define AES_TAG_LEN AES_GCM_TAG_LEN
 #else
+// The IV/Nonce length 'N' for CCM mode is dependent on the maximum message length 'L' value
+// and should be equal to 15-L (in octets).
+// Refer to [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information on
+// trade-offs between 'L' and 'N' value.
+// The current implementation uses L=8, and hence the IV/Nonce length N = 15-8 = 7 octets
+// As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
+// L=2 could also be used. N=13 MUST be used in this case.
 #define AES_CCM_IV_LEN 7
 #define AES_IV_LEN AES_CCM_IV_LEN
 #define AES_CCM_TAG_LEN 16
