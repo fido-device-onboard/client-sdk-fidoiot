@@ -59,8 +59,7 @@ static int32_t getIV(uint8_t *iv, uint32_t clear_text_length)
  * Out: Size of the cipher text stored in cipher
  * @param iv Out Pointer to the initialization vector (IV) used for AES
  * encryption.
- * The IV is 16 bytes long, so the buffer specified by iv must be
- * at least 16 bytes long
+ * The IV length is dependent of AES mode used (GCM/CCM).
  * @param tag Out Pointer to the buffer where the authentication tag is stored
  * after encryption. This buffer must be
  * allocated before calling this API
@@ -144,8 +143,7 @@ int32_t fdo_msg_decrypt_get_pt_len(uint32_t cipher_length,
  * @param cipher In Pointer to cipher text that is to be decrypted
  * @param cipher_length In Size of the cipher
  * @param iv In Pointer to the initialization vector (IV) used for AES
- * decryption. The IV is 16 bytes long, so the buffer specified by
- * iv must be at least 16 bytes long
+ * decryption. The IV length is dependent on AES mode used (GCM/CCM).
  * @param tag In Pointer to the buffer containing the authentication tag that is
  * used for decryption.
  * @param tag_length In/Out In: Size of the tag

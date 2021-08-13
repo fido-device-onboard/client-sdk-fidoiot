@@ -9,8 +9,16 @@
  * Supported modes are:
  * - AES-GCM-128 (Key = 128 bits)
  * - AES-GCM-256 (Key = 256 bits)
- * - AES-CCM-64-128-128 (L=64 (2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
- * - AES-CCM-64-128-256 (L=64 (2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
+ * - AES-CCM-64-128-128 (L=64 (8 octets,2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
+ * - AES-CCM-64-128-256 (L=64 (8 octets,2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
+ *
+ * \NOTE: The IV/Nonce length 'N' for CCM mode is dependent on the maximum message length 'L' value
+ * and should be equal to 15-L (in octets).
+ * Refer to [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information on
+ * trade-offs between 'L' and 'N' value.
+ * The current implementation uses L=8, and hence the IV/Nonce length N = 15-8 = 7 octets
+ * As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
+ * L=2 could also be used. N=13 MUST be used in this case.
  */
 
 #include "fdoCryptoHal.h"
@@ -55,6 +63,8 @@
 
 #define TAG_LENGTH AES_CCM_TAG_LEN
 #define IV_LENGTH AES_CCM_IV_LEN
+// 'L' value of 8 octets. A change to this value MUST be matched with a corresponding change
+// of IV_LENGTH, 'N' to '15-L'. For example, for L_VALUE_BYTES(L)=2, IV_LENGTH(N)=13
 #define L_VALUE_BYTES 8
 
 #define SET_IV EVP_CTRL_CCM_SET_IVLEN
@@ -69,27 +79,27 @@
  * @param clear_text
  *        Input text to be encrypted.
  * @param clear_text_length
- *        Plain text size in bytes.
+ *        Plain text size in BYTES.
  * @param cipher_text
  *        Encrypted text(output).
  * @param cipher_length
- *        Encrypted text size of cipher_text in bytes. [INOUT]
+ *        Encrypted text size of cipher_text in BYTES. [INOUT]
  * @param block_size
- *        AES encryption block size in bytes. always 128 bits.
+ *        AES encryption block size in BYTES. always 128 bits.
  * @param iv
  *        AES encryption initialization vector.
  * @param key
  *        Key in Byte_array format used in encryption.
  * @param key_length
- *        Key size in Bytes.
+ *        Key size in BYTES.
  * @param tag
  *        Tag in Byte_array format (output).
  * @param tag_length
- *        Fixed tag length in Bytes (output).
+ *        Fixed tag length in BYTES (output).
  * @param aad
- *        Additional Authenticated Datac(AAD) in Byte_array format used in encryption.
+ *        Additional Authenticated Data(AAD) in Byte_array format used in encryption.
  * @param aad_length
- *        Additional Authenticated Datac(AAD) size in Bytes.
+ *        Additional Authenticated Data(AAD) size in BYTES.
  * @return ret
  *        return 0 on success. -1 on failure.
  *        fills cipher_length in bytes while cipher_text passed as NULL, & all
@@ -214,27 +224,27 @@ end:
  * @param clear_text
  *        Decrypted text(output).
  * @param clear_text_length
- *        Decrypted text size in Byte. (IN/OUT)
+ *        Decrypted text size in BYTES. (IN/OUT)
  * @param cipher_text
  *        Encrypted text(input).
  * @param cipher_length
- *        Encrypted text size in Byte.
+ *        Encrypted text size in BYTES.
  * @param block_size
- *        AES encryption block size in Byte. FDO_AES_BLOCK_SIZE
+ *        AES encryption block size in BYTES. FDO_AES_BLOCK_SIZE
  * @param iv
  *        AES encryption initialization vector.
  * @param key
  *        Key in Byte_array format used in encryption.
  * @param key_length
- *        Key size in Bytes.
+ *        Key size in BYTES.
  * @param tag
  *        Tag in Byte_array format that will be verified.
  * @param tag_length
- *        Fixed tag length in Bytes.
+ *        Fixed tag length in BYTES.
  * @param aad
- *        Additional Authenticated Datac(AAD) in Byte_array format used in decryption.
+ *        Additional Authenticated Data(AAD) in Byte_array format used in decryption.
  * @param aad_length
- *        Additional Authenticated Datac(AAD) size in Bytes.
+ *        Additional Authenticated Data(AAD) size in BYTES.
  * @return ret
  *        return 0 on success. -1 on failure.
  *        fills clear_text_length in bytes for maximum possible buffer size

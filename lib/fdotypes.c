@@ -482,7 +482,7 @@ bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data)
  *   Info: bstr
  * ]
  * @param fdow - pointer to the struct where the GID is to be written.
- * @return true if write is successfull. false, otherwise.
+ * @return true if write is successful. false, otherwise.
  */
 bool fdo_siginfo_write(fdow_t *fdow)
 {
@@ -511,7 +511,7 @@ bool fdo_siginfo_write(fdow_t *fdow)
 		LOG(LOG_ERROR, "SigInfo: Failed to end array\n");
 		goto end;
 	}
-	LOG(LOG_DEBUG, "eASigInfo write successfull\n");
+	LOG(LOG_DEBUG, "eASigInfo write successful\n");
 	ret = true;
 end:
 	fdo_byte_array_free(empty_byte_array);
@@ -526,7 +526,7 @@ end:
  *   Info: bstr
  * ]
  * @param fdor - pointer to the struct containing GID
- * @return true if write is successfull. false, otherwise.
+ * @return true if write is successful. false, otherwise.
  */
 bool fdo_siginfo_read(fdor_t *fdor)
 {
@@ -575,7 +575,7 @@ bool fdo_siginfo_read(fdor_t *fdor)
 		LOG(LOG_ERROR, "No End Array\n");
 		goto end;
 	}
-	LOG(LOG_DEBUG, "eBSigInfo read successfull\n");
+	LOG(LOG_DEBUG, "eBSigInfo read successful\n");
 	ret = true;
 end:
 	fdo_free(buf);
@@ -1234,7 +1234,7 @@ bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
 		LOG(LOG_ERROR, "PublicKey write: Failed to end array.\n");
 		return false;
 	}
-	// Write successfull. Return true.
+	// Write successful. Return true.
 	return true;
 }
 
@@ -2227,27 +2227,27 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 {
 	fdo_encrypted_packet_t *pkt = NULL;
 	fdo_cose_encrypt0_t *cose_encrypt0 = NULL;
-	int expected_aes_alg_type;
+	int expected_aes_alg_type = -1;
 
 	if (!fdor){
 		LOG(LOG_ERROR, "Encrypted Message Read: Invalid FDOR\n");
-		goto error;
+		goto err;
 	}
 
 	pkt = fdo_encrypted_packet_alloc();
 	if (!pkt) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc Encrypted structure\n");
-		goto error;
+		goto err;
 	}
 
 	cose_encrypt0 = fdo_alloc(sizeof(fdo_cose_encrypt0_t));
 	if (!cose_encrypt0) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to alloc COSE_Encrypt0\n");
-		goto error;
+		goto err;
 	}
 	if (!fdo_cose_encrypt0_read(fdor, cose_encrypt0)) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to read COSE_Encrypt0\n");
-		goto error;
+		goto err;
 	}
 
 	// Encrypted payload that contains cipher||tag
@@ -2255,7 +2255,7 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 	pkt->em_body = fdo_byte_array_alloc(cose_encrypt0->payload->byte_sz - sizeof(pkt->tag));
 	if (!pkt->em_body) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Payload\n");
-		goto error;
+		goto err;
 	}
 
 	// copy the cipher
@@ -2263,14 +2263,14 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 		    cose_encrypt0->payload->bytes,
 			cose_encrypt0->payload->byte_sz - sizeof(pkt->tag)) != 0) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy cipher data\n");
-		goto error;
+		goto err;
 	}
 
 	// copy the tag
 	if (0 != memcpy_s(&pkt->tag, sizeof(pkt->tag),
 		cose_encrypt0->payload->bytes + pkt->em_body->byte_sz, sizeof(pkt->tag))) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy tag\n");
-		goto error;
+		goto err;
 	}
 
 	// copy IV that is used to decrypt the encrypted payload
@@ -2280,19 +2280,19 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 	if (0 != memcpy_s(&pkt->iv, sizeof(pkt->iv),
 		&cose_encrypt0->unprotected_header->aes_iv, sizeof(cose_encrypt0->unprotected_header->aes_iv))) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Failed to copy COSE_Encrypt0.Unprotected.AESIV\n");
-		goto error;
+		goto err;
 	}
 
 #ifdef COSE_ENC_TYPE
 	expected_aes_alg_type = COSE_ENC_TYPE;
 #else
 	LOG(LOG_ERROR, "Encrypted Message Read: Invalid Encryption type\n");
-	goto error;
+	goto err;
 #endif
 
 	if (cose_encrypt0->protected_header->aes_plain_type != expected_aes_alg_type) {
 		LOG(LOG_ERROR, "Encrypted Message Read: Unexpected AESPlainType\n");
-		goto error;
+		goto err;
 	}
 	pkt->aes_plain_type = cose_encrypt0->protected_header->aes_plain_type;
 
@@ -2300,7 +2300,7 @@ fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor)
 	cose_encrypt0 = NULL;
 	LOG(LOG_DEBUG, "Encrypted Message Read: Encrypted Message parsed successfully\n");
 	return pkt;
-error:
+err:
 	fdo_encrypted_packet_free(pkt);
 	if (cose_encrypt0) {
 		fdo_cose_encrypt0_free(cose_encrypt0);
@@ -2319,7 +2319,7 @@ error:
  *]
  * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
  * @param alg_type - COSEEncType value to be used in protected header
- * @return true if write is successfull, false otherwise.
+ * @return true if write is successful, false otherwise.
  */
 bool fdo_aad_write(fdow_t *fdow, int alg_type) {
 
@@ -2397,7 +2397,7 @@ err:
  *]
  * @param fdow - fdow_t object containing the buffer where CBOR data will be written to
  * @param pkt - fdo_encrypted_packet_t object
- * @return true if write is successfull, false otherwise.
+ * @return true if write is successful, false otherwise.
  */
 bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt)
 {
@@ -2471,7 +2471,6 @@ err:
  * for its content.
  * @param fdor - pointer to the fdor object to fill
  * @param pkt - Pointer to the Encrypted packet pkt that has to be processed.
- * @param iv - pointer to the IV struct
  * @return true if all goes well, otherwise false
  */
 bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
@@ -2531,7 +2530,7 @@ bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt)
 		LOG(LOG_ERROR, "Encrypted Message (decrypt): Failed to initialize FDOR parser\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decrytion done\n");
+	LOG(LOG_DEBUG, "Encrypted Message (decrypt): Decryption done\n");
 	ret = true;
 err:
 	if (temp_fdow.b.block || temp_fdow.current) {
@@ -2621,7 +2620,6 @@ exit:
 		if (!fdow_encoder_init(fdow)) {
 			LOG(LOG_ERROR,
 				"Encrypted Message (encrypt): Failed to initialize FDOW encoder\n");
-			goto exit;
 		}
 	}
 	return ret;
