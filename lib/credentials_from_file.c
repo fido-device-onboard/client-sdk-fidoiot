@@ -163,7 +163,7 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 	/**
 	 * Blob format: DeviceCredential.DCHmacSecret as bstr.
 	 */
-	fdow_byte_string(fdow, (*ovkey)->bytes, INITIAL_SECRET_BYTES);
+	fdow_byte_string(fdow, (*ovkey)->bytes, (*ovkey)->byte_sz);
 	size_t encoded_secret_length = 0;
 	if (!fdow_encoded_length(fdow, &encoded_secret_length) || encoded_secret_length == 0) {
 		LOG(LOG_ERROR, "Failed to get encoded DeviceCredential.DCHmacSecret length\n");
@@ -378,8 +378,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 
-	// TO-DO : Is it always 32 bytes? Could it be 48 bytes as well? Compare length.
-	secret = fdo_byte_array_alloc(INITIAL_SECRET_BYTES);
+	secret = fdo_byte_array_alloc(FDO_HMAC_KEY_LENGTH);
 	if (!secret) {
 		LOG(LOG_ERROR, "Dev_cred Secret malloc Failed.\n");
 		goto end;
@@ -390,7 +389,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 
-	if (0 != set_ov_key(secret, INITIAL_SECRET_BYTES)) {
+	if (0 != set_ov_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		LOG(LOG_ERROR, "Failed to set HMAC secret.\n");
 		goto end;
 	}

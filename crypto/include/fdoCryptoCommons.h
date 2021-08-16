@@ -28,6 +28,7 @@
 #define SEK_KEY_SIZE 16
 #define KEX "ECDH"
 #define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_32_BYTES
+#define FDO_HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES
 
 // Encryption/Decryption Algorithms: AES128
 #define AES_128_BIT
@@ -44,6 +45,7 @@
 #define SEK_KEY_SIZE 32
 #define KEX "ECDH384"
 #define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_48_BYTES
+#define FDO_HMAC_KEY_LENGTH BUFF_SIZE_64_BYTES
 
 // Encryption/Decryption Algorithms: AES256
 #define AES_256_BIT

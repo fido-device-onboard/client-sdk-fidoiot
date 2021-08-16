@@ -11,7 +11,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define INITIAL_SECRET_BYTES (32)
 #define GID_SIZE (16)
 
 // FDO Device States
