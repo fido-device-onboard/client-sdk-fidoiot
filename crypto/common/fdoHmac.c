@@ -30,7 +30,7 @@ int32_t set_ov_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
-	      (BUFF_SIZE_48_BYTES == OVKey_len))) {
+	      (BUFF_SIZE_64_BYTES == OVKey_len))) {
 		return -1;
 	}
 
@@ -219,7 +219,7 @@ int32_t fdo_generate_ov_hmac_key(void)
 		       " from TPM.\n");
 
 #else
-	fdo_byte_array_t *secret = fdo_byte_array_alloc(INITIAL_SECRET_BYTES);
+	fdo_byte_array_t *secret = fdo_byte_array_alloc(FDO_HMAC_KEY_LENGTH);
 
 	if (!secret) {
 		LOG(LOG_ERROR, "Out of memory for OV HMAC key\n");
@@ -227,8 +227,8 @@ int32_t fdo_generate_ov_hmac_key(void)
 	}
 
 	/* Generate HMAC key for calcuating it over Ownership header */
-	fdo_crypto_random_bytes(secret->bytes, INITIAL_SECRET_BYTES);
-	if (0 != set_ov_key(secret, INITIAL_SECRET_BYTES)) {
+	fdo_crypto_random_bytes(secret->bytes, FDO_HMAC_KEY_LENGTH);
+	if (0 != set_ov_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		goto err;
 	}
 
@@ -264,7 +264,7 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 		       " from TPM.\n");
 
 #else
-	fdo_byte_array_t *secret = fdo_byte_array_alloc(INITIAL_SECRET_BYTES);
+	fdo_byte_array_t *secret = fdo_byte_array_alloc(FDO_HMAC_KEY_LENGTH);
 
 	if (!secret) {
 		LOG(LOG_ERROR, "Out of memory for OV replacement HMAC key\n");
@@ -272,8 +272,8 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 	}
 
 	/* Generate replacement HMAC key for calcuating it over Ownership header */
-	fdo_crypto_random_bytes(secret->bytes, INITIAL_SECRET_BYTES);
-	if (0 != set_ov_replacement_key(secret, INITIAL_SECRET_BYTES)) {
+	fdo_crypto_random_bytes(secret->bytes, FDO_HMAC_KEY_LENGTH);
+	if (0 != set_ov_replacement_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		goto err;
 	}
 
@@ -312,7 +312,7 @@ int32_t fdo_commit_ov_replacement_hmac_key(void)
 		return false;
 	}
 
-	if (0 != set_ov_key(*secret, INITIAL_SECRET_BYTES)) {
+	if (0 != set_ov_key(*secret, FDO_HMAC_KEY_LENGTH)) {
 		LOG(LOG_ERROR, "Failed to commit OV replacement HMAC key\n");
 		return false;
 	}
