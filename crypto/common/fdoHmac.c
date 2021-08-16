@@ -74,7 +74,7 @@ int32_t set_ov_replacement_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
-	      (BUFF_SIZE_48_BYTES == OVKey_len))) {
+	      (BUFF_SIZE_64_BYTES == OVKey_len))) {
 		return -1;
 	}
 
