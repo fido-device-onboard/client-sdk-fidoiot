@@ -480,10 +480,6 @@ bool fdo_signature_verification(fdo_byte_array_t *plain_text,
 				fdo_byte_array_t *sg, fdo_public_key_t *pk);
 
 bool fdo_compare_public_keys(fdo_public_key_t *pk1, fdo_public_key_t *pk2);
-bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
-bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num);
-bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
-bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
 
 /*==================================================================*/
 /* Service Info functionality */
@@ -507,6 +503,18 @@ typedef struct fdo_sv_info_dsi_info_s {
 void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module);
 void fdo_sdk_service_info_deregister_module(void);
 void print_service_info_module_list(void);
+
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
+bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num);
+bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
+bool fdo_serviceinfo_external_mod_is_more(fdow_t *fdow,
+	fdo_sdk_service_info_module_list_t *module_list, size_t mtu);
+fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *fdow,
+	fdo_sdk_service_info_module_list_t *module_list,
+	size_t mtu);
+bool fdo_serviceinfo_external_mod_write(fdow_t *fdow, fdo_sdk_service_info_module *module,
+	size_t mtu);
+bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
 
 bool fdo_mod_exec_sv_infotype(fdo_sdk_service_info_module_list_t *module_list,
 			      fdo_sdk_si_type type);

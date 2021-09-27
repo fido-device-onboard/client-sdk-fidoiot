@@ -11,9 +11,11 @@
 #include <unistd.h>
 #include "fdo_sys_utils.h"
 
-int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
+int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
+	char *module_message, bool *has_more, bool *is_more, size_t mtu)
 {
 	static char filename[FILE_NAME_LEN];
+	static bool more = true;
 	int strcmp_filedesc = 1;
 	int strcmp_write = 1;
 	int strcmp_exec = 1;
@@ -35,12 +37,68 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message)
 		case FDO_SI_FAILURE:
 			result = FDO_SI_SUCCESS;
 			goto end;
+		case FDO_SI_HAS_MORE_DSI:
+			// calculate whether there is ServiceInfo to send NOW and update 'has_more'.
+			// For testing purposes, set this to true here, and false once first write is done.
+			// TO-DO : Update during keep-alive implementation
+			if (!has_more) {
+				result = FDO_SI_CONTENT_ERROR;
+				goto end;
+			}
+
+			*has_more = more;
+			if (*has_more) {
+#ifdef DEBUG_LOGS
+				printf("fdo_sys : There is ServiceInfo to write\n");
+#endif
+			}
+			result = FDO_SI_SUCCESS;
+			goto end;
+		case FDO_SI_IS_MORE_DSI:
+			// calculate whether there is ServiceInfo to send in the NEXT iteration
+			// and update 'is_more'.
+			// For testing purposes, set this to false here, since only 1 message is being sent.
+			// TO-DO : Update during keep-alive implementation
+			if (!is_more) {
+				result = FDO_SI_CONTENT_ERROR;
+				goto end;
+			}
+			*is_more = false;
+			result = FDO_SI_SUCCESS;
+			goto end;
 		case FDO_SI_GET_DSI:
-			// this operation is not supported
-			result = FDO_SI_FAILURE;
+			// write Device ServiceInfo using 'fdow' by partitioning the messages as per MTU, here.
+			// For now, simply write an empty message and reset the has_more flag
+			// TO-DO : Update during keep-alive implementation
+			(void)mtu;
+			if (!fdow) {
+				result = FDO_SI_CONTENT_ERROR;
+				goto end;
+			}
+#ifdef DEBUG_LOGS
+				printf("fdo_sys : Writing ServiceInfo within module\n");
+#endif
+
+			if (!fdow_start_array(fdow, 0)) {
+#ifdef DEBUG_LOGS
+				printf("Failed to start empty array in fdo_sys "
+					"Module\n");
+#endif
+				goto end;
+			}
+			if (!fdow_end_array(fdow)) {
+#ifdef DEBUG_LOGS
+				printf("Failed to end empty array in fdo_sys "
+					"Module\n");
+#endif
+				goto end;
+			}
+			// reset this because module has nothing else left to send
+			more = false;
+			result = FDO_SI_SUCCESS;
 			goto end;
 		case FDO_SI_SET_OSI:
-
+			// Process the received Owner ServiceInfo contained within 'fdor', here.
 		strcmp_s(module_message, FDO_MODULE_MSG_LEN, "filedesc",
 					&strcmp_filedesc);
 		strcmp_s(module_message, FDO_MODULE_MSG_LEN, "write", &strcmp_write);

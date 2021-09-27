@@ -4851,7 +4851,7 @@ bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_mes
 			if (module_list->module.active) {
 				// check if module callback is successful
 				*cb_return_val = module_list->module.service_info_callback(
-					FDO_SI_SET_OSI, fdor, module_message);
+					FDO_SI_SET_OSI, fdor, NULL, module_message, NULL, NULL, 0);
 
 				if (*cb_return_val != FDO_SI_SUCCESS) {
 					LOG(LOG_ERROR,
@@ -5472,6 +5472,110 @@ end:
 }
 
 /**
+ * Return bool value representing whether any external ServiceInfo module has message to
+ * send in the NEXT iteration. This determines the TO2.DeviceServiceInfo.IsMoreServiceInfo value
+ * for any currently active module.
+ *
+ * @param fdow - Pointer to the writer.
+ * @param module_list - Pointer to the ServiceInfo module list containing all
+ * Device ServiceInfos modules.
+ * @param mtu - MTU to be used for fitting the values.
+ *
+ * @return true if there is ServiceInfo to be sent in the next iteration,
+ * false on any other conditions.
+ */
+bool fdo_serviceinfo_external_mod_is_more(fdow_t *fdow,
+	fdo_sdk_service_info_module_list_t *module_list, size_t mtu) {
+
+	if (!fdow || !module_list) {
+		return false;
+	}
+	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
+	bool is_more = false;
+
+	while (traverse_list) {
+		if (traverse_list->module.active &&
+			traverse_list->module.service_info_callback(
+			FDO_SI_IS_MORE_DSI, NULL, fdow, NULL, NULL, &is_more, mtu) != FDO_SI_SUCCESS) {
+			LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
+			    traverse_list->module.module_name, FDO_SI_HAS_MORE_DSI);
+			return false;
+		}
+		if (is_more) {
+			return is_more;
+		}
+		traverse_list = traverse_list->next;
+	}
+	return false;
+}
+
+/**
+ * Return a module reference that has some ServiceInfo to be send NOW/immediately,
+ * by making a callbacks to each active module, to determine whether the module
+ * has something to send immediately.
+ *
+ * @param fdow - Pointer to the writer.
+ * @param module_list - Pointer to the ServiceInfo module list containing all
+ * Device ServiceInfos modules.
+ * @param mtu - MTU to be used for fitting the values.
+ *
+ * @return Pointer to/module reference (fdo_sdk_service_info_module *) if there is any module
+ * that has ServiceInfo to send NOW/immediately, else return NULL.
+ */
+fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *fdow,
+	fdo_sdk_service_info_module_list_t *module_list, size_t mtu) {
+
+	if (!fdow || !module_list) {
+		return false;
+	}
+	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
+	bool has_more = false;
+
+	while (traverse_list) {
+		if (traverse_list->module.active &&
+			traverse_list->module.service_info_callback(
+			FDO_SI_HAS_MORE_DSI, NULL, fdow, NULL, &has_more, NULL, mtu) != FDO_SI_SUCCESS) {
+			LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
+			    traverse_list->module.module_name, FDO_SI_HAS_MORE_DSI);
+			return false;
+		}
+		if (has_more) {
+			return &(traverse_list->module);
+		}
+		traverse_list = traverse_list->next;
+	}
+	return NULL;
+}
+
+/**
+ * Given an active ServiceInfo module, invoke the callback on the same,
+ * to write ServiceInfo to be sent. The module is responsible for writing the 'ServiceInfo'
+ * structure.
+ *
+ * @param fdow - Pointer to the writer.
+ * @param module - Pointer to the ServiceInfo module list containing all
+ * Device ServiceInfos modules.
+ * @param mtu - MTU to be used for fitting the values.
+ *
+ * @return Return true if module callback was successful, else return false.
+ */
+bool fdo_serviceinfo_external_mod_write(fdow_t *fdow, fdo_sdk_service_info_module *module,
+	size_t mtu) {
+	bool ret = false;
+	if (!fdow || !module || !module->active) {
+		return ret;
+	}
+
+	if (module->service_info_callback(FDO_SI_GET_DSI, NULL, fdow, NULL, NULL, NULL, mtu) != FDO_SI_SUCCESS) {
+		LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
+		    module->module_name, FDO_SI_GET_DSI);
+		return ret;
+	}
+	ret = true;
+	return ret;
+}
+
+/**
  * Fit as many ServiceInfo as possible in the given MTU.
  * The key-values are CBOR encoded once to decide how many
  * key-value pairs (partial/complete), can be fitted within the
@@ -5483,6 +5587,7 @@ end:
  * @param si - Pointer to the fdo_service_info_t list containing all platform
  * Device ServiceInfos.
  * @param mtu - MTU to be used for fitting the values
+* @return Return true if operation was successful, else return false.
  */
 bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu) {
 
@@ -5494,7 +5599,7 @@ bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu) {
 	size_t encoded_length = 0;
 	size_t fit_so_far = 0;
 
-	if (!si) {
+	if (!fdow || !si) {
 		return false;
 	}
 
@@ -5576,7 +5681,7 @@ bool fdo_mod_exec_sv_infotype(fdo_sdk_service_info_module_list_t *module_list,
 {
 	while (module_list) {
 		if (module_list->module.service_info_callback(
-			type, NULL, NULL) != FDO_SI_SUCCESS) {
+			type, NULL, NULL, NULL, NULL, NULL, 0) != FDO_SI_SUCCESS) {
 			LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
 			    module_list->module.module_name, type);
 			return false;
