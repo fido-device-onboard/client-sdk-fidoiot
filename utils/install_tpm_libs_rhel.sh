@@ -1,9 +1,5 @@
 TPM2_TSS_VER="3.0.3"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
-TPM2_ABRMD_VER="2.4.0"
-TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
-TPM2_TOOLS_VER="5.0"
-TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
 TPM2_TSS_ENGINE_VER=1.1.0
 TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v$TPM2_TSS_ENGINE_VER.zip"
 
@@ -13,28 +9,37 @@ cd $PARENT_DIR
 install_dependencies()
 {
     echo "Install the dependencies..."
-    apt -y update
-    apt -y install \
+    yum -y install \
         autoconf-archive \
-        libcmocka0 \
-        libcmocka-dev \
-        libjson-c-dev \
+        libcmocka \
+        libcmocka-devel \
+        json-c-devel \
         procps \
-        iproute2 \
-        build-essential \
+        iproute \
+        gcc-c++ \
+        kernel-devel \
+        make \
         git \
         pkg-config \
         gcc \
         libtool \
         automake \
-        uthash-dev \
+        uthash-devel \
         autoconf \
         doxygen \
         m4 \
         pandoc \
-        libcurl4-openssl-dev
-
-    pip install pyyaml PyYAML
+        libcurl-devel \
+        uriparser-devel \
+        dbus-devel \
+        glib2-devel \
+        dbus-x11 \
+        libgcrypt-devel \
+        libuuid-devel \
+        diffutils
+        
+    dnf builddep tpm2-tss
+    pip3 install pyyaml PyYAML
 }
 
 install_tpm2tss() 
@@ -46,12 +51,13 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
     make -j$(nproc)
     make install
     
     mkdir -p /var/lib/tpm
-    userdel tss
+    userdel -f tss
+    groupdel tss
     groupadd tss &&  useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
     udevadm control --reload-rules &&  udevadm trigger
     ldconfig
@@ -59,23 +65,9 @@ install_tpm2tss()
 
 install_tpm2abrmd()
 {
-    echo "Build & Install tpm2-abrmd version : $TPM2_ABRMD_VER"
-    cd $PARENT_DIR
-    rm -f tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz
-    wget $TPM2_ABRMD_LINK
-    tar -xvzf tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz
-    cd tpm2-abrmd-$TPM2_ABRMD_VER
-
-    ./configure --with-dbuspolicydir=/etc/dbus-1/system.d --with-systemdsystemunitdir=/lib/systemd/system/ --with-systemdpresetdir=/lib/systemd/system-preset/
-    make
-    make install
-
-    mv /usr/local/share/dbus-1/system-services/com.intel.tss2.Tabrmd.service /usr/share/dbus-1/system-services/
-    ldconfig
+    echo "Build & Install tpm2-abrmd"
+    yum -y install tpm2-abrmd
     service tpm2-abrmd stop
-    pkill -HUP dbus-daemon
-    systemctl daemon-reload
-    service tpm2-abrmd status
     service tpm2-abrmd start
     service tpm2-abrmd status
     systemctl enable tpm2-abrmd.service
@@ -83,16 +75,8 @@ install_tpm2abrmd()
 
 install_tpm2tools()
 {
-    echo "Build & Install tpm2-tools version : $TPM2_TOOLS_VER"
-    cd $PARENT_DIR
-    rm -f  tpm2-tools-$TPM2_TOOLS_VER.tar.gz
-    wget $TPM2_TOOLS_LINK
-    tar -xvzf tpm2-tools-$TPM2_TOOLS_VER.tar.gz
-    cd tpm2-tools-$TPM2_TOOLS_VER
-
-    ./configure
-    make
-    make install
+    echo "Build & Install tpm2-tools"
+    yum -y install tpm2-tools
 }
 
 install_tpm2tssengine()
@@ -106,9 +90,11 @@ install_tpm2tssengine()
 
     ./bootstrap
     mkdir -p /usr/local/lib/engines-1.1/
-    ./configure --with-enginesdir=/usr/local/lib/engines-1.1/
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --with-enginesdir=/usr/local/lib/engines-1.1/
     make -j$(nproc)
     make install
+    ldconfig
+
 }
 
 uninstall_tpm2tss()
@@ -122,18 +108,15 @@ uninstall_tpm2tss()
 uninstall_tpm2abrmd()
 {
     echo "Uninstall tpm2-abrmd"
-    cd $PARENT_DIR
-    cd tpm2-abrmd-$TPM2_ABRMD_VER
+    service tpm2-abrmd stop
     systemctl disable tpm2-abrmd.service
-    make uninstall
+    yum -y remove tpm2-abrmd
 }
 
 uninstall_tpm2tools()
 {
     echo "Uninstall tpm2-tools...."
-    cd $PARENT_DIR
-    cd tpm2-tools-$TPM2_TOOLS_VER
-    make uninstall
+    yum -y remove tpm2-tools
 }
 
 uninstall_tpm2tssengine()

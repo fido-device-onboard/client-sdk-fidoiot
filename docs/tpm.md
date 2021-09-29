@@ -1,11 +1,19 @@
 
+
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 / RHEL OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO build and execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
-## 1. Packages Requirements when Setting up TPM* 2.0 (on Ubuntu* OS version 20.04)
+## 1. Packages Requirements when Setting up TPM* 2.0
+
+* On RHEL OS version 8.4:
+```shell
+sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo yum -y install perl-Module-Load-Conditional perl-core
+```
 
 OpenSSL* toolkit version 1.1.1k.
 
@@ -32,7 +40,7 @@ OpenSSL* toolkit version 1.1.1k.
 	```
 	make
 	```
-	  (You may need to run `sudo apt install make gcc` before running this command successfully).
+	  (You may need to run `sudo apt/yum install make gcc` before running this command successfully).
 
 6. Check for possible errors:
 	```
@@ -64,41 +72,68 @@ Issue the following command from the terminal:
 	OpenSSL* 1.1.1k  25 Mar 2021
 	```
 
-## 2. TPM* Library Installation (for Ubuntu* OS version 20.04)
+## 2. TPM* Library Installation
 
 TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
-* Script usage command
-
+**Script usage command**
+* **On Ubuntu OS version 20.04:**
 ```shell
-./install_tpm_libs.sh -h
+sudo ./install_tpm_libs.sh -h
 ```
 
 * TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
 
 	* Command to install tpm-tss library
 	```
-	./install_tpm_libs.sh -t
+	sudo ./install_tpm_libs.sh -t
 	```
 	* Command to uninstall tpm-tss library
 	```
-	./install_tpm_libs.sh -d
+	sudo ./install_tpm_libs.sh -d
 	```
 
 * TPM* setup to enable TPM* enabled FDO Client SDK code compilation and execution
 
 	* Command to install TPM* libraries
 	```
-	./install_tpm_libs.sh -i
+	sudo ./install_tpm_libs.sh -i
 	```
 
 	* Command to uninstall TPM* libraries
 	```
-	./install_tpm_libs.sh -u
+	sudo ./install_tpm_libs.sh -u
 	```
-> ***NOTE***: Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
+* **On RHEL OS version 8.4:**
+> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4.
+```shell
+sudo ./install_tpm_libs_rhel.sh -h
+```
+
+* TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
+
+	* Command to install tpm-tss library
+	```
+	sudo ./install_tpm_libs_rhel.sh -t
+	```
+	* Command to uninstall tpm-tss library
+	```
+	sudo ./install_tpm_libs_rhel.sh -d
+	```
+
+* TPM* setup to enable TPM* enabled FDO Client SDK code compilation and execution
+
+	* Command to install TPM* libraries
+	```
+	sudo ./install_tpm_libs_rhel.sh -i
+	```
+
+	* Command to uninstall TPM* libraries
+	```
+	sudo ./install_tpm_libs_rhel.sh -u
+	```
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM*)
 
