@@ -116,16 +116,19 @@ int32_t msg68(fdo_prot_t *ps)
 
 		}
 
-		// get any external module that has some ServiceInfo to send 'NOW',
-		ext_module = fdo_serviceinfo_get_external_mod_to_write(&ps->fdow,
-					ps->sv_info_mod_list_head,
-					ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN);
-		// reset FDOW because it may have been used by the above method
-		fdo_block_reset(&ps->fdow.b);
-		ps->fdor.b.block_size = ps->prot_buff_sz;
-		if (!fdow_encoder_init(&ps->fdow)) {
-			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to initialize FDOW encoder\n");
-			goto err;
+		// As per the spec, Only send Device ServiceInfo modules IF Owner is not done
+		if (!ps->owner_serviceinfo_isdone) {
+			// get any external module that has some ServiceInfo to send 'NOW',
+			ext_module = fdo_serviceinfo_get_external_mod_to_write(&ps->fdow,
+						ps->sv_info_mod_list_head,
+						ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN);
+			// reset FDOW because it may have been used by the above method
+			fdo_block_reset(&ps->fdow.b);
+			ps->fdor.b.block_size = ps->prot_buff_sz;
+			if (!fdow_encoder_init(&ps->fdow)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to initialize FDOW encoder\n");
+				goto err;
+			}
 		}
 
 		// Finally, Send ServiceInfo in priority:
@@ -171,7 +174,8 @@ int32_t msg68(fdo_prot_t *ps)
 				goto err;
 			}
 
-			if (!fdow_boolean(&ps->fdow, ps->device_serviceinfo_ismore || ext_module)) {
+			ps->device_serviceinfo_ismore = ps->device_serviceinfo_ismore || (ext_module != NULL);
+			if (!fdow_boolean(&ps->fdow, ps->device_serviceinfo_ismore)) {
 				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 				goto err;
 			}
@@ -198,12 +202,15 @@ int32_t msg68(fdo_prot_t *ps)
 			// if we reach here, ServiceInfo write has been done
 			module_write_done = true;
 
-		} else if (ext_module) {
+		} else if (ext_module != NULL) {
 			// write External module ServiceInfo
 
-			ps->device_serviceinfo_ismore = fdo_serviceinfo_external_mod_is_more(&ps->fdow,
+			if (!fdo_serviceinfo_external_mod_is_more(&ps->fdow,
 				ps->sv_info_mod_list_head,
-				ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN);
+				ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN, &ps->device_serviceinfo_ismore)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to calculate IsMoreServiceInfo\n");
+				goto err;
+			}
 			// reset FDOW because it may have been used by the above method
 			fdo_block_reset(&ps->fdow.b);
 			ps->fdor.b.block_size = ps->prot_buff_sz;
@@ -247,7 +254,7 @@ int32_t msg68(fdo_prot_t *ps)
 			goto err;
 		}
 
-		if (!fdow_boolean(&ps->fdow, ps->device_serviceinfo_ismore)) {
+		if (!fdow_boolean(&ps->fdow, false)) {
 			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write IsMoreServiceInfo\n");
 			goto err;
 		}

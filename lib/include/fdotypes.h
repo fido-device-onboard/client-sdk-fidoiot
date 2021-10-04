@@ -508,7 +508,7 @@ bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
 bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num);
 bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
 bool fdo_serviceinfo_external_mod_is_more(fdow_t *fdow,
-	fdo_sdk_service_info_module_list_t *module_list, size_t mtu);
+	fdo_sdk_service_info_module_list_t *module_list, size_t mtu, bool *is_more);
 fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *fdow,
 	fdo_sdk_service_info_module_list_t *module_list,
 	size_t mtu);

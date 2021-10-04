@@ -5480,38 +5480,40 @@ end:
  * @param module_list - Pointer to the ServiceInfo module list containing all
  * Device ServiceInfos modules.
  * @param mtu - MTU to be used for fitting the values.
+ * @param is_more - Out parameter (Pointer) that will store the callback's value for
+ * TO2.DeviceServiceInfo.IsMoreServiceInfo.
  *
- * @return true if there is ServiceInfo to be sent in the next iteration,
- * false on any other conditions.
+ * @return true the operation was a success, false otherwise.
  */
 bool fdo_serviceinfo_external_mod_is_more(fdow_t *fdow,
-	fdo_sdk_service_info_module_list_t *module_list, size_t mtu) {
+	fdo_sdk_service_info_module_list_t *module_list, size_t mtu, bool *is_more) {
 
-	if (!fdow || !module_list) {
+	if (!fdow || !module_list || !is_more) {
 		return false;
 	}
 	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
-	bool is_more = false;
+	bool more = false;
 
 	while (traverse_list) {
 		if (traverse_list->module.active &&
 			traverse_list->module.service_info_callback(
-			FDO_SI_IS_MORE_DSI, NULL, fdow, NULL, NULL, &is_more, mtu) != FDO_SI_SUCCESS) {
+			FDO_SI_IS_MORE_DSI, NULL, fdow, NULL, NULL, &more, mtu) != FDO_SI_SUCCESS) {
 			LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
 			    traverse_list->module.module_name, FDO_SI_HAS_MORE_DSI);
 			return false;
 		}
-		if (is_more) {
-			return is_more;
+		if (more) {
+			*is_more = more;
+			return more;
 		}
 		traverse_list = traverse_list->next;
 	}
-	return false;
+	return true;
 }
 
 /**
- * Return a module reference that has some ServiceInfo to be send NOW/immediately,
- * by making a callbacks to each active module, to determine whether the module
+ * Return a module reference that has some ServiceInfo to be sent NOW/immediately,
+ * by making callbacks to each active module, to determine whether the module
  * has something to send immediately.
  *
  * @param fdow - Pointer to the writer.
@@ -5526,7 +5528,7 @@ fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *f
 	fdo_sdk_service_info_module_list_t *module_list, size_t mtu) {
 
 	if (!fdow || !module_list) {
-		return false;
+		return NULL;
 	}
 	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
 	bool has_more = false;
@@ -5537,7 +5539,7 @@ fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *f
 			FDO_SI_HAS_MORE_DSI, NULL, fdow, NULL, &has_more, NULL, mtu) != FDO_SI_SUCCESS) {
 			LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
 			    traverse_list->module.module_name, FDO_SI_HAS_MORE_DSI);
-			return false;
+			return NULL;
 		}
 		if (has_more) {
 			return &(traverse_list->module);
@@ -5561,18 +5563,16 @@ fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *f
  */
 bool fdo_serviceinfo_external_mod_write(fdow_t *fdow, fdo_sdk_service_info_module *module,
 	size_t mtu) {
-	bool ret = false;
 	if (!fdow || !module || !module->active) {
-		return ret;
+		return false;
 	}
 
 	if (module->service_info_callback(FDO_SI_GET_DSI, NULL, fdow, NULL, NULL, NULL, mtu) != FDO_SI_SUCCESS) {
 		LOG(LOG_DEBUG, "Sv_info: %s's CB Failed for type:%d\n",
 		    module->module_name, FDO_SI_GET_DSI);
-		return ret;
+		return false;
 	}
-	ret = true;
-	return ret;
+	return true;
 }
 
 /**
