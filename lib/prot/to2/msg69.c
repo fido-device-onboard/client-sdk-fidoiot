@@ -128,10 +128,10 @@ int32_t msg69(fdo_prot_t *ps)
 			goto err;
 		}
 		// Device does not have anything else to send
-		if (!ps->serviceinfo_invalid_modnames) {
+		if (!ps->serviceinfo_invalid_modnames && !ps->device_serviceinfo_ismore) {
 			ps->state = FDO_STATE_TO2_SND_DONE;
 		} else {
-			// Device has more ServiceInfo to send
+			// Device has more ServiceInfo to send (ONLY Unsupported module names can be sent)
 			ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
 		}
 	} else {
