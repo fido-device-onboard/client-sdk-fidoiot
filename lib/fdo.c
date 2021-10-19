@@ -437,7 +437,7 @@ static fdo_sdk_status app_initialize(void)
 
 	if ((g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READY1) ||
 			(g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READYN)) {
-		ret = load_mfg_secret();
+		ret = load_device_secret();
 		if (ret == -1) {
 			LOG(LOG_ERROR, "Load HMAC Secret failed\n");
 			return FDO_ERROR;
@@ -723,6 +723,7 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 			    fdo_sdk_service_info_module *module_information)
 {
 	int ret;
+	fdo_sdk_device_status state = FDO_DEVICE_STATE_D;
 
 	/* fdo Global data initialization */
 	g_fdo_data = fdo_alloc(sizeof(app_data_t));
@@ -752,10 +753,25 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 	}
 
 	/* Load credentials */
-	ret = load_credential();
-	if (ret == -1) {
-		LOG(LOG_ERROR, "Load credential failed.\n");
+	if (NULL == app_alloc_credentials()) {
+		LOG(LOG_ERROR, "Alloc credential failed.\n");
 		return FDO_ERROR;
+	}
+	fdo_dev_cred_init(g_fdo_data->devcred);
+
+	if (!load_device_status(&state)) {
+		LOG(LOG_ERROR, "Load device status failed.\n");
+		return FDO_ERROR;
+	}
+	g_fdo_data->devcred->ST = state;
+
+	// Load Device Credentials ONLY if there is one
+	if (g_fdo_data->devcred->ST != FDO_DEVICE_STATE_PC) {
+		ret = load_credential(g_fdo_data->devcred);
+		if (ret == -1) {
+			LOG(LOG_ERROR, "Load credential failed.\n");
+			return FDO_ERROR;
+		}
 	}
 
 	if ((num_modules == 0) || (num_modules > FDO_MAX_MODULES) ||
@@ -1015,7 +1031,7 @@ fdo_sdk_status fdo_sdk_resale(void)
 	if (g_fdo_data->devcred->ST == FDO_DEVICE_STATE_IDLE) {
 		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_READYN;
 
-		if (load_mfg_secret()) {
+		if (load_device_secret()) {
 			LOG(LOG_ERROR, "Reading {Mfg|Secret} blob failied!\n");
 			return FDO_ERROR;
 		}
