@@ -86,11 +86,6 @@ int32_t msg66(fdo_prot_t *ps)
 				LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to write ReplacementHMac\n");
 				goto err;
 			}
-			// Update the DCPubKeyHash (pkh) to the new values and store hash of the new owner public key
-			fdo_hash_free(ps->dev_cred->owner_blk->pkh);
-			ps->dev_cred->owner_blk->pkh =
-			    fdo_pub_key_hash(ps->osc->pubkey);
-
 		} else {
 			LOG(LOG_DEBUG,
 			    "TO2.DeviceServiceInfoReady: *****Resale triggered but not supported.*****\n");
