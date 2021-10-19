@@ -5,12 +5,11 @@
 
 
 client_sdk_include_directories(
-  fdo_sys
+  fido_alliance
   )
 
 client_sdk_sources(
-  fdo_sys/fdo_sys.c
-  fdo_sys/sys_utils_linux.c
+  fido_alliance/fido_alliance.c
   )
 
 

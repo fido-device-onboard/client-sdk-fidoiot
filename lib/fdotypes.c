@@ -5427,7 +5427,7 @@ bool fdo_serviceinfo_modules_list_write(fdow_t *fdow) {
 
 	bool ret = false;
 	char module_key[15] = "devmod:modules";
-	char module_value[8] = "fdo_sys";
+	char module_value[14] = "fido_alliance";
 
 	if (!fdow_start_array(fdow, 2)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to start array\n");

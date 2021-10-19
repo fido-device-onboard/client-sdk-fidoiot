@@ -116,12 +116,12 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 
 	/* module#1: fdo_sys */
 	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
-		      "fdo_sys", FDO_MODULE_NAME_LEN) != 0) {
+		      "fido_alliance", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
 		fdo_free(module_info);
 		return NULL;
 	}
-	module_info[0].service_info_callback = fdo_sys;
+	module_info[0].service_info_callback = fido_alliance;
 
 	return module_info;
 }

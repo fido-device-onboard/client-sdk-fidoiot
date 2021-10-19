@@ -59,4 +59,7 @@ typedef struct {
 extern int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 	char *module_message, bool *has_more, bool *is_more, size_t mtu);
 
+extern int fido_alliance(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
+	char *module_message, bool *has_more, bool *is_more, size_t mtu);
+
 #endif /* __FDOTYPES_H__ */
