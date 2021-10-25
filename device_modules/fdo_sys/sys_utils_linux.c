@@ -7,9 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "fdo_sys_utils.h"
 #include "fdo_sys.h"
+
+// Process ID of the process created by fdo_sys:exec_cb
+static pid_t exec_pid = -1;
 
 /* Allow only alphanumeric file name either shell or python script*/
 static bool is_valid_filename(const char *fname)
@@ -109,38 +113,32 @@ end:
 }
 
 bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
-		  char *file_name)
+		  char *file_name, char **command, bool *status_iscomplete, int *status_resultcode,
+		  uint64_t *status_waitsec)
 {
-	int ret = false;
+	bool ret = false;
 	FILE *fp = NULL;
-	int error_code = 0;
-	char *command = NULL;
-	size_t command_len = data_len;
-	const char exec_terminator = '\0';
-	const char *space_delimeter_str = " ";
-	char *exec_token, *exec_token_next;
-	int exec_token_index = 0;
-
-	if (!data || !data_len) {
-#ifdef DEBUG_LOGS
-		printf("NULL params in Process_data\n");
-#endif
-		return false;
-	}
+	int status = -1;
 
 	// For writing to a file
 	if (type == FDO_SYS_MOD_MSG_WRITE) {
 
+		if (!data || !data_len) {
+#ifdef DEBUG_LOGS
+			printf("fdo_sys write : Invalid params\n");
+#endif
+			return false;
+		}
 		if (!file_name) {
 #ifdef DEBUG_LOGS
-			printf("fdo_sys write:No filename present\n");
+			printf("fdo_sys write : No filename present for fdo_sys:write\n");
 #endif
 			return false;
 		}
 		fp = fopen(file_name, "a");
 		if (!fp) {
 #ifdef DEBUG_LOGS
-			printf("fdo_sys write:Failed to open file(path): %s\n", file_name);
+			printf("fdo_sys write : Failed to open file(path): %s\n", file_name);
 #endif
 			return false;
 		}
@@ -151,7 +149,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 		if (fwrite(data, sizeof(char), data_len, fp) !=
 		    (size_t)data_len) {
 #ifdef DEBUG_LOGS
-			printf("fdo_sys write: Failed to write\n");
+			printf("fdo_sys write : Failed to write\n");
 #endif
 			goto end;
 		}
@@ -159,65 +157,148 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 		goto end;
 	}
 
-	// For Exec call
-	if (type == FDO_SYS_MOD_MSG_EXEC) {
+	// For exec/exec_cb call
+	if (type == FDO_SYS_MOD_MSG_EXEC || type == FDO_SYS_MOD_MSG_EXEC_CB) {
 
-		if (exec_terminator != data[data_len]) {
+		if (!file_name || !is_valid_filename((const char *) file_name)) {
 #ifdef DEBUG_LOGS
-			printf("fdo_sys exec : Command is not null-terminated\n");
+			printf("fdo_sys exec/exec_cb : Invalid filename\n");
 #endif
-			goto end;
-		}
-		// copy the 'exec_instructions' array upto 'exec_instructions_sz'
-		// into 'command'. check if it is '\0' delimeted, and get the file name
-		command = (char *) ModuleAlloc(data_len);
-		if (command == NULL) {
-#ifdef DEBUG_LOGS
-			printf("fdo_sys exec : Failed to alloc for command\n");
-#endif
-			goto end;
+			return false;
 		}
 
-		if (0 != strncpy_s(command, command_len,
-			(char *) data, command_len)) {
-			goto end;
+		if (!command) {
+#ifdef DEBUG_LOGS
+			printf("fdo_sys exec/exec_cb : Missing command\n");
+#endif
+			return false;			
 		}
 
-		// exec_token empties itself in the tokenization process and
-		// exec_token_next is provided for internal usage for strtok_s
-		exec_token = strtok_s(command, &command_len,
-			space_delimeter_str, &exec_token_next);
-		while (exec_token) {
-			// 1st ' ' i.e 2nd token, gives the filename that will be executed.
-			if (exec_token_index == 1) {
-				// Proper error check for system call
-				// Allow only filename (no absolute path for secure env)
-				if (is_valid_filename((const char *) exec_token) == false) {
+		if (exec_pid != -1) {
 #ifdef DEBUG_LOGS
-					printf("fdo_sys exec : Found invalid filename in command\n");
+			printf("fdo_sys exec/exec_cb : An exec instruction is currently in progress\n");
 #endif
-					goto end;
-				}
+			return false;
+		}
+
+		printf("fdo_sys exec : Executing command...\n");
+		exec_pid = fork();
+		if (exec_pid < 0) {
+			// error
+#ifdef DEBUG_LOGS
+			printf("fdo_sys exec : Failed to fork.\n");
+#endif
+			return false;
+		} else if (exec_pid == 0) {
+			// child process
+			status = execv(command[0], command);
+			if (status == -1) {
+#ifdef DEBUG_LOGS
+				printf("fdo_sys exec : Failed to execute command.\n");
+#endif
+				goto end;
 			}
-			exec_token = strtok_s(NULL, &command_len,
-				space_delimeter_str, &exec_token_next);
-			exec_token_index++;
-		}
+		} else {
+			// parent process
+			// if exec, block until process completes
+			if (type == FDO_SYS_MOD_MSG_EXEC) {
+				waitpid(exec_pid, &status, 0);
+				if (WIFEXITED(status)) {
+					if (WEXITSTATUS(status) != 0) {
+#ifdef DEBUG_LOGS
+						printf("fdo_sys exec : Proces execution failed.\n");
+#endif
+						goto end;
 
-		printf("fdo_sys exec: Received command completely. Executing...\n");
-		error_code = system((char *) data);
-		if (error_code != 0) {
-			printf("fdo_sys exec : Failed to execute command.\n");
-			goto end;
+					} else {
+#ifdef DEBUG_LOGS
+						printf("fdo_sys exec : Process execution completed.\n");
+#endif
+						ret = true;
+						goto end;
+					}
+				}
+			} else {
+				if (!status_iscomplete || !status_resultcode || !status_waitsec) {
+#ifdef DEBUG_LOGS
+					printf("fdo_sys exec_cb : Invalid params\n");
+#endif
+				}
+				*status_iscomplete = false;
+				*status_resultcode = 0;
+				*status_waitsec = 5;
+				ret = true;
+#ifdef DEBUG_LOGS
+				printf("fdo_sys exec_cb : Process execution started\n");
+#endif
+			}
 		}
 
 		ret = true;
 	}
 
-end:
-	if (command) {
-		ModuleFree(command);
+	// For status_cb
+	if (type == FDO_SYS_MOD_MSG_STATUS_CB) {
+
+		if (!status_iscomplete || !status_resultcode || !status_waitsec) {
+#ifdef DEBUG_LOGS
+			printf("fdo_sys status_cb : Invalid params\n");
+#endif
+			return ret;
+		}
+		if (*status_iscomplete && exec_pid < 0) {
+			// final Acknowledgement message from the Owner. NO-OP
+			ret = true;
+			return ret;
+		}
+		if (*status_iscomplete && exec_pid > 0) {
+			// kill the process as requested by the Owner
+			kill(exec_pid, SIGTERM);
+			*status_iscomplete = true;
+			*status_resultcode = 0;
+			*status_waitsec = 0;
+			ret = true;
+			goto end;
+		} else {
+			// check for process status every second, until the given waitsec
+			int wait_timer = *status_waitsec;
+			while (wait_timer > 0) {
+				if (waitpid(exec_pid, &status, WNOHANG) == -1) {
+#ifdef DEBUG_LOGS
+					printf("fdo_sys status_cb : Error occurred while checking process status\n");
+#endif
+					return ret;
+				}
+				if (WIFEXITED(status)) {
+					*status_resultcode = WEXITSTATUS(status);
+					*status_iscomplete = true;
+					*status_waitsec = 0;
+#ifdef DEBUG_LOGS
+					printf("fdo_sys status_cb: Process execution completed\n");
+#endif
+					exec_pid = -1;
+					ret = true;
+					goto end;
+				}
+				sleep(1);
+				wait_timer--;
+			}
+			*status_iscomplete = false;
+			*status_resultcode = 0;
+		}
+
+		ret = true;
 	}
+
+	// For performing clean-up operations of module exit
+	if (type == FDO_SYS_MOD_MSG_EXIT) {
+		if (exec_pid > 0) {
+			// kill the process as a part of clea-up operations
+			kill(exec_pid, SIGTERM);
+		}
+		ret = true;
+	}
+end:
 
 	if (fp) {
 		if (fclose(fp) == EOF) {
@@ -225,6 +306,11 @@ end:
 			printf("Fclose failed\n");
 #endif
 		}
+	}
+	// upon error, kill the forked process
+	if (!ret && exec_pid > 0) {
+		kill(exec_pid, SIGTERM);
+		exec_pid = -1;
 	}
 	return ret;
 }
@@ -243,4 +329,54 @@ bool delete_old_file(const char *filename)
 		ret = true;
 	}
 	return ret;
+}
+
+/**
+ * Return the length of the given file.
+ */
+size_t get_file_sz(char const *filename)
+{
+	if (!filename || !filename[0]) {
+		return 0;
+	}
+	size_t file_length = 0;
+	FILE *fp = fopen(filename, "rb");
+
+	if (fp) {
+		fseek(fp, 0, SEEK_END);
+		file_length = ftell(fp);
+		if (fclose(fp) == EOF) {
+			printf("Fclose Failed");
+		}
+	}
+	return file_length;
+}
+
+/**
+ * Read the filename's content (size bytes) into the given buffer (pre-allocated memory)
+ * starting at the specified offset (from).
+ */
+bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer, size_t size, int from)
+{
+	FILE *file = NULL;
+	size_t bytes_read = 0;
+
+	file = fopen(filename, "rb");
+	if (!file) {
+		return false;
+	}
+
+	fseek(file, from, SEEK_SET);
+	bytes_read = fread(buffer, 1, size, file);
+	if (bytes_read != size) {
+		if (fclose(file) == EOF) {
+			printf("Fclose Failed");
+		}
+		return false;
+	}
+
+	if (fclose(file) == EOF) {
+		printf("Fclose Failed");
+	}
+	return true;
 }
