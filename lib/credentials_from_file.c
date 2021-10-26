@@ -18,6 +18,8 @@
 #include "util.h"
 #include "fdoCrypto.h"
 
+static bool validate_state(fdo_sdk_device_status current_status);
+
 /**
  * Write the Device Credentials blob, contains our state
  * @param dev_cred_file - pointer of type const char to which credentails are
@@ -201,6 +203,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	bool ret = false;
 	size_t dev_cred_len = 0;
 	fdor_t *fdor = NULL;
+	int dev_state = -1;
 
 	if (!dev_cred_file || !our_dev_cred) {
 		LOG(LOG_ERROR, "Invalid params\n");
@@ -252,12 +255,14 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 
-	if (!fdor_signed_int(fdor, &our_dev_cred->ST)) {
+	if (!fdor_signed_int(fdor, &dev_state)) {
 		LOG(LOG_ERROR, "DeviceCredential read: ST not found\n");
 		goto end;
 	}
+	our_dev_cred->ST = dev_state;
 
-	if (our_dev_cred->ST < FDO_DEVICE_STATE_READY1) {
+	if (!validate_state(our_dev_cred->ST)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Invalid ST\n");
 		goto end;
 	}
 
@@ -348,7 +353,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 	size_t dev_cred_len = 0;
 	fdo_byte_array_t *secret = NULL;
 
-	if (!dev_cred_file || !our_dev_cred) {
+	if (!dev_cred_file) {
 		LOG(LOG_DEBUG, "Invalid params\n");
 		return false;
 	}
@@ -434,21 +439,17 @@ int store_credential(fdo_dev_cred_t *ocred)
 }
 
 /**
- * load_credentials function loads the State & Owner_blk credentials from
+ * load_credentials function loads the State, Owner and Manufacturer credentials from
  * storage
  *
  * @return
  *        return 0 on success. -1 on failure.
  */
-int load_credential(void)
+int load_credential(fdo_dev_cred_t *ocred)
 {
-	fdo_dev_cred_t *ocred = app_alloc_credentials();
-
 	if (!ocred) {
 		return -1;
 	}
-
-	fdo_dev_cred_init(ocred);
 
 	/* Read in the blob and save the device credentials */
 	if (!read_normal_device_credentials((char *)FDO_CRED_NORMAL,
@@ -460,27 +461,74 @@ int load_credential(void)
 }
 
 /**
- * load_mfg_secret function loads the Secure & MFG credentials from storage
+ * load_device_secret function loads the Secure & credentials from storage
  *
  * @return
  *        return 0 on success. -1 on failure.
  */
 
-int load_mfg_secret(void)
+int load_device_secret(void)
 {
-	fdo_dev_cred_t *ocred = app_get_credentials();
-
-	if (!ocred) {
-		return -1;
-	}
 
 #if !defined(DEVICE_TPM20_ENABLED)
 	// ReadHMAC Credentials
 	if (!read_secure_device_credentials((char *)FDO_CRED_SECURE,
-					    FDO_SDK_SECURE_DATA, ocred)) {
+					    FDO_SDK_SECURE_DATA, NULL)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
 #endif
 	return 0;
+}
+
+/**
+ * Read the Device status and store it in the out variable 'state'.
+ *
+ * @return
+ *        return true on success. false on failure.
+ */
+bool load_device_status(fdo_sdk_device_status *state) {
+
+	if (!state) {
+		return false;
+	}
+	size_t dev_cred_len = fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA);
+	// Device has not yet been initialized.
+	// Since, Normal.blob is empty, the file size will be 0
+	if (dev_cred_len == 0) {
+		LOG(LOG_DEBUG, "DeviceCredential is empty. Set state to run DI\n");
+		*state = FDO_DEVICE_STATE_PC;
+	} else {
+		LOG(LOG_DEBUG, "DeviceCredential is non-empty. Set state to run TO1/TO2\n");
+		// No Device state is being set currently
+	}
+	return true;
+}
+
+/**
+ * Store the Device status given by the variable 'state'.
+ * NOTE: Currently, it does nothing. This is a provision to store status separately
+ * and is unused in this specific implementation.
+ *
+ * @return
+ *        return true on success. false on failure.
+ */
+bool store_device_status(fdo_sdk_device_status *state) {
+	(void)state;
+	return true;
+}
+
+/**
+ * Validate the current status of the device.
+ */
+static bool validate_state(fdo_sdk_device_status current_status) {
+
+	if (current_status == FDO_DEVICE_STATE_READY1 ||
+		current_status == FDO_DEVICE_STATE_D1 ||
+		current_status == FDO_DEVICE_STATE_IDLE ||
+		current_status == FDO_DEVICE_STATE_READYN ||
+		current_status == FDO_DEVICE_STATE_DN) {
+		return true;
+	}
+	return false;
 }

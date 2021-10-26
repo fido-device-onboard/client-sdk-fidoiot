@@ -13,16 +13,6 @@
 
 #define GID_SIZE (16)
 
-// FDO Device States
-#define FDO_DEVICE_STATE_PD 0     // Permanently Disabled
-#define FDO_DEVICE_STATE_PC 1     // Pre-Configured
-#define FDO_DEVICE_STATE_D 2      // Disabled
-#define FDO_DEVICE_STATE_READY1 3 // Initial Transfer Ready
-#define FDO_DEVICE_STATE_D1 4     // Initial Transfer Disabled
-#define FDO_DEVICE_STATE_IDLE 5   // FDO Idle
-#define FDO_DEVICE_STATE_READYN 6 // Transfer Ready
-#define FDO_DEVICE_STATE_DN 7     // Transfer Disabled
-
 // Ports
 #define FDO_PORT_MAX_LEN 5 // max value of port is 65535 i.e. length 5
 #define FDO_PORT_MIN_VALUE 1
@@ -226,4 +216,9 @@ bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep);
 
 int ps_get_m_string(fdo_prot_t *ps);
 int ps_get_m_string_cbor(fdo_byte_array_t *mstring);
+
+/* Allocate and return the Device Credentials */
+fdo_dev_cred_t *app_alloc_credentials(void);
+fdo_dev_cred_t *app_get_credentials(void);
+
 #endif /* __FDOPROT_H__ */

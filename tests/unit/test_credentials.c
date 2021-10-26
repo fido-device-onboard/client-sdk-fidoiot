@@ -256,7 +256,7 @@ void test_read_normal_device_credentials(void)
 	TEST_ASSERT_EQUAL(FDO_SUCCESS, ret);
 
 	configure_blobs();
-	ret = load_mfg_secret();
+	ret = load_device_secret();
 	TEST_ASSERT_NOT_EQUAL(-1, ret);
 
 	fdo_dev_cred_t *normal_cred = app_get_credentials();
@@ -344,15 +344,19 @@ void test_load_credential(void)
 
 	/* Negative case*/
 	g_malloc_fail = true;
-	ret = load_credential();
+	ret = load_credential(NULL);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	g_malloc_fail = false;
-	ret = load_credential();
+	fdo_dev_cred_t *ocred = app_alloc_credentials();
+	TEST_ASSERT_NOT_NULL(ocred);
+	fdo_dev_cred_init(ocred);
+
+	ret = load_credential(ocred);
 	TEST_ASSERT_EQUAL(0, ret);
 
 	configure_blobs();
-	ret = load_credential();
+	ret = load_credential(ocred);
 	TEST_ASSERT_EQUAL(0, ret);
 
 	fdo_sdk_deinit();
@@ -381,7 +385,7 @@ void test_read_write_Device_credentials(void)
 	// then, write the same back into blobs, using library.
 	configure_blobs();
 
-	ret = load_mfg_secret();
+	ret = load_device_secret();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	fdo_dev_cred_t *ocred = app_get_credentials();
@@ -435,7 +439,7 @@ void test_store_credential(void)
 	// then, write the same back into blobs, using library.
 	configure_blobs();
 
-	ret = load_mfg_secret();
+	ret = load_device_secret();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
 	fdo_dev_cred_t *ocred = app_get_credentials();
