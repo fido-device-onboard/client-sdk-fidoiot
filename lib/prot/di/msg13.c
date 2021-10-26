@@ -66,8 +66,13 @@ int32_t msg13(fdo_prot_t *ps)
 
 	/* Update the state of device to be ready for TO1 */
 	ps->dev_cred->ST = FDO_DEVICE_STATE_READY1;
+	if (!store_device_status(&ps->dev_cred->ST)) {
+		LOG(LOG_ERROR, "Failed to store updated device status\n");
+		goto err;
+	}
+
 	if (store_credential(ps->dev_cred) != 0) {
-		LOG(LOG_ERROR, "Failed to store updated device state\n");
+		LOG(LOG_ERROR, "Failed to store updated device credentials\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "Device credentials successfully written!!\n");

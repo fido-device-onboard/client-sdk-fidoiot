@@ -96,7 +96,12 @@ int32_t msg70(fdo_prot_t *ps)
 		LOG(LOG_DEBUG, "TO2.Done: Device hmac key is unchanged as reuse was triggered.\n");
 	}
 
-	/* Write new device credentials */
+	/* Write new device credentials and state*/
+	if (!store_device_status(&ps->dev_cred->ST)) {
+		LOG(LOG_ERROR, "TO2.Done: Failed to store updated device status\n");
+		goto err;
+	}
+
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");
 		goto err;

@@ -8,6 +8,18 @@
 
 #include "fdotypes.h"
 
+// FDO Device States
+typedef enum {
+	FDO_DEVICE_STATE_PD = 0,     // Permanently Disabled
+	FDO_DEVICE_STATE_PC = 1,     // Pre-Configured
+	FDO_DEVICE_STATE_D = 2,      // Disabled
+	FDO_DEVICE_STATE_READY1 = 3, // Initial Transfer Ready
+	FDO_DEVICE_STATE_D1 = 4,     // Initial Transfer Disabled
+	FDO_DEVICE_STATE_IDLE = 5,   // FDO Idle
+	FDO_DEVICE_STATE_READYN = 6, // Transfer Ready
+	FDO_DEVICE_STATE_DN = 7      // Transfer Disabled
+} fdo_sdk_device_status;
+
 fdo_hash_t *fdo_pub_key_hash(fdo_public_key_t *pub_key);
 
 // 3.4.1, Device Credential sub-values
@@ -26,7 +38,7 @@ typedef struct _fdo_cred_mfg_block_t {
 
 // 3.4.1, Device Credential
 typedef struct _fdo_device_credentials_t {
-	int ST;
+	fdo_sdk_device_status ST;
 	bool dc_active;
 	fdo_cred_mfg_t *mfg_blk;
 	fdo_cred_owner_t *owner_blk;
