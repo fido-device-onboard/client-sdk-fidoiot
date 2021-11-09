@@ -25,11 +25,24 @@
 	}
 #endif
 
-typedef enum { FDO_SYS_MOD_MSG_WRITE, FDO_SYS_MOD_MSG_EXEC } fdoSysModMsg;
+typedef enum {
+	FDO_SYS_MOD_MSG_WRITE,
+	FDO_SYS_MOD_MSG_EXEC,
+	FDO_SYS_MOD_MSG_EXEC_CB,
+	FDO_SYS_MOD_MSG_STATUS_CB,
+	FDO_SYS_MOD_MSG_DATA,
+	FDO_SYS_MOD_MSG_EOT,
+	FDO_SYS_MOD_MSG_EXIT,
+	FDO_SYS_MOD_MSG_NONE
+} fdoSysModMsg;
 
 void *ModuleAlloc(int size);
 bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t dataLen,
-		  char *File_name);
+		  char *file_name, char **command,
+		  bool *status_iscomplete, int *status_resultcode,
+		  uint64_t *status_waitsec);
 
-bool delete_old_file(const char *File_name);
+size_t get_file_sz(char const *filename);
+bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer, size_t size, int from);
+bool delete_old_file(const char *file_name);
 #endif /* __SYS_UTILS_H__ */
