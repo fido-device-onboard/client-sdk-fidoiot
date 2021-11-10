@@ -214,6 +214,8 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #ifdef DEBUG_LOGS
 						printf("fdo_sys exec : Process execution completed.\n");
 #endif
+						// reset the process ID since execution is done
+						exec_pid = -1;
 						ret = true;
 						goto end;
 					}
@@ -276,6 +278,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #ifdef DEBUG_LOGS
 					printf("fdo_sys status_cb: Process execution completed\n");
 #endif
+					// reset the process ID since execution is done
 					exec_pid = -1;
 					ret = true;
 					goto end;
