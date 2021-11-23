@@ -1434,7 +1434,7 @@ static bool _STATE_TO2(void)
 		return FDO_ERROR;
 	}
 
-	if (!rvbypass) {
+	if (!rvbypass && !g_fdo_data->current_rvto2addrentry) {
 		// preset RVTO2Addr if we're going to run TO2 using it.
 		fdo_rvto2addr_t *rvto2addr = g_fdo_data->prot.rvto2addr;
 		if (!rvto2addr) {
@@ -1450,13 +1450,13 @@ static bool _STATE_TO2(void)
 	bool tls = true;
 	bool skip_rv = false;
 
-	// if thers is RVBYPASS enabled, we enter the loop and set 'rvbypass' flag to false
+	// if thers is RVBYPASS enabled, we set 'rvbypass' flag to false
 	// otherwise, there'll be RVTO2AddrEntry(s), and we iterate through it.
 	// Only one of the conditions will satisfy, which is ensured by resetting of the 'rvbypass' flag,
 	// and, eventual Nulling of the 'g_fdo_data->current_rvto2addrentry'
 	// because we keep on moving to next.
 	// Run the TO2 protocol regardless.
-	while (rvbypass || g_fdo_data->current_rvto2addrentry) {
+	if (rvbypass || g_fdo_data->current_rvto2addrentry) {
 
 		tls = true;
 		skip_rv = false;
@@ -1536,7 +1536,10 @@ static bool _STATE_TO2(void)
 			// else, skip the directive
 			if (!rvbypass) {
 				// free only when rvbypass is false, since the allocation was done then.
-				fdo_free(ip);
+				// Note: This may be unreachable.
+				if (ip) {
+					fdo_free(ip);
+				}
 				ip = NULL;
 			} else {
 				// set the global rvbypass flag to false so that we don't continue the loop
@@ -1547,7 +1550,10 @@ static bool _STATE_TO2(void)
 				ret = true;
 				return ret;
 			}
-			continue;
+			g_fdo_data->state_fn = &_STATE_TO2;
+			// return true so that TO2 is processed with the remaining directives
+			ret = true;
+			return ret;
 		}
 
 		prot_ctx = fdo_prot_ctx_alloc(
@@ -1581,7 +1587,10 @@ static bool _STATE_TO2(void)
 				// the execution reaches here only if rvbypass was never set
 				if (g_fdo_data->current_rvto2addrentry) {
 					LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
-					continue;
+					g_fdo_data->state_fn = &_STATE_TO2;
+					// return true so that TO2 is processed with the remaining directives
+					ret = true;
+					return ret;
 				}
 				// there's no more owner locations left to try,
 				// so start retrying with TO1, if retry is enabled.
@@ -1621,7 +1630,9 @@ static bool _STATE_TO2(void)
 
 		if (!rvbypass) {
 			// free only when rvbypass is false, since the allocation was done then.
-			fdo_free(ip);
+			if (ip) {
+				fdo_free(ip);
+			}
 			ip = NULL;
 		} else {
 			// set the global rvbypass flag to false so that we don't continue the loop
@@ -1635,7 +1646,8 @@ static bool _STATE_TO2(void)
 		LOG(LOG_INFO, "@FIDO Device Onboard Complete@\n");
 		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 		ret = true;
-		break;
+	} else {
+		LOG(LOG_ERROR, "Invalid State\n");
 	}
 	return ret;
 }
