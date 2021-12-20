@@ -352,6 +352,26 @@ bool fdow_null(fdow_t *fdow)
 }
 
 /**
+ * Write a CBOR Tag value.
+ *
+ * @param fdow_t - struct fdow_t
+ * @param value - unsigned integer representing a Tag to be written
+ * @return true if the operation was a success, false otherwise
+ */
+bool fdow_tag(fdow_t *fdow, uint64_t tag)
+{
+	if (!fdow || !fdow->current) {
+		LOG(LOG_ERROR, "CBOR encoder: Invalid params\n");
+		return false;
+	}
+	if (cbor_encode_tag(&fdow->current->cbor_encoder, tag) != CborNoError) {
+		LOG(LOG_ERROR, "CBOR encoder: Failed to write Tag\n");
+		return false;
+	}
+	return true;
+}
+
+/**
  * Mark the completion of writing elements into a CBOR array (Major Type 4).
  * 
  * It moves back to previous CborEncoder and frees the node containing the current
@@ -786,6 +806,30 @@ bool fdor_boolean(fdor_t *fdor, bool *result) {
 		cbor_value_get_boolean(&fdor->current->cbor_value, result)
 			!= CborNoError) {
 		LOG(LOG_ERROR, "CBOR decoder: Failed to start Major Type 7 (bool)\n");
+		return false;
+	}
+	if (!fdor_next(fdor)) {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Read a CBOR Tag.
+ *
+ * @param fdor_t - struct fdor_t
+ * @param result - output variable where the read Tag will be stored
+ * @return true if the operation was a success, false otherwise
+ */
+bool fdor_tag(fdor_t *fdor, uint64_t *result) {
+	if (!fdor || !fdor->current || !result) {
+		LOG(LOG_ERROR, "CBOR decoder: Invalid params\n");
+		return false;
+	}
+	if (!cbor_value_is_tag(&fdor->current->cbor_value) ||
+		cbor_value_get_tag(&fdor->current->cbor_value, result)
+			!= CborNoError) {
+		LOG(LOG_ERROR, "CBOR decoder: Failed to read Tag\n");
 		return false;
 	}
 	if (!fdor_next(fdor)) {

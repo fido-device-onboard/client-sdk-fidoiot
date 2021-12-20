@@ -1189,7 +1189,9 @@ void fdo_public_key_free(fdo_public_key_t *pk)
 	if (!pk) {
 		return;
 	}
-	fdo_byte_array_free(pk->key1);
+	if (pk->key1) {
+		fdo_byte_array_free(pk->key1);
+	}
 	if (pk->key2) {
 		fdo_byte_array_free(pk->key2);
 	}
@@ -1226,10 +1228,72 @@ bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
 		LOG(LOG_ERROR, "PublicKey write: Failed to write pkEnc.\n");
 		return false;
 	}
-	if (!fdow_byte_string(fdow, pk->key1->bytes, pk->key1->byte_sz)) {
-		LOG(LOG_ERROR, "PublicKey write: Failed to write pkBody.\n");
+	switch (pk->pkenc)
+	{
+	case FDO_CRYPTO_PUB_KEY_ENCODING_CRYPTO:
+		LOG(LOG_ERROR, "PublicKey write: pkEnc.Crypto is not supported.\n");
+		return false;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_X509:
+		if (!fdow_byte_string(fdow, pk->key1->bytes, pk->key1->byte_sz)) {
+			LOG(LOG_ERROR, "PublicKey write: Failed to write in bytes (x509).\n");
+			return false;
+		}
+		break;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509:
+		LOG(LOG_ERROR, "PublicKey write: pkEnc.COSEX509 is not supported.\n");
+		return false;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY:
+		;
+		int crv = 0;
+		if (!fdow_start_map(fdow, 3)) {
+			LOG(LOG_ERROR, "PublicKey write: Failed to start COSEKey Map\n");
+			return false;
+		}
+
+		if (!fdow_signed_int(fdow, FDO_COSE_ENC_COSEKEY_CURVE_KEY)) {
+			LOG(LOG_ERROR, "PublicKey write: Failed to write COSEKey key\n");
+			return false;
+		}
+		crv = pk->pkalg == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 ?
+			FDO_COSE_ENC_COSEKEY_CRV_EC2_P256 : FDO_COSE_ENC_COSEKEY_CRV_EC2_P384;
+		if (!fdow_signed_int(fdow, crv)) {
+			LOG(LOG_ERROR,
+				"PublicKey write: Failed to write COSEKey Type value\n");
+			return false;
+		}
+
+		if (!fdow_signed_int(fdow, FDO_COSE_ENC_COSEKEY_ECX_KEY)) {
+			LOG(LOG_ERROR, "PublicKey write: Failed to write COSEKey X key\n");
+			return false;
+		}
+		if (!fdow_byte_string(fdow, pk->key1->bytes, pk->key1->byte_sz)) {
+			LOG(LOG_ERROR,
+				"PublicKey write: Failed to write COSEKey X value\n");
+			return false;
+		}
+
+		if (!fdow_signed_int(fdow, FDO_COSE_ENC_COSEKEY_ECY_KEY)) {
+			LOG(LOG_ERROR, "PublicKey write: Failed to write COSEKey Y key\n");
+			return false;
+		}
+		if (!fdow_byte_string(fdow, pk->key2->bytes, pk->key2->byte_sz)) {
+			LOG(LOG_ERROR,
+				"PublicKey write: Failed to write COSEKey Y value\n");
+			return false;
+		}
+
+		if (!fdow_end_map(fdow)) {
+			LOG(LOG_ERROR,
+				"PublicKey write: Failed to end COSEKey map\n");
+			return false;
+		}
+		break;
+
+	default:
+		LOG(LOG_ERROR, "PublicKey write: Invalid pkEnc found\n");
 		return false;
 	}
+
 	if (!fdow_end_array(fdow)) {
 		LOG(LOG_ERROR, "PublicKey write: Failed to end array.\n");
 		return false;
@@ -1262,40 +1326,148 @@ fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 	}
 
 	if (!fdor_array_length(fdor, &num_public_key_items) || num_public_key_items != 3) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: Array length\n", __func__);
+		LOG(LOG_ERROR, "Invalid PublicKey: Array length\n");
 		goto err;
 	}
 	if (!fdor_start_array(fdor)) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: Start array not found\n", __func__);
+		LOG(LOG_ERROR, "Invalid PublicKey: Start array not found\n");
 		goto err;
 	}
-	if (!fdor_signed_int(fdor, &pk->pkalg)) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkType\n", __func__);
+	if (!fdor_signed_int(fdor, &pk->pkalg) || pk->pkalg != FDO_PK_ALGO) {
+		LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkType\n");
 		goto err;
 	}
 	if (!fdor_signed_int(fdor, &pk->pkenc)) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkEnc\n", __func__);
+		LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkEnc\n");
 		goto err;
 	}
 
-	if (!fdor_string_length(fdor, &public_key_length) || public_key_length <= 0) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkBody length\n", __func__);
-	}
-	LOG(LOG_DEBUG, "PublicKey.pkBody length: %zu bytes\n", public_key_length);
-	pk->key1 = fdo_byte_array_alloc(public_key_length);
+	switch (pk->pkenc)
+	{
+	case FDO_CRYPTO_PUB_KEY_ENCODING_CRYPTO:
+		LOG(LOG_ERROR, "Invalid PublicKey: pkEnc.Crypto is not supported.\n");
+		goto err;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_X509:
+		if (!fdor_string_length(fdor, &public_key_length) || public_key_length <= 0) {
+			LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkBody length\n");
+			goto err;
+		}
+		LOG(LOG_DEBUG, "PublicKey.pkBody length: %zu bytes\n", public_key_length);
+		pk->key1 = fdo_byte_array_alloc(public_key_length);
 
-	if (!pk->key1 || !fdor_byte_string(fdor, pk->key1->bytes, public_key_length)) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: Unable to decode pkBody\n", __func__);
-		fdo_byte_array_free(pk->key1);
+		if (!pk->key1 || !fdor_byte_string(fdor, pk->key1->bytes, public_key_length)) {
+			LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkBody\n");
+			fdo_byte_array_free(pk->key1);
+			goto err;
+		}
+		pk->key1->byte_sz = public_key_length;
+		break;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509:
+		LOG(LOG_ERROR, "Invalid PublicKey: pkEnc.COSEX509 is not supported.\n");
+		goto err;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY:
+		;
+		size_t map_items = 0;
+		int map_key = 0;
+		int map_val_int = 0;
+		size_t map_val_bytes_sz = 0;
+		int exp_crv_val = 0;
+
+#if defined(ECDSA256_DA)
+		exp_crv_val = FDO_COSE_ENC_COSEKEY_CRV_EC2_P256;
+#else
+		exp_crv_val = FDO_COSE_ENC_COSEKEY_CRV_EC2_P384;
+#endif
+
+		if (!fdor_map_length(fdor, &map_items) || (map_items != 0 && map_items != 3)) {
+			LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkBody COSEKey Map length\n");
+			goto err;
+		}
+
+		if (!fdor_start_map(fdor)) {
+			LOG(LOG_ERROR, "Invalid PublicKey: Unable to start pkBody COSEKey Map\n");
+			goto err;
+		}
+
+		// iterate through the map and look for 2 keys specifically
+		// if any other key is found, throw an error
+		while (fdor_map_has_more(fdor)) {
+			map_key = 0;
+			map_val_bytes_sz = 0;
+			map_val_int = 0;
+
+			if (!fdor_is_value_signed_int(fdor)) {
+				LOG(LOG_ERROR,
+					"Invalid PublicKey: Found a non-integer unknown/unsupported COSEKey key.\n");
+				goto err;
+			}
+			if (!fdor_signed_int(fdor, &map_key) || map_key == 0) {
+				LOG(LOG_ERROR, "Invalid PublicKey: Failed to read COSEKey key\n");
+				goto err;
+			}
+
+			if (map_key == FDO_COSE_ENC_COSEKEY_CURVE_KEY) {
+				if (!fdor_signed_int(fdor, &map_val_int) || map_val_int != exp_crv_val) {
+					LOG(LOG_ERROR,
+						"Invalid PublicKey: Failed to read/Invalid COSEKey Type value\n");
+					goto err;
+				}
+			} else if (map_key == FDO_COSE_ENC_COSEKEY_ECX_KEY) {
+				if (!fdor_string_length(fdor, &map_val_bytes_sz) || map_val_bytes_sz == 0) {
+					if (!fdor_byte_string(fdor, pk->key2->bytes, pk->key2->byte_sz)) {
+						LOG(LOG_ERROR,
+							"Invalid PublicKey: Failed to read COSEKey X value length\n");
+						goto err;
+					}
+				}
+				pk->key1 = fdo_byte_array_alloc(map_val_bytes_sz);
+				if (!fdor_byte_string(fdor, pk->key1->bytes, pk->key1->byte_sz)) {
+					LOG(LOG_ERROR,
+						"Invalid PublicKey: Failed to read COSEKey X value\n");
+					goto err;
+				}
+			} else if (map_key == FDO_COSE_ENC_COSEKEY_ECY_KEY) {
+				if (!fdor_string_length(fdor, &map_val_bytes_sz) || map_val_bytes_sz == 0) {
+					if (!fdor_byte_string(fdor, pk->key2->bytes, pk->key2->byte_sz)) {
+						LOG(LOG_ERROR,
+							"Invalid PublicKey: Failed to read COSEKey Y value length\n");
+						goto err;
+					}
+				}
+				pk->key2 = fdo_byte_array_alloc(map_val_bytes_sz);
+				if (!fdor_byte_string(fdor, pk->key2->bytes, pk->key2->byte_sz)) {
+					LOG(LOG_ERROR,
+						"Invalid PublicKey: Failed to read COSEKey Y value\n");
+					goto err;
+				}
+			} else {
+				LOG(LOG_ERROR,
+					"Invalid PublicKey: Found unknown/unsupported COSEKey key\n");
+				goto err;
+			}
+		}
+
+		if (!fdor_end_map(fdor)) {
+			LOG(LOG_ERROR,
+				"Invalid PublicKey: Failed to end COSEKey map\n");
+			goto err;
+		}
+		break;
+
+	default:
+		LOG(LOG_ERROR, "Invalid PublicKey: Invalid pkEnc found\n");
 		goto err;
 	}
-	pk->key1->byte_sz = public_key_length;
+
 	if (!fdor_end_array(fdor)) {
-		LOG(LOG_ERROR, "%s Invalid PublicKey: End array not found\n", __func__);
+		LOG(LOG_ERROR, "Invalid PublicKey: End array not found\n");
 		goto err;
 	}
 	return pk;
 err:
+	if (pk) {
+		fdo_public_key_free(pk);
+	}
 	return NULL;
 }
 
@@ -2780,6 +2952,11 @@ bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat) {
 		return false;
 	}
 
+	if (!fdow_tag(fdow, FDO_COSE_TAG_SIGN1)) {
+		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write Tag\n");
+		return false;
+	}
+
 	if (!fdow_start_array(fdow, 4)) {
 		LOG(LOG_ERROR, "Entity Attestation Token: Failed to write start array\n");
 		return false;
@@ -3393,6 +3570,13 @@ bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph) {
 	}
 
 	size_t num_cose_items = 4;
+	uint64_t tag = 0;
+
+	if (!fdor_tag(fdor, &tag) || tag != FDO_COSE_TAG_SIGN1) {
+		LOG(LOG_ERROR, "COSE: Failed to read/Invalid Tag\n");
+		return false;
+	}
+
 	if (!fdor_array_length(fdor, &num_cose_items) || num_cose_items != 4) {
 		LOG(LOG_ERROR, "COSE: Failed to read/Invalid array length\n");
 		return false;
@@ -3593,6 +3777,11 @@ bool fdo_cose_write_unprotected_header(fdow_t *fdow) {
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose) {
 	if (!fdow || !cose) {
 		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
+	if (!fdow_tag(fdow, FDO_COSE_TAG_SIGN1)) {
+		LOG(LOG_ERROR, "COSE: Failed to write Tag\n");
 		return false;
 	}
 
@@ -3959,9 +4148,15 @@ bool fdo_cose_encrypt0_read_unprotected_header(fdor_t *fdor,
  */
 bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0) {
 	size_t num_cose_items = 3;
+	uint64_t tag = 0;
 
 	if (!fdor || !cose_encrypt0) {
 		LOG(LOG_ERROR, "COSE: Invalid params\n");
+		return false;
+	}
+
+	if (!fdor_tag(fdor, &tag) || tag != FDO_COSE_TAG_ENCRYPT0) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to read/Invalid Tag\n");
 		return false;
 	}
 
@@ -4154,6 +4349,12 @@ bool fdo_cose_encrypt0_write_unprotected_header(fdow_t *fdow,
  * @return true, if write was a success. False otherwise.
  */
 bool fdo_cose_encrypt0_write(fdow_t *fdow, fdo_cose_encrypt0_t *cose_encrypt0) {
+
+	if (!fdow_tag(fdow, FDO_COSE_TAG_ENCRYPT0)) {
+		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write Tag\n");
+		return false;
+	}
+
 	if (!fdow_start_array(fdow, 3)) {
 		LOG(LOG_ERROR, "COSE_Encrypt0: Failed to write start array\n");
 		return false;

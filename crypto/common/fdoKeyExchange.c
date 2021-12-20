@@ -52,7 +52,7 @@ int32_t fdo_kex_init(void)
 
 #ifdef AES_MODE_GCM_ENABLED
 	// AES GCM mode
-	snprintf_s_i(cs, sizeof(cs), "AES%uGCM", AES_BITS);
+	snprintf_s_i(cs, sizeof(cs), "A%uGCM", AES_BITS);
 	(void)ofs;
 #else
 	// AES CCM mode
