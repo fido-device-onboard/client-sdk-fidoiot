@@ -136,8 +136,8 @@ typedef struct {
 } fdo_dns_name_t;
 
 // 3.3.4, PublicKey types (pkType)
-#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 -7
-#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384 -35
+#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 10
+#define FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384 11
 
 // 3.3.5 COSECompatibleSignatureTypes
 #define FDO_CRYPTO_SIG_TYPE_ECSDAp256 -7
@@ -159,14 +159,14 @@ typedef struct {
 #define FDO_COSE_TAG_SIGN1 18
 
 // Appendix E
-#define FDO_EATFDO -17760707
-#define FDO_EAT_MAROE_PREFIX_KEY -17760708
-#define FDO_EAT_EUPHNONCE_KEY -17760709
+#define FDO_EATFDO -257
+#define FDO_EAT_MAROE_PREFIX_KEY -258
+#define FDO_EAT_EUPHNONCE_KEY -259
 #define FDO_EATNONCE_KEY 10
 #define FDO_EATUEID_KEY 11
 
-#define FDO_COSE_SIGN1_CUPHNONCE_KEY -17760701
-#define FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY -17760702
+#define FDO_COSE_SIGN1_CUPHNONCE_KEY 256
+#define FDO_COSE_SIGN1_CUPHOWNERPUBKEY_KEY 257
 
 // AES GCM/CCM algotithm values from COSE specification, RFC 8152
 #define FDO_CRYPTO_A128GCM 1
@@ -516,15 +516,16 @@ void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module);
 void fdo_sdk_service_info_deregister_module(void);
 void print_service_info_module_list(void);
 
-bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si);
-bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num);
+bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
+bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num, size_t mtu);
 bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
 bool fdo_serviceinfo_external_mod_is_more(fdow_t *fdow,
 	fdo_sdk_service_info_module_list_t *module_list, size_t mtu, bool *is_more);
 fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *fdow,
 	fdo_sdk_service_info_module_list_t *module_list,
 	size_t mtu);
-bool fdo_serviceinfo_external_mod_write(fdow_t *fdow, fdo_sdk_service_info_module *module,
+bool fdo_serviceinfo_external_mod_write(fdow_t *fdow, fdo_byte_array_t *ext_serviceinfo,
+	fdo_sdk_service_info_module *module,
 	size_t mtu);
 bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
 
@@ -536,7 +537,8 @@ void fdo_sv_info_clear_module_psi_osi_index(
 
 bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
 	int *cb_return_val, fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
-bool fdo_supply_serviceinfoval(fdor_t *fdor, char *module_name, char *module_message,
+bool fdo_supply_serviceinfoval(char *module_name, char *module_message,
+	fdo_byte_array_t *module_val,
 	fdo_sdk_service_info_module_list_t *module_list, int *cb_return_val);
 bool fdo_serviceinfo_invalid_modname_add(char *module_name,
 	fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);

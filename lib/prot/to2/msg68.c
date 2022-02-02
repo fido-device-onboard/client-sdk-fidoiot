@@ -182,7 +182,8 @@ int32_t msg68(fdo_prot_t *ps)
 
 			serviceinfo_itr = ps->service_info;
 			// Construct and write Device ServiceInfo
-			if (!fdo_serviceinfo_write(&ps->fdow, serviceinfo_itr)) {
+			if (!fdo_serviceinfo_write(&ps->fdow, serviceinfo_itr,
+				ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN)) {
 				LOG(LOG_ERROR, "Error in combining platform DSI's!\n");
 				goto err;
 			}
@@ -229,8 +230,8 @@ int32_t msg68(fdo_prot_t *ps)
 				goto err;
 			}
 
-			if (!fdo_serviceinfo_external_mod_write(&ps->fdow, ext_module,
-				ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN)) {
+			if (!fdo_serviceinfo_external_mod_write(&ps->fdow, ps->ext_service_info,
+				ext_module, ps->maxDeviceServiceInfoSz - SERVICEINFO_MTU_FIT_MARGIN)) {
 				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed to write External module ServiceInfo\n");
 				goto err;
 			}

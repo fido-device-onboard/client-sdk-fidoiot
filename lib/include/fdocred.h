@@ -95,8 +95,8 @@ typedef struct _fdo_ownershipvoucher_t {
 fdo_ownership_voucher_t *fdo_ov_alloc(void);
 void fdo_ov_free(fdo_ownership_voucher_t *ov);
 void fdo_ov_print(fdo_ownership_voucher_t *ov);
-fdo_ownership_voucher_t *fdo_ov_hdr_read(fdor_t *fdor, fdo_hash_t **hmac);
-bool fdo_ov_hdr_hmac(fdo_ownership_voucher_t *ov, fdo_hash_t **hmac);
+fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader, fdo_hash_t **hmac);
+bool fdo_ov_hdr_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac);
 fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 			fdo_owner_supplied_credentials_t *osc, fdo_hash_t *hdc);
 bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,

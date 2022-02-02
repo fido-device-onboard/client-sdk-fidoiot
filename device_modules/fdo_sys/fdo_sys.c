@@ -11,6 +11,11 @@
 #include <unistd.h>
 #include "fdo_sys_utils.h"
 
+// CBOR-decoder. Interchangeable with any other CBOR implementation.
+static fdor_t *fdor = NULL;
+// CBOR-encoder. Interchangeable with any other CBOR implementation.
+static fdow_t *fdow = NULL;
+
 // filename that will either be read from or written onto
 static char filename[FILE_NAME_LEN];
 // position/offset on the file from which data will be read
@@ -39,12 +44,14 @@ static bool ismore = false;
 // the type of operation to perform, generally used to manage responses
 static fdoSysModMsg write_type = FDO_SYS_MOD_MSG_NONE;
 
-static bool write_status_cb(fdow_t *fdow);
-static bool write_data(fdow_t *fdow, uint8_t *bin_data, size_t bin_len, size_t mtu);
-static bool write_eot(fdow_t *fdow, int status);
+static bool write_status_cb(char *module_message);
+static bool write_data(char *module_message,
+	uint8_t *bin_data, size_t bin_len);
+static bool write_eot(char *module_message, int status);
 
-int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
-	char *module_message, bool *has_more, bool *is_more, size_t mtu)
+int fdo_sys(fdo_sdk_si_type type,
+	char *module_message, uint8_t *module_val, size_t *module_val_sz,
+	uint16_t *num_module_messages, bool *has_more, bool *is_more, size_t mtu)
 {
 	int strcmp_filedesc = 1;
 	int strcmp_write = 1;
@@ -60,9 +67,31 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 	char **exec_instr = NULL;
 	size_t exec_instructions_sz = 0;
 	size_t file_remaining = 0;
+	size_t temp_module_val_sz = 0;
 
 	switch (type) {
 		case FDO_SI_START:
+			// Initialize module's CBOR Reader/Writer objects.
+			fdow = ModuleAlloc(sizeof(fdow_t));
+			if (!fdow_init(fdow) || !fdo_block_alloc_with_size(&fdow->b, MOD_MAX_BUFF_SIZE)) {
+#ifdef DEBUG_LOGS
+				printf(
+					"Module fdo_sys - FDOW Initialization/Allocation failed!\n");
+#endif
+				result = FDO_SI_CONTENT_ERROR;
+				goto end;
+			}
+
+			fdor = ModuleAlloc(sizeof(fdor_t));
+			if (!fdor_init(fdor) ||
+				!fdo_block_alloc_with_size(&fdor->b, MOD_MAX_BUFF_SIZE)) {
+#ifdef DEBUG_LOGS
+				printf("Module fdo_sys - FDOR Initialization/Allocation failed!\n");
+#endif
+				goto end;
+			}
+			result = FDO_SI_SUCCESS;
+			goto end;
 		case FDO_SI_END:
 		case FDO_SI_FAILURE:
 			// perform clean-ups as needed
@@ -73,6 +102,16 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 #endif
 				goto end;
 			}
+
+			if (fdow) {
+				fdow_flush(fdow);
+				ModuleFree(fdow);
+			}
+			if (fdor) {
+				fdor_flush(fdor);
+				ModuleFree(fdor);
+			}
+
 			result = FDO_SI_SUCCESS;
 			goto end;
 		case FDO_SI_HAS_MORE_DSI:
@@ -104,12 +143,31 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 			*is_more = ismore;
 			result = FDO_SI_SUCCESS;
 			goto end;
+		case FDO_SI_GET_DSI_COUNT:
+			// return the total number of messages that will be sent in THIS message alone
+			// we are always sending 1 message at all times.
+			// However, this flag 'case' won't be encountered since this is not invoked
+			// by the 'lib/' as of now.
+			if (!num_module_messages) {
+				result = FDO_SI_CONTENT_ERROR;
+				goto end;
+			}
+			*num_module_messages = 1;
+			result = FDO_SI_SUCCESS;
+			goto end;
 		case FDO_SI_GET_DSI:
 			// write Device ServiceInfo using 'fdow' by partitioning the messages as per MTU, here.
-			// however, it is not needed to be done currently and the variable is unused.
-			(void)mtu;
-			if (!fdow || mtu == 0) {
+			if (mtu == 0 || !module_message || !module_val || !module_val_sz) {
 				result = FDO_SI_CONTENT_ERROR;
+				goto end;
+			}
+
+			// reset and initialize FDOW's encoder for usage
+			fdo_block_reset(&fdow->b);
+			if (!fdow_encoder_init(fdow)) {
+#ifdef DEBUG_LOGS
+				printf("Module fdo_sys - Failed to initialize FDOW encoder\n");
+#endif
 				goto end;
 			}
 
@@ -120,23 +178,9 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 				goto end;
 			}
 
-			// Prepare Service structure as per Section 3.8 of FDO specification
-			if (!fdow_start_array(fdow, 1)) {
-#ifdef DEBUG_LOGS
-				printf("Module fdo_sys - Failed to start ServiceInfo array\n");
-#endif
-				goto end;
-			}
-
-			if (!fdow_start_array(fdow, 1)) {
-#ifdef DEBUG_LOGS
-				printf("Module fdo_sys - Failed to start ServiceInfoKeyVal array\n");
-#endif
-				goto end;
-			}
-
 			if (write_type == FDO_SYS_MOD_MSG_STATUS_CB) {
-				if (!write_status_cb(fdow)) {
+
+				if (!write_status_cb(module_message)) {
 #ifdef DEBUG_LOGS
 					printf("Module fdo_sys - Failed to respond with fdo_sys:status_cb\n");
 #endif
@@ -168,73 +212,68 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 					printf("Module fdo_sys - Empty/Invalid content for fdo_sys:data in %s\n",
 						filename);
 #endif
-					if (!write_eot(fdow, fetch_data_status)) {
+					if (!write_eot(module_message, fetch_data_status)) {
 #ifdef DEBUG_LOGS
 						printf("Module fdo_sys - Failed to respond with fdo_sys:eot\n");
 #endif
 						goto end;
 					}
 					result = FDO_SI_SUCCESS;
-					goto end;
-				}
+				} else {
 
-				file_remaining = file_sz - file_seek_pos;
-				bin_len = file_remaining > mtu ? mtu : file_remaining;
-				bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
-				if (!bin_data) {
+					file_remaining = file_sz - file_seek_pos;
+					bin_len = file_remaining > mtu ? mtu : file_remaining;
+					bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
+					if (!bin_data) {
 #ifdef DEBUG_LOGS
-					printf("Module fdo_sys - Failed to alloc for fdo_sys:data buffer\n");
-#endif
-					goto end;
-				}
-				if (memset_s(bin_data, bin_len, 0) != 0) {
-#ifdef DEBUG_LOGS
-					printf("Module fdo_sys - Failed to clear fdo_sys:data buffer\n");
-#endif
-					goto end;
-				}
-
-				if (!read_buffer_from_file_from_pos(filename, bin_data, bin_len, file_seek_pos)) {
-#ifdef DEBUG_LOGS
-					printf("Module fdo_sys - Failed to read fdo_sys:data content from %s\n",
-						filename);
-#endif
-					if (!write_eot(fdow, fetch_data_status)) {
-#ifdef DEBUG_LOGS
-						printf("Module fdo_sys - Failed to respond with fdo_sys:eot\n");
+						printf("Module fdo_sys - Failed to alloc for fdo_sys:data buffer\n");
 #endif
 						goto end;
 					}
-					result = FDO_SI_SUCCESS;
-					goto end;
-				}
-
-				file_seek_pos += bin_len;
-
-				if (!write_data(fdow,bin_data, bin_len, mtu)) {
-				// if this fails, then we're essentially sending an incomplete message to the Owner
-				// This is non-recoverable as of now, since this requires us to rewrite msg/68
-				// from start
-				// it is HIGHLY UNLIKELY that this will error out though
-				// TO-DO: Fix to recover from this
+					if (memset_s(bin_data, bin_len, 0) != 0) {
 #ifdef DEBUG_LOGS
-					printf("Module fdo_sys - Failed to respond with fdo_sys:data\n");
+						printf("Module fdo_sys - Failed to clear fdo_sys:data buffer\n");
 #endif
-					goto end;
-				}
-				hasmore = true;
+						goto end;
+					}
 
-				// if file is sent completely, then send EOT next
-				fetch_data_status = 0;
-				if (file_sz == file_seek_pos) {
-					write_type = FDO_SYS_MOD_MSG_EOT;
+					if (!read_buffer_from_file_from_pos(filename, bin_data, bin_len, file_seek_pos)) {
+#ifdef DEBUG_LOGS
+						printf("Module fdo_sys - Failed to read fdo_sys:data content from %s\n",
+							filename);
+#endif
+						if (!write_eot(module_message, fetch_data_status)) {
+#ifdef DEBUG_LOGS
+							printf("Module fdo_sys - Failed to respond with fdo_sys:eot\n");
+#endif
+							goto end;
+						}
+						result = FDO_SI_SUCCESS;
+					} else {
+
+						file_seek_pos += bin_len;
+
+						if (!write_data(module_message, bin_data, bin_len)) {
+#ifdef DEBUG_LOGS
+							printf("Module fdo_sys - Failed to respond with fdo_sys:data\n");
+#endif
+							goto end;
+						}
+						hasmore = true;
+
+						// if file is sent completely, then send EOT next
+						fetch_data_status = 0;
+						if (file_sz == file_seek_pos) {
+							write_type = FDO_SYS_MOD_MSG_EOT;
+						}
+					}
 				}
 
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Responded with fdo_sys:data containing\n");
 #endif
 			} else if (write_type == FDO_SYS_MOD_MSG_EOT) {
-				if (!write_eot(fdow, fetch_data_status)) {
+				if (!write_eot(module_message, fetch_data_status)) {
 #ifdef DEBUG_LOGS
 					printf("Module fdo_sys - Failed to respond with fdo_sys:eot\n");
 #endif
@@ -253,22 +292,29 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 				goto end;
 			}
 
-			if (!fdow_end_array(fdow)) {
+			if (!fdow_encoded_length(fdow, &temp_module_val_sz)) {
 #ifdef DEBUG_LOGS
-				printf("Module fdo_sys - Failed to end ServiceInfoKeyVal array\n");
+				printf("Module fdo_sys - Failed to get encoded length\n");
 #endif
 				goto end;
 			}
-
-			if (!fdow_end_array(fdow)) {
+			*module_val_sz = temp_module_val_sz;
+			if (memcpy_s(module_val, *module_val_sz,
+				fdow->b.block, *module_val_sz) != 0) {
 #ifdef DEBUG_LOGS
-				printf("Module fdo_sys - Failed to end ServiceInfo array\n");
+				printf("Module fdo_sys - Failed to copy CBOR-encoded module value\n");
 #endif
 				goto end;
 			}
 			result = FDO_SI_SUCCESS;
 			goto end;
 		case FDO_SI_SET_OSI:
+
+		if (!module_message || !module_val || !module_val_sz ||
+			*module_val_sz > MOD_MAX_BUFF_SIZE) {
+			result = FDO_SI_CONTENT_ERROR;
+			goto end;
+		}
 			// Process the received Owner ServiceInfo contained within 'fdor', here.
 		strcmp_s(module_message, FDO_MODULE_MSG_LEN, "filedesc",
 					&strcmp_filedesc);
@@ -287,13 +333,31 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 			return FDO_SI_CONTENT_ERROR;
 		}
 
+		// reset, copy CBOR data and initialize Parser.
+		fdo_block_reset(&fdor->b);
+		if (0 != memcpy_s(fdor->b.block, *module_val_sz,
+			module_val, *module_val_sz)) {
+#ifdef DEBUG_LOGS
+			printf("Module fdo_sys - Failed to copy buffer into temporary FDOR\n");
+#endif
+			goto end;
+		}
+		fdor->b.block_size = *module_val_sz;
+
+		if (!fdor_parser_init(fdor)) {
+#ifdef DEBUG_LOGS
+			printf("Module fdo_sys - Failed to init FDOR parser\n");
+#endif
+			goto end;
+		}
+
 		if (strcmp_filedesc == 0) {
 
 			if (!fdor_string_length(fdor, &bin_len)) {
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Failed to read fdo_sys:filedesc length\n");
 #endif
-				goto end;			
+				goto end;
 			}
 
 			if (bin_len == 0) {
@@ -353,7 +417,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Failed to read fdo_sys:write length\n");
 #endif
-				goto end;			
+				goto end;
 			}
 
 			if (bin_len == 0) {
@@ -531,7 +595,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Invalid number of items in fdo_sys:status_cb\n");
 #endif
-				goto end;				
+				goto end;
 			}
 
 			if (!fdor_start_array(fdor)) {
@@ -547,14 +611,14 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 #endif
 				goto end;
 			}
-	
+
 			if (!fdor_signed_int(fdor, &status_cb_resultcode)) {
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Failed to process fdo_sys:status_cb resultCode\n");
 #endif
 				goto end;
 			}
-	
+
 			if (!fdor_unsigned_int(fdor, &status_cb_waitsec)) {
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Failed to process fdo_sys:status_cb waitSec\n");
@@ -600,7 +664,7 @@ int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
 #ifdef DEBUG_LOGS
 				printf("Module fdo_sys - Failed to read fdo_sys:fetch length\n");
 #endif
-				goto end;			
+				goto end;
 			}
 
 			if (bin_len == 0) {
@@ -673,28 +737,20 @@ end:
 /**
  * Write CBOR-encoded fdo_sys:status_cb content into FDOW.
  */
-static bool write_status_cb(fdow_t *fdow) {
+static bool write_status_cb(char *module_message) {
 
-	if (!fdow) {
+	if (!module_message) {
 #ifdef DEBUG_LOGS
 		printf("Module fdo_sys - Invalid params for fdo_sys:status_cb array\n");
 #endif
 		return false;
 	}
 
-	char key[] = "fdo_sys:status_cb";
-
-	if (!fdow_start_array(fdow, 2)) {
+	char message[] = "status_cb";
+	if (memcpy_s(module_message, sizeof(message),
+		message, sizeof(message)) != 0) {
 #ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to start outer array in fdo_sys:status_cb\n");
-#endif
-		return false;
-	}
-
-	// -1 for ignoring \0 at end
-	if (!fdow_text_string(fdow, key, sizeof(key) - 1)) {
-#ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to write fdo_sys:status_cb Key\n");
+		printf("Module fdo_sys - Failed to copy module message status_cb\n");
 #endif
 		return false;
 	}
@@ -734,40 +790,27 @@ static bool write_status_cb(fdow_t *fdow) {
 		return false;
 	}
 
-	if (!fdow_end_array(fdow)) {
-#ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to end outer array in fdo_sys:status_cb\n");
-#endif
-		return false;
-	}
 	return true;
 }
 
 /**
  * Write CBOR-encoded fdo_sys:data content into FDOW with given data.
  */
-static bool write_data(fdow_t *fdow, uint8_t *bin_data, size_t bin_len, size_t mtu) {
-	(void)mtu;
-	char key[] = "fdo_sys:data";
+static bool write_data(char *module_message,
+	uint8_t *bin_data, size_t bin_len) {
 
-	if (!fdow || !bin_data) {
+	if (!module_message || !bin_data) {
 #ifdef DEBUG_LOGS
 		printf("Module fdo_sys - Invalid params for fdo_sys:data\n");
 #endif
 		return false;
 	}
 
-	if (!fdow_start_array(fdow, 2)) {
+	char message[] = "data";
+	if (memcpy_s(module_message, sizeof(message),
+		message, sizeof(message)) != 0) {
 #ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to start array in fdo_sys:data\n");
-#endif
-		return false;
-	}
-
-	// -1 for ignoring \0 at end
-	if (!fdow_text_string(fdow, key, sizeof(key) - 1)) {
-#ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to write fdo_sys:data Key\n");
+		printf("Module fdo_sys - Failed to copy module message data\n");
 #endif
 		return false;
 	}
@@ -779,40 +822,26 @@ static bool write_data(fdow_t *fdow, uint8_t *bin_data, size_t bin_len, size_t m
 		return false;
 	}
 
-	if (!fdow_end_array(fdow)) {
-#ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to end array in fdo_sys:data\n");
-#endif
-		return false;
-	}
-
 	return true;
 }
 
 /**
  * Write CBOR-encoded fdo_sys:eot content into FDOW with given status.
  */
-static bool write_eot(fdow_t *fdow, int status) {
-	char key[] = "fdo_sys:eot";
+static bool write_eot(char *module_message, int status) {
 
-	if (!fdow) {
+	if (!module_message) {
 #ifdef DEBUG_LOGS
 		printf("Module fdo_sys - Invalid params for fdo_sys:eot\n");
 #endif
 		return false;
 	}
 
-	if (!fdow_start_array(fdow, 2)) {
+	char message[] = "eot";
+	if (memcpy_s(module_message, sizeof(message),
+		message, sizeof(message)) != 0) {
 #ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to start outer array in fdo_sys:eot\n");
-#endif
-		return false;
-	}
-
-	// -1 for ignoring \0 at end
-	if (!fdow_text_string(fdow, key, sizeof(key) - 1)) {
-#ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to write fdo_sys:eot Key\n");
+		printf("Module fdo_sys - Failed to copy module message eot\n");
 #endif
 		return false;
 	}
@@ -838,11 +867,5 @@ static bool write_eot(fdow_t *fdow, int status) {
 		return false;
 	}
 
-	if (!fdow_end_array(fdow)) {
-#ifdef DEBUG_LOGS
-		printf("Module fdo_sys - Failed to end outer array in fdo_sys:eot\n");
-#endif
-		return false;
-	}
 	return true;
 }

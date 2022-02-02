@@ -283,9 +283,21 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 	ps->dev_cred = dev_cred;
 	ps->g2 = dev_cred->owner_blk->guid;
 	ps->round_trip_count = 0;
+	ps->hello_device_hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	if (!ps->hello_device_hash) {
+		return false;
+	}
 
 	/* Initialize svinfo related data */
 	if (module_list) {
+
+		ps->ext_service_info = fdo_byte_array_alloc(ps->prot_buff_sz);
+		if (!ps->ext_service_info) {
+			LOG(LOG_ERROR,
+			    "Sv_info: External module's buffer alloc failed\n");
+			return false;
+		}
+
 		ps->sv_info_mod_list_head = module_list;
 		if (!fdo_serviceinfo_deactivate_modules(ps->sv_info_mod_list_head)) {
 			return false;

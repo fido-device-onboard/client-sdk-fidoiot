@@ -93,7 +93,7 @@
 #define MAX_TO2_ROUND_TRIPS 1000000
 
 // Current protocol version
-#define FDO_PROT_SPEC_VERSION 100
+#define FDO_PROT_SPEC_VERSION 101
 
 // minimum ServiceInfo size
 #define MIN_SERVICEINFO_SZ 256
@@ -141,19 +141,23 @@ typedef struct fdo_prot_s {
 	fdo_dev_cred_t *dev_cred;
 	fdo_public_key_t *
 	    owner_public_key; // Owner's public key
-	fdo_service_info_t *service_info;
+	fdo_service_info_t *service_info; // store System ServiceInfo (devmod+unsupported module list)
+	fdo_byte_array_t *ext_service_info; // store External module ServiceInfoVal (fdo_sys, for ex.)
 	fdo_public_key_t *tls_key; // unused for now
 	int ov_entry_num;
 	fdo_ownership_voucher_t *ovoucher;
 	fdo_hash_t *new_ov_hdr_hmac;
+	fdo_hash_t *hello_device_hash;
 	fdo_cose_t *to1d_cose;
 	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames;
+	uint64_t max_device_message_size; // used to store maxDeviceMessageSize
+	uint64_t max_owner_message_size; // used to store maxOwnerMessageSize and not used thereafter
 	int maxOwnerServiceInfoSz;
 	int maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
 	bool owner_serviceinfo_ismore;
 	bool owner_serviceinfo_isdone;
-	size_t prot_buff_sz;
+	size_t prot_buff_sz; // protocol buffer size, same as maxDeviceMessageSize for now
 	fdo_owner_supplied_credentials_t *osc;
 	fdo_byte_array_t *nonce_to1proof;
 	fdo_byte_array_t *nonce_to2proveov;

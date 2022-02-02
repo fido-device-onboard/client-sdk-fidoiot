@@ -31,6 +31,7 @@ typedef enum {
 	FDO_SI_START,
 	FDO_SI_HAS_MORE_DSI,
 	FDO_SI_IS_MORE_DSI,
+	FDO_SI_GET_DSI_COUNT,
 	FDO_SI_GET_DSI,
 	FDO_SI_SET_OSI,
 	FDO_SI_END,
@@ -47,7 +48,8 @@ typedef struct fdo_sdk_si_key_value {
 
 // callback to module
 typedef int (*fdo_sdk_service_infoCB)(fdo_sdk_si_type type,
-	fdor_t *fdor, fdow_t *fdow, char *module_message, bool *has_more, bool *is_more, size_t mtu);
+	char *module_message, uint8_t *module_val, size_t *module_val_sz,
+	uint16_t *num_module_messages, bool *has_more, bool *is_more, size_t mtu);
 
 /* module struct for modules */
 typedef struct {
@@ -56,7 +58,8 @@ typedef struct {
 	fdo_sdk_service_infoCB service_info_callback;
 } fdo_sdk_service_info_module;
 
-extern int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, fdow_t *fdow,
-	char *module_message, bool *has_more, bool *is_more, size_t mtu);
+extern int fdo_sys(fdo_sdk_si_type type,
+	char *module_message, uint8_t *module_val, size_t *module_val_sz,
+	uint16_t *num_module_messages, bool *has_more, bool *is_more, size_t mtu);
 
 #endif /* __FDOTYPES_H__ */
