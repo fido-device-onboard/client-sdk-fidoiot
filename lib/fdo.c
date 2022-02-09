@@ -425,13 +425,13 @@ static fdo_sdk_status app_initialize(void)
 		fdo_free(buffer);
 	}
 
-	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %d bytes\n",
+	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %"PRIu64" bytes\n",
 		g_fdo_data->prot.maxDeviceServiceInfoSz);
-	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %d bytes\n",
+	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %"PRIu64" bytes\n",
 		g_fdo_data->prot.maxOwnerServiceInfoSz);
 
-	/* 
-	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's 
+	/*
+	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's
 	* protocol execution. Reuse the allocated memory by emptying the contents.
 	*/
 	if (!fdow_init(&g_fdo_data->prot.fdow) ||
@@ -1343,7 +1343,7 @@ static bool _STATE_TO1(void)
 			// skip the current directive and check for the same in the next directives.
 			continue;
 		}
-	
+
 		prot_ctx =
 	    	fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot, ip,
 		       dns ? dns->bytes : NULL, port, tls);
@@ -1446,7 +1446,7 @@ static bool _STATE_TO2(void)
 		return FDO_ERROR;
 	}
 
-	if (!rvbypass) {
+	if (!rvbypass && !g_fdo_data->current_rvto2addrentry) {
 		// preset RVTO2Addr if we're going to run TO2 using it.
 		fdo_rvto2addr_t *rvto2addr = g_fdo_data->prot.rvto2addr;
 		if (!rvto2addr) {
@@ -1462,13 +1462,13 @@ static bool _STATE_TO2(void)
 	bool tls = true;
 	bool skip_rv = false;
 
-	// if thers is RVBYPASS enabled, we enter the loop and set 'rvbypass' flag to false
+	// if thers is RVBYPASS enabled, we set 'rvbypass' flag to false
 	// otherwise, there'll be RVTO2AddrEntry(s), and we iterate through it.
 	// Only one of the conditions will satisfy, which is ensured by resetting of the 'rvbypass' flag,
 	// and, eventual Nulling of the 'g_fdo_data->current_rvto2addrentry'
 	// because we keep on moving to next.
 	// Run the TO2 protocol regardless.
-	while (rvbypass || g_fdo_data->current_rvto2addrentry) {
+	if (rvbypass || g_fdo_data->current_rvto2addrentry) {
 
 		tls = true;
 		skip_rv = false;
@@ -1548,7 +1548,10 @@ static bool _STATE_TO2(void)
 			// else, skip the directive
 			if (!rvbypass) {
 				// free only when rvbypass is false, since the allocation was done then.
-				fdo_free(ip);
+				// Note: This may be unreachable.
+				if (ip) {
+					fdo_free(ip);
+				}
 				ip = NULL;
 			} else {
 				// set the global rvbypass flag to false so that we don't continue the loop
@@ -1559,7 +1562,10 @@ static bool _STATE_TO2(void)
 				ret = true;
 				return ret;
 			}
-			continue;
+			g_fdo_data->state_fn = &_STATE_TO2;
+			// return true so that TO2 is processed with the remaining directives
+			ret = true;
+			return ret;
 		}
 
 		prot_ctx = fdo_prot_ctx_alloc(
@@ -1585,7 +1591,9 @@ static bool _STATE_TO2(void)
 			// Repeat some of the same operations as the failure case above
 			// when processing RendezvousInfo/RVTO2Addr and they need to be skipped
 			if (!rvbypass) {
-				fdo_free(ip);
+				if (ip) {
+					fdo_free(ip);
+				}
 				ip = NULL;
 				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", default_delay);
 				fdo_sleep(default_delay);
@@ -1593,7 +1601,10 @@ static bool _STATE_TO2(void)
 				// the execution reaches here only if rvbypass was never set
 				if (g_fdo_data->current_rvto2addrentry) {
 					LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
-					continue;
+					g_fdo_data->state_fn = &_STATE_TO2;
+					// return true so that TO2 is processed with the remaining directives
+					ret = true;
+					return ret;
 				}
 				// there's no more owner locations left to try,
 				// so start retrying with TO1, if retry is enabled.
@@ -1633,7 +1644,9 @@ static bool _STATE_TO2(void)
 
 		if (!rvbypass) {
 			// free only when rvbypass is false, since the allocation was done then.
-			fdo_free(ip);
+			if (ip) {
+				fdo_free(ip);
+			}
 			ip = NULL;
 		} else {
 			// set the global rvbypass flag to false so that we don't continue the loop
@@ -1647,7 +1660,8 @@ static bool _STATE_TO2(void)
 		LOG(LOG_INFO, "@FIDO Device Onboard Complete@\n");
 		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 		ret = true;
-		break;
+	} else {
+		LOG(LOG_ERROR, "Invalid State\n");
 	}
 	return ret;
 }

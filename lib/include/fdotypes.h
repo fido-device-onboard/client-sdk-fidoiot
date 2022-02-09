@@ -171,8 +171,8 @@ typedef struct {
 // AES GCM/CCM algotithm values from COSE specification, RFC 8152
 #define FDO_CRYPTO_A128GCM 1
 #define FDO_CRYPTO_A256GCM 3
-#define FDO_CRYPTO_A128CCM 32
-#define FDO_CRYPTO_A256CCM 33
+#define FDO_CRYPTO_A128CCM 30
+#define FDO_CRYPTO_A256CCM 31
 
 // 3.3.4 PublicKey encodings (pkEnc)
 #define FDO_CRYPTO_PUB_KEY_ENCODING_CRYPTO 0

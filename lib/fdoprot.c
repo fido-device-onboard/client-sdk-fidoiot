@@ -151,7 +151,7 @@ bool fdo_process_states(fdo_prot_t *ps)
 		case FDO_STATE_DI_DONE:
 			state_fn = di_state_fn[DI_ID_TO_STATE_FN(ps->state)];
 			break;
-	
+
 		// TO1 states
 		case FDO_STATE_T01_SND_HELLO_FDO:
 		case FDO_STATE_TO1_RCV_HELLO_FDOACK:
@@ -394,8 +394,8 @@ bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep)
 }
 
 /**
- * TO-DO : Update to pass EMErrorUuid if needed in future.
- * 
+ * TO-DO : Update to pass EMErrorCID if needed in future.
+ *
  * Internal API
  */
 void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
@@ -426,7 +426,7 @@ void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
 	}
 	// writing 0 as correlationId. May be updated in future.
 	if (!fdow_signed_int(fdow, 0)) {
-		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorUuid\n");
+		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorCID\n");
 		return;
 	}
 	if (!fdow_end_array(fdow)) {

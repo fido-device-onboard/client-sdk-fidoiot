@@ -62,6 +62,7 @@ typedef struct _fdo_oventry_t {
 	uint16_t enn;
 	fdo_hash_t *hp_hash;	// Hash of previous entry (OVEHashPrevEntry)
 	fdo_hash_t *hc_hash;	// Hash of header info (OVEHashHdrInfo)
+	fdo_byte_array_t *ove_extra; // (OVEExtra)
 	fdo_public_key_t *pk;	// public key (OVEPubKey)
 } fdo_ov_entry_t;
 
@@ -81,7 +82,7 @@ void fdo_owner_supplied_credentials_free(fdo_owner_supplied_credentials_t *ocs);
 
 // 3.4.2 OwnershipVoucher
 typedef struct _fdo_ownershipvoucher_t {
-	int prot_version;	// OVHeader.OVProtVer
+	int prot_version;	// OVHeader.OVHProtVer
 	fdo_byte_array_t *g2;	// OVHeader.OVGuid
 	fdo_rendezvous_list_t *rvlst2;	// OVHeader.OVRVInfo
 	fdo_string_t *dev_info;	// OVHeader.OVDeviceInfo

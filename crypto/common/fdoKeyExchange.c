@@ -26,11 +26,10 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
  */
 int32_t fdo_kex_init(void)
 {
-	char cs[32];
+	int32_t cs;
 	int32_t ret = -1;
 	fdo_kex_ctx_t *kex_ctx = getfdo_key_ctx();
 	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
-	size_t ofs = 0;
 
 	/* Allocate kex string */
 	kex_ctx->kx = fdo_string_alloc_with_str(KEX);
@@ -50,17 +49,8 @@ int32_t fdo_kex_init(void)
 	 *     SHA = 384 bit
 	 */
 
-#ifdef AES_MODE_GCM_ENABLED
-	// AES GCM mode
-	snprintf_s_i(cs, sizeof(cs), "A%uGCM", AES_BITS);
-	(void)ofs;
-#else
-	// AES CCM mode
-	snprintf_s_i(cs, sizeof(cs), "AES-CCM-64-128-%u", AES_BITS);
-	(void)ofs;
-#endif
-
-	kex_ctx->cs = fdo_string_alloc_with_str(cs);
+	cs = COSE_ENC_TYPE;
+	kex_ctx->cs = cs;
 	if (!kex_ctx->cs) {
 		LOG(LOG_ERROR, "Failed to allocate cs info\n");
 		goto err;
@@ -100,12 +90,6 @@ int32_t fdo_kex_close(void)
 	if (kex_ctx->kx) {
 		fdo_string_free(kex_ctx->kx);
 		kex_ctx->kx = NULL;
-	}
-
-	/* Free "Cipher Suite" string */
-	if (kex_ctx->cs) {
-		fdo_string_free(kex_ctx->cs);
-		kex_ctx->cs = NULL;
 	}
 
 	/* Free "Key Exchange" information sent from device */

@@ -30,7 +30,7 @@ int32_t msg60(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_string_t *kx = fdo_get_device_kex_method();
-	fdo_string_t *cs = fdo_get_device_crypto_suite();
+	int32_t cs = fdo_get_device_crypto_suite();
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -51,6 +51,11 @@ int32_t msg60(fdo_prot_t *ps)
 	if (!fdow_unsigned_int(&ps->fdow, ps->max_device_message_size)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write maxDeviceMessageSize\n");
 		return false;
+	}
+
+	if (ps->max_device_message_size > MAX_NEGO_MSG_SIZE) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: maxDeviceMessageSize can not be greater than 65535\n");
+		goto err;
 	}
 
 	/* Fill in the GUID */
@@ -78,7 +83,7 @@ int32_t msg60(fdo_prot_t *ps)
 	}
 
 	/* Fill in the ciphersuite info */
-	if (!fdow_text_string(&ps->fdow, cs->bytes, cs->byte_sz)) {
+	if (!fdow_signed_int(&ps->fdow, cs)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write cipherSuiteName\n");
 		return false;
 	}

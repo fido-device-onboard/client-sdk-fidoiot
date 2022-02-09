@@ -114,6 +114,12 @@
 // the final buffer to read/write protcol (DI/TO1/TO2)
 #define MSG_METADATA_SIZE 700
 
+// limit on number of Ownership Voucher entries to 255
+#define MAX_NO_OVENTRIES 255
+
+// The maximum negotiated message size
+#define MAX_NEGO_MSG_SIZE 65535
+
 #if defined(REUSE_SUPPORTED)
 static const bool reuse_supported = true;
 #else
@@ -152,8 +158,8 @@ typedef struct fdo_prot_s {
 	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames;
 	uint64_t max_device_message_size; // used to store maxDeviceMessageSize
 	uint64_t max_owner_message_size; // used to store maxOwnerMessageSize and not used thereafter
-	int maxOwnerServiceInfoSz;
-	int maxDeviceServiceInfoSz;
+	uint64_t maxOwnerServiceInfoSz;
+	uint64_t maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
 	bool owner_serviceinfo_ismore;
 	bool owner_serviceinfo_isdone;

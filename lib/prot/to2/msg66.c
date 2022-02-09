@@ -98,11 +98,16 @@ int32_t msg66(fdo_prot_t *ps)
 		}
 	}
 
-	if (!fdow_signed_int(&ps->fdow, ps->maxOwnerServiceInfoSz)) {
+	if (!fdow_unsigned_int(&ps->fdow, ps->maxOwnerServiceInfoSz)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to write maxOwnerServiceInfoSz\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: Sent maxOwnerServiceInfoSz = %d\n",
+
+	if (ps->maxOwnerServiceInfoSz > MAX_NEGO_MSG_SIZE) {
+		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: maxOwnerServiceInfoSz can not be greater than 65535\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: Sent maxOwnerServiceInfoSz = %"PRIu64"\n",
 		ps->maxOwnerServiceInfoSz);
 
 	if (!fdow_end_array(&ps->fdow)) {

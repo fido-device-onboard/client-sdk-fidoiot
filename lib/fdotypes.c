@@ -491,7 +491,7 @@ bool fdo_siginfo_write(fdow_t *fdow)
 		LOG(LOG_ERROR, "SigInfo: Failed to start array\n");
 		return ret;
 	}
-	if (!fdow_signed_int(fdow, FDO_PK_ALGO)) {
+	if (!fdow_signed_int(fdow, FDO_SIG_TYPE)) {
 		LOG(LOG_ERROR, "SigInfo: Failed to write sgType\n");
 		return ret;
 	}
@@ -544,7 +544,7 @@ bool fdo_siginfo_read(fdor_t *fdor)
 		goto end;
 	}
 
-	exptype = FDO_PK_ALGO;
+	exptype = FDO_SIG_TYPE;
 
 	if (!fdor_signed_int(fdor, &type)) {
 		LOG(LOG_ERROR, "SigInfo: Failed to read sgType\n");
@@ -4513,57 +4513,78 @@ bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_ent
 		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read start array\n");
 		return false;
 	}
-	size_t rvip_length = 0;
-	if (!fdor_string_length(fdor, &rvip_length) || rvip_length == 0) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP length\n");
-		return false;
-	}
-	rvto2addr_entry->rvip = fdo_byte_array_alloc(rvip_length);
-	if (!rvto2addr_entry->rvip) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVIP\n");
-		return false;
-	}
-	if (!fdor_byte_string(fdor, rvto2addr_entry->rvip->bytes, rvto2addr_entry->rvip->byte_sz)) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP\n");
-		return false;
+
+	if (fdor_is_value_null(fdor)) {
+		if (!fdor_next(fdor)) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to skip NULL RVIP\n");
+			return false;
+		}
+		fdor_next(fdor);
+	} else {
+		size_t rvip_length = 0;
+		if (!fdor_string_length(fdor, &rvip_length) || rvip_length == 0) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP length\n");
+			return false;
+		}
+		rvto2addr_entry->rvip = fdo_byte_array_alloc(rvip_length);
+		if (!rvto2addr_entry->rvip) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVIP\n");
+			return false;
+		}
+		if (!fdor_byte_string(fdor, rvto2addr_entry->rvip->bytes, rvto2addr_entry->rvip->byte_sz)) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP\n");
+			return false;
+		}
 	}
 
-	size_t rvdns_length = 0;
-	if (!fdor_string_length(fdor, &rvdns_length) || rvdns_length == 0) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS length\n");
-		return false;
-	}
-	rvto2addr_entry->rvdns = fdo_string_alloc_size(rvdns_length);
-	if (!rvto2addr_entry->rvdns) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVDNS\n");
-		return false;
+	if (fdor_is_value_null(fdor)) {
+		if (!fdor_next(fdor)) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to skip NULL RVDNS\n");
+			return false;
+		}
+	} else {
+		size_t rvdns_length = 0;
+		if (!fdor_string_length(fdor, &rvdns_length) || rvdns_length == 0) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS length\n");
+			return false;
+		}
+		rvto2addr_entry->rvdns = fdo_string_alloc_size(rvdns_length);
+		if (!rvto2addr_entry->rvdns) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to alloc RVDNS\n");
+			return false;
+		}
+
+		if (!fdor_text_string(fdor, rvto2addr_entry->rvdns->bytes, rvdns_length)) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS\n");
+			return false;
+		}
+		rvto2addr_entry->rvdns->bytes[rvdns_length] = '\0';
 	}
 
-	if (!fdor_text_string(fdor, rvto2addr_entry->rvdns->bytes, rvdns_length)) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS\n");
-		return false;
-	}
-	rvto2addr_entry->rvdns->bytes[rvdns_length] = '\0';
+	if (!rvto2addr_entry->rvip && !rvto2addr_entry->rvdns) {
+		LOG(LOG_ERROR, "RVTO2AddrEntry: Both RVIP and RVDNS can not be NULL\n");
+			return false;
+	} else {
+		rvto2addr_entry->rvport = -1;
+		if (!fdor_signed_int(fdor, &rvto2addr_entry->rvport) ||
+			rvto2addr_entry->rvport == -1) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVPort\n");
+			return false;
+		}
 
-	rvto2addr_entry->rvport = -1;
-	if (!fdor_signed_int(fdor, &rvto2addr_entry->rvport) ||
-		rvto2addr_entry->rvport == -1) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVPort\n");
-		return false;
-	}
+		rvto2addr_entry->rvprotocol = -1;
+		if (!fdor_signed_int(fdor, &rvto2addr_entry->rvprotocol) ||
+			rvto2addr_entry->rvprotocol == -1) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVProtocol\n");
+			return false;
+		}
 
-	rvto2addr_entry->rvprotocol = -1;
-	if (!fdor_signed_int(fdor, &rvto2addr_entry->rvprotocol) ||
-		rvto2addr_entry->rvprotocol == -1) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVProtocol\n");
-		return false;
+		if (!fdor_end_array(fdor)) {
+			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read end array\n");
+			goto end;
+		}
+		return true;
 	}
-
-	if (!fdor_end_array(fdor)) {
-		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read end array\n");
-		goto end;
-	}
-	return true;
 end:
 	fdo_rvto2addr_entry_free(rvto2addr_entry);
 	return false;

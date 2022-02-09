@@ -165,6 +165,12 @@ int32_t msg61(fdo_prot_t *ps)
 		goto err;
 	}
 
+	// Read the bin character length
+	if (!fdor_string_length(&ps->fdor, &ovheader_sz) || ovheader_sz == 0) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Unable to decode length of ProveOVHdr!\n");
+		goto err;
+	}
+
 	// bstr-unwrap OVHeader
 	ovheader = fdo_byte_array_alloc(ovheader_sz);
 	if (!ovheader) {
@@ -209,6 +215,11 @@ int32_t msg61(fdo_prot_t *ps)
 	}
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Total number of OwnershipVoucher.OVEntries: %d\n",
 		ps->ovoucher->num_ov_entries);
+
+	if (ps->ovoucher->num_ov_entries > MAX_NO_OVENTRIES) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: NumOVEntries can not be greater than 255\n");
+		goto err;
+	}
 
 	ps->ovoucher->ovoucher_hdr_hash = fdo_hash_alloc_empty();
 	if (!ps->ovoucher->ovoucher_hdr_hash) {
@@ -315,6 +326,11 @@ int32_t msg61(fdo_prot_t *ps)
 	// previously allocated buffer sizes for protocol messages
 	if (!fdor_unsigned_int(&ps->fdor, &ps->max_owner_message_size)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read maxOwnerMessageSize\n");
+		goto err;
+	}
+
+	if (ps->max_owner_message_size > MAX_NEGO_MSG_SIZE) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: maxOwnerMessageSize can not be greater than 65535\n");
 		goto err;
 	}
 

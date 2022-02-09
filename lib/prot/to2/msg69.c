@@ -100,7 +100,7 @@ int32_t msg69(fdo_prot_t *ps)
 		// 1 byte for main array, 1 byte each for bool values.
 		// the remaining data is the ServiceInfo, and hence we can deduce the size of received
 		// ServiceInfo by subtracting 3 from the total message length.
-		if ((int)(ps->fdor.b.block_size - 3) <= ps->maxOwnerServiceInfoSz) {
+		if ((uint64_t)(ps->fdor.b.block_size - 3) <= ps->maxOwnerServiceInfoSz) {
 			// process the received ServiceInfo
 			module_list_itr = ps->sv_info_mod_list_head;
 			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val,
