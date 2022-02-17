@@ -22,7 +22,7 @@ make DA=ecdsa256
    ```
    FILE: lib/m-string.c
    DeviceMfgInfo Format: [<key type id>, <serial number>, <model number>, <csr>]
-   key type id  : ECDSA256 = -7 and ECDSA384 = -35
+   key type id  : ECDSA256 = 10 and ECDSA384 = 11
    serial number: To be filled
    model number : Can be an empty string
    csr          : ECC-based Certificate Signing Request
