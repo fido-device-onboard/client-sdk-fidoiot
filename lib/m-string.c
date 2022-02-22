@@ -21,7 +21,7 @@
  * Generate the "m" string value.
  * Syntax:
  * [<key type id>, <serial number>, <model number>, <CSR>]
- * @key type id  : ECDSA256 = 13 and ECDSA384 = 14
+ * @key type id  : ECDSA256 = 10 and ECDSA384 = 11
  * @serial number: Device serial number.
  * @model number : Device model number.
  * @csr          : CSR based on EC keys
@@ -34,7 +34,7 @@
  *
  * o OA: ECDSA256
  *   - DA: ECDSA256/ECDSA384: In this case CSR data is being sent.
- *                            <key type id> = 13 or 14 based on DA choosen.
+ *                            <key type id> = 10 or 11 based on DA choosen.
  */
 
 /* All below sizes are excluding NULL termination */
@@ -76,7 +76,7 @@ static int read_fill_modelserial(void)
 					"NULL terminated\n");
 			goto err;
 		}
-		
+
 		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ, DEF_SERIAL_NO,
 				def_serial_sz);
 		if (ret) {
@@ -125,9 +125,6 @@ err:
  * ]
  *
  * DeviceMfgInfo = bstr, MfgInfo.cbor (bstr-wrap MfgInfo CBOR bytes)
- *
- * NOTE: There are 2 more fields: hashType and Signature. Uncomment them as needed,
- * and update array size from 5 to 6/7 accordingly.
  */
 int ps_get_m_string(fdo_prot_t *ps)
 {
@@ -208,13 +205,6 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write keyEnc\n");
 		goto err;
 	}
-	/*
-	// FIX-ME/TO-DO : Uncomment if needed, remove otherwise
-	if (!fdow_signed_int(&temp_fdow, key_hashtype)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write keyHashType\n");
-		goto err;
-	}
-	*/
 	if (!fdow_text_string(&temp_fdow, (char *) device_serial, device_serial_len)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write serialNumber\n");
 		goto err;
@@ -227,18 +217,6 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSR\n");
 		goto err;
 	}
-	/*
-	// FIX-ME/TO-DO : Uncomment if needed, remove otherwise
-	empty_byte_array = fdo_byte_array_alloc(0);
-	if (!empty_byte_array) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Byte Array Alloc failed\n");
-		goto err;
-	}
-	if (!fdow_byte_string(&temp_fdow, empty_byte_array->bytes, empty_byte_array->byte_sz)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSR\n");
-		goto err;
-	}
-	*/
 	if (!fdow_end_array(&temp_fdow)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to end array\n");
 		goto err;

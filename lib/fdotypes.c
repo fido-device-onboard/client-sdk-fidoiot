@@ -1239,8 +1239,8 @@ bool fdo_public_key_write(fdow_t *fdow, fdo_public_key_t *pk)
 			return false;
 		}
 		break;
-	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509:
-		LOG(LOG_ERROR, "PublicKey write: pkEnc.COSEX509 is not supported.\n");
+	case FDO_CRYPTO_PUB_KEY_ENCODING_X5CHAIN:
+		LOG(LOG_ERROR, "PublicKey write: pkEnc.X5CHAIN is not supported.\n");
 		return false;
 	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY:
 		;
@@ -1357,13 +1357,12 @@ fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 
 		if (!pk->key1 || !fdor_byte_string(fdor, pk->key1->bytes, public_key_length)) {
 			LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkBody\n");
-			fdo_byte_array_free(pk->key1);
 			goto err;
 		}
 		pk->key1->byte_sz = public_key_length;
 		break;
-	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509:
-		LOG(LOG_ERROR, "Invalid PublicKey: pkEnc.COSEX509 is not supported.\n");
+	case FDO_CRYPTO_PUB_KEY_ENCODING_X5CHAIN:
+		LOG(LOG_ERROR, "Invalid PublicKey: pkEnc.X5CHAIN is not supported.\n");
 		goto err;
 	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY:
 		;
@@ -1421,6 +1420,10 @@ fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 					}
 				}
 				pk->key1 = fdo_byte_array_alloc(map_val_bytes_sz);
+				if (!pk->key1) {
+					LOG(LOG_ERROR, "PublicKey1 alloc failed\n");
+					goto err;
+				}
 				if (!fdor_byte_string(fdor, pk->key1->bytes, pk->key1->byte_sz)) {
 					LOG(LOG_ERROR,
 						"Invalid PublicKey: Failed to read COSEKey X value\n");
@@ -1435,6 +1438,10 @@ fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 					}
 				}
 				pk->key2 = fdo_byte_array_alloc(map_val_bytes_sz);
+				if (!pk->key2) {
+					LOG(LOG_ERROR, "PublicKey2 alloc failed\n");
+					goto err;
+				}
 				if (!fdor_byte_string(fdor, pk->key2->bytes, pk->key2->byte_sz)) {
 					LOG(LOG_ERROR,
 						"Invalid PublicKey: Failed to read COSEKey Y value\n");

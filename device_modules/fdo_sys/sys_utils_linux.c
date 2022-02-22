@@ -171,7 +171,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #ifdef DEBUG_LOGS
 			printf("fdo_sys exec/exec_cb : Missing command\n");
 #endif
-			return false;			
+			return false;
 		}
 
 		if (exec_pid != -1) {
@@ -225,6 +225,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #ifdef DEBUG_LOGS
 					printf("fdo_sys exec_cb : Invalid params\n");
 #endif
+					return ret;
 				}
 				*status_iscomplete = false;
 				*status_resultcode = 0;

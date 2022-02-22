@@ -54,6 +54,7 @@ node('ccode'){
         mkdir utils
         cp ../utils/tpm_make_ready_ecdsa.sh utils/
         cp ../utils/install_tpm_libs.sh utils/
+        cp ../utils/install_tpm_libs_rhel.sh utils/
         cp ../utils/keys_gen.sh utils/
         cd ..
         tar -cvzf client-sdk-binaries.tar.gz client-sdk-binaries
@@ -77,23 +78,21 @@ node('ccode'){
 
       // Copying the contents to the folder
       print "Copying PRI and Client-SDK artifacts"
-      copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'test-fidoiot/binaries/pri-fidoiot/'
+      copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/1.1-dev', selector: lastSuccessful(), target: 'test-fidoiot/binaries/pri-fidoiot/'
       print "Extracting PRI and Client-SDK artifacts"
       sh '''
         tar -xvzf test-fidoiot/binaries/pri-fidoiot/demo.tar.gz
         cp -r demo/* test-fidoiot/binaries/pri-fidoiot/
-        bash test-fidoiot/binaries/pri-fidoiot/scripts/keys_gen.sh test-fidoiot/binaries/pri-fidoiot/
-        cp -r test-fidoiot/binaries/pri-fidoiot/creds/* test-fidoiot/binaries/pri-fidoiot/
 
         cp client-sdk/x86_ecdsa256_gcm_bin/linux-client test-fidoiot/binaries/client-sdk-fidoiot/
         cp -r client-sdk/x86_ecdsa256_gcm_bin/data test-fidoiot/
         bash client-sdk/utils/keys_gen.sh test-fidoiot/
       '''
 
-      // Updating the TO0 scheduling time interval
+      // Updating the manufacturer address
       sh '''
-        cd test-fidoiot/binaries/pri-fidoiot/owner
-        sed -i 's/300/30/g' owner.env
+        cd test-fidoiot/data
+        sed -i 's/8039/8080/g' manufacturer_addr.bin
       '''
 
       // Setting the TEST_DIR and executing smoke test

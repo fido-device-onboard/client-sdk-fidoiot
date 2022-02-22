@@ -15,9 +15,11 @@ sudo apt-get install python-setuptools clang-format dos2unix ruby \
 * For RHEL OS version 8.4:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 ```
-sudo yum -y install python3-setuptools git-clang-format dos2unix ruby \
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial
 ```
 ## 2. Packages Requirements when Executing Binaries:
@@ -137,8 +139,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
 - To enable the device for Transfer Ownership protocol (TO1 and TO2), configure the FDO PRI Rendezvous and Owner.
   Refer to [ Ownership Transfer Setup ](ownership_transfer.md).
   After these are set up, execute `linux-client` again.
-  
+
   ```shell
   ./build/linux-client
   ```
-  
