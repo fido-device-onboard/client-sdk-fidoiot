@@ -24,7 +24,7 @@ typedef struct fdo_to2Sym_enc_ctx {
 
 typedef struct fdo_kex_ctx {
 	fdo_string_t *kx;
-	int32_t cs;
+	size_t cs;
 	fdo_byte_array_t *xB;
 	fdo_byte_array_t *initial_secret;
 	const char *kdf_label;

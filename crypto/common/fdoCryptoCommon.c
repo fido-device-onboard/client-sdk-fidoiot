@@ -31,7 +31,7 @@ fdo_string_t *fdo_get_device_kex_method(void)
  * This function returns the cs value needed by the protocol
  * @return cs string which was stored during init.
  */
-int32_t fdo_get_device_crypto_suite(void)
+size_t fdo_get_device_crypto_suite(void)
 {
 	return crypto_ctx.kex.cs;
 }

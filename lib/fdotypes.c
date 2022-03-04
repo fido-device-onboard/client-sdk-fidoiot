@@ -618,33 +618,6 @@ bool fdo_nonce_equal(fdo_byte_array_t *n1, fdo_byte_array_t *n2)
 	}
 }
 
-/**
- * convert nonce to string
- * @param n - pointer to the input nonce
- * @param buf - pointer to the converted string
- * @param buf_sz - size of the converted string
- * @return pointer to the converted string
- */
-char *fdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz)
-{
-	int i = 0;
-	char *a = (char *)n;
-
-	(void)buf_sz; /* FIXME: Change the signature as its unused */
-
-	if (!n || !buf) {
-		return NULL;
-	}
-
-	while (i < FDO_NONCE_BYTES) {
-		buf[i] = INT2HEX(((*a >> 4) & 0xf));
-		buf[++i] = INT2HEX((*a & 0xf));
-		++i;
-		++a;
-	}
-	return buf;
-}
-
 // -----------------------------------------------------------------------------
 // GUID routines
 //
@@ -1364,8 +1337,7 @@ fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 	case FDO_CRYPTO_PUB_KEY_ENCODING_X5CHAIN:
 		LOG(LOG_ERROR, "Invalid PublicKey: pkEnc.X5CHAIN is not supported.\n");
 		goto err;
-	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY:
-		;
+	case FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY: ;
 		size_t map_items = 0;
 		int map_key = 0;
 		int map_val_int = 0;

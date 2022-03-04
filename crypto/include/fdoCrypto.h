@@ -24,7 +24,7 @@ int32_t fdo_kex_init(void);
 int32_t fdo_kex_close(void);
 
 fdo_string_t *fdo_get_device_kex_method(void);
-int32_t fdo_get_device_crypto_suite(void);
+size_t fdo_get_device_crypto_suite(void);
 fdo_byte_array_t **getOVKey(void);
 fdo_byte_array_t **getreplacementOVKey(void);
 int32_t set_ov_key(fdo_byte_array_t *OVkey, size_t OVKey_len);
