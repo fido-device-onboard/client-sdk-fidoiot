@@ -111,7 +111,6 @@ int fdo_sys(fdo_sdk_si_type type,
 				fdor_flush(fdor);
 				ModuleFree(fdor);
 			}
-
 			result = FDO_SI_SUCCESS;
 			goto end;
 		case FDO_SI_HAS_MORE_DSI:
@@ -746,7 +745,7 @@ static bool write_status_cb(char *module_message) {
 		return false;
 	}
 
-	char message[] = "status_cb";
+	const char message[] = "status_cb";
 	if (memcpy_s(module_message, sizeof(message),
 		message, sizeof(message)) != 0) {
 #ifdef DEBUG_LOGS
@@ -806,7 +805,7 @@ static bool write_data(char *module_message,
 		return false;
 	}
 
-	char message[] = "data";
+	const char message[] = "data";
 	if (memcpy_s(module_message, sizeof(message),
 		message, sizeof(message)) != 0) {
 #ifdef DEBUG_LOGS
@@ -837,7 +836,7 @@ static bool write_eot(char *module_message, int status) {
 		return false;
 	}
 
-	char message[] = "eot";
+	const char message[] = "eot";
 	if (memcpy_s(module_message, sizeof(message),
 		message, sizeof(message)) != 0) {
 #ifdef DEBUG_LOGS

@@ -83,7 +83,6 @@ typedef uint8_t fdo_ueid_t[FDO_UEID_BYTES];
 
 /* Nonce  */
 void fdo_nonce_init_rand(fdo_byte_array_t *n);
-char *fdo_nonce_to_string(uint8_t *n, char *buf, int buf_sz);
 bool fdo_nonce_equal(fdo_byte_array_t *n1, fdo_byte_array_t *n2);
 
 typedef struct _fdo_hash_t {
@@ -171,8 +170,8 @@ typedef struct {
 // AES GCM/CCM algotithm values from COSE specification, RFC 8152
 #define FDO_CRYPTO_A128GCM 1
 #define FDO_CRYPTO_A256GCM 3
-#define FDO_CRYPTO_A128CCM 30
-#define FDO_CRYPTO_A256CCM 31
+#define FDO_CRYPTO_A128CCM 32
+#define FDO_CRYPTO_A256CCM 33
 
 // 3.3.4 PublicKey encodings (pkEnc)
 #define FDO_CRYPTO_PUB_KEY_ENCODING_CRYPTO 0

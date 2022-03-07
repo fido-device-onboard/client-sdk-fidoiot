@@ -407,7 +407,6 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader, fdo_hash_t 
 
 	fdo_ov_hdr_hmac(ovheader, hmac);
 	ret = 0;
-	return ov;
 exit:
 	if (ret) {
 		LOG(LOG_ERROR, "Ov_hdr Error\n");
@@ -417,7 +416,7 @@ exit:
 	if (fdor.b.block || fdor.current) {
 		fdor_flush(&fdor);
 	}
-	return NULL;
+	return ov;
 }
 
 /**
@@ -553,7 +552,7 @@ exit:
 	if (!ret && ov->ov_entries->hc_hash) {
 		fdo_hash_free(ov->ov_entries->hc_hash);
 	}
-	return ret;	
+	return ret;
 }
 
 /**

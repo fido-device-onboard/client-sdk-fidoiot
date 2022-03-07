@@ -30,7 +30,7 @@ int32_t msg60(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_string_t *kx = fdo_get_device_kex_method();
-	int32_t cs = fdo_get_device_crypto_suite();
+	size_t cs = fdo_get_device_crypto_suite();
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");

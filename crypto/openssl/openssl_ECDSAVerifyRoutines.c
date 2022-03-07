@@ -76,6 +76,10 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	/* generate required EC_KEY based on type */
 	if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
 		eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+		if (NULL == eckey) {
+			LOG(LOG_ERROR, "EC_KEY allocation failed!\n");
+			goto end;
+		}
 		/* Perform SHA-256 digest of the message */
 		if (SHA256((const unsigned char *)message, message_length,
 			   hash) == NULL) {
@@ -86,6 +90,10 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 
 	} else { // P-384
 		eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
+		if (NULL == eckey) {
+			LOG(LOG_ERROR, "EC_KEY allocation failed!\n");
+			goto end;
+		}
 		/* Perform SHA-384 digest of the message */
 		if (SHA384((const unsigned char *)message, message_length,
 			   hash) == NULL) {
@@ -93,11 +101,6 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 			goto end;
 		}
 		hash_length = SHA384_DIGEST_LENGTH;
-	}
-
-	if (NULL == eckey) {
-		LOG(LOG_ERROR, "EC_KEY allocation failed!\n");
-		goto end;
 	}
 
 	if (key_encoding == FDO_CRYPTO_PUB_KEY_ENCODING_X509) {
@@ -165,7 +168,7 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	r = BN_bin2bn((const unsigned char*) sig_r, signature_length/2, NULL);
 	if (!r) {
 		LOG(LOG_ERROR, "Failed to convert r\n");
-		goto end;		
+		goto end;
 	}
 	s = BN_bin2bn((const unsigned char*) sig_s, signature_length/2, NULL);
 	if (!s) {

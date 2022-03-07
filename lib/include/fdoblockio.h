@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include "cbor.h"
 
-#define INT2HEX(i) ((i) <= 9 ? '0' + (i) : 'a' - 10 + (i))
+static inline int INT2HEX(int i) {
+	return (i <= 9 ? '0' + i : 'a' - 10 + i);
+}
 
 // a typical buffer and its associated size
 typedef struct {
