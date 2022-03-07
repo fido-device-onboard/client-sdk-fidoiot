@@ -102,6 +102,15 @@ int fdo_sys(fdo_sdk_si_type type,
 #endif
 				goto end;
 			}
+
+			if (fdow) {
+				fdow_flush(fdow);
+				ModuleFree(fdow);
+			}
+			if (fdor) {
+				fdor_flush(fdor);
+				ModuleFree(fdor);
+			}
 			result = FDO_SI_SUCCESS;
 			goto end;
 		case FDO_SI_HAS_MORE_DSI:
@@ -703,14 +712,6 @@ int fdo_sys(fdo_sdk_si_type type,
 end:
 	if (bin_data) {
 		ModuleFree(bin_data);
-	}
-	if (fdow) {
-		fdow_flush(fdow);
-		ModuleFree(fdow);
-	}
-	if (fdor) {
-		fdor_flush(fdor);
-		ModuleFree(fdor);
 	}
 	if (exec_instr && exec_array_length > 0) {
 		int exec_counter = exec_array_length - 1;

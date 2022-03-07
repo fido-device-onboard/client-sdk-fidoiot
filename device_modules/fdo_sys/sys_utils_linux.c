@@ -377,8 +377,8 @@ bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer, size_
 	}
 
 	if (fseek(file, from, SEEK_SET) != 0) {
-        printf("fseek() failed in the file");
-        if (fclose(file) == EOF) {
+		printf("fseek() failed in the file");
+		if (fclose(file) == EOF) {
 			printf("Fclose Failed");
 		}
 		return false;
