@@ -1,3 +1,4 @@
+
 # FIDO Device Onboard (FDO) Compilation Setup
 <a name="safestring"></a>
 ## 1. Intel safestringlib
@@ -84,9 +85,21 @@ This value is sent as TO2.DeviceServiceInfoReady.maxOwnerServiceInfoSz and is co
 $ cd <path-to-client-sdk-fidoiot>
 $ echo -n <integer size> > data/max_serviceinfo_sz.bin
 ```
+<a  name="device_serial"></a>
+## 6. Setting the Manufacturer Device Serial Number (Optional)
+
+The manufacturer device serial number can be set in the file `manufacturer_sn.bin`. The character length should not be greater than 255. If the length is greater than 255, the value would default to "abcdef".
+
+```shell
+# To set the device serial number
+$ cd <path-to-client-sdk-fidoiot>
+$ echo -n <device serial> > data/manufacturer_sn.bin
+```
+
+>  ***NOTE***: By default, `manufacturer_sn.bin` is not there and the device serial is configured with "abcdef".
 
 <a name="cred_reuse"></a>
-## 6.  FDO Credentials REUSE Protocol
+## 7.  FDO Credentials REUSE Protocol
 
 The FDO credentials REUSE feature allows FDO devices to reuse their ownership credentials across multiple device onboardings. This feature only gets enabled if the owner sends down the same rendezvous info, device GUID information, and public key at the end of the Transfer of Ownership, Step 2 (TO2) protocol.
 
@@ -100,7 +113,7 @@ $ cmake -DREUSE=true
 Activating the device credentials will in turn, activate the FDO device and configure the FDO device to run multiple onboarding(s). This can be useful in several test and development environments, where multiple onboardings are common.
 
 <a name="http_proxy"></a>
-## 7. HTTP-proxy Configuration (Optional)
+## 8. HTTP-proxy Configuration (Optional)
 If the device is located behind a proxy server, the proxy server details must be provided to the device. For the same purpose, there are three files (each for the manufacturer, rendezvous, and owner servers) in which the proxy server details should be specified in the required format, before connecting to the respective server. These files can be created or removed as required.
 
 Each proxy file is located in the `data/` directory and named as follows:

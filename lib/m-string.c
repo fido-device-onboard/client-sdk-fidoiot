@@ -39,7 +39,7 @@
 
 /* All below sizes are excluding NULL termination */
 #define DEVICE_MFG_STRING_ARRAY_SZ 5
-#define MAX_DEV_SERIAL_SZ 32
+#define MAX_DEV_SERIAL_SZ 255
 #define MAX_MODEL_NO_SZ 32
 
 /* TODO: Device serial number source need to be fixed */
@@ -68,7 +68,11 @@ static int read_fill_modelserial(void)
 			goto err;
 		}
 	} else {
-		LOG(LOG_INFO, "No serialno file present!\n");
+		if (fsize > MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_INFO, "Serialno exceeds 255 characters. Defaulting it to 'abcdef'\n");
+		} else {
+			LOG(LOG_INFO, "No serialno file present!\n");
+		}
 
 		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
 		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
@@ -93,8 +97,12 @@ static int read_fill_modelserial(void)
 			goto err;
 		}
 	} else {
+		if (fsize > MAX_MODEL_NO_SZ) {
+			LOG(LOG_INFO, "Model number exceeds 32 characters. Defaulting it to '12345'\n");
+		} else {
+			LOG(LOG_INFO, "No model number file present!\n");
+		}
 
-		LOG(LOG_INFO, "No model number file present!\n");
 		def_model_sz = strnlen_s(DEF_MODEL_NO, MAX_MODEL_NO_SZ);
 		if (!def_model_sz || def_model_sz == MAX_MODEL_NO_SZ) {
 			LOG(LOG_ERROR, "Default model number string isn't "

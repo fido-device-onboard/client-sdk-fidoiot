@@ -12,6 +12,7 @@ credentials while porting this to different platforms.
 - [ Manufacturer Network Address ](docs/setup.md#manuf_addr)
 - [ ECDSA Private Key Generation ](docs/setup.md#ecdsa_priv)
 - [ Setting the Maximum ServiceInfo Size](docs/setup.md#serviceinfo_mtu)
+- [ Setting the Manufacturer Device Serial Number](docs/setup.md#device_serial)
 - [ Configure Credential Reuse](docs/setup.md#cred_reuse)
 - [ HTTP_PROXY ](docs/setup.md#http_proxy)
 
