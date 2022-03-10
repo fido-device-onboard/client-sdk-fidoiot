@@ -12,13 +12,14 @@
 #include "safe_lib.h"
 #include "fdokeyexchange.h"
 #include "util.h"
+#include "fdoCryptoCommons.h"
 
 /**
  * msg61 - TO2.ProveOVHdr
  * The owner responds to the device with the OVHeader. The COSESignature.signature
  * is signed with owner Private key to start establishing that it is the
  * rightful owner of the Ownership Voucher and thus the device.
- * 
+ *
  * TO2.ProveOVHdr = CoseSignature, where
  * TO2ProveOVHdrUnprotectedHeaders = (
  *   CUPHNonce:       NonceTO2ProveDv, ;; NonceTO2ProveDv is used below in TO2.ProveDevice and TO2.Done
@@ -28,12 +29,14 @@
  *   TO2ProveOVHdrPayload
  * )
  * TO2ProveOVHdrPayload = [
- *   OVHeader,     ;; Ownership Voucher header
+ *   OVHeader,     ;; Ownership Voucher header as bstr
  *   NumOVEntries, ;; number of ownership voucher entries
  *   HMac,         ;; Ownership Voucher "hmac" of hdr
  *   NonceTO2ProveOV,       ;; nonce from TO2.HelloDevice
  *   eBSigInfo,    ;; Device attestation signature info
  *   xAKeyExchange ;; Key exchange first step
+ *   helloDeviceHash ;; hash of HelloDevice message
+ *   maxOwnerMessageSize ;;
  * ]
  */
 int32_t msg61(fdo_prot_t *ps)
@@ -45,6 +48,9 @@ int32_t msg61(fdo_prot_t *ps)
 	fdo_cose_t *cose = NULL;
 	fdo_byte_array_t *cose_sig_structure = NULL;
 	fdo_hash_t *ovheader_pubkey_hash = NULL;
+	fdo_hash_t *hello_device_hash_rcv = NULL;
+	fdo_byte_array_t *ovheader = NULL;
+	size_t ovheader_sz = 0;
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -147,8 +153,9 @@ int32_t msg61(fdo_prot_t *ps)
 	}
 
 	size_t num_payloadbasemap_items = 0;
+	// check if TO2.ProveOVHdrPayload consist of all entries i.e. 8 entries
 	if (!fdor_array_length(&ps->fdor, &num_payloadbasemap_items) ||
-		num_payloadbasemap_items != 6) {
+		num_payloadbasemap_items != 8) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read array length\n");
 		goto err;
 	}
@@ -158,8 +165,25 @@ int32_t msg61(fdo_prot_t *ps)
 		goto err;
 	}
 
+	// Read the bin character length
+	if (!fdor_string_length(&ps->fdor, &ovheader_sz) || ovheader_sz == 0) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Unable to decode length of ProveOVHdr!\n");
+		goto err;
+	}
+
+	// bstr-unwrap OVHeader
+	ovheader = fdo_byte_array_alloc(ovheader_sz);
+	if (!ovheader) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc for OVHeader as bstr\n");
+		goto err;
+	}
+	if (!fdor_byte_string(&ps->fdor, ovheader->bytes, ovheader->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read OVHeader as bstr\n");
+		goto err;
+	}
+
 	// Read the OVHeader
-	ps->ovoucher = fdo_ov_hdr_read(&ps->fdor, &ps->new_ov_hdr_hmac);
+	ps->ovoucher = fdo_ov_hdr_read(ovheader, &ps->new_ov_hdr_hmac);
 	if (!ps->ovoucher) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read OVHeader\n");
 		goto err;
@@ -191,6 +215,11 @@ int32_t msg61(fdo_prot_t *ps)
 	}
 	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Total number of OwnershipVoucher.OVEntries: %d\n",
 		ps->ovoucher->num_ov_entries);
+
+	if (ps->ovoucher->num_ov_entries > MAX_NO_OVENTRIES) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: NumOVEntries can not be greater than 255\n");
+		goto err;
+	}
 
 	ps->ovoucher->ovoucher_hdr_hash = fdo_hash_alloc_empty();
 	if (!ps->ovoucher->ovoucher_hdr_hash) {
@@ -233,7 +262,7 @@ int32_t msg61(fdo_prot_t *ps)
 	if (!fdor_byte_string(&ps->fdor, ps->nonce_to2proveov_rcv->bytes,
 		ps->nonce_to2proveov_rcv->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read NonceTO2ProveOV\n");
-		goto err;		
+		goto err;
 	}
 
 	/* The nonces "NonceTO2ProveOV" from Type 60 and 61 must match */
@@ -261,7 +290,7 @@ int32_t msg61(fdo_prot_t *ps)
 	size_t xA_length = 8;
 	if (!fdor_string_length(&ps->fdor, &xA_length)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read xAKeyExchange length\n");
-		goto err;	
+		goto err;
 	}
 	xA = fdo_byte_array_alloc(xA_length);
 	if (!xA) {
@@ -278,6 +307,33 @@ int32_t msg61(fdo_prot_t *ps)
 		goto err;
 	}
 
+	hello_device_hash_rcv = fdo_hash_alloc_empty();
+	if (!hello_device_hash_rcv) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc for helloDeviceHash\n");
+		goto err;
+	}
+	if (!fdo_hash_read(&ps->fdor, hello_device_hash_rcv)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read helloDeviceHash\n");
+		goto err;
+	}
+
+	if (!fdo_compare_hashes(hello_device_hash_rcv, ps->hello_device_hash)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to verify helloDeviceHash\n");
+		goto err;
+	}
+
+	// maxOwnerMessageSize is read, but not really used since it may require changing
+	// previously allocated buffer sizes for protocol messages
+	if (!fdor_unsigned_int(&ps->fdor, &ps->max_owner_message_size)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read maxOwnerMessageSize\n");
+		goto err;
+	}
+
+	if (ps->max_owner_message_size > MAX_NEGO_MSG_SIZE) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: maxOwnerMessageSize can not be greater than 65535\n");
+		goto err;
+	}
+
 	if (!fdor_end_array(&ps->fdor)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to end TO2ProveOVHdrPayload array\n");
 		goto err;
@@ -287,7 +343,7 @@ int32_t msg61(fdo_prot_t *ps)
 	ps->ovoucher->ov_entries = fdo_ov_entry_alloc_empty();
 	if (!ps->ovoucher->ov_entries) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to alloc OVEntry\n");
-		goto err;		
+		goto err;
 	}
 	if (!fdo_ove_hash_hdr_info_save(ps->ovoucher)) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to save OVEHashHdrInfo\n");
@@ -344,6 +400,14 @@ err:
 	if (ovheader_pubkey_hash) {
 		fdo_hash_free(ovheader_pubkey_hash);
 		ovheader_pubkey_hash = NULL;
+	}
+	if (hello_device_hash_rcv) {
+		fdo_hash_free(hello_device_hash_rcv);
+		hello_device_hash_rcv = NULL;
+	}
+	if (ovheader) {
+		fdo_byte_array_free(ovheader);
+		ovheader = NULL;
 	}
 	return ret;
 }

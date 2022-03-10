@@ -62,6 +62,7 @@ typedef struct _fdo_oventry_t {
 	uint16_t enn;
 	fdo_hash_t *hp_hash;	// Hash of previous entry (OVEHashPrevEntry)
 	fdo_hash_t *hc_hash;	// Hash of header info (OVEHashHdrInfo)
+	fdo_byte_array_t *ove_extra; // (OVEExtra)
 	fdo_public_key_t *pk;	// public key (OVEPubKey)
 } fdo_ov_entry_t;
 
@@ -81,7 +82,7 @@ void fdo_owner_supplied_credentials_free(fdo_owner_supplied_credentials_t *ocs);
 
 // 3.4.2 OwnershipVoucher
 typedef struct _fdo_ownershipvoucher_t {
-	int prot_version;	// OVHeader.OVProtVer
+	int prot_version;	// OVHeader.OVHProtVer
 	fdo_byte_array_t *g2;	// OVHeader.OVGuid
 	fdo_rendezvous_list_t *rvlst2;	// OVHeader.OVRVInfo
 	fdo_string_t *dev_info;	// OVHeader.OVDeviceInfo
@@ -95,8 +96,8 @@ typedef struct _fdo_ownershipvoucher_t {
 fdo_ownership_voucher_t *fdo_ov_alloc(void);
 void fdo_ov_free(fdo_ownership_voucher_t *ov);
 void fdo_ov_print(fdo_ownership_voucher_t *ov);
-fdo_ownership_voucher_t *fdo_ov_hdr_read(fdor_t *fdor, fdo_hash_t **hmac);
-bool fdo_ov_hdr_hmac(fdo_ownership_voucher_t *ov, fdo_hash_t **hmac);
+fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader, fdo_hash_t **hmac);
+bool fdo_ov_hdr_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac);
 fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 			fdo_owner_supplied_credentials_t *osc, fdo_hash_t *hdc);
 bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,

@@ -171,7 +171,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #ifdef DEBUG_LOGS
 			printf("fdo_sys exec/exec_cb : Missing command\n");
 #endif
-			return false;			
+			return false;
 		}
 
 		if (exec_pid != -1) {
@@ -225,6 +225,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 #ifdef DEBUG_LOGS
 					printf("fdo_sys exec_cb : Invalid params\n");
 #endif
+					return ret;
 				}
 				*status_iscomplete = false;
 				*status_resultcode = 0;
@@ -346,7 +347,13 @@ size_t get_file_sz(char const *filename)
 	FILE *fp = fopen(filename, "rb");
 
 	if (fp) {
-		fseek(fp, 0, SEEK_END);
+		if (fseek(fp, 0, SEEK_END) != 0) {
+			printf("fseek() failed in the file");
+			if (fclose(fp) == EOF) {
+				printf("Fclose Failed");
+			}
+			return 0;
+		}
 		file_length = ftell(fp);
 		if (fclose(fp) == EOF) {
 			printf("Fclose Failed");
@@ -369,7 +376,13 @@ bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer, size_
 		return false;
 	}
 
-	fseek(file, from, SEEK_SET);
+	if (fseek(file, from, SEEK_SET) != 0) {
+		printf("fseek() failed in the file");
+		if (fclose(file) == EOF) {
+			printf("Fclose Failed");
+		}
+		return false;
+    }
 	bytes_read = fread(buffer, 1, size, file);
 	if (bytes_read != size) {
 		if (fclose(file) == EOF) {

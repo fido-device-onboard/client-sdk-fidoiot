@@ -440,11 +440,13 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		if (!fdor_parser_init(fdor)) {
 			LOG(LOG_ERROR, "Failed to initilize FDOR parser\n");
 			ret = -1;
+			break;
 		}
 		if (!fdor_is_valid_cbor(fdor)) {
 			LOG(LOG_ERROR, "Received an invalid CBOR stream\n");
 			fdo_block_reset(&fdor->b);
 			ret = -1;
+			break;
 		}
 		fdor->have_block = true;
 	}

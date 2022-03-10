@@ -250,6 +250,11 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 		fdo_hash_free(ps->new_ov_hdr_hmac);
 		ps->new_ov_hdr_hmac = NULL;
 	}
+	if (ps->hello_device_hash) {
+		fdo_hash_free(ps->hello_device_hash);
+		ps->hello_device_hash = NULL;
+	}
+	ps->max_owner_message_size = 0;
 
 	/* clear Sv_info PSI/DSI/OSI related data */
 	fdo_sv_info_clear_module_psi_osi_index(ps->sv_info_mod_list_head);
@@ -264,6 +269,11 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	if (ps->service_info) {
 		fdo_service_info_free(ps->service_info);
 		ps->service_info = NULL;
+	}
+
+	if (ps->ext_service_info) {
+		fdo_byte_array_free(ps->ext_service_info);
+		ps->ext_service_info = NULL;
 	}
 
 	if (ps->serviceinfo_invalid_modnames) {
@@ -409,17 +419,19 @@ static fdo_sdk_status app_initialize(void)
 			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
 		}
 	}
+	// maxDeviceMessageSize that is to be sent during msg/60
+	g_fdo_data->prot.max_device_message_size = g_fdo_data->prot.prot_buff_sz;
 	if (buffer != NULL) {
 		fdo_free(buffer);
 	}
 
-	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %d bytes\n",
+	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %"PRIu64" bytes\n",
 		g_fdo_data->prot.maxDeviceServiceInfoSz);
-	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %d bytes\n",
+	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %"PRIu64" bytes\n",
 		g_fdo_data->prot.maxOwnerServiceInfoSz);
 
-	/* 
-	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's 
+	/*
+	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's
 	* protocol execution. Reuse the allocated memory by emptying the contents.
 	*/
 	if (!fdow_init(&g_fdo_data->prot.fdow) ||
@@ -1331,7 +1343,7 @@ static bool _STATE_TO1(void)
 			// skip the current directive and check for the same in the next directives.
 			continue;
 		}
-	
+
 		prot_ctx =
 	    	fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot, ip,
 		       dns ? dns->bytes : NULL, port, tls);
@@ -1579,7 +1591,9 @@ static bool _STATE_TO2(void)
 			// Repeat some of the same operations as the failure case above
 			// when processing RendezvousInfo/RVTO2Addr and they need to be skipped
 			if (!rvbypass) {
-				fdo_free(ip);
+				if (ip) {
+					fdo_free(ip);
+				}
 				ip = NULL;
 				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", default_delay);
 				fdo_sleep(default_delay);

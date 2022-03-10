@@ -11,7 +11,7 @@
 #define HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES    /* 256 bits */
 
 // default Owner attestation
-#define FDO_OWNER_ATTEST_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_COSEX509
+#define FDO_OWNER_ATTEST_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_X509
 
 // Device Attestation (DA) is used to decide the size of the key used for the following:
 // 1. Key-Exchange
@@ -22,11 +22,12 @@
 
 // Device Attestation: ECDSA256
 #define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256
+#define FDO_SIG_TYPE FDO_CRYPTO_SIG_TYPE_ECSDAp256
 
 // Key-Exchange: ECDH
 #define KEX_ECDH_ENABLED
 #define SEK_KEY_SIZE 16
-#define KEX "ECDH"
+#define KEX "ECDH256"
 #define FDO_SHA_DIGEST_SIZE_USED BUFF_SIZE_32_BYTES
 #define FDO_HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES
 
@@ -39,6 +40,7 @@
 
 // Device Attestation: ECDSA384
 #define FDO_PK_ALGO FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384
+#define FDO_SIG_TYPE FDO_CRYPTO_SIG_TYPE_ECSDAp384
 
 // Key-Exchange: ECDH384
 #define KEX_ECDH384_ENABLED

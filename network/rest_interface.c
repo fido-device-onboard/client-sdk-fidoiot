@@ -568,9 +568,14 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
 			if (rest->authorization) {
-				fdo_free(rest->authorization);
+				// currently received token can be compared against previously
+				// received token.
+				// however, do nothing for now since specification doesn't mandate us to
+				// the ONLY requirement is that the Client MUST cache the received token once
+				// and transmit the same in subsequent messages.
+			} else {
+				rest->authorization = strdup(p1);
 			}
-			rest->authorization = strdup(p1);
 			if (rest->authorization) {
 				LOG(LOG_DEBUG, "Authorization: %s\n",
 				    rest->authorization);
