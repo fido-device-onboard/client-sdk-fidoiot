@@ -1,3 +1,4 @@
+
 # FIDO Device Onboard (FDO) Protocol Reference Implementation (PRI) Manufacturer
 The FDO PRI Manufacturer generates a device certificate based on the Elliptic Curve Digital Signature Algorithm (ECDSA) as part of the Device Initialization (DI) protocol, enabling a seamless Ownership Transfer of the device to the new owner.
 
@@ -58,3 +59,4 @@ make DA=ecdsa256
    ```
    Marked combinations in the preceding table are supported.
 
+4. If the onboarding fails during TO2, any artifacts created by the fdosys module may not be deleted. Delete these files from clients if the ServiceInfo fails halfway through.
