@@ -1,11 +1,11 @@
 # Build Configuration
-There following are some of the options to choose when building the device:
+Following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
 - DA: Device Attestation Algorithm
 - AES_MODE: Advanced Encryption Standard (AES) encryption mode
 - TLS: Underlying cryptography library to use
 
-> ***NOTE***: The currently supported AES operations are: A128GCM, A256GCM, AES-CCM-64-128-128 and AES-CCM-64-128-256. Refer to Section 4.4 of [FIDO Device Onboard (FDO) specification](https://fidoalliance.org/specs/FDO/fido-device-onboard-v1.0-ps-20210323/fido-device-onboard-v1.0-ps-20210323.html) for more information.
+> ***NOTE***: The currently supported AES operations are: A128GCM, A256GCM, AES-CCM-64-128-128 and AES-CCM-64-128-256. Refer to Section 4.4 of [FIDO Device Onboard (FDO) specification](https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-RD-v1.1-20211214/) for more information.
 
 ## Default Configuration
 
