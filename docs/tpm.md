@@ -1,14 +1,15 @@
 
 
+
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04 / RHEL OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO build and execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM* 2.0
 
-* On RHEL OS version 8.4:
+* On RHEL* OS version 8.4:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -106,7 +107,7 @@ sudo ./install_tpm_libs.sh -h
 	```
 	sudo ./install_tpm_libs.sh -u
 	```
-* **On RHEL OS version 8.4:**
+* **On RHEL\* OS version 8.4:**
 > ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4.
 ```shell
 sudo ./install_tpm_libs_rhel.sh -h
@@ -147,7 +148,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
 
@@ -161,7 +162,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see section on Compiling FDO.
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
@@ -173,7 +174,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
 
@@ -185,7 +186,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0.zip)
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0/INSTALL.md)
 
@@ -217,7 +218,7 @@ export TINYCBOR_ROOT=path/to/tinycbor
 
 ## 6. Compiling FDO Client SDK
 
-The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
+The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  It assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
 Refer the TPM* Library Setup steps given in section 2 to compile TPM* enabled FDO Client SDK. 
 
@@ -248,19 +249,16 @@ Refer to the section [FDO Build configurations](build_conf.md)
 ## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
 The TPM* enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
-To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
-[FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
-[FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
+To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md), [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
-Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK
+Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK.
 
-After a successful compilation, the  FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
+After a successful compilation, the FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
 
-- Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer
+- Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer.
   Refer to [ Device Initialization Setup ](DI_setup.md).
   Then, execute the TPM* make ready script. Refer to [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh).
-  Alternatively, perform the steps listed in section 8.1 to initialise the device without using
-  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
+  Alternatively, perform the steps listed in section 7.1 to initialise the device without using [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
 
   Script execution command:
 
@@ -268,9 +266,7 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
   ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
   ```
 
-- Once the TPM* make ready script is executed successfully, the device is now initialized
-  with the credentials and is ready for ownership transfer. To run the device against the
-  FDO PRI Manufacturer for the DI protocol, do the following:
+- Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
   ./build/linux-client
   ```
@@ -322,15 +318,11 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
 
 ## 8. Troubleshooting Details
 
-- TPM* Authorization Failure while Running tpm2-tools Command.<br />
-  Clear TPM* from the BIOS. To run the TPM* enabled FDO Client SDK implementation, the TPM* on the device should not be owned.
-  To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your 
-  device, refer to your device manual.
+- TPM* Authorization Failure while Running tpm2-tools Command. <br />
+Clear TPM* from the BIOS. To run the TPM* enabled FDO Client SDK implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your device, refer to your device manual.
 
 - Clear the Used Persistent Index in TPM*.<br />
-  Use the tpm2_evictcontrol command to delete the content or clear TPM* from the BIOS. To run the TPM* based FDO 
-  implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*.
-  To find the location of the option in the BIOS of your device, refer to your device manual.
+Use the tpm2_evictcontrol command to delete the content or clear TPM* from the BIOS. To run the TPM* based FDO implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your device, refer to your device manual.
 
   Assuming that the index is 0x81000001, run the following command to delete the keys.
 

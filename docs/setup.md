@@ -1,10 +1,11 @@
 
+
 # FIDO Device Onboard (FDO) Compilation Setup
 <a name="safestring"></a>
 ## 1. Intel safestringlib
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows).
 
-* For Linux*/ Arm Mbed* OS/ Arm Mbed Linux OS builds, download safestring from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>.
+* For Linux*/ Arm Mbed* OS/ Arm Mbed* Linux* OS builds, download safestring from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>.
 
 <a name="tinycbor"></a>
 ## 2. Intel TinyCBOR

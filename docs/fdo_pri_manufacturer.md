@@ -5,7 +5,7 @@ The FDO PRI Manufacturer generates a device certificate based on the Elliptic Cu
 ## DI.AppStart
 - This is the first message sent by the device to start the Ownership Transfer.
 
-- The message is sent to the FDO PRI Manufacturer in the manufacturer�s premises with a Certificate Signing Request (CSR).
+- The message is sent to the FDO PRI Manufacturer in the manufacturer's premises with a Certificate Signing Request (CSR).
 
 - The FDO PRI Manufacturer uses this CSR to generate the Device Certificate and passes the Device Certificate on as an
   authentication mechanism for the device using the ECDSA public/private key cryptography.

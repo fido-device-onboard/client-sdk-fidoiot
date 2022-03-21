@@ -1,18 +1,19 @@
 
 
+
 # Linux* OS
-The development and execution OS used was `Ubuntu* OS version 20.04 / RHEL OS version 8.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+The development and execution OS used was `Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
-* For Ubuntu OS version 20.04:
+* For Ubuntu* OS version 20.04:
 ```shell
 sudo apt-get install python-setuptools clang-format dos2unix ruby \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
 ```
 
-* For RHEL OS version 8.4:
+* For RHEL* OS version 8.4:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
