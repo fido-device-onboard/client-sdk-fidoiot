@@ -4,7 +4,7 @@
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1n. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04:
@@ -25,17 +25,17 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
-OpenSSL* toolkit version 1.1.1k
+OpenSSL* toolkit version 1.1.1n
 GCC version > 7.5
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1k
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1n
 
 1. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
+	wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1k.tar.gz && cd openssl-1.1.1k
+	tar -zxf openssl-1.1.1n.tar.gz && cd openssl-1.1.1n
 	```
 3. Issue the command:
 	```
@@ -74,7 +74,7 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1k  25 Mar 2021
+	OpenSSL* 1.1.1n  15 Mar 2022
 	```
 
 ## 3. Compiling Intel safestringlib
