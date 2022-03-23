@@ -5,7 +5,7 @@
 
 `Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO build and execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO build and execution depend on OpenSSL* toolkit version 1.1.1n. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM* 2.0
 
@@ -16,9 +16,9 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 
-OpenSSL* toolkit version 1.1.1k.
+OpenSSL* toolkit version 1.1.1n.
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1k
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1n
 
 1. If libssl-dev is installed, remove it:
 	```
@@ -27,11 +27,11 @@ OpenSSL* toolkit version 1.1.1k.
 	```
 2. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
+	wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
 	```
 3. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1k.tar.gz && cd openssl-1.1.1k
+	tar -zxf openssl-1.1.1n.tar.gz && cd openssl-1.1.1n
 	```
 4. Issue the command:
 	```
@@ -70,7 +70,7 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1k  25 Mar 2021
+	OpenSSL* 1.1.1n  15 Mar 2022
 	```
 
 ## 2. TPM* Library Installation
@@ -331,12 +331,12 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1k for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 1.1.1n for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
   openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1k, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1k.
+  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1n, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1n.
 
 
