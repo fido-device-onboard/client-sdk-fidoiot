@@ -84,7 +84,7 @@ bool is_owner_proxy_defined(void)
  */
 
 /* internal api
- * proxydata: proxy data as asscii string. e.g."http://theproxy.intel.com:123"
+ * proxydata: proxy data as asscii string. e.g."http://theproxy.mycompany.com:123"
  * return resolved dns, as ip in network format and port
  */
 static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
@@ -115,7 +115,7 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 		i++;
 	}
 
-	// resolve dn proxy-chain.intel.com
+	// resolve dn
 	if (fdo_con_dns_lookup(proxy_url, &ip_list, &num_ofIPs) == -1) {
 		LOG(LOG_ERROR, "DNS look-up failed!\n");
 		goto err;
