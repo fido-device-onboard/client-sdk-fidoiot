@@ -69,11 +69,12 @@ typedef enum log_level {
 	}
 #endif
 
-#ifndef TARGET_OS_MBEDOS
-#define ATTRIBUTE_FALLTHROUGH __attribute__((fallthrough))
-#else
+//Removed(commented) the below MBEDOS part to enable compilation with ubuntu 22
+//#ifndef TARGET_OS_MBEDOS
+//#define ATTRIBUTE_FALLTHROUGH __attribute__((fallthrough))
+//#else
 #define ATTRIBUTE_FALLTHROUGH
-#endif /* TARGET_OS_MBEDOS */
+//#endif /* TARGET_OS_MBEDOS */
 
 #define BUFF_SIZE_4_BYTES 4
 #define BUFF_SIZE_8_BYTES 8
