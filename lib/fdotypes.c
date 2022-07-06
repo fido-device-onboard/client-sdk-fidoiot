@@ -4498,7 +4498,6 @@ bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_ent
 			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to skip NULL RVIP\n");
 			return false;
 		}
-		fdor_next(fdor);
 	} else {
 		size_t rvip_length = 0;
 		if (!fdor_string_length(fdor, &rvip_length) || rvip_length == 0) {
