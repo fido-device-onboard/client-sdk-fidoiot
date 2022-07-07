@@ -1520,7 +1520,7 @@ static bool _STATE_TO2(void)
 		} else {
 
 			ip = fdo_ipaddress_alloc();
-			if (!fdo_convert_to_ipaddress(g_fdo_data->current_rvto2addrentry->rvip, ip)) {
+			if (g_fdo_data->current_rvto2addrentry->rvip && !fdo_convert_to_ipaddress(g_fdo_data->current_rvto2addrentry->rvip, ip)) {
 				LOG(LOG_ERROR, "Failed to convert IP from RVTO2Addr into IPAddress!\n");
 			}
 			dns = g_fdo_data->current_rvto2addrentry->rvdns;
@@ -1540,8 +1540,8 @@ static bool _STATE_TO2(void)
 
 		}
 
-		if (skip_rv || (!ip && !dns) || port == 0) {
-			// If any of the IP/DNS/Port values are missing, or
+		if (skip_rv || (!ip && !dns && !port)) {
+			// If all of the IP/DNS/Port values are missing, or
 			// if RVOwnerOnly is present in the current directive, or
 			// if unsupported/invalid RVProtocolValue/RVProtocol was found
 			// for rvbypass, goto TO1
