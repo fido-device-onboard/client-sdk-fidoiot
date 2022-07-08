@@ -149,7 +149,7 @@ TEST_CASE("fdo_prot_ctx_alloc", "[protctx][fdo]")
 #endif
 {
 	fdo_prot_t protdata;
-	char host_dns[] = "localhost";
+	char host_dns[] = "host.docker.internal";
 	uint16_t host_port = 5000;
 	fdo_prot_ctx_t *prot_ctx = NULL;
 
@@ -209,7 +209,7 @@ TEST_CASE("fdo_prot_ctx_run", "[protctx][fdo]")
 
 	int ret = -1;
 	// char tmp_buf[512];
-	char host_dns[] = "localhost";
+	char host_dns[] = "host.docker.internal";
 	uint16_t host_port = 5000;
 
 	fdo_prot_ctx_t *prot_ctx = fdo_alloc(sizeof(fdo_prot_ctx_t));

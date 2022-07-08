@@ -84,7 +84,7 @@ static int32_t configure_blobs(void)
 
 	/*
 	[3, true, 100, "12345", h'C6F29F84DAD6456488CFEF0ED1AA889A',
-	[[[5, "localhost"], [3, 8040], [12, 1], [2, h'7F000001'], [4, 8443]]],
+	[[[5, "host.docker.internal"], [3, 8040], [12, 1], [2, h'7F000001'], [4, 8443]]],
 	[-43, h'E2DE3109F7F73264C530C8694FD0F0FD9534F255C329ED1A9A23AF8C7B0884
 	48E85C9B919C7A2C74F23804389006678F']]
 	*/

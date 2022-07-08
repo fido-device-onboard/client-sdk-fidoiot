@@ -172,22 +172,22 @@ void test_resolve_dn(void)
 	ret = resolve_dn(NULL, &ip, port, NULL, false);
 	TEST_ASSERT_FALSE(ret);
 
-	ret = resolve_dn("localhost", NULL, port, NULL, false);
+	ret = resolve_dn("host.docker.internal", NULL, port, NULL, false);
 	TEST_ASSERT_FALSE(ret);
 
 #if defined HTTPPROXY
 	cache_dns_fail = true;
-	ret = resolve_dn("localhost", &ip, port, NULL, true);
+	ret = resolve_dn("host.docker.internal", &ip, port, NULL, true);
 	TEST_ASSERT_FALSE(ret);
 	cache_dns_fail = false;
 #else
 	dns_lookup_fail = true;
-	ret = resolve_dn("localhost", &ip, port, NULL, false);
+	ret = resolve_dn("host.docker.internal", &ip, port, NULL, false);
 	TEST_ASSERT_FALSE(ret);
 	dns_lookup_fail = false;
 
 	connect_fail = true;
-	ret = resolve_dn("localhost", &ip, port, NULL, false);
+	ret = resolve_dn("host.docker.internal", &ip, port, NULL, false);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 #endif
