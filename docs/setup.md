@@ -35,7 +35,7 @@ $ cd <path-to-client-sdk-fidoiot>
 $ echo -n https://127.0.0.1:12345 > data/manufacturer_addr.bin
 ```
 
-> ***NOTE***: By default, `manufacturer_addr.bin` is configured with "http://localhost:8039".
+> ***NOTE***: By default, `manufacturer_addr.bin` is configured with "http://host.docker.internal:8039".
 
 <a name="ecdsa_priv"></a>
 ## 4. Elliptic Curve Digital Signature Algorithm (ECDSA) Private Key File Generation
