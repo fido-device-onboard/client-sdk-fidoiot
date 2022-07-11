@@ -1,36 +1,33 @@
 # Build Configuration
-There following are some of the options to choose when building the device:
+Following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
 - DA: Device Attestation Algorithm
 - AES_MODE: Advanced Encryption Standard (AES) encryption mode
-- KEX: Key Exchange method
-- PK_ENC: Owner Attestation Algorithm
-- TLS: SSL support
+- TLS: Underlying cryptography library to use
+
+> ***NOTE***: The currently supported AES operations are: A128GCM, A256GCM, AES-CCM-64-128-128 and AES-CCM-64-128-256. Refer to Section 4.4 of [FIDO Device Onboard (FDO) specification](https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-RD-v1.1-20211214/) for more information.
 
 ## Default Configuration
 
 ```shell
   BUILD = debug #build mode
   TARGET_OS = linux #target OS. (`linux` denotes the Linux* OS.)
-  KEX = ecdh #key-exchange method
-  AES_MODE = ctr #AES encryption type
-  DA = ecdsa256 #device attestation method
-  PK_ENC = ecdsa #public key encoding (for owner attestation)
+  AES_MODE = gcm #AES encryption type
+  DA = ecdsa384 #device attestation method
   TLS = openssl #underlying cryptography library to use. (`openssl` denotes the OpenSSL* toolkit.)
-  MODULES = false #whether to use FIDO Device Onboard (FDO) ServiceInfo functionality
 ```
 The default configuration can be overridden by using more options in `cmake`.<br>
+
+> ***NOTE***: The Owner attestation supported is conversely based on the specified `DA`. Additionally, only `X509 (COSE EC2)` Public Key encoding is supported.
 
 ## Custom Build
 The default configuration can be overridden by using more options in `cmake`.<br>
 For example, to build the `STM32F429ZI` device:
 - BUILD: Debug mode
 - DA: ECDSA-256
-- AES_MODE: CBC
-- KEX: Diffie-Hellman
-- PK_ENC: rsa (Default)
+- AES_MODE: GCM
 ```shell
-$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=cbc -DKEX=dh -DDA=ecdsa256 .
+$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=gcm -DDA=ecdsa256 .
 $ make -j4
 ```
 
@@ -48,24 +45,15 @@ List of supported boards (valid only when TARGET_OS=mbedos):
 BOARD=NUCLEO_F767ZI   # (When building for STM32F767ZI MCU)
 BOARD=NUCLEO_F429ZI   # (When building for STM32F429ZI MCU)
 
-List of key exchange options:
-KEX=dh                # use Diffie-Hellman key exchange mechanism during TO2 (Not supported)
-KEX=asym              # use Asymmetric key exchange mechanism during TO2 (Not supported)
-KEX=ecdh              # use Elliptic-curve Diffie–Hellman key exchange mechanism during TO2 (default)
-KEX=ecdh384           # use Elliptic-curve Diffie–Hellman 384 bit key exchange mechanism during TO2
-
 List of AES encryption modes:
-AES_MODE=ctr          # use Counter mode encryption during TO2 (default)
-AES_MODE=cbc          # use Code-Block-Chaining mode encryption during TO2
+AES_MODE=gcm          # use Galois/Counter Mode encryption during TO2 (default)
+AES_MODE=ccm          # use Counter with CBC-MAC encryption during TO2
 
 List of Device Attestation options:
-DA=ecdsa256           # Use ECDSA P256 based device attestation(default)
-DA=ecdsa384           # Use ECDSA-P384 based device attestation
+DA=ecdsa256           # Use ECDSA P256 based device attestation
+DA=ecdsa384           # Use ECDSA-P384 based device attestation(default)
 DA=tpm20_ecdsa256     # Use ECDSA-P256 based device attestation with TPM2.0 support
 DA_FILE=pem           # only Use if ECDSA private keys are PEM encoded
-
-List of Public Key encoding/owner-attestation options:
-PK_ENC=ecdsa          # Use ECDSA-X.509 based public key encoding (default)
 
 Underlying crypto library to be used:
 TLS=openssl           # (Linux default, not supported for other TARGET_OS)
@@ -77,15 +65,11 @@ HTTPPROXY=true        # http-proxy enabled (default)
 HTTPPROXY=false       # http-proxy disabled
 PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 
-Option to enable FDO ServiceInfo functionality:
-MODULES=false         # ServiceInfo modules are not present (default)
-MODULES=true          # ServiceInfo modules are present
-
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
 REUSE=false           # Reuse feature disabled
-RESALE=false          # Resale feature disabled (default)
-RESALE=true           # Resale feature enabled
+RESALE=false          # Resale feature disabled
+RESALE=true           # Resale feature enabled (default)
 
 List of options to clean targets:
 pristine              # cleanup by remove generated files

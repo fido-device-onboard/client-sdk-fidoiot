@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "safe_lib.h"
+#include "fdoCryptoHal.h"
 #if defined(USE_OPENSSL)
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -39,12 +40,21 @@
 
 #if !defined(DEVICE_TPM20_ENABLED)
 /* platform level rand no generation reference */
-static int32_t *gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
+static int32_t gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
 {
-	size_t i;
-
-	for (i = 0; i < num_bytes; i++) {
-		random_buffer[i] = (uint8_t)(rand() % 255);
+	// initialize the random now, use it, and then close it
+	// it will be initialized again, when needed later
+	if (0 != random_init()) {
+		LOG(LOG_ERROR, "Failed to init rand\n");
+		return -1;
+	}
+	if (0 != crypto_hal_random_bytes(random_buffer, num_bytes)) {
+		LOG(LOG_ERROR, "Failed to get rand bytes\n");
+		return -1;
+	}
+	if (0 != random_close()) {
+		LOG(LOG_ERROR, "Failed to close rand\n");
+		return -1;
 	}
 	return 0;
 }
@@ -53,9 +63,7 @@ static int32_t *gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
 int32_t configure_normal_blob(void)
 {
 	/* From the platfrom, read unsealed Normal Blob for the very first time
-	 * and
-	 * write back
-	 * sealed Normal blob for FDO.
+	 * and write back sealed Normal blob for FDO.
 	 */
 	size_t bytes_written = 0;
 	uint8_t *raw_normal_blob = NULL;
@@ -116,11 +124,6 @@ int32_t configure_normal_blob(void)
 		    "Platform Normal blob size is zero, DI not done!\n");
 		ret = 0;
 		goto err;
-	}
-
-	if (raw_normal_blob_size < 0) {
-		LOG(LOG_ERROR, "Trouble getting plain Normal blob size!\n");
-		goto err;
 	} else if (raw_normal_blob_size >
 		   PLATFORM_HMAC_KEY_DEFAULT_LEN + DATA_CONTENT_SIZE) {
 		ret = 0;
@@ -166,8 +169,9 @@ int32_t configure_normal_blob(void)
 	if (0 != mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
 				 (const uint8_t *)hmac_key,
 				 PLATFORM_HMAC_KEY_DEFAULT_LEN, raw_normal_blob,
-				 raw_normal_blob_size, signed_normal_blob))
+				 raw_normal_blob_size, signed_normal_blob)) {
 		goto err;
+	}
 #else // USE_OPENSSL
 	if (NULL == HMAC(EVP_sha256(), hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN,
 			 raw_normal_blob, (int)raw_normal_blob_size,
@@ -202,9 +206,11 @@ int32_t configure_normal_blob(void)
 	}
 	ret = 0;
 err:
-	if (raw_normal_blob)
+	if (raw_normal_blob) {
 		fdo_free(raw_normal_blob);
-	if (signed_normal_blob)
+	}
+	if (signed_normal_blob) {
 		fdo_free(signed_normal_blob);
+	}
 	return ret;
 }

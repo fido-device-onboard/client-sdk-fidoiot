@@ -11,6 +11,7 @@ extern "C" {
 
 #include "fdokeyexchange.h"
 #include "util.h"
+#include "fdoCryptoCommons.h"
 #include "fdoCryptoCtx.h"
 #ifdef USE_MBEDTLS
 #if !defined(TARGET_OS_LINUX)
@@ -35,19 +36,6 @@ extern "C" {
 #define SHA384_DIGEST_SIZE BUFF_SIZE_48_BYTES
 #define SHA512_DIGEST_SIZE BUFF_SIZE_64_BYTES
 #define HMACSHA256_KEY_SIZE BUFF_SIZE_32_BYTES
-#define FDO_CRYPTO_AES_MODE_CBC 1
-#define FDO_CRYPTO_AES_MODE_CTR 2
-// AES GCM authenticated TAG length
-#define AES_GCM_TAG_LEN BUFF_SIZE_16_BYTES
-
-#define FDO_AES_BLOCK_SIZE BUFF_SIZE_16_BYTES /* 128 bits */
-#define FDO_AES_IV_SIZE BUFF_SIZE_16_BYTES    /* 128 bits */
-#define HMAC_KEY_LENGTH BUFF_SIZE_32_BYTES    /* 256 bits */
-#if defined(AES_256_BIT)
-#define FDO_AES_KEY_LENGTH BUFF_SIZE_32_BYTES /* 256 bits */
-#else					      // defined(AES_128_BIT)
-#define FDO_AES_KEY_LENGTH BUFF_SIZE_16_BYTES /* 128 bits */
-#endif
 
 /* Initialize randomization library. */
 int random_init(void);
@@ -113,23 +101,6 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
 		       unsigned char *signature, size_t *signature_len);
 
-/* Encrypt "clear_text" using rsa pubkeys. */
-int32_t crypto_hal_rsa_encrypt(uint8_t hash_type, uint8_t key_encoding,
-			       uint8_t key_algorithm, const uint8_t *clear_text,
-			       uint32_t clear_text_length, uint8_t *cipher_text,
-			       uint32_t cipher_text_length,
-			       const uint8_t *key_param1,
-			       uint32_t key_param1Length,
-			       const uint8_t *key_param2,
-			       uint32_t key_param2Length);
-
-uint32_t crypto_hal_rsa_len(const uint8_t *key_param1,
-			    uint32_t key_param1Length,
-			    const uint8_t *key_param2,
-			    uint32_t key_param2Length);
-
-#define RSA_SHA256_KEY1_SIZE 256
-
 /* Encrypt "clear_text" using "key" and put the result in "cypher_text".
  * "cipher_txt" must point to a buffer large enough to store the
  * encrypted message. cypher_text buffer size required can be derived
@@ -139,7 +110,9 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t clear_text_length, uint8_t *cypher_text,
 			       uint32_t *cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length);
+			       uint32_t key_length,
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length);
 
 /* Decrypt "cypher_text" using "key" and put the result in "clear_text".
  * and "clear_text" must point to a buffer large enough to store the
@@ -150,24 +123,9 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       const uint8_t *cypher_text,
 			       uint32_t cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length);
-
-/* AES-GCM authenticated encryption/decryption APIs */
-int32_t fdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
-				   uint32_t plain_text_length,
-				   uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length);
-
-int32_t fdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
-				   uint32_t clear_text_length,
-				   const uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length);
+			       uint32_t key_length,
+			       uint8_t *tag, size_t tag_length,
+			       const uint8_t *aad, size_t aad_length);
 
 /*
  * Helper API designed to convert the raw signature into DER format required by
@@ -227,26 +185,8 @@ int fdo_ssl_close(void *ssl);
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks);
 
-/* DH kex type */
-#define FDO_CRYPTO_KEX_DH_GROUP_14 1
-#define FDO_CRYPTO_KEX_DH_GROUP_15 2
-
-#if defined(KEX_DH_ENABLED) //(m size =2048)
-#define DH_PEER_RANDOM_SIZE 256
-#else // KEX_DH_3072_ENABLED  (m size 3072)
-#define DH_PEER_RANDOM_SIZE 768
-#endif
-
-/* ECDH kex type */
-#define FDO_CRYPTO_KEX_ECDH_P256 0
-#define FDO_CRYPTO_KEX_ECDH_P384 1
-
 #define FDO_ECDH256_DEV_RANDOM BUFF_SIZE_16_BYTES // 128bits
 #define FDO_ECDH384_DEV_RANDOM BUFF_SIZE_48_BYTES // 384bits
-
-/* Asym  kex type */
-#define FDO_ASYM_DEV_RANDOM 256
-#define FDO_ASYM3072_DEV_RANDOM 768
 
 int32_t crypto_hal_kex_init(void **context);
 int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
@@ -257,8 +197,6 @@ int32_t crypto_hal_set_peer_random(void *context,
 int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
 			      uint32_t *secret_length);
 int32_t crypto_hal_kex_close(void **context);
-
-int32_t set_encrypt_key_asym(void *context, fdo_public_key_t *encrypt_key);
 
 #ifdef SECURE_ELEMENT
 int32_t crypto_hal_se_init(void);

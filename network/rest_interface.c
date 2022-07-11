@@ -23,7 +23,7 @@
 #define isRESTContext_active() ((rest) ? true : false)
 
 // Global REST context
-static rest_ctx_t *rest;
+static rest_ctx_t *rest = NULL;
 
 /**
  * Initialize REST context.
@@ -63,13 +63,14 @@ bool cache_host_dns(const char *dns)
 {
 	bool ret = false;
 
-	if (!dns)
+	if (!dns) {
 		goto err;
+	}
 
 	size_t len = strnlen_s(dns, FDO_MAX_STR_SIZE);
-
-	if (!len || len == FDO_MAX_STR_SIZE)
+	if (!len || len == FDO_MAX_STR_SIZE) {
 		goto err;
+	}
 
 	if (!isRESTContext_active()) {
 		LOG(LOG_ERROR, "Rest Context is not active!\n");
@@ -85,8 +86,9 @@ bool cache_host_dns(const char *dns)
 		goto err;
 	}
 
-	if (strcpy_s(rest->host_dns, len + 1, dns) != 0)
+	if (strcpy_s(rest->host_dns, len + 1, dns) != 0) {
 		goto err;
+	}
 
 	ret = true;
 
@@ -105,8 +107,9 @@ bool cache_host_ip(fdo_ip_address_t *ip)
 {
 	bool ret = false;
 
-	if (!ip)
+	if (!ip) {
 		goto err;
+	}
 
 	if (!isRESTContext_active()) {
 		LOG(LOG_ERROR, "Rest Context is not active!\n");
@@ -147,6 +150,11 @@ bool cache_host_port(uint16_t port)
 		goto err;
 	}
 
+	if (port < FDO_PORT_MIN_VALUE || port > FDO_PORT_MAX_VALUE) {
+		LOG(LOG_ERROR, "Invalid port value.\n");
+		goto err;
+	}
+
 	rest->portno = port;
 	ret = true;
 
@@ -184,30 +192,38 @@ err:
  */
 static bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
 {
-	char temp[IP_TAG_LEN] = {0};
+	char temp[IP_TAG_LEN + 1] = {0};
 	uint8_t octlet_size = 4; // e.g 192.168.0.100, max 3char +1 null/oct.
 
-	if (!ip || !ip_ascii)
-		goto err;
-
-	if ((snprintf_s_i(temp, octlet_size, "%d", ip->addr[0]) < 0) ||
-	    (snprintf_s_i((temp + strnlen_s(temp, IP_TAG_LEN)), octlet_size + 1,
-			  ".%d", ip->addr[1]) < 0) ||
-	    (snprintf_s_i((temp + strnlen_s(temp, IP_TAG_LEN)), octlet_size + 1,
-			  ".%d", ip->addr[2]) < 0) ||
-	    (snprintf_s_i((temp + strnlen_s(temp, IP_TAG_LEN)), octlet_size + 1,
-			  ".%d", ip->addr[3]) < 0)) {
-		LOG(LOG_ERROR, "Snprintf() failed!\n");
+	if (!ip || !ip_ascii) {
 		goto err;
 	}
 
-	if (strcpy_s(ip_ascii, strnlen(temp, IP_TAG_LEN) + 1, temp) != 0) {
+	size_t temp_len = 0;
+	for (int i = 0; i < 4; i++) {
+		if (snprintf_s_i(temp + temp_len, octlet_size + 1, "%d.",
+				ip->addr[i]) < 0) {
+			LOG(LOG_ERROR, "Snprintf() failed!\n");
+			goto err;
+		}
+
+		temp_len = strnlen_s(temp, IP_TAG_LEN + 1);
+		if (!temp_len || temp_len == IP_TAG_LEN + 1) {
+			LOG(LOG_ERROR,
+				"temp string is not NULL terminated.\n");
+			goto err;
+		}
+	}
+
+	// Remove the last '.'
+	temp[temp_len-1] = '\0';
+
+	if (strcpy_s(ip_ascii, temp_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcpy() failed!\n");
 		goto err;
 	}
 
 	return true;
-
 err:
 	return false;
 }
@@ -217,47 +233,47 @@ err:
  *
  * @param rest_ctx - current REST context.
  * @param g_URL - post URL output.
- * @param POST_URL_LEN - post URL max length.
+ * @param post_url_len - post URL max length.
  * @retval true if header onstruction was successful, false otherwise.
  */
 bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
-			   size_t POST_URL_LEN)
+			   size_t post_url_len)
 {
 	char *ip_ascii = NULL;
 	char temp[HTTP_MAX_URL_SIZE] = {0};
 	char temp1[256] = {0};
-	char msgequals[] = ""; //!!! todo: "msg=";
+	char msgequals[] = "";
 	bool ret = false;
 
-	if (!rest_ctx || !g_URL || !POST_URL_LEN) {
+	if (!rest_ctx || !g_URL || !post_url_len) {
 		LOG(LOG_ERROR, "Invalid input!\n");
 		goto err;
 	}
 
 	if (rest_ctx->host_ip) {
 		ip_ascii = fdo_alloc(IP_TAG_LEN);
-
-		if (!ip_ascii)
+		if (!ip_ascii) {
 			goto err;
+		}
 
-		if (!ip_bin_to_ascii(rest_ctx->host_ip, ip_ascii))
+		if (!ip_bin_to_ascii(rest_ctx->host_ip, ip_ascii)) {
 			goto err;
+		}
 	}
 
-	// TLS needed ?
 	if (rest_ctx->tls) {
-		if (strcpy_s(g_URL, POST_URL_LEN, "POST https://") != 0) {
+		if (strcpy_s(g_URL, post_url_len, "POST https://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	} else {
-		if (strcpy_s(g_URL, POST_URL_LEN, "POST http://") != 0) {
+		if (strcpy_s(g_URL, post_url_len, "POST http://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	}
 
-	if (/* rest_ctx->is_dns  && */ rest_ctx->host_dns) {
+	if (rest_ctx->host_dns) {
 		/* DNS */
 		if (snprintf_s_si(temp, sizeof(temp), "%s:%d",
 				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
@@ -276,7 +292,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -287,7 +303,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -298,12 +314,12 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, " HTTP/1.1\r\n") != 0) {
+	if (strcat_s(g_URL, post_url_len, " HTTP/1.1\r\n") != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -329,7 +345,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		}
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -342,35 +358,35 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, temp1) != 0) {
+	if (strcat_s(g_URL, post_url_len, temp1) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
 	if (rest_ctx->authorization) {
-		if (strcat_s(g_URL, POST_URL_LEN, "Authorization:") != 0) {
+		if (strcat_s(g_URL, post_url_len, "Authorization:") != 0) {
 			LOG(LOG_ERROR, "Strcpy() failed!\n");
 			goto err;
 		}
 
-		if (strcat_s(g_URL, POST_URL_LEN, rest_ctx->authorization) !=
+		if (strcat_s(g_URL, post_url_len, rest_ctx->authorization) !=
 		    0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 
-		if (strcat_s(g_URL, POST_URL_LEN, "\r\n") != 0) {
+		if (strcat_s(g_URL, post_url_len, "\r\n") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, "\r\n") != 0) {
+	if (strcat_s(g_URL, post_url_len, "\r\n") != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(g_URL, POST_URL_LEN, msgequals) != 0) {
+	if (strcat_s(g_URL, post_url_len, msgequals) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -378,8 +394,9 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	ret = true;
 
 err:
-	if (ip_ascii)
+	if (ip_ascii) {
 		fdo_free(ip_ascii);
+	}
 	return ret;
 }
 
@@ -396,12 +413,14 @@ err:
 bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 {
 	bool ret = false;
-	char *rem, *p1, *p2;
-	size_t remlen;
-	char tmp[512];
+	char *rem = NULL, *p1 = NULL, *p2 = NULL;
+	size_t remlen = 0;
+	char tmp[BUFF_SIZE_512_BYTES] = {0};
 	char *eptr = NULL;
-	size_t tmplen;
-	int rcode, result_strcmpcase;
+	size_t tmplen = 0;
+	long rcode = 0;
+	int result_strcmpcase = 0;
+	size_t counter = 0;
 
 	/* REST context must be active */
 	if (!isRESTContext_active()) {
@@ -409,14 +428,27 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		goto err;
 	}
 
+	if (!hdr || !hdrlen || !cont_len) {
+		LOG(LOG_ERROR, "Input argument can't be NULL or 0.\n");
+		goto err;
+	}
+
+	for (counter = 0; counter < hdrlen; counter ++) {
+		if (!ISASCII(hdr[counter])) {
+			LOG(LOG_ERROR, "Header contains non-ASCII values\n");
+			goto err;
+		}
+	}
 	rest->msg_type = 0;
 
 	// GET HTTP reponse from header
-	rem = strchr(hdr, '\n');
+	if(strstr_s(hdr, hdrlen, "\n", 1, &rem)){
+		LOG(LOG_ERROR, "Error parsing resonse\n");
+		goto err;
+	}
 
 	if (rem) {
 		remlen = strnlen_s(rem, FDO_MAX_STR_SIZE);
-
 		if (!remlen || remlen == FDO_MAX_STR_SIZE) {
 			LOG(LOG_ERROR, "Strlen() failed!\n");
 			goto err;
@@ -434,12 +466,12 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		LOG(LOG_DEBUG, "REST: HTTP response line: %s\n", tmp);
 
 		// validate HTTP response
-		p1 = strchr(tmp, ' ');
-		if (p1 == NULL) {
+		if(strstr_s(tmp, tmplen, " ", 1, &p1)){
 			LOG(LOG_ERROR,
 			    "fdo_rest_run: Response line parse error\n");
 			goto err;
 		}
+
 		*p1++ = 0;
 		// set to 0 explicitly
 		errno = 0;
@@ -448,12 +480,18 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			LOG(LOG_ERROR, "Invalid value read for Response Code\n");
 			goto err;
 		}
-		p2 = strchr(p1, ' ');
-		if (p2 == NULL) {
-			LOG(LOG_DEBUG, "Response code %03d\n", rcode);
+
+		size_t p1_len = strnlen_s(p1, FDO_MAX_STR_SIZE);
+		if (!p1_len || p1_len == FDO_MAX_STR_SIZE) {
+			LOG(LOG_ERROR, "Error parsing response.\n");
+			goto err;
+		}
+
+		if(strstr_s(p1, p1_len, " ", 1, &p2)) {
+			LOG(LOG_DEBUG, "Response code %03ld\n", rcode);
 		} else {
 			*p2++ = 0;
-			LOG(LOG_DEBUG, "Response code %03d received (%s)\n",
+			LOG(LOG_DEBUG, "Response code %03ld received (%s)\n",
 			    rcode, p2);
 		}
 
@@ -467,13 +505,17 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	}
 
 	// parse and process other header elements
-	while ((rem = strchr(hdr, '\n')) != NULL) {
-		remlen = strnlen_s(rem, FDO_MAX_STR_SIZE);
+	while (1) {
+		if(strstr_s(hdr, hdrlen, "\n", 1, &rem)) {
+			break;
+		}
 
+		remlen = strnlen_s(rem, FDO_MAX_STR_SIZE);
 		if (!remlen || remlen == FDO_MAX_STR_SIZE) {
 			LOG(LOG_ERROR, "Strlen() failed!\n");
 			goto err;
 		}
+
 		tmplen = hdrlen - remlen;
 
 		if (strncpy_s(tmp, tmplen + 1, hdr, tmplen) != 0) {
@@ -484,15 +526,15 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		hdr += tmplen;
 		hdrlen -= tmplen;
 
-		p1 = strchr(tmp, ':');
-		if (p1 == NULL) {
+		if(strstr_s(tmp, tmplen, ":", 1, &p1)) {
 			LOG(LOG_ERROR, "REST: HEADER parse error\n");
 			goto err;
 		}
 
 		*p1++ = 0;
-		while (*p1 == ' ')
+		while (*p1 == ' ') {
 			++p1;
+		}
 
 		if ((strcasecmp_s(tmp, tmplen, "content-length",
 				  &result_strcmpcase) == 0) &&
@@ -525,9 +567,15 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		} else if (strcasecmp_s(tmp, tmplen, "authorization",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
-			if (rest->authorization)
-				fdo_free(rest->authorization);
-			rest->authorization = strdup(p1);
+			if (rest->authorization) {
+				// currently received token can be compared against previously
+				// received token.
+				// however, do nothing for now since specification doesn't mandate us to
+				// the ONLY requirement is that the Client MUST cache the received token once
+				// and transmit the same in subsequent messages.
+			} else {
+				rest->authorization = strdup(p1);
+			}
 			if (rest->authorization) {
 				LOG(LOG_DEBUG, "Authorization: %s\n",
 				    rest->authorization);
@@ -541,7 +589,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 				LOG(LOG_DEBUG, "X-Token: %s\n",
 				    rest->x_token_authorization);
 			}
-		} else if  (strcasecmp_s(tmp, tmplen, "message-type",
+		} else if (strcasecmp_s(tmp, tmplen, "message-type",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
 			// set to 0 explicitly
@@ -563,8 +611,9 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			 * if
 			 * allocated
 			 */
-			if (rest->x_token_authorization)
+			if (rest->x_token_authorization) {
 				fdo_free(rest->x_token_authorization);
+			}
 			rest->x_token_authorization = strdup(p1);
 			LOG(LOG_DEBUG, "Body: %s\n", tmp);
 		}
@@ -602,14 +651,18 @@ char get_rest_hdr_body_separator(void)
 void exit_rest_context(void)
 {
 	if (rest) {
-		if (rest->authorization)
+		if (rest->authorization) {
 			fdo_free(rest->authorization);
-		if (rest->x_token_authorization)
+		}
+		if (rest->x_token_authorization) {
 			fdo_free(rest->x_token_authorization);
-		if (rest->host_ip)
+		}
+		if (rest->host_ip) {
 			fdo_free(rest->host_ip);
-		if (rest->host_dns)
+		}
+		if (rest->host_dns) {
 			fdo_free(rest->host_dns);
+		}
 		fdo_free(rest);
 	}
 }

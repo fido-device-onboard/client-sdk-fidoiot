@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg49 of TO2 state machine.
+ * \brief This file implements msg69 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -13,7 +13,7 @@
 #include "util.h"
 
 /**
- * msg49() - TO2.OwnerServiceInfo
+ * msg69() - TO2.OwnerServiceInfo
  * Device receives the Owner ServiceInfo.
  *
  * TO2.OwnerServiceInfo = [
@@ -38,10 +38,13 @@ int32_t msg69(fdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "FDOProtTO2";
 	fdo_encrypted_packet_t *pkt = NULL;
-	bool IsMoreServiceInfo;
-	bool isDone;
 	int module_ret_val = -1;
 	fdo_sdk_service_info_module_list_t *module_list_itr = NULL;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -60,7 +63,7 @@ int32_t msg69(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to parse encrypted packet\n");
 		goto err;
 	}
-	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt, ps->iv)) {
+	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to decrypt packet!\n");
 		goto err;
 	}
@@ -70,18 +73,19 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdor_boolean(&ps->fdor, &IsMoreServiceInfo)) {
+	if (!fdor_boolean(&ps->fdor, &ps->owner_serviceinfo_ismore)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read IsMoreServiceInfo\n");
 		goto err;
 	}
 
-	if (!fdor_boolean(&ps->fdor, &isDone)) {
+	if (!fdor_boolean(&ps->fdor, &ps->owner_serviceinfo_isdone)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read IsDone\n");
 		goto err;
 	}
 
-	if (ps->device_serviceinfo_ismore && !IsMoreServiceInfo && !isDone) {
-		// Expecting ServiceInfo to be an empty array [].
+	if (ps->device_serviceinfo_ismore) {
+		// TO2.DeviceServiceInfo.IsMoreServiceInfo is true
+		// Expecting received Owner ServiceInfo to be an empty array [].
 		if (!fdor_start_array(&ps->fdor)) {
 			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to start empty ServiceInfo array\n");
 			goto err;
@@ -96,10 +100,11 @@ int32_t msg69(fdo_prot_t *ps)
 		// 1 byte for main array, 1 byte each for bool values.
 		// the remaining data is the ServiceInfo, and hence we can deduce the size of received
 		// ServiceInfo by subtracting 3 from the total message length.
-		if ((int)(ps->fdor.b.block_size - 3) <= ps->maxOwnerServiceInfoSz) {
+		if ((uint64_t)(ps->fdor.b.block_size - 3) <= ps->maxOwnerServiceInfoSz) {
 			// process the received ServiceInfo
 			module_list_itr = ps->sv_info_mod_list_head;
-			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val)) {
+			if (!fdo_serviceinfo_read(&ps->fdor, module_list_itr, &module_ret_val,
+				&ps->serviceinfo_invalid_modnames)) {
 				LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Failed to read ServiceInfo\n");
 				goto err;
 			}
@@ -117,8 +122,18 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (isDone) {
-		ps->state = FDO_STATE_TO2_SND_DONE;
+	if (ps->owner_serviceinfo_isdone) {
+		if (ps->owner_serviceinfo_ismore) {
+			LOG(LOG_ERROR, "TO2.OwnerServiceInfo: Both isMoreServiceInfo and isDone are true\n");
+			goto err;
+		}
+		// Device does not have anything else to send
+		if (!ps->serviceinfo_invalid_modnames && !ps->device_serviceinfo_ismore) {
+			ps->state = FDO_STATE_TO2_SND_DONE;
+		} else {
+			// Device has more ServiceInfo to send (ONLY Unsupported module names can be sent)
+			ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
+		}
 	} else {
 		ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
 	}

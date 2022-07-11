@@ -43,17 +43,20 @@ static bool is_ownership_transfer(bool do_resale)
 
 #ifdef RASALE_BASED_ON_FILE
 	fp = fopen(OWNERSHIP_TRANSFER_FILE, "r");
-	if (!fp)
-		return false;
-
-	if (fread(&state, 1, 1, fp) != 1) {
-		if (fclose(fp) == EOF)
-			LOG(LOG_INFO, "Fclose Failed");
+	if (!fp) {
 		return false;
 	}
 
-	if (fclose(fp) == EOF)
+	if (fread(&state, 1, 1, fp) != 1) {
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
+		return false;
+	}
+
+	if (fclose(fp) == EOF) {
 		LOG(LOG_INFO, "Fclose Failed");
+	}
 #endif
 	if (state == '1') {
 		ret = fdo_sdk_resale();
@@ -64,18 +67,21 @@ static bool is_ownership_transfer(bool do_resale)
 		}
 		if (ret == FDO_SUCCESS) {
 			fp = fopen(OWNERSHIP_TRANSFER_FILE, "w");
-			if (!fp)
+			if (!fp) {
 				return false;
+			}
 			state = '0';
 			if (fwrite(&state, 1, 1, fp) != 1) {
 				LOG(LOG_INFO, "Fwrite Failed");
-				if (fclose(fp) == EOF)
+				if (fclose(fp) == EOF) {
 					LOG(LOG_INFO, "Fclose Failed");
+				}
 				return false;
 			}
 			ret = 0;
-			if (fclose(fp) == EOF)
+			if (fclose(fp) == EOF) {
 				LOG(LOG_INFO, "Fclose Failed");
+			}
 			return true;
 		} else if (ret == FDO_RESALE_NOT_READY) {
 			/*Device is not yet ready for ownership transfer
@@ -101,8 +107,7 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 
-#ifdef MODULES_ENABLED
-	module_info = malloc(FDO_MAX_MODULES * (sizeof(*module_info)));
+	module_info = fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
 
 	if (!module_info) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
@@ -113,42 +118,10 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 	if (strncpy_s(module_info[0].module_name, FDO_MODULE_NAME_LEN,
 		      "fdo_sys", FDO_MODULE_NAME_LEN) != 0) {
 		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
+		fdo_free(module_info);
 		return NULL;
 	}
 	module_info[0].service_info_callback = fdo_sys;
-
-#if defined(EXTRA_MODULES)
-	/* module#2: devconfig */
-	if (strncpy_s(module_info[1].module_name, FDO_MODULE_NAME_LEN,
-		      "devconfig", FDO_MODULE_NAME_LEN) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
-		return NULL;
-	}
-	module_info[1].service_info_callback = devconfig;
-
-	/* module#3: keypair */
-	if (strncpy_s(module_info[2].module_name, FDO_MODULE_NAME_LEN,
-		      "keypair", FDO_MODULE_NAME_LEN) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
-		return NULL;
-	}
-	module_info[2].service_info_callback = keypair;
-
-#ifdef TARGET_OS_LINUX
-	/* module#4: pelionconfig (only supported on linux as of now) */
-	if (strncpy_s(module_info[3].module_name, FDO_MODULE_NAME_LEN,
-		      "pelionconfig", FDO_MODULE_NAME_LEN) != 0) {
-		LOG(LOG_ERROR, "Strcpy failed");
-		free(module_info);
-		return NULL;
-	}
-	module_info[3].service_info_callback = pelionconfig;
-#endif // #ifdef TARGET_OS_LINUX
-#endif
-#endif
 
 	return module_info;
 }
@@ -221,16 +194,21 @@ static void print_device_status(void)
 	fdo_sdk_device_state status = FDO_STATE_ERROR;
 
 	status = fdo_sdk_get_status();
-	if (status == FDO_STATE_PRE_DI)
+	if (status == FDO_STATE_PRE_DI) {
 		LOG(LOG_DEBUG, "Device is ready for DI\n");
-	if (status == FDO_STATE_PRE_TO1)
+	}
+	if (status == FDO_STATE_PRE_TO1) {
 		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
-	if (status == FDO_STATE_IDLE)
+	}
+	if (status == FDO_STATE_IDLE) {
 		LOG(LOG_DEBUG, "Device Ownership transfer Done\n");
-	if (status == FDO_STATE_RESALE)
+	}
+	if (status == FDO_STATE_RESALE) {
 		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
-	if (status == FDO_STATE_ERROR)
+	}
+	if (status == FDO_STATE_ERROR) {
 		LOG(LOG_DEBUG, "Error in getting device status\n");
+	}
 }
 
 /**
@@ -244,7 +222,8 @@ int main(int argc, char **argv)
 int app_main(bool is_resale)
 #endif
 {
-	fdo_sdk_service_info_module *module_info;
+	fdo_sdk_service_info_module *module_info = NULL;
+	int ret = -1;
 
 	bool do_resale = false;
 	LOG(LOG_DEBUG, "Starting FIDO Device Onboard\n");
@@ -259,7 +238,8 @@ int app_main(bool is_resale)
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 
 	/* List and Init all Sv_info modules */
@@ -273,14 +253,10 @@ int app_main(bool is_resale)
 	if (FDO_SUCCESS !=
 	    fdo_sdk_init(error_cb, FDO_MAX_MODULES, module_info)) {
 		LOG(LOG_ERROR, "fdo_sdk_init failed!!\n");
-		free(module_info);
-		return -1;
+		fdo_free(module_info);
+		ret = -1;
+		goto end;
 	}
-
-	/* free the module related info
-	 * FDO has created the required DB
-	 */
-	free(module_info);
 
 #ifdef TARGET_OS_LINUX
 	/* Change stdout to unbuffered mode, without this we don't get logs
@@ -304,16 +280,28 @@ int app_main(bool is_resale)
 
 #endif
 	if (is_ownership_transfer(do_resale)) {
-		return 0;
+		ret = 0;
+		goto end;
 	}
 
 	print_device_status();
 
 	if (FDO_SUCCESS != fdo_sdk_run()) {
 		LOG(LOG_ERROR, "FIDO Device Onboard failed\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 
+	ret = 0;
+end:
+	/* free the module related info
+	 * FDO has created the required DB
+	 */
+	if (module_info) {
+		fdo_free(module_info);
+	}
+
+	fdo_sdk_deinit();
 	// Return 0 on success
-	return 0;
+	return ret;
 }

@@ -101,8 +101,9 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 	retval = true;
 
 end:
-	if (p_iv)
+	if (p_iv) {
 		fdo_free(p_iv);
+	}
 	return retval;
 }
 

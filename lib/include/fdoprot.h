@@ -11,42 +11,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define INITIAL_SECRET_BYTES (32)
 #define GID_SIZE (16)
 
-// FDO Device States
-#define FDO_DEVICE_STATE_PD 0     // Permanently Disabled
-#define FDO_DEVICE_STATE_PC 1     // Pre-Configured
-#define FDO_DEVICE_STATE_D 2      // Disabled
-#define FDO_DEVICE_STATE_READY1 3 // Initial Transfer Ready
-#define FDO_DEVICE_STATE_D1 4     // Initial Transfer Disabled
-#define FDO_DEVICE_STATE_IDLE 5   // FDO Idle
-#define FDO_DEVICE_STATE_READYN 6 // Transfer Ready
-#define FDO_DEVICE_STATE_DN 7     // Transfer Disabled
-
 // Ports
-#define FDO_PORT_TO1 8041
-#define FDO_PORT_TO2 8042
-#define FDO_PORT_REST 8085
-#define FDO_PORT_REPORTED 980
 #define FDO_PORT_MAX_LEN 5 // max value of port is 65535 i.e. length 5
 #define FDO_PORT_MIN_VALUE 1
 #define FDO_PORT_MAX_VALUE 65535
 
 // States
-#define FDO_STATE_RCV_ERROR 80
 #define FDO_STATE_ERROR 81
 #define FDO_STATE_DONE 82
 
-// Operational States for the device
-#define FDO_OP_STATE_APPLICATION 2 // FDO Complete, running customer application
-
 // Note states are sequential to make fdo_state_toURL work
-
-// Protocol Report: Device => Reporter Server
-#define FDO_STATE_MGR_AGENT_INIT 17
-#define FDO_STATE_SND_REPORT 18
-#define FDO_STATE_RCV_REPORT_ACK 19
 
 // DI
 #define FDO_DI_APP_START 10
@@ -108,62 +84,41 @@
 // Protocol message types
 #define FDO_TYPE_ERROR 255
 
-// Persistent
-#define FDO_TYPE_CRED_OWNER 1
-#define FDO_TYPE_CRED_MFG 2
-#define FDO_TYPE_OWNERSHIP_VOUCHER 3
-#define FDO_TYPE_PUBLIC_KEY 4
-#define FDO_TYPE_SERVICE_INFO 5
-#define FDO_TYPE_DEVICE_CRED 6
-#define FDO_TYPE_HMAC 7
-
-// Report
-#define FDO_MGR_AGENT_SND_REPORT 52
-#define FDO_MGR_AGENT_RCV_REPORT_ACK 53
-
-// For restful URL mapping
-#define FDOMsg_typeMIN FDO_TO1_TYPE_HELLO_FDO
-#define FDOMsg_typeMAX FDO_TO2_DONE2
-
-// Protocol version
-#define FDO_VER_MAJOR 1
-#define FDO_VER_MINOR 10
-
 // Error Message
-#define INVALID_JWT_TOKEN 1
-#define INVALID_OWNERSHIP_VOUCHER 2
-#define INVALID_OWNER_SIGN_BODY 3
-#define INVALID_IP_ADDRESS 4
-#define INVALID_GUID 5
-#define RESOURCE_NOT_FOUND 6
-#define INVALID_PROVE_REQUEST_EXCEPTION 7
-#define INVALID_EPID_SIGNATURE 8
+// TODO: Additional macros should be created to map different error conditions
+// specified in the spec.
 #define MESSAGE_BODY_ERROR 100
-#define INVALID_MESSAGE_ERROR 101
 #define INTERNAL_SERVER_ERROR 500
 
 #define MAX_TO2_ROUND_TRIPS 1000000
 
 // Current protocol version
-#define FDO_PROT_SPEC_VERSION 100
-
-/*
- * Set size of buffer for generating debugging messages.
- * The messages will be truncated appropriately, so this can be
- * any size.  To see an entire public key, you need more than 512 bytes,
- * which may be too much for a constrained system to put on the stack.
- *
- * An alternative is to declare the buffer global
- */
-#define DEBUGBUFSZ 1024
+#define FDO_PROT_SPEC_VERSION 101
 
 // minimum ServiceInfo size
-#define MIN_SERVICEINFO_SZ 1300
+#define MIN_SERVICEINFO_SZ 256
 // maximum ServiceInfo size
 #define MAX_SERVICEINFO_SZ 8192
+// the margin considered while trying to fit Device ServiceInfo within MTU
+// which allows us to avoid sending more than the MTU at all times
+// For large numbers of ServiceInfoKeyVal to be sent, a larger number might be needed
+// However, the current implementation writes only 1 ServiceInfoKeyVal containing
+// any number of ServiceInfoKVs
+#define SERVICEINFO_MTU_FIT_MARGIN 30
+
+// minimum message buffer size to read/write protcol (DI/TO1/TO2)
+// if user-configured MAX_SERVICE_SZ is more than this, that is used as the buffer length
+// else this is used as the message buffer length
+#define MSG_BUFFER_SZ 1300
 // margin that gets added to either max or min ServiceInfo size to create
 // the final buffer to read/write protcol (DI/TO1/TO2)
 #define MSG_METADATA_SIZE 700
+
+// limit on number of Ownership Voucher entries to 255
+#define MAX_NO_OVENTRIES 255
+
+// The maximum negotiated message size
+#define MAX_NEGO_MSG_SIZE 65535
 
 #if defined(REUSE_SUPPORTED)
 static const bool reuse_supported = true;
@@ -187,33 +142,28 @@ typedef struct fdo_prot_s {
 	fdow_t fdow;
 	uint8_t gid[GID_SIZE];
 	fdo_byte_array_t *g2; /* Our initial GUID */
-	fdo_ip_address_t i1;
-	uint32_t port1;
-	char *dns1;
 	int key_encoding;
 	fdo_rvto2addr_t *rvto2addr;
-	fdo_public_key_t *new_pk;
 	fdo_dev_cred_t *dev_cred;
-	fdo_public_key_t *mfg_public_key; // TO2.bo.oh.pk & DI.oh.ok
-	// Installed during manufacturing is a hash of this
 	fdo_public_key_t *
-	    owner_public_key; // TO2.ProveOVHdr bo.pk - The new Owner Public key
-	fdo_iv_t *iv;	 // IV store
-	fdo_service_info_t *service_info;
-	fdo_public_key_t *tls_key;
-	fdo_public_key_t *local_key_pair;
+	    owner_public_key; // Owner's public key
+	fdo_service_info_t *service_info; // store System ServiceInfo (devmod+unsupported module list)
+	fdo_byte_array_t *ext_service_info; // store External module ServiceInfoVal (fdo_sys, for ex.)
+	fdo_public_key_t *tls_key; // unused for now
 	int ov_entry_num;
 	fdo_ownership_voucher_t *ovoucher;
 	fdo_hash_t *new_ov_hdr_hmac;
-	fdo_rendezvous_t *rv;
+	fdo_hash_t *hello_device_hash;
 	fdo_cose_t *to1d_cose;
-	uint16_t serv_req_info_num;
-	int maxOwnerServiceInfoSz;
-	int maxDeviceServiceInfoSz;
+	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames;
+	uint64_t max_device_message_size; // used to store maxDeviceMessageSize
+	uint64_t max_owner_message_size; // used to store maxOwnerMessageSize and not used thereafter
+	uint64_t maxOwnerServiceInfoSz;
+	uint64_t maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
-	size_t prot_buff_sz;
-	int owner_supplied_service_info_num;
-	int owner_supplied_service_info_rcv;
+	bool owner_serviceinfo_ismore;
+	bool owner_serviceinfo_isdone;
+	size_t prot_buff_sz; // protocol buffer size, same as maxDeviceMessageSize for now
 	fdo_owner_supplied_credentials_t *osc;
 	fdo_byte_array_t *nonce_to1proof;
 	fdo_byte_array_t *nonce_to2proveov;
@@ -221,14 +171,12 @@ typedef struct fdo_prot_s {
 	fdo_byte_array_t *nonce_to2provedv;
 	fdo_byte_array_t *nonce_to2setupdv;
 	fdo_byte_array_t *nonce_to2setupdv_rcv;
-	fdo_redirect_t fdo_redirect;
 	uint32_t round_trip_count;
 	//	void *key_ex_data;
 	fdo_sdk_service_info_module_list_t
 	    *sv_info_mod_list_head; // Global Sv_infomodule list head
 	fdo_sv_info_dsi_info_t *dsi_info;
 	int total_dsi_rounds; // device service infos + module DSI counts
-	uint8_t rv_index;     // keep track of current rv index
 	bool reuse_enabled;   // REUSE protocol flag
 } fdo_prot_t;
 
@@ -278,4 +226,9 @@ bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep);
 
 int ps_get_m_string(fdo_prot_t *ps);
 int ps_get_m_string_cbor(fdo_byte_array_t *mstring);
+
+/* Allocate and return the Device Credentials */
+fdo_dev_cred_t *app_alloc_credentials(void);
+fdo_dev_cred_t *app_get_credentials(void);
+
 #endif /* __FDOPROT_H__ */

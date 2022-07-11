@@ -17,45 +17,6 @@
 #endif
 
 /**
- * This function computes the HMAC of encrypted TO2 messages using SVK as its
- * key. fdo_to2Crypto_context specifies the hmac_type to be used to generate
- * the HMAC of the data contained in to2Msg of size to2Msg_length and places
- * the output in hmac, the size of which is specified by hmac_length.
- * The hmac buffer must be of size FDO_MSG_HMAC_LENGTH or greater.
- * @param to2Msg In Pointer to the message
- * @param to2Msg_len In Size of the message
- * @param hmac Out Pointer to the buffer where the hmac is stored after the HMAC
- * operation is completed. This buffer must be allocated before calling this API
- * @param hmac_len In Size of the buffer pointed to by hmac
- * @return 0 on success and -1 on failure.
- */
-int32_t fdo_to2_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
-		     size_t hmac_len)
-{
-	fdo_aes_keyset_t *keyset = get_keyset();
-	uint8_t *svk;
-	uint8_t svk_len;
-
-	if (NULL == keyset || (NULL == keyset->svk) || (NULL == to2Msg)) {
-		return -1;
-	}
-	svk = keyset->svk->bytes;
-	svk_len = keyset->svk->byte_sz;
-
-	if (!svk || !svk_len || !to2Msg_len || !hmac_len)
-		goto error;
-
-	if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_USED, to2Msg, to2Msg_len,
-				 hmac, hmac_len, svk, svk_len)) {
-		LOG(LOG_ERROR, "Failed to perform HMAC\n");
-		goto error;
-	}
-	return 0;
-error:
-	return -1;
-}
-
-/**
  * This function sets the Ownership Voucher hmac key in the structure.
  * Which will later be used by the OVHMAC function to get the hmac.
  * @param OVkey In Pointer to the Ownership Voucher hmac.
@@ -69,7 +30,51 @@ int32_t set_ov_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
-	      (BUFF_SIZE_48_BYTES == OVKey_len))) {
+	      (BUFF_SIZE_64_BYTES == OVKey_len))) {
+		return -1;
+	}
+
+	if (NULL == *ovkeyctx) {
+		*ovkeyctx = fdo_byte_array_alloc(OVKey_len);
+		if (!*ovkeyctx) {
+			LOG(LOG_ERROR, "Alloc failed\n");
+			return -1;
+		}
+	}
+	if (!(*ovkeyctx) || !(*ovkeyctx)->bytes) {
+		goto err;
+	}
+
+	ret = memcpy_s((*ovkeyctx)->bytes, OVKey_len, OVkey->bytes, OVKey_len);
+	if (ret != 0) {
+		ret = -1;
+		goto err;
+	}
+	ret = 0;
+err:
+	if ((0 != ret) && (*ovkeyctx)) {
+		fdo_byte_array_free(*ovkeyctx);
+		*ovkeyctx = NULL;
+	}
+
+	return ret;
+}
+
+/**
+ * This function sets the Ownership Voucher replacement hmac key in the structure.
+ * Which will later be used to generate the replacement hmac.
+ * @param OVkey In Pointer to the Ownership Voucher replacement hmac key.
+ * @param OVKey_len In Size of the Ownership Voucher replacement hmac key
+ * @return 0 on success and -1 on failure.
+ */
+int32_t set_ov_replacement_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
+{
+	int ret = -1;
+	fdo_byte_array_t **ovkeyctx = getreplacementOVKey();
+
+	if ((NULL == OVkey) || !(OVkey->bytes) ||
+	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
+	      (BUFF_SIZE_64_BYTES == OVKey_len))) {
 		return -1;
 	}
 
@@ -113,25 +118,45 @@ err:
  * operation is completed. This buffer must be allocated before calling this API
  * @param hmac_len In/Out In: Size of the buffer pointed to by hmac
  * Out: Size of the message hmac
+ * @param is_replacement_hmac In bool value that signifies whether the HMAC to
+ * be computed is the orginal HMAC (for DI, using original HMAC key), or,
+ * replacement HMAC (for TO2, using replacement HMAC key)
  * @return 0 on success and -1 on failure.
  */
 int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
-			   size_t hmac_len)
+			   size_t hmac_len, bool is_replacement_hmac)
 {
+	fdo_byte_array_t **keyset = NULL;
+
+	if (!OVHdr || !hmac) {
+		return -1;
+	}
+
+	if (is_replacement_hmac) {
+#if defined(DEVICE_TPM20_ENABLED)
+	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
+				TPM_HMAC_REPLACEMENT_PUB_KEY, TPM_HMAC_REPLACEMENT_PRIV_KEY);
+#else
+		keyset = getreplacementOVKey();
+#endif
+	} else {
 #if defined(DEVICE_TPM20_ENABLED)
 	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
 				TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
 #else
-	fdo_byte_array_t **keyset = getOVKey();
-
-	if (!keyset || !*keyset || !OVHdr || !hmac) {
+		keyset = getOVKey();
+#endif
+	}
+	if (!keyset || !*keyset) {
 		return -1;
 	}
+
 	uint8_t *hmac_key = (*keyset)->bytes;
 	uint8_t hmac_key_len = (*keyset)->byte_sz;
 
-	if (!hmac_key || !hmac_key_len || !OVHdr_len || !hmac_len)
+	if (!hmac_key || !hmac_key_len || !OVHdr_len || !hmac_len) {
 		goto error;
+	}
 
 	if (0 != crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_USED, OVHdr, OVHdr_len,
 				 hmac, hmac_len, hmac_key, hmac_key_len)) {
@@ -141,7 +166,6 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 	return 0;
 error:
 	return -1;
-#endif
 }
 
 /**
@@ -195,7 +219,7 @@ int32_t fdo_generate_ov_hmac_key(void)
 		       " from TPM.\n");
 
 #else
-	fdo_byte_array_t *secret = fdo_byte_array_alloc(INITIAL_SECRET_BYTES);
+	fdo_byte_array_t *secret = fdo_byte_array_alloc(FDO_HMAC_KEY_LENGTH);
 
 	if (!secret) {
 		LOG(LOG_ERROR, "Out of memory for OV HMAC key\n");
@@ -203,8 +227,8 @@ int32_t fdo_generate_ov_hmac_key(void)
 	}
 
 	/* Generate HMAC key for calcuating it over Ownership header */
-	fdo_crypto_random_bytes(secret->bytes, INITIAL_SECRET_BYTES);
-	if (0 != set_ov_key(secret, INITIAL_SECRET_BYTES)) {
+	fdo_crypto_random_bytes(secret->bytes, FDO_HMAC_KEY_LENGTH);
+	if (0 != set_ov_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		goto err;
 	}
 
@@ -213,6 +237,88 @@ err:
 	fdo_byte_array_free(secret);
 #endif
 
+	return ret;
+}
+
+/**
+ * fdo_generate_ov_replacement_hmac_key function generates the new/replacement OV HMAC key
+ *
+ * @return
+ *        return 0 on success, -1 on failure.
+ */
+int32_t fdo_generate_ov_replacement_hmac_key(void)
+{
+
+	int32_t ret = -1;
+#if defined(DEVICE_TPM20_ENABLED)
+	if (0 !=
+	    fdo_tpm_generate_hmac_key(TPM_HMAC_REPLACEMENT_PUB_KEY,
+			TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
+		LOG(LOG_ERROR, "Failed to generate device replacement HMAC key"
+			       " from TPM.\n");
+		return ret;
+	}
+
+	ret = 0;
+	LOG(LOG_DEBUG, "Successfully generated device HMAC key"
+		       " from TPM.\n");
+
+#else
+	fdo_byte_array_t *secret = fdo_byte_array_alloc(FDO_HMAC_KEY_LENGTH);
+
+	if (!secret) {
+		LOG(LOG_ERROR, "Out of memory for OV replacement HMAC key\n");
+		goto err;
+	}
+
+	/* Generate replacement HMAC key for calcuating it over Ownership header */
+	fdo_crypto_random_bytes(secret->bytes, FDO_HMAC_KEY_LENGTH);
+	if (0 != set_ov_replacement_key(secret, FDO_HMAC_KEY_LENGTH)) {
+		goto err;
+	}
+
+	ret = 0;
+err:
+	fdo_byte_array_free(secret);
+#endif
+	return ret;
+}
+
+/**
+ * Commit the OV replacment key by replacing the original HMAC key
+ * with the replacement HMAC key. This operation is final and the original HMAC key
+ * is lost completely.
+ *
+ * @return
+ *        return 0 on success, -1 on failure.
+ */
+int32_t fdo_commit_ov_replacement_hmac_key(void)
+{
+
+	int32_t ret = -1;
+#if defined(DEVICE_TPM20_ENABLED)
+	if (0 != fdo_tpm_commit_replacement_hmac_key()) {
+		LOG(LOG_ERROR, "Failed to commit device replacement HMAC key"
+			       " for TPM.\n");
+		return ret;
+	}
+
+	ret = 0;
+#else
+	fdo_byte_array_t **secret = getreplacementOVKey();
+
+	if (!secret || !(*secret) || !(*secret)->bytes) {
+		LOG(LOG_ERROR, "Failed to read OV replacement HMAC key\n");
+		return false;
+	}
+
+	if (0 != set_ov_key(*secret, FDO_HMAC_KEY_LENGTH)) {
+		LOG(LOG_ERROR, "Failed to commit OV replacement HMAC key\n");
+		return false;
+	}
+
+	ret = 0;
+#endif
 	return ret;
 }
 

@@ -24,6 +24,14 @@ int32_t msg13(fdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "FDOProtDI";
 	fdo_dev_cred_t *dev_cred = app_get_credentials();
+	// GUID needs (2 * 16) + 4 + 1 sized buffer for format 8-4-4-4-12,
+	// simplifying by using a larger buffer
+	char guid_buf[BUFF_SIZE_48_BYTES] = {0};
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	/* Check if we are able to read the device credentials from storage */
 	if (dev_cred == NULL) {
@@ -58,8 +66,13 @@ int32_t msg13(fdo_prot_t *ps)
 
 	/* Update the state of device to be ready for TO1 */
 	ps->dev_cred->ST = FDO_DEVICE_STATE_READY1;
+	if (!store_device_status(&ps->dev_cred->ST)) {
+		LOG(LOG_ERROR, "Failed to store updated device status\n");
+		goto err;
+	}
+
 	if (store_credential(ps->dev_cred) != 0) {
-		LOG(LOG_ERROR, "Failed to store updated device state\n");
+		LOG(LOG_ERROR, "Failed to store updated device credentials\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "Device credentials successfully written!!\n");
@@ -67,6 +80,9 @@ int32_t msg13(fdo_prot_t *ps)
 	/* Mark as success, and DI done */
 	ps->state = FDO_STATE_DONE;
 	ps->fdor.have_block = false;
+
+	LOG(LOG_INFO, "(Current) GUID after DI: %s\n",
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
 	LOG(LOG_DEBUG, "DIDone completed\n");
 	ret = 0;
 

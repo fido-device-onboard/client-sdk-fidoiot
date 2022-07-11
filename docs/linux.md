@@ -1,25 +1,88 @@
+
+
+
 # Linux* OS
-The development and execution OS used was `Ubuntu* OS version 20.04` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+The development and execution OS used was `Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1n. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
-## 1. Packages Requirements when Building Binaries (for Ubuntu OS version 20.04):
-
+## 1. Packages Requirements when Building Binaries:
+* For Ubuntu* OS version 20.04:
 ```shell
-$ sudo apt-get install python-setuptools clang-format dos2unix ruby \
+sudo apt-get install python-setuptools clang-format dos2unix ruby \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
 ```
-## 2. Packages Requirements when Executing Binaries (on Ubuntu OS version 20.04):
 
-OpenSSL* toolkit version 1.1.1k
+* For RHEL* OS version 8.4:
+```shell
+sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo yum -y install perl-Module-Load-Conditional perl-core
+```
+```
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby \
+  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial
+```
+## 2. Packages Requirements when Executing Binaries:
+
+OpenSSL* toolkit version 1.1.1n
 GCC version > 7.5
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1n
+
+1. Pull the tarball:
+	```
+	wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
+	```
+2. Unpack the tarball with:
+	```
+	tar -zxf openssl-1.1.1n.tar.gz && cd openssl-1.1.1n
+	```
+3. Issue the command:
+	```
+	./config
+	```
+4. Issue the command:
+	```
+	make
+	```
+	  (You may need to run `sudo apt install make gcc` before running this command successfully).
+
+5. Check for possible errors:
+	```
+	make test
+	```
+6. Backup the current OpenSSL* binary:
+	```
+	sudo mv /usr/bin/openssl ~/tmp
+	```
+7. Issue the command:
+	```
+	sudo make install
+	```
+8. Create a symbolic link from the newly installed binary to the default location:
+	```
+	sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
+	```
+9. Run the command to update symlinks and rebuild the library cache:
+	```
+	sudo ldconfig
+	```
+10. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.
+Issue the following command from the terminal:
+	```
+	openssl version
+	```
+	  Your output should be as follows:
+	```
+	OpenSSL* 1.1.1n  15 Mar 2022
+	```
 
 ## 3. Compiling Intel safestringlib
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
- $ mkdir obj
- $ make
+ mkdir obj
+ make
  ```
 After this step, `libsafestring.a` library will be created.
 
@@ -27,15 +90,15 @@ After this step, `libsafestring.a` library will be created.
 FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
 From the root of the TinyCBOR (named `tinycbor`), do the following:
  ```shell
- $ make
+ make
  ```
 
 ## 5. Environment Variables
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
 Provide safestringlib and tinycbor paths:
 ```shell
-$ export SAFESTRING_ROOT=path/to/safestringlib
-$ export TINYCBOR_ROOT=path/to/tinycbor
+export SAFESTRING_ROOT=path/to/safestringlib
+export TINYCBOR_ROOT=path/to/tinycbor
 ```
 
 ## 6. Compiling FDO Client SDK
@@ -45,12 +108,13 @@ The FDO Client SDK build system is based on <a href="https://www.gnu.org/softwar
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md).
 
 ```shell
-$ make pristine
-$ cmake -DTARGET_OS=linux -DBUILD=debug .
-$ make
+make pristine
+cmake .
+make
+bash utils/keys_gen.sh .
 ```
 
-Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), public-key encoding (PK_ENC) type, and SSL support (TLS).
+Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section. [FDO Build configurations](build_conf.md)
 
 <a name="run_linux_fdo"></a>
@@ -70,49 +134,13 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   Then, execute `linux-client`. The device is now initialized with the credentials and is ready for ownership transfer.
 
   ```shell
-  $ ./build/linux-client
+  ./build/linux-client
   ```
 
 - To enable the device for Transfer Ownership protocol (TO1 and TO2), configure the FDO PRI Rendezvous and Owner.
   Refer to [ Ownership Transfer Setup ](ownership_transfer.md).
   After these are set up, execute `linux-client` again.
-  
+
   ```shell
-  $ ./build/linux-client
+  ./build/linux-client
   ```
-
-
-**Steps to Upgrade the OpenSSL Toolkit to Version 1.1.1k**
-
-1. Pull the tarball: wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
-
-2. Unpack the tarball with `tar -zxf openssl-1.1.1k.tar.gz && cd openssl-1.1.1k`
-
-3. Issue the command `./config`.
-
-4. Issue the command `make ` (You may need to run ‘sudo apt install make gcc’ before running this command successfully).
-
-5. Run `make test` to check for possible errors.
-
-6. Backup the current OpenSSL binary: `sudo mv /usr/bin/openssl ~/tmp`
-
-7. Issue the command `sudo make install`.
-
-8. Create a symbolic link from the newly installed binary to the default location:
-
-   `sudo ln -s /usr/local/bin/openssl /usr/bin/openssl`
-
-9. Run the command `sudo ldconfig` to update symlinks and rebuild the library cache.
-    Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL toolkit.
-
-10. Issue the following command from the terminal:
-
-    ```
-    openssl version
-    ```
-
-    Your output should be as follows:
-
-    ```
-	OpenSSL 1.1.1k  25 Mar 2021
-    ```

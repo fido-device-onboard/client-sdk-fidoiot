@@ -9,34 +9,31 @@
 set (TARGET_OS linux)
 set (CSTD c99)
 set (TLS openssl)
-set (DA ecdsa256)
-set (PK_ENC ecdsa)
-set (KEX ecdh)
-set (AES_MODE ctr)
-set (EPID epid_r6)
+set (DA ecdsa384)
+set (AES_MODE gcm)
 set (BUILD debug)
 set (TARGET_OS linux)
 set (HTTPPROXY true)
 set (PROXY_DISCOVERY false)
 set (OPTIMIZE 1)
-set (MODULES false)
 set (DA_FILE der)
 set (CRYPTO_HW false)
 set (ARCH x86)
 set (RETRY true)
 set (unit-test false)
-set (MANUFACTURER_TOOLKIT true)
 set (STORAGE true)
 set (BOARD NUCLEO_F767ZI)
 set (BLOB_PATH .)
 set (TPM2_TCTI_TYPE tabrmd)
-set (RESALE false)
+set (RESALE true)
 set (REUSE true)
 
 #following are specific to only mbedos
 set (DATASTORE sd)
 set (WIFI_SSID " ")
 set (WIFI_PASS " ")
+# TO-DO : This flag is no longer being used in the source.
+# Explore use of the alternative MANUFACTURER_ADDR instead.
 set (MANUFACTURER_IP " ")
 set (MANUFACTURER_DN " ")
 
@@ -101,62 +98,6 @@ endif()
 
 set(CACHED_DA ${DA} CACHE STRING "Selected DA")
 message("Selected DA ${DA}")
-
-###########################################
-# FOR PK_ENC
-get_property(cached_pk_enc_value CACHE PK_ENC PROPERTY VALUE)
-
-set(pk_enc_cli_arg ${cached_pk_enc_value})
-if(pk_enc_cli_arg STREQUAL CACHED_PK_ENC)
-  unset(pk_enc_cli_arg)
-endif()
-
-set(pk_enc_app_cmake_lists ${PK_ENC})
-if(cached_pk_enc_value STREQUAL PK_ENC)
-  unset(pk_enc_app_cmake_lists)
-endif()
-
-if(CACHED_PK_ENC)
-  if ((pk_enc_cli_arg) AND (NOT(CACHED_PK_ENC STREQUAL pk_enc_cli_arg)))
-    message(WARNING "Need to do make pristine before cmake args can change.")
-  endif()
-  set(PK_ENC ${CACHED_PK_ENC})
-elseif(pk_enc_cli_arg)
-  set(PK_ENC ${pk_enc_cli_arg})
-elseif(pk_enc_app_cmake_lists)
-  set(PK_ENC ${pk_enc_app_cmake_lists})
-endif()
-
-set(CACHED_PK_ENC ${PK_ENC} CACHE STRING "Selected PK_ENC")
-message("Selected PK_ENC ${PK_ENC}")
-
-###########################################
-# FOR KEX
-get_property(cached_kex_value CACHE KEX PROPERTY VALUE)
-
-set(kex_cli_arg ${cached_kex_value})
-if(kex_cli_arg STREQUAL CACHED_KEX)
-  unset(kex_cli_arg)
-endif()
-
-set(kex_app_cmake_lists ${KEX})
-if(cached_kex_value STREQUAL KEX)
-  unset(kex_app_cmake_lists)
-endif()
-
-if(CACHED_KEX)
-  if ((kex_cli_arg) AND (NOT(CACHED_KEX STREQUAL kex_cli_arg)))
-    message(WARNING "Need to do make pristine before cmake args can change.")
-  endif()
-  set(KEX ${CACHED_KEX})
-elseif(kex_cli_arg)
-  set(KEX ${kex_cli_arg})
-elseif(kex_app_cmake_lists)
-  set(KEX ${kex_app_cmake_lists})
-endif()
-
-set(CACHED_KEX ${KEX} CACHE STRING "Selected KEX")
-message("Selected KEX ${KEX}")
 
 ###########################################
 # FOR AES_MODE
@@ -271,35 +212,6 @@ set(CACHED_PROXY_DISCOVERY ${PROXY_DISCOVERY} CACHE STRING "Selected PROXY_DISCO
 message("Selected PROXY_DISCOVERY ${PROXY_DISCOVERY}")
 
 ###########################################
-# FOR MODULES
-get_property(cached_modules_value CACHE MODULES PROPERTY VALUE)
-
-set(modules_cli_arg ${cached_modules_value})
-if(modules_cli_arg STREQUAL CACHED_MODULES)
-  unset(modules_cli_arg)
-endif()
-
-set(modules_app_cmake_lists ${MODULES})
-if(cached_modules_value STREQUAL MODULES)
-  unset(modules_app_cmake_lists)
-endif()
-
-if(DEFINED CACHED_MODULES)
-  if ((DEFINED modules_cli_arg) AND (NOT(CACHED_MODULES STREQUAL modules_cli_arg)))
-    message(WARNING "Need to do make pristine before cmake args can change.")
-  endif()
-  set(MODULES ${CACHED_MODULES})
-elseif(DEFINED modules_cli_arg)
-  set(MODULES ${modules_cli_arg})
-elseif(DEFINED modules_app_cmake_lists)
-  set(MODULES ${modules_app_cmake_lists})
-endif()
-
-set(CACHED_MODULES ${MODULES} CACHE STRING "Selected MODULES")
-message("Selected MODULES ${MODULES}")
-
-
-###########################################
 # FOR DA_FILE
 get_property(cached_da_file_value CACHE DA_FILE PROPERTY VALUE)
 
@@ -412,35 +324,6 @@ set(CACHED_UNIT-TEST ${unit-test} CACHE STRING "Selected unit-test")
 if (${unit-test} STREQUAL true)  
   message("Selected UNIT-TEST ${unit-test}")
 endif()
-
-###########################################
-# FOR MANUFACTURER_TOOLKIT
-get_property(cached_manufacturer_toolkit_value CACHE MANUFACTURER_TOOLKIT PROPERTY VALUE)
-
-set(manufacturer_toolkit_cli_arg ${cached_manufacturer_toolkit_value})
-if(manufacturer_toolkit_cli_arg STREQUAL CACHED_MANUFACTURER_TOOLKIT)
-  unset(manufacturer_toolkit_cli_arg)
-endif()
-
-set(manufacturer_toolkit_app_cmake_lists ${MANUFACTURER_TOOLKIT})
-if(cached_manufacturer_toolkit_value STREQUAL MANUFACTURER_TOOLKIT)
-  unset(manufacturer_toolkit_app_cmake_lists)
-endif()
-
-if(DEFINED CACHED_MANUFACTURER_TOOLKIT)
-  if ((DEFINED manufacturer_toolkit_cli_arg) AND (NOT(CACHED_MANUFACTURER_TOOLKIT STREQUAL manufacturer_toolkit_cli_arg)))
-    message(WARNING "Need to do make pristine before cmake args can change.")
-  endif()
-  set(MANUFACTURER_TOOLKIT ${CACHED_MANUFACTURER_TOOLKIT})
-elseif(DEFINED manufacturer_toolkit_cli_arg)
-  set(MANUFACTURER_TOOLKIT ${manufacturer_toolkit_cli_arg})
-elseif(DEFINED manufacturer_toolkit_app_cmake_lists)
-  set(MANUFACTURER_TOOLKIT ${manufacturer_toolkit_app_cmake_lists})
-endif()
-
-set(CACHED_MANUFACTURER_TOOLKIT ${MANUFACTURER_TOOLKIT} CACHE STRING
-  "Selected MANUFACTURER_TOOLKIT")
-message("Selected MANUFACTURER_TOOLKIT ${MANUFACTURER_TOOLKIT}")
 
 ###########################################
 # FOR BUILD

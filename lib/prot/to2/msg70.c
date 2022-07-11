@@ -5,15 +5,13 @@
 
 /*!
  * \file
- * \brief This file implements msg50 of TO2 state machine.
+ * \brief This file implements msg70 of TO2 state machine.
  */
 
 #include "fdoCrypto.h"
 #include "load_credentials.h"
 #include "fdoprot.h"
 #include "util.h"
-
-#define REUSE_HMAC_MAX_LEN 1
 
 /**
  * msg70() - TO2.Done
@@ -26,13 +24,23 @@
 int32_t msg70(fdo_prot_t *ps)
 {
 	int ret = -1;
-	fdo_hash_t *hmac = NULL;
+	// GUID needs (2 * 16) + 4 + 1 sized buffer for format 8-4-4-4-12,
+	// simplifying by using a larger buffer
+	char guid_buf[BUFF_SIZE_48_BYTES] = {0};
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	LOG(LOG_DEBUG, "TO2.Done started\n");
 
+	LOG(LOG_DEBUG, "(Old) GUID before TO2: %s\n",
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
+
 	/*
 	 * TODO: Writing credentials to TEE!
-	 * This GUID came as g3 - "the new transaction GUID"
+	 * This GUID came as TO2SetupDevicePayload.Guid - "the new transaction GUID"
 	 * which will overwrite GUID in initial credential data.
 	 * A new transaction will start fresh, taking the latest
 	 * credential (among them this, new GUID). That's why
@@ -54,7 +62,22 @@ int32_t msg70(fdo_prot_t *ps)
 		// Done with FIDO Device Onboard.
 		// As of now moving to done state for resale
 		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
+		// create new Owner's public key hash
+		fdo_hash_free(ps->dev_cred->owner_blk->pkh);
+		ps->dev_cred->owner_blk->pkh = fdo_pub_key_hash(ps->dev_cred->owner_blk->pk);
+		if (!ps->dev_cred->owner_blk->pkh) {
+			LOG(LOG_ERROR, "TO2.Done: Hash creation of TO2.SetupDevice.Owner2Key failed\n");
+			goto err;
+		}
 	}
+
+	// clear and reuse the buffer to print new guid
+	if (0 != memset_s(guid_buf, sizeof(guid_buf), 0)) {
+		LOG(LOG_ERROR, "TO2.Done: Failed to clear GUID buffer\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "(New) GUID after TO2: %s\n",
+		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
 
 	/* Rotate Data Protection Key */
 	if (0 != fdo_generate_storage_hmac_key()) {
@@ -62,7 +85,23 @@ int32_t msg70(fdo_prot_t *ps)
 	}
 	LOG(LOG_DEBUG, "TO2.Done: Data protection key rotated successfully!!\n");
 
-	/* Write new device credentials */
+	if (!ps->reuse_enabled) {
+		/* Commit the replacement hmac key only if reuse was not triggered*/
+		if (fdo_commit_ov_replacement_hmac_key() != 0) {
+			LOG(LOG_ERROR, "TO2.Done: Failed to store new device hmac key.\n");
+			goto err;
+		}
+		LOG(LOG_DEBUG, "TO2.Done: Updated device's new hmac key\n");
+	} else {
+		LOG(LOG_DEBUG, "TO2.Done: Device hmac key is unchanged as reuse was triggered.\n");
+	}
+
+	/* Write new device credentials and state*/
+	if (!store_device_status(&ps->dev_cred->ST)) {
+		LOG(LOG_ERROR, "TO2.Done: Failed to store updated device status\n");
+		goto err;
+	}
+
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");
 		goto err;
@@ -98,7 +137,7 @@ int32_t msg70(fdo_prot_t *ps)
 		return false;
 	}
 
-	if (!fdo_encrypted_packet_windup(&ps->fdow, FDO_TO2_DONE, ps->iv)) {
+	if (!fdo_encrypted_packet_windup(&ps->fdow, FDO_TO2_DONE)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to create Encrypted Message\n");
 		goto err;
 	}
@@ -109,7 +148,5 @@ int32_t msg70(fdo_prot_t *ps)
 	ret = 0; /*Mark as success */
 
 err:
-	if (hmac)
-		fdo_hash_free(hmac);
 	return ret;
 }

@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg46 of TO2 state machine.
+ * \brief This file implements msg66 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -27,6 +27,11 @@ int32_t msg66(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_hash_t *hmac = NULL;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady started\n");
 
@@ -66,7 +71,7 @@ int32_t msg66(fdo_prot_t *ps)
 		if (resale_supported) {
 			LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: *****Resale triggered.*****\n");
 			/* Generate new HMAC secret for OV header validation */
-			if (0 != fdo_generate_ov_hmac_key()) {
+			if (0 != fdo_generate_ov_replacement_hmac_key()) {
 				LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to refresh OV HMAC Key\n");
 				goto err;
 			}
@@ -81,11 +86,6 @@ int32_t msg66(fdo_prot_t *ps)
 				LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to write ReplacementHMac\n");
 				goto err;
 			}
-			// Update the pkh to the new values and store hash of the new owner public key
-			fdo_hash_free(ps->dev_cred->owner_blk->pkh);
-			ps->dev_cred->owner_blk->pkh =
-			    fdo_pub_key_hash(ps->osc->pubkey);
-
 		} else {
 			LOG(LOG_DEBUG,
 			    "TO2.DeviceServiceInfoReady: *****Resale triggered but not supported.*****\n");
@@ -98,11 +98,16 @@ int32_t msg66(fdo_prot_t *ps)
 		}
 	}
 
-	if (!fdow_signed_int(&ps->fdow, ps->maxOwnerServiceInfoSz)) {
+	if (!fdow_unsigned_int(&ps->fdow, ps->maxOwnerServiceInfoSz)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to write maxOwnerServiceInfoSz\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: Sent maxOwnerServiceInfoSz = %d\n",
+
+	if (ps->maxOwnerServiceInfoSz > MAX_NEGO_MSG_SIZE) {
+		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: maxOwnerServiceInfoSz can not be greater than 65535\n");
+		goto err;
+	}
+	LOG(LOG_DEBUG, "TO2.DeviceServiceInfoReady: Sent maxOwnerServiceInfoSz = %"PRIu64"\n",
 		ps->maxOwnerServiceInfoSz);
 
 	if (!fdow_end_array(&ps->fdow)) {
@@ -112,7 +117,7 @@ int32_t msg66(fdo_prot_t *ps)
 
 	/* Encrypt the packet */
 	if (!fdo_encrypted_packet_windup(
-		&ps->fdow, FDO_TO2_NEXT_DEVICE_SERVICE_INFO, ps->iv)) {
+		&ps->fdow, FDO_TO2_NEXT_DEVICE_SERVICE_INFO)) {
 		LOG(LOG_ERROR, "TO2.DeviceServiceInfoReady: Failed to create Encrypted Message\n");
 		goto err;
 	}
@@ -122,5 +127,8 @@ int32_t msg66(fdo_prot_t *ps)
 	ret = 0; /* Mark as success */
 
 err:
+	if (hmac) {
+		fdo_hash_free(hmac);
+	}
 	return ret;
 }

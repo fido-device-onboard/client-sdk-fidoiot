@@ -2,6 +2,23 @@
 The following are security implications to be
 addressed before using the reference solution as is, because of the nature of the reference platform.
 
+## AES Counter with CBC-MAC (CCM) mode trade-offs
+The Nonce length 'N' for CCM mode is dependent on the maximum message length 'L' value
+and should be equal to '15-L' octets.
+Refer to [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information on
+trade-offs between 'L' and 'N' value.
+The current implementation supports L=8 with the following configurations:
+   - `AES-CCM-64-128-128` (L=64 (8 octets, maximum 2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
+   - `AES-CCM-64-128-256` (L=64 (8 octets, maximum 2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
+
+The Nonce length 'N' is thus fixed at 7 octets (i.e 15-8).
+
+As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
+L=2 could also be used. N=13 MUST be used in this case.
+   Affected file(s):
+   - `crypto/openssl/openssl_AESRoutines.c`
+   - `lib/fdotypes.h`
+
 ## Linux* OS (OpenSSL* toolkit as the cryptography library)
 1. The random number needs to be seeded with an entropy source.
    Affected file(s):

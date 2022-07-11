@@ -27,6 +27,12 @@ int32_t msg32(fdo_prot_t *ps)
 	int ret = -1;
 	fdo_eat_payload_base_map_t payloadbasemap;
 	fdo_byte_array_t *encoded_payloadbasemap = NULL;
+	fdo_byte_array_t *eat_sig_structure = NULL;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	LOG(LOG_DEBUG, "TO1.ProveToRV started\n");
 
@@ -92,9 +98,15 @@ int32_t msg32(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// generate the signature on encoded payload
+	if (!fdo_eat_write_sigstructure(eat->eat_ph, eat->eat_payload, NULL,
+		&eat_sig_structure) || !eat_sig_structure) {
+		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to write COSE Sig_structure\n");
+		goto err;
+	}
+
+	// generate the signature on Sig_structure
 	if (0 !=
-	    fdo_device_sign(eat->eat_payload->bytes, eat->eat_payload->byte_sz,
+	    fdo_device_sign(eat_sig_structure->bytes, eat_sig_structure->byte_sz,
 			&eat->eat_signature)) {
 		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to generate signature\n");
 		goto err;		
@@ -119,6 +131,10 @@ err:
 	if (eat) {
 		fdo_eat_free(eat);
 		eat = NULL;
+	}
+	if (eat_sig_structure) {
+		fdo_byte_array_free(eat_sig_structure);
+		eat_sig_structure = NULL;
 	}
 	return ret;
 }

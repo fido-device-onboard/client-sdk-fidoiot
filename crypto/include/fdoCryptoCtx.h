@@ -22,18 +22,9 @@ typedef struct fdo_to2Sym_enc_ctx {
 	uint32_t ctr_value;
 } fdo_to2Sym_enc_ctx_t;
 
-typedef struct fdo_oa_crypto_ctx {
-	uint8_t *rsa_mod;
-	uint32_t rsa_mod_len;
-	uint8_t *rsa_exp;
-	uint32_t rsa_exp_len;
-	const uint8_t *ecdsa_pubkey;
-
-} fdo_oa_crypto_ctx_t;
-
 typedef struct fdo_kex_ctx {
 	fdo_string_t *kx;
-	fdo_string_t *cs;
+	size_t cs;
 	fdo_byte_array_t *xB;
 	fdo_byte_array_t *initial_secret;
 	const char *kdf_label;
@@ -46,6 +37,7 @@ typedef struct {
 	fdo_to2Sym_enc_ctx_t to2Sym_enc;
 	fdo_kex_ctx_t kex;
 	fdo_byte_array_t *OVKey;
+	fdo_byte_array_t *replacement_OVKey;
 } fdo_crypto_context_t;
 
 fdo_aes_keyset_t *get_keyset(void);

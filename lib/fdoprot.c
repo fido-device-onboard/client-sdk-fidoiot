@@ -19,11 +19,6 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 
-/* This is a test mode to skip the CEC1702 signing and present a constant nonce_to1proof
- * nonce and signature.  These were generated in the server.
- */
-//#define CONSTANT_N4
-
 #ifndef asizeof
 #define asizeof(x) (sizeof(x) / sizeof(x)[0])
 #endif
@@ -80,14 +75,6 @@ static state_func to2_state_fn[] = {
  */
 static void ps_free(fdo_prot_t *ps)
 {
-	if (ps->fdo_redirect.plain_text) {
-		fdo_byte_array_free(ps->fdo_redirect.plain_text);
-		ps->fdo_redirect.plain_text = NULL;
-	}
-	if (ps->fdo_redirect.obsig) {
-		fdo_byte_array_free(ps->fdo_redirect.obsig);
-		ps->fdo_redirect.obsig = NULL;
-	}
 	if (ps->nonce_to2proveov) {
 		fdo_byte_array_free(ps->nonce_to2proveov);
 		ps->nonce_to2proveov = NULL;
@@ -95,10 +82,6 @@ static void ps_free(fdo_prot_t *ps)
 	if (ps->nonce_to2proveov_rcv) {
 		fdo_byte_array_free(ps->nonce_to2proveov_rcv);
 		ps->nonce_to2proveov_rcv = NULL;
-	}
-	if (ps->new_ov_hdr_hmac) {
-		fdo_hash_free(ps->new_ov_hdr_hmac);
-		ps->new_ov_hdr_hmac = NULL;
 	}
 	if (ps->nonce_to2provedv) {
 		fdo_byte_array_free(ps->nonce_to2provedv);
@@ -155,6 +138,9 @@ bool fdo_process_states(fdo_prot_t *ps)
 		 * it means that the data read from network is pending, so, we
 		 * read data and come back here for the same message processing
 		 */
+		if (!ps) {
+			return false;
+		}
 		prev_state = ps->state;
 
 		switch (ps->state) {
@@ -165,7 +151,7 @@ bool fdo_process_states(fdo_prot_t *ps)
 		case FDO_STATE_DI_DONE:
 			state_fn = di_state_fn[DI_ID_TO_STATE_FN(ps->state)];
 			break;
-	
+
 		// TO1 states
 		case FDO_STATE_T01_SND_HELLO_FDO:
 		case FDO_STATE_TO1_RCV_HELLO_FDOACK:
@@ -200,16 +186,23 @@ bool fdo_process_states(fdo_prot_t *ps)
 		 * FIXME: ps->state cannot start with a junk state. It is for
 		 * unit test to pass
 		 */
-		if (!state_fn)
+		if (!state_fn) {
 			break;
+		}
 
 		if (ps->state != FDO_STATE_DONE && state_fn && state_fn(ps)) {
-			char err_msg[64];
+			LOG(LOG_ERROR, "Error occurred while processing Type %d\n", ps->state);
+			char err_msg[64] = {0};
+			size_t err_msg_sz = 0;
 
 			(void)snprintf_s_i(err_msg, sizeof(err_msg),
 					   "msg%d: message parse error",
 					   ps->state);
-			ps->state = FDO_STATE_ERROR;
+			err_msg_sz = strnlen_s(err_msg, sizeof(err_msg));
+			if (!err_msg_sz || err_msg_sz == sizeof(err_msg)) {
+				LOG(LOG_ERROR, "Failed to get error message length\n");
+				break;
+			}
 			// clear the block contents to write error message
 			fdo_block_reset(&ps->fdow.b);
 			if (!fdow_encoder_init(&ps->fdow)) {
@@ -217,12 +210,13 @@ bool fdo_process_states(fdo_prot_t *ps)
 				break;
 			}
 			fdo_send_error_message(&ps->fdow, MESSAGE_BODY_ERROR,
-					       ps->state, err_msg, sizeof(err_msg));
+					       ps->state, err_msg, err_msg_sz);
+			ps->state = FDO_STATE_ERROR;
 			ps_free(ps);
 			break;
 		}
 
-		/* If we reached with msg51 as ps->state, we are done */
+		/* If we reached with msg71 as ps->state, we are done */
 		if (prev_state == FDO_STATE_TO2_RCV_DONE_2 &&
 		    ps->state == FDO_STATE_DONE) {
 			ps_free(ps);
@@ -289,15 +283,25 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 	ps->dev_cred = dev_cred;
 	ps->g2 = dev_cred->owner_blk->guid;
 	ps->round_trip_count = 0;
-	ps->iv = fdo_alloc(sizeof(fdo_iv_t));
-	if (!ps->iv) {
-		LOG(LOG_ERROR, "Malloc failed!\n");
+	ps->hello_device_hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	if (!ps->hello_device_hash) {
 		return false;
 	}
 
 	/* Initialize svinfo related data */
 	if (module_list) {
+
+		ps->ext_service_info = fdo_byte_array_alloc(ps->prot_buff_sz);
+		if (!ps->ext_service_info) {
+			LOG(LOG_ERROR,
+			    "Sv_info: External module's buffer alloc failed\n");
+			return false;
+		}
+
 		ps->sv_info_mod_list_head = module_list;
+		if (!fdo_serviceinfo_deactivate_modules(ps->sv_info_mod_list_head)) {
+			return false;
+		}
 		ps->dsi_info = fdo_alloc(sizeof(fdo_sv_info_dsi_info_t));
 		if (!ps->dsi_info) {
 			return false;
@@ -311,13 +315,17 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 					      FDO_SI_START)) {
 			LOG(LOG_ERROR,
 			    "Sv_info: One or more module's START failed\n");
-			fdo_free(ps->iv);
 			fdo_free(ps->dsi_info);
 			return false;
 		}
-	} else
+	} else {
 		LOG(LOG_DEBUG,
 		    "Sv_info: no modules are registered to the FDO!\n");
+	}
+	ps->device_serviceinfo_ismore = false;
+	ps->owner_serviceinfo_ismore = false;
+	ps->owner_serviceinfo_isdone = false;
+	ps->serviceinfo_invalid_modnames = NULL;
 
 	//	LOG(LOG_DEBUG, "Key Exchange Mode: %s\n", ps->kx->bytes);
 	//	LOG(LOG_DEBUG, "Cipher Suite: %s\n", ps->cs->bytes);
@@ -337,13 +345,10 @@ bool fdo_check_to2_round_trips(fdo_prot_t *ps)
 {
 	if (ps->round_trip_count > MAX_TO2_ROUND_TRIPS) {
 		LOG(LOG_ERROR, "Exceeded maximum number of TO2 rounds\n");
-		char err_msg[64];
-		(void)snprintf_s_i(err_msg, sizeof(err_msg),
-				   "Exceeded max number of rounds",
-				   ps->state);
+		char err_msg[] = "Exceeded max number of rounds";
 		fdo_send_error_message(&ps->fdow, INTERNAL_SERVER_ERROR,
 				       ps->state,
-				       "Exceeded max number of rounds", sizeof(err_msg));
+				       err_msg, sizeof(err_msg));
 		ps->state = FDO_STATE_ERROR;
 		return false;
 	}
@@ -389,8 +394,8 @@ bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep)
 }
 
 /**
- * TO-DO : Update to pass EMErrorUuid if needed in future.
- * 
+ * TO-DO : Update to pass EMErrorCID if needed in future.
+ *
  * Internal API
  */
 void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
@@ -421,7 +426,7 @@ void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
 	}
 	// writing 0 as correlationId. May be updated in future.
 	if (!fdow_signed_int(fdow, 0)) {
-		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorUuid\n");
+		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorCID\n");
 		return;
 	}
 	if (!fdow_end_array(fdow)) {
@@ -454,14 +459,17 @@ void fdo_receive_error_message(fdor_t *fdor, int *ecode, int *msgnum,
 		      errmsg_sz) != 0) {
 		LOG(LOG_ERROR, "strcpy() failed!\n");
 	}
-	if (!fdo_read_expected_tag(fdor, "ec"))
+	if (!fdo_read_expected_tag(fdor, "ec")) {
 		goto fail;
+	}
 	*ecode = fdo_read_uint(fdor);
-	if (!fdo_read_expected_tag(fdor, "emsg"))
+	if (!fdo_read_expected_tag(fdor, "emsg")) {
 		goto fail;
+	}
 	*msgnum = fdo_read_uint(fdor);
-	if (!fdo_read_expected_tag(fdor, "em"))
+	if (!fdo_read_expected_tag(fdor, "em")) {
 		goto fail;
+	}
 	if (!fdo_read_string(fdor, errmsg, errmsg_sz)) {
 		LOG(LOG_ERROR, "%s(): fdo_read_string() "
 		    "returned NULL!\n", __func__);

@@ -26,6 +26,8 @@
 extern "C" int TO2_done;
 extern "C" void app_main(bool is_resale);
 
+// TO-DO : Look at the usage of this flag and remove later
+// since this flag has been removed from the source.
 #ifdef MODULES_ENABLED
 extern void cloud_main(SDBlockDevice *bd, FATFileSystem *fs);
 #endif
@@ -73,10 +75,11 @@ int init_eth(void)
 	printf("IP address: %s\n", ip ? ip : "None");
 	printf("Netmask: %s\n", netmask ? netmask : "None");
 	printf("Gateway: %s\n", gateway ? gateway : "None");
-	if (!ip && !netmask && !gateway)
+	if (!ip && !netmask && !gateway) {
 		return 1;
-	else
+	} else {
 		return 0;
+	}
 
 } // end init_eth()
 

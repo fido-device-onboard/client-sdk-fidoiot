@@ -30,10 +30,15 @@
 int32_t msg10(fdo_prot_t *ps)
 {
 	int ret = -1;
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	fdow_next_block(&ps->fdow, FDO_DI_APP_START);
-	if (!fdow_start_array(&ps->fdow, 1))
+	if (!fdow_start_array(&ps->fdow, 1)) {
 		goto err;
+	}
 
 	/* Get the DeviceMfgInfo in the ps object */
 	ret = ps_get_m_string(ps);
@@ -42,8 +47,9 @@ int32_t msg10(fdo_prot_t *ps)
 		goto err;
 	}
 	/* End the object */
-	if (!fdow_end_array(&ps->fdow))
+	if (!fdow_end_array(&ps->fdow)) {
 		goto err;
+	}
 
 	/* This state manages the transition to the next protocol message */
 	ps->state = FDO_STATE_DI_SET_CREDENTIALS;

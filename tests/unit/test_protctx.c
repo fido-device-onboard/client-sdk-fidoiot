@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Intel Corporation All Rights Reserved
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
  */
 
 /*!
@@ -72,9 +73,6 @@ void *__wrap_fdo_alloc(size_t bytes)
 		return __real_fdo_alloc(bytes);
 }
 #endif
-
-#define SIMULATE_SOCKREAD 555
-#define WRAPPER_MALLOC_RET_ERR NULL
 
 char sample_rest[] = "I am test sample test file\n2nd part shouldn't come\r\n"
 		     "Can I really break the code?";
@@ -151,7 +149,7 @@ TEST_CASE("fdo_prot_ctx_alloc", "[protctx][fdo]")
 #endif
 {
 	fdo_prot_t protdata;
-	char host_dns[] = "localhost";
+	char host_dns[] = "host.docker.internal";
 	uint16_t host_port = 5000;
 	fdo_prot_ctx_t *prot_ctx = NULL;
 
@@ -160,12 +158,14 @@ TEST_CASE("fdo_prot_ctx_alloc", "[protctx][fdo]")
 				      host_dns, host_port, false);
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 	fdo_prot_ctx_free(prot_ctx);
+	fdo_free(prot_ctx);
 
 	// positive test case, prot_ctx is allocated
 	prot_ctx = fdo_prot_ctx_alloc(&fdo_prot_dummy, &protdata, NULL,
 				      host_dns, host_port, true);
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 	fdo_prot_ctx_free(prot_ctx);
+	fdo_free(prot_ctx);
 
 	g_malloc_fail = true;
 	prot_ctx = fdo_prot_ctx_alloc(&fdo_prot_dummy, &protdata, NULL,
@@ -209,19 +209,19 @@ TEST_CASE("fdo_prot_ctx_run", "[protctx][fdo]")
 
 	int ret = -1;
 	// char tmp_buf[512];
-	char host_dns[] = "localhost";
+	char host_dns[] = "host.docker.internal";
 	uint16_t host_port = 5000;
 
-	fdo_prot_ctx_t *prot_ctx = malloc(sizeof(fdo_prot_ctx_t));
+	fdo_prot_ctx_t *prot_ctx = fdo_alloc(sizeof(fdo_prot_ctx_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 
 	ret = memset_s(prot_ctx, sizeof(fdo_prot_ctx_t), 0);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	prot_ctx->host_ip = malloc(sizeof(fdo_ip_address_t));
+	prot_ctx->host_ip = fdo_alloc(sizeof(fdo_ip_address_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx->host_ip);
 
-	prot_ctx->protdata = malloc(sizeof(fdo_prot_t));
+	prot_ctx->protdata = fdo_alloc(sizeof(fdo_prot_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx->protdata);
 
 	prot_ctx->sock_hdl = FDO_CON_INVALID_HANDLE;

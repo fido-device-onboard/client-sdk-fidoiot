@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg51 of TO2 state machine.
+ * \brief This file implements msg71 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -27,6 +27,11 @@ int32_t msg71(fdo_prot_t *ps)
 	char prot[] = "FDOProtTO2";
 	fdo_encrypted_packet_t *pkt = NULL;
 
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
+
 	LOG(LOG_DEBUG, "TO2.Done2 started\n");
 
 	if (!fdo_check_to2_round_trips(ps)) {
@@ -44,7 +49,7 @@ int32_t msg71(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt, ps->iv)) {
+	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt)) {
 		LOG(LOG_ERROR, "TO2.Done2: Failed to decrypt packet!\n");
 		goto err;
 	}

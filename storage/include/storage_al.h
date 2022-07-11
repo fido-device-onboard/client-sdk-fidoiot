@@ -18,10 +18,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// platform HMAC and GCM tag size
+// platform HMAC and blob size
 #define PLATFORM_HMAC_SIZE BUFF_SIZE_32_BYTES
-#define PLATFORM_GCM_TAG_SIZE BUFF_SIZE_16_BYTES
-
 #define BLOB_CONTENT_SIZE BUFF_SIZE_4_BYTES
 
 typedef enum {
@@ -40,7 +38,7 @@ int32_t fdo_blob_read(const char *blob_name, fdo_sdk_blob_flags flags,
 int32_t fdo_blob_write(const char *blob_name, fdo_sdk_blob_flags flags,
 		       const uint8_t *buffer, uint32_t length);
 
-int32_t fdo_blob_size(const char *blob_name, fdo_sdk_blob_flags flags);
+size_t fdo_blob_size(const char *blob_name, fdo_sdk_blob_flags flags);
 
 int32_t create_hmac_normal_blob(void);
 

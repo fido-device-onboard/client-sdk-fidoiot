@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg44 of TO2 state machine.
+ * \brief This file implements msg64 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -36,6 +36,12 @@ int32_t msg64(fdo_prot_t *ps)
 
 	fdo_eat_payload_base_map_t payloadbasemap;
 	fdo_byte_array_t *encoded_payloadbasemap = NULL;
+	fdo_byte_array_t *eat_sig_structure = NULL;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	LOG(LOG_DEBUG, "TO2.ProveDevice started\n");
 
@@ -121,9 +127,15 @@ int32_t msg64(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// generate the signature on encoded payload
+	if (!fdo_eat_write_sigstructure(eat->eat_ph, eat->eat_payload, NULL,
+		&eat_sig_structure) || !eat_sig_structure) {
+		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to write COSE Sig_structure\n");
+		goto err;
+	}
+
+	// generate the signature on encoded Sig_structure
 	if (0 !=
-	    fdo_device_sign(eat->eat_payload->bytes, eat->eat_payload->byte_sz,
+	    fdo_device_sign(eat_sig_structure->bytes, eat_sig_structure->byte_sz,
 			&eat->eat_signature)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to generate signature\n");
 		goto err;		
@@ -156,7 +168,12 @@ int32_t msg64(fdo_prot_t *ps)
 	ps->state = FDO_STATE_TO2_RCV_GET_NEXT_DEVICE_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.ProveDevice comleted successfully\n");
 err:
-	if (eat)
+	if (eat) {
 		fdo_eat_free(eat);
+	}
+	if (eat_sig_structure) {
+		fdo_byte_array_free(eat_sig_structure);
+		eat_sig_structure = NULL;
+	}
 	return ret;
 }

@@ -13,7 +13,6 @@
  */
 #define FDO_MODULE_NAME_LEN 32
 #define FDO_MODULE_MSG_LEN 32
-#define FDO_MODULE_VALUE_LEN 100
 
 #ifdef EXTRA_MODULES
 #define FDO_MAX_MODULES 4
@@ -22,6 +21,7 @@
 #endif
 
 #define FDO_MODULE_MESSAGE_ACTIVE "active"
+#define FDO_MODULE_SEPARATOR ":"
 
 /*==================================================================*/
 /* Service Info module registration functionality */
@@ -29,6 +29,9 @@
 // enum for Service_info Types
 typedef enum {
 	FDO_SI_START,
+	FDO_SI_HAS_MORE_DSI,
+	FDO_SI_IS_MORE_DSI,
+	FDO_SI_GET_DSI_COUNT,
 	FDO_SI_GET_DSI,
 	FDO_SI_SET_OSI,
 	FDO_SI_END,
@@ -36,7 +39,7 @@ typedef enum {
 } fdo_sdk_si_type;
 
 // enum for Sv_info module CB return value
-enum { FDO_SI_CONTENT_ERROR, FDO_SI_INTERNAL_ERROR, FDO_SI_SUCCESS };
+enum { FDO_SI_CONTENT_ERROR, FDO_SI_INTERNAL_ERROR, FDO_SI_SUCCESS, FDO_SI_INVALID_MOD_ERROR };
 
 typedef struct fdo_sdk_si_key_value {
 	char *key;
@@ -44,25 +47,19 @@ typedef struct fdo_sdk_si_key_value {
 } fdo_sdk_si_key_value;
 
 // callback to module
-typedef int (*fdo_sdk_device_service_infoCB)(fdo_sdk_si_type type, fdow_t *fdow);
-typedef int (*fdo_sdk_owner_service_infoCB)(fdo_sdk_si_type type,
-	fdor_t *fdor, char *module_message);
+typedef int (*fdo_sdk_service_infoCB)(fdo_sdk_si_type type,
+	char *module_message, uint8_t *module_val, size_t *module_val_sz,
+	uint16_t *num_module_messages, bool *has_more, bool *is_more, size_t mtu);
 
 /* module struct for modules */
 typedef struct {
 	bool active;
 	char module_name[FDO_MODULE_NAME_LEN];
-	fdo_sdk_owner_service_infoCB service_info_callback;
+	fdo_sdk_service_infoCB service_info_callback;
 } fdo_sdk_service_info_module;
 
-extern int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message);
-
-// Modules CB
-// TO-DO at a later time
-extern int devconfig(fdo_sdk_si_type type, int *count,
-		     fdo_sdk_si_key_value *si);
-extern int keypair(fdo_sdk_si_type type, int *count, fdo_sdk_si_key_value *si);
-extern int pelionconfig(fdo_sdk_si_type type, int *count,
-			fdo_sdk_si_key_value *si);
+extern int fdo_sys(fdo_sdk_si_type type,
+	char *module_message, uint8_t *module_val, size_t *module_val_sz,
+	uint16_t *num_module_messages, bool *has_more, bool *is_more, size_t mtu);
 
 #endif /* __FDOTYPES_H__ */

@@ -36,8 +36,9 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 	BIGNUM *iv_bn_cur = NULL, *iv_bn_first = NULL, *iv_bn_new = NULL;
 	BIGNUM *ctr_bn = NULL, *ctr_bn_tmp = NULL;
 
-	if (!first_iv || !new_iv)
+	if (!first_iv || !new_iv) {
 		return -1;
+	}
 
 	/* Convert stored iv from buffer to bn */
 	iv_bn_cur = BN_bin2bn(new_iv, iv_len, NULL);
@@ -53,10 +54,11 @@ int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 		goto err;
 	}
 
-	if (aesblocks <= 0xFFFFFFFF)
+	if (aesblocks <= 0xFFFFFFFF) {
 		inc = 1;
-	else
+	} else {
 		inc = 2;
+	}
 
 	ctr_bn = BN_bin2bn(&inc, 1, NULL);
 	if (!ctr_bn) {
@@ -255,16 +257,18 @@ int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
 
 	switch (hash_type) {
 	case FDO_CRYPTO_HASH_TYPE_SHA_256:
-		if (output_length < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE) {
 			return -1;
+		}
 		if (NULL == SHA256((const unsigned char *)buffer, buffer_length,
 				   output)) {
 			return -1;
 		}
 		break;
 	case FDO_CRYPTO_HASH_TYPE_SHA_384:
-		if (output_length < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE) {
 			return -1;
+		}
 		if (NULL == SHA384((const unsigned char *)buffer, buffer_length,
 				   output)) {
 			return -1;
@@ -304,16 +308,18 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 
 	switch (hmac_type) {
 	case FDO_CRYPTO_HMAC_TYPE_SHA_256:
-		if (output_length < SHA256_DIGEST_SIZE)
+		if (output_length < SHA256_DIGEST_SIZE) {
 			return -1;
+		}
 		if (NULL == HMAC(EVP_sha256(), key, key_length, buffer,
 				 (int)buffer_length, output, NULL)) {
 			return -1;
 		}
 		break;
 	case FDO_CRYPTO_HMAC_TYPE_SHA_384:
-		if (output_length < SHA384_DIGEST_SIZE)
+		if (output_length < SHA384_DIGEST_SIZE) {
 			return -1;
+		}
 		if (NULL == HMAC(EVP_sha384(), key, key_length, buffer,
 				 (int)buffer_length, output, NULL)) {
 			return -1;

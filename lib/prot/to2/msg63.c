@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg43 of TO2 state machine.
+ * \brief This file implements msg63 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -32,6 +32,7 @@
  * OVEntryPayload = [
  *   OVEHashPrevEntry: Hash,
  *   OVEHashHdrInfo:   Hash,  ;; hash[GUID||DeviceInfo] in header
+ *   OVEExtra:         null / bstr .cbor OVEExtraInfo
  *   OVEPubKey:        PublicKey
  * ]
  */
@@ -44,10 +45,18 @@ int32_t msg63(fdo_prot_t *ps)
 	fdo_hash_t *current_hp_hash = NULL;
 	fdo_hash_t *temp_hash_hp;
 	fdo_hash_t *temp_hash_hc;
+	fdo_byte_array_t *temp_ove_extra = NULL;
+	size_t ove_extra_len = 0;
 	fdo_public_key_t *temp_pk;
 	int entry_num;
 	fdo_cose_t *cose = NULL;
 	fdo_byte_array_t *cose_encoded = NULL;
+	fdo_byte_array_t *cose_sig_structure = NULL;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -97,8 +106,13 @@ int32_t msg63(fdo_prot_t *ps)
 		goto err;
 	}
 
+	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload, NULL,
+		&cose_sig_structure) || !cose_sig_structure) {
+		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to write COSE Sig_structure\n");
+		goto err;
+	}
 	// verify the received COSE signature
-	if (!fdo_signature_verification(cose->cose_payload,
+	if (!fdo_signature_verification(cose_sig_structure,
 					cose->cose_signature,
 					ps->ovoucher->ov_entries->pk)) {
 		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to verify OVEntry signature\n");
@@ -115,13 +129,13 @@ int32_t msg63(fdo_prot_t *ps)
 	if (!fdow_encoded_length(&ps->fdow, &ps->fdow.b.block_size)) {
 		LOG(LOG_ERROR,
 			"TO2.OVNextEntry: Failed to get encoded COSE length for OVEHashPrevEntry\n");
-		goto err;		
+		goto err;
 	}
 	cose_encoded = fdo_byte_array_alloc(ps->fdow.b.block_size);
 	if (!cose_encoded) {
 		LOG(LOG_ERROR,
 			"TO2.OVNextEntry: Failed to alloc encoded COSE for OVEHashPrevEntry\n");
-		goto err;		
+		goto err;
 	}
 	if (0 != memcpy_s(cose_encoded->bytes, cose_encoded->byte_sz,
 		ps->fdow.b.block, ps->fdow.b.block_size)) {
@@ -154,7 +168,7 @@ int32_t msg63(fdo_prot_t *ps)
 	// start parsing OVEntryPayload
 	size_t num_payloadbasemap_items = 0;
 	if (!fdor_array_length(&ps->fdor, &num_payloadbasemap_items) ||
-		num_payloadbasemap_items != 3) {
+		num_payloadbasemap_items != 4) {
 		LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read array length\n");
 		goto err;
 	}
@@ -192,6 +206,30 @@ int32_t msg63(fdo_prot_t *ps)
 		goto err;
 	}
 
+	// Read OVEntryPayload.OVEExtra
+	if (fdor_is_value_null(&ps->fdor)) {
+		if (!fdor_next(&ps->fdor)) {
+			LOG(LOG_ERROR,
+				"TO2.OVNextEntry: Failed to read OVNextEntry as null\n");
+			goto err;
+		}
+	} else {
+		// Read the bin character length
+		if (!fdor_string_length(&ps->fdor, &ove_extra_len) || ove_extra_len == 0) {
+			LOG(LOG_DEBUG, "TO2.OVNextEntry: Unable to decode length of OVEExtra!\n");
+			goto err;
+		}
+		temp_ove_extra = fdo_byte_array_alloc(ove_extra_len);
+		if (!temp_ove_extra) {
+			LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to alloc for OVEExtra as bstr\n");
+			goto err;
+		}
+		if (!fdor_byte_string(&ps->fdor, temp_ove_extra->bytes, temp_ove_extra->byte_sz)) {
+			LOG(LOG_ERROR, "TO2.OVNextEntry: Failed to read OVEExtra as bstr\n");
+			goto err;
+		}
+	}
+
 	// Read OVEntryPayload.OVEPubKey
 	temp_pk = fdo_public_key_read(&ps->fdor);
 	if (!temp_pk) {
@@ -213,6 +251,7 @@ int32_t msg63(fdo_prot_t *ps)
 	temp_entry->enn = entry_num;
 	temp_entry->hp_hash = temp_hash_hp;
 	temp_entry->hc_hash = temp_hash_hc;
+	temp_entry->ove_extra = temp_ove_extra;
 	temp_entry->pk = temp_pk;
 
 	// Compare OVEHashPrevEntry (msg61 data) with the OVEHashPrevEntry from this message
@@ -305,11 +344,17 @@ err:
 		if (temp_entry->hc_hash) {
 			fdo_hash_free(temp_entry->hc_hash);
 		}
+		if (temp_ove_extra) {
+			fdo_byte_array_free(temp_ove_extra);
+		}
 		fdo_free(temp_entry);
 	}
 	if (cose_encoded) {
 		fdo_byte_array_free(cose_encoded);
 	}
-
+	if (cose_sig_structure) {
+		fdo_byte_array_free(cose_sig_structure);
+		cose_sig_structure = NULL;
+	}
 	return ret;
 }

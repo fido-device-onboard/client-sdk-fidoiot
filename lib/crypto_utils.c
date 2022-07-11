@@ -13,11 +13,10 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "snprintf_s.h"
-#include "base64.h"
 #include "fdoCrypto.h"
 
 /**
- * Encrypt the characters in the clear_txt buffer, place the result and a HMAC
+ * Encrypt the characters in the clear_txt buffer, place the result
  * of the clear text in the cipher_txt object, which must be pre allocated.
  *
  * @param cipher_txt
@@ -26,14 +25,19 @@
  *        Input text to be encrypted.
  * @param clear_txt_size
  *        Plain text size.
+ * @param aad
+ *        Buffer containing the Additonal Authenticated Data (AAD).
+ * @param aad_length
+ *        Size of the aad
  * @return ret
  *        return 0 on success. -1 on failure.
  */
 int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
-		       size_t clear_txt_size)
+		       size_t clear_txt_size, const uint8_t *aad, size_t aad_length)
 {
-	if (NULL == cipher_txt || NULL == clear_txt || 0 == clear_txt_size)
+	if (!cipher_txt || !clear_txt || 0 == clear_txt_size || !aad || 0 == aad_length) {
 		return -1;
+	}
 
 	int ret = -1;
 	uint8_t *temp = NULL;
@@ -58,10 +62,13 @@ int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 
 	// get encryted data
 	if (0 != fdo_msg_encrypt(ct, clear_txt_size, cipher_text,
-				 &cipher_length, cipher_txt->iv)) {
+				 &cipher_length, cipher_txt->iv,
+				 cipher_txt->tag, sizeof(cipher_txt->tag),
+				 aad, aad_length)) {
 		LOG(LOG_ERROR, "Failed to get encrypt.\n");
 		goto end;
 	}
+
 	ret = 0;
 end:
 	if (temp) {
@@ -85,20 +92,23 @@ end:
  *        Cipher text to be decrypted and HMAC to be verified.
  * @param clear_txt
  *        Buffer to place the decrypted text.
+ * @param aad
+ *        Buffer containing the Additonal Authenticated Data (AAD).
+ * @param aad_length
+ *        Size of the aad
  * @return ret
  *        return 0 on success. -1 on failure.
  */
 int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
-		       fdo_byte_array_t *clear_txt)
+		       fdo_byte_array_t *clear_txt, const uint8_t *aad,
+		       size_t aad_length)
 {
 	int ret = -1;
 	uint32_t clear_text_length = 0;
-	fdo_hash_t *cipher_txt_hmac = NULL;
 	uint8_t *cleartext = NULL;
 	int result = -1;
 
-	if (NULL == cipher_txt || NULL == cipher_txt->em_body ||
-	    NULL == cipher_txt->hmac || NULL == cipher_txt->ct_string) {
+	if (!cipher_txt || !cipher_txt->em_body || !aad || 0 == aad_length) {
 		return -1;
 	}
 
@@ -117,37 +127,10 @@ int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
 		goto end;
 	}
 
-	/* Create an HMAC of the decrypted message. */
-	cipher_txt_hmac =
-	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
-
-	if (!cipher_txt_hmac) {
-		LOG(LOG_ERROR, "failed to allocated memory: fdo-hash struct\n");
-		goto end;
-	}
-
-	if (0 != fdo_to2_hmac(cipher_txt->ct_string->bytes,
-			      cipher_txt->ct_string->byte_sz,
-			      cipher_txt_hmac->hash->bytes,
-			      cipher_txt_hmac->hash->byte_sz)) {
-		LOG(LOG_ERROR, "Failed to perform HMAC\n");
-		goto end;
-	}
-
-	/* If the HMACs do not match, give an error. */
-	memcmp_s(cipher_txt_hmac->hash->bytes, cipher_txt_hmac->hash->byte_sz,
-		 cipher_txt->hmac->hash->bytes, cipher_txt_hmac->hash->byte_sz,
-		 &result);
-
-	if (result != 0) {
-		LOG(LOG_ERROR, "fdoAESDecrypt_packet : FAILED, HMACs do "
-			       "not compare\n");
-		goto end;
-	}
-
 	if (0 != fdo_msg_decrypt(
 		     cleartext, &clear_text_length, cipher_txt->em_body->bytes,
-		     cipher_txt->em_body->byte_sz, cipher_txt->iv)) {
+		     cipher_txt->em_body->byte_sz, cipher_txt->iv,
+		     cipher_txt->tag, sizeof(cipher_txt->tag), aad, aad_length)) {
 		LOG(LOG_ERROR, "Failed to Decrypt\n");
 		goto end;
 	}
@@ -169,14 +152,10 @@ int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
 		goto end;
 	}
 
-#ifdef AES_MODE_CTR_ENABLED
-	cipher_txt->offset = cipher_txt->em_body->byte_sz % FDO_AES_BLOCK_SIZE;
-#endif
 	ret = 0;
 end:
-	if (cleartext)
+	if (cleartext) {
 		fdo_free(cleartext);
-	if (cipher_txt_hmac)
-		fdo_hash_free(cipher_txt_hmac);
+	}
 	return ret;
 }

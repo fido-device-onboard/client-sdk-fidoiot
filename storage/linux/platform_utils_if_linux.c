@@ -110,10 +110,12 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 	retval = true;
 
 end:
-	if (fp)
+	if (fp) {
 		fclose(fp);
-	if (p_iv)
+	}
+	if (p_iv) {
 		fdo_free(p_iv);
+	}
 	return retval;
 }
 
@@ -182,8 +184,9 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 	retval = true;
 
 end:
-	if (fp)
+	if (fp) {
 		fclose(fp);
+	}
 	return retval;
 }
 /**
@@ -251,7 +254,8 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 	retval = true;
 
 end:
-	if (fp)
+	if (fp) {
 		fclose(fp);
+	}
 	return retval;
 }

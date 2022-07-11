@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Intel Corporation All Rights Reserved
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
  */
 
 /*!
@@ -263,7 +264,7 @@ TEST_CASE("read_until_new_line", "[OS][HAL][fdo]")
 	bool retval;
 	struct fdo_sock_handle handle = {0};
 
-	fdo_prot_ctx_t *prot_ctx = malloc(sizeof(fdo_prot_ctx_t));
+	fdo_prot_ctx_t *prot_ctx = fdo_alloc(sizeof(fdo_prot_ctx_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 	ret = memset_s(prot_ctx, sizeof(fdo_prot_ctx_t), 0);
 	TEST_ASSERT_EQUAL_INT(0, ret);

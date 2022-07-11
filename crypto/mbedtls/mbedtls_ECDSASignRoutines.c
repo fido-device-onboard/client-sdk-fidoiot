@@ -141,8 +141,9 @@ end:
 	mbedtls_pk_free(&pk_ctx);
 #endif
 	if (privkey) {
-		if (memset_s(privkey, privkeysize, 0) != 0)
+		if (memset_s(privkey, privkeysize, 0) != 0) {
 			LOG(LOG_ERROR, "Memset Failed\n");
+		}
 		fdo_free(privkey);
 	}
 	return ret;

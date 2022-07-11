@@ -18,6 +18,7 @@
  * Convert the stored ecdsa privkey to buffer
  * @param keybuf: valid pointer to receive the pointer to key buffer
  * @param length: length of the key buffer
+ * @return 0 on success, else error
  */
 int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 {
@@ -34,7 +35,7 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 
 	/* Get the ECDSA private key size from storage */
 	privkeysize = fdo_blob_size((char *)ECDSA_PRIVKEY, FDO_SDK_RAW_DATA);
-	if (privkeysize <= 0) {
+	if (privkeysize == 0) {
 		LOG(LOG_ERROR, "No ECDSA private key exists\n");
 		goto err;
 	}
@@ -70,8 +71,9 @@ int load_ecdsa_privkey(unsigned char **keybuf, size_t *length)
 
 err:
 	if (privkey) {
-		if (memset_s(privkey, privkeysize, 0) != 0)
+		if (memset_s(privkey, privkeysize, 0) != 0) {
 			LOG(LOG_ERROR, "Memset Failed\n");
+		}
 		fdo_free(privkey);
 	}
 	return ret;

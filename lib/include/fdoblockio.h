@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include "cbor.h"
 
-#define INT2HEX(i) ((i) <= 9 ? '0' + (i) : 'A' - 10 + (i))
+static inline int INT2HEX(int i) {
+	return (i <= 9 ? '0' + i : 'a' - 10 + i);
+}
 
 // a typical buffer and its associated size
 typedef struct {
@@ -60,17 +62,7 @@ typedef struct _FDOW_s {
 	fdow_cbor_encoder_t *current;
 } fdow_t;
 
-
 #define CBOR_BUFFER_LENGTH 2048
-
-#define FDO_FIX_UP_STR "\"0000\""
-#define FDO_FIX_UP_TEMPL "\"%04x\""
-#define FDO_FIX_UP_LEN 6
-#define FDO_BLOCK_READ_SZ 7 // ["XXXX"
-#define FDO_BLOCKINC 256
-#define FDO_BLOCK_MASK ~255
-#define FDO_OK 0
-#define FDO_BLOCKLEN_SZ 8
 
 // Block methods
 void fdo_block_reset(fdo_block_t *fdob);
@@ -89,6 +81,7 @@ bool fdow_text_string(fdow_t *fdow_cbor, char *bytes , size_t byte_sz);
 bool fdow_signed_int(fdow_t *fdow_cbor, int value);
 bool fdow_unsigned_int(fdow_t *fdow_cbor, uint64_t value);
 bool fdow_boolean(fdow_t *fdow_cbor, bool value);
+bool fdow_tag(fdow_t *fdow, uint64_t tag);
 bool fdow_null(fdow_t *fdow);
 bool fdow_end_array(fdow_t *fdow_cbor);
 bool fdow_end_map(fdow_t *fdow_cbor);
@@ -102,6 +95,7 @@ bool fdor_parser_init(fdor_t *fdor_cbor);
 bool fdor_start_array(fdor_t *fdor);
 bool fdor_start_map(fdor_t *fdor);
 bool fdor_array_length(fdor_t *fdor, size_t *length);
+bool fdor_map_length(fdor_t *fdor, size_t *length);
 bool fdor_string_length(fdor_t *fdor, size_t *length);
 bool fdor_byte_string(fdor_t *fdor, uint8_t *buffer, size_t buffer_length);
 bool fdor_text_string(fdor_t *fdor, char *buffer, size_t buffer_length);
@@ -110,9 +104,12 @@ bool fdor_is_value_signed_int(fdor_t *fdor);
 bool fdor_signed_int(fdor_t *fdor, int *result);
 bool fdor_unsigned_int(fdor_t *fdor, uint64_t *result);
 bool fdor_boolean(fdor_t *fdor, bool *result);
+bool fdor_tag(fdor_t *fdor, uint64_t *tag);
 bool fdor_end_array(fdor_t *fdor);
 bool fdor_end_map(fdor_t *fdor);
+bool fdor_map_has_more(fdor_t *fdor);
 bool fdor_next(fdor_t *fdor);
+bool fdor_is_valid_cbor(fdor_t *fdor);
 void fdor_flush(fdor_t *fdor);
 
 #endif /*__FDOBLOCKIO_H__ */

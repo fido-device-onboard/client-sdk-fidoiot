@@ -12,32 +12,23 @@
 #include "storage_al.h"
 #include <stdbool.h>
 
-#define DATA_FILES "./data/"
-#define MAX_FILENAME_LEN 1024
-
 bool read_normal_device_credentials(const char *dev_cred_file,
 				    fdo_sdk_blob_flags flags,
 				    fdo_dev_cred_t *our_dev_cred);
-bool read_mfg_device_credentials(const char *dev_cred_file,
-				 fdo_sdk_blob_flags flags,
-				 fdo_dev_cred_t *our_dev_cred);
 bool read_secure_device_credentials(const char *dev_cred_file,
 				    fdo_sdk_blob_flags flags,
 				    fdo_dev_cred_t *our_dev_cred);
 bool write_normal_device_credentials(const char *dev_cred_file,
 				     fdo_sdk_blob_flags flags,
 				     fdo_dev_cred_t *our_dev_cred);
-bool write_mfg_device_credentials(const char *dev_cred_file,
-				  fdo_sdk_blob_flags flags,
-				  fdo_dev_cred_t *our_dev_cred);
 bool write_secure_device_credentials(const char *dev_cred_file,
 				     fdo_sdk_blob_flags flags,
 				     fdo_dev_cred_t *our_dev_cred);
-int load_credential(void);
-int load_mfg_secret(void);
+int load_credential(fdo_dev_cred_t *ocred);
+int load_device_secret(void);
 int store_credential(fdo_dev_cred_t *ocred);
-void load_default_data(void);
-fdo_dev_cred_t *app_get_credentials(void);
-fdo_dev_cred_t *app_alloc_credentials(void);
+
+bool load_device_status(fdo_sdk_device_status *state);
+bool store_device_status(fdo_sdk_device_status *state);
 
 #endif /* __LOAD_CREDENTIALS_H__ */

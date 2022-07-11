@@ -5,16 +5,17 @@
 
 /*!
  * \file
- * \brief This file implements msg47 of TO2 state machine.
+ * \brief This file implements msg67 of TO2 state machine.
  */
 
 #include "fdoprot.h"
 #include "fdokeyexchange.h"
 #include "util.h"
+#include "fdoCrypto.h"
 
 /**
  * msg67() - TO2.OwnerServiceInfoReady
- * 
+ *
  * TO2.OwnerServiceInfoReady  = [
  *   maxDeviceServiceInfoSz    ;; maximum size service info that Owner can receive, uint/NULL
  * ]
@@ -24,7 +25,12 @@ int32_t msg67(fdo_prot_t *ps)
 	int ret = -1;
 	char prot[] = "FDOProtTO2";
 	fdo_encrypted_packet_t *pkt = NULL;
-	int rec_maxDeviceServiceInfoSz = 0;
+	uint64_t rec_maxDeviceServiceInfoSz = 0;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -43,7 +49,7 @@ int32_t msg67(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt, ps->iv)) {
+	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt)) {
 		LOG(LOG_ERROR, "TO2.OwnerServiceInfoReady: Failed to decrypt packet!\n");
 		goto err;
 	}
@@ -56,7 +62,7 @@ int32_t msg67(fdo_prot_t *ps)
 	// maxDeviceServiceInfoSz = CBOR NULL implies that MIN_SERVICEINFO_SZ should be accepted
 	// maxDeviceServiceInfoSz = Unsigned Integer implies that the given value should be processed
 	if (fdor_is_value_signed_int(&ps->fdor)) {
-		if (!fdor_signed_int(&ps->fdor, &rec_maxDeviceServiceInfoSz)) {
+		if (!fdor_unsigned_int(&ps->fdor, &rec_maxDeviceServiceInfoSz)) {
 			LOG(LOG_ERROR,
 				"TO2.OwnerServiceInfoReady: Failed to read maxDeviceServiceInfoSz as number\n");
 			goto err;
@@ -74,20 +80,20 @@ int32_t msg67(fdo_prot_t *ps)
 		goto err;
 	}
 
-	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz = %d\n",
+	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz = %"PRIu64"\n",
 		rec_maxDeviceServiceInfoSz);
-	if (rec_maxDeviceServiceInfoSz <= MIN_SERVICEINFO_SZ) {
+	if (rec_maxDeviceServiceInfoSz < MIN_SERVICEINFO_SZ) {
 		// default to minimum and log it
 		ps->maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		LOG(LOG_DEBUG,
 			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is less than "
-			"the minimum size supported. Defaulting to %d\n",
+			"the minimum size supported. Defaulting to %"PRIu64"\n",
 			ps->maxDeviceServiceInfoSz);
-	} else if (rec_maxDeviceServiceInfoSz >= ps->maxDeviceServiceInfoSz) {
+	} else if (rec_maxDeviceServiceInfoSz > ps->maxDeviceServiceInfoSz) {
 		// nothing to do, just log it
 		LOG(LOG_DEBUG,
 			"TO2.OwnerServiceInfoReady: Received maxDeviceServiceInfoSz is more than "
-			"the maximum size supported. Defaulting to %d\n",
+			"the maximum size supported. Defaulting to %"PRIu64"\n",
 			ps->maxDeviceServiceInfoSz);
 	} else {
 		// set the received value
@@ -101,7 +107,7 @@ int32_t msg67(fdo_prot_t *ps)
 		goto err;
 	}
 
-	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Expected Maximum Device ServiceInfo size is %d \n",
+	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady: Expected Maximum Device ServiceInfo size is %"PRIu64"\n",
 	    ps->maxDeviceServiceInfoSz);
 	ps->state = FDO_STATE_T02_SND_GET_NEXT_OWNER_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.OwnerServiceInfoReady completed successfully\n");

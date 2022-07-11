@@ -16,11 +16,7 @@ if(TARGET_OS MATCHES linux)
     -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
     -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
     -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
-    -DEPID_PRIVKEY=\"${BLOB_PATH}/data/epidprivkey.dat\"
-    -DFDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
-    -DMANUFACTURER_IP=\"${BLOB_PATH}/data/manufacturer_ip.bin\"
-    -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
-    -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
+    -DMANUFACTURER_ADDR=\"${BLOB_PATH}/data/manufacturer_addr.bin\"
     -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
     )
   if (${DA} MATCHES tpm)
@@ -32,6 +28,8 @@ if(TARGET_OS MATCHES linux)
        -DTPM_OUTPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_output_data_temp_file\"
        -DTPM_HMAC_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_pub.key\"
        -DTPM_HMAC_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_priv.key\"
+       -DTPM_HMAC_REPLACEMENT_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_pub.key\"
+       -DTPM_HMAC_REPLACEMENT_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_priv.key\"
        -DTPM_HMAC_DATA_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_pub.key\"
        -DTPM_HMAC_DATA_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_priv.key\"
        -DTPM2_TSS_ENGINE_SO_PATH=\"/usr/local/lib/engines-1.1/libtpm2tss.so\"
@@ -41,7 +39,7 @@ if(TARGET_OS MATCHES linux)
     if (${unit-test} MATCHES true)
       if (${DA_FILE} MATCHES pem)
 	client_sdk_compile_definitions(
-          -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\"
+          -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\"
           )
       else()
 	client_sdk_compile_definitions(
@@ -61,7 +59,7 @@ if(TARGET_OS MATCHES linux)
       if (${DA} MATCHES ecdsa256)	#ecdsa 256 selected
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.dat\")
@@ -69,7 +67,7 @@ if(TARGET_OS MATCHES linux)
       else() 				# ecdsa 384 selected
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.dat\")
@@ -101,11 +99,7 @@ if(TARGET_OS MATCHES linux)
       -DPLATFORM_IV=\"${BLOB_PATH}/data/platform_iv.bin\"
       -DPLATFORM_HMAC_KEY=\"${BLOB_PATH}/data/platform_hmac_key.bin\"
       -DPLATFORM_AES_KEY=\"${BLOB_PATH}/data/platform_aes_key.bin\"
-      -DEPID_PRIVKEY=\"${BLOB_PATH}/data/epidprivkey.dat\"
-      -DFDO_CRED=\"${BLOB_PATH}/data/PMDeviceCredentials.bin\"
-      -DMANUFACTURER_IP=\"${BLOB_PATH}/data/manufacturer_ip.bin\"
-      -DMANUFACTURER_DN=\"${BLOB_PATH}/data/manufacturer_dn.bin\"
-      -DMANUFACTURER_PORT=\"${BLOB_PATH}/data/manufacturer_port.bin\"
+      -DMANUFACTURER_ADDR=\"${BLOB_PATH}/data/manufacturer_addr.bin\"
       -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
       )
     if (${unit-test} MATCHES true)
@@ -120,7 +114,7 @@ if(TARGET_OS MATCHES linux)
 	)
       if (${DA_FILE} MATCHES pem)
 	client_sdk_compile_definitions(
-	  -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\")
+	  -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.pem\")
       else()
 	client_sdk_compile_definitions(
 	  -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.dat\")
@@ -139,7 +133,7 @@ if(TARGET_OS MATCHES linux)
       if (${DA} MATCHES ecdsa256)
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.dat\")
@@ -147,7 +141,7 @@ if(TARGET_OS MATCHES linux)
       else()
 	if (${DA_FILE} MATCHES pem)
 	  client_sdk_compile_definitions(
-	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
+	    -DECDSA_PEM -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa256privkey.pem\")
 	else()
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.dat\")

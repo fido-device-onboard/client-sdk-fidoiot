@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg45 of TO2 state machine.
+ * \brief This file implements msg65 of TO2 state machine.
  */
 
 #include "fdoprot.h"
@@ -36,6 +36,12 @@ int32_t msg65(fdo_prot_t *ps)
 	char prot[] = "FDOProtTO2";
 	fdo_encrypted_packet_t *pkt = NULL;
 	fdo_cose_t *cose = NULL;
+	fdo_byte_array_t *cose_sig_structure = NULL;
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	if (!fdo_check_to2_round_trips(ps)) {
 		goto err;
@@ -55,7 +61,7 @@ int32_t msg65(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt, ps->iv)) {
+	if (!fdo_encrypted_packet_unwind(&ps->fdor, pkt)) {
 		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to decrypt packet!\n");
 		goto err;
 	}
@@ -164,8 +170,14 @@ int32_t msg65(fdo_prot_t *ps)
 		goto err;
 	}
 
+	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload, NULL,
+		&cose_sig_structure) || !cose_sig_structure) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to write COSE Sig_structure\n");
+		goto err;
+	}
+
 	// verify the received COSE signature
-	if (!fdo_signature_verification(cose->cose_payload,
+	if (!fdo_signature_verification(cose_sig_structure,
 					cose->cose_signature,
 					ps->osc->pubkey)) {
 		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to verify OVEntry signature\n");
@@ -185,6 +197,9 @@ err:
 		fdo_cose_free(cose);
 		cose = NULL;
 	}
-
+	if (cose_sig_structure) {
+		fdo_byte_array_free(cose_sig_structure);
+		cose_sig_structure = NULL;
+	}
 	return ret;
 }

@@ -18,7 +18,7 @@ include(cmake/blob_path.cmake)
 
 
 if (NOT(DEFINED ENV{SAFESTRING_ROOT}))
-  message(FATAL_ERROR "SAFESTING_ROOT not set")
+  message(FATAL_ERROR "SAFESTRING_ROOT not set")
 endif()
 
 if (NOT(DEFINED ENV{TINYCBOR_ROOT}))
@@ -37,6 +37,7 @@ client_sdk_compile_options(
   -Wswitch-default
   -Wunused-parameter
   -Wsign-compare
+  -Wno-deprecated-declarations
   -Wpedantic
   -Werror
   -Wimplicit-function-declaration
@@ -74,9 +75,7 @@ add_subdirectory(lib)
 add_subdirectory(network)
 add_subdirectory(storage)
 add_subdirectory(crypto)
-if (${MODULES} MATCHES true)
-  add_subdirectory(device_modules)
-endif()
+add_subdirectory(device_modules)
 
 endif()
 

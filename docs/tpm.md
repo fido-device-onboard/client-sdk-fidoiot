@@ -1,45 +1,140 @@
+
+
+
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO build and execution depend on OpenSSL* toolkit version 1.1.1k. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO build and execution depend on OpenSSL* toolkit version 1.1.1n. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
-## 1. Packages Requirements when Setting up TPM* 2.0 (on Ubuntu* OS version 20.04)
+## 1. Packages Requirements when Setting up TPM* 2.0
 
-OpenSSL* toolkit version 1.1.1k. Follow the steps given in section 9 to update the OpenSSL* version to 1.1.1k.
+* On RHEL* OS version 8.4:
+```shell
+sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
+sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo yum -y install perl-Module-Load-Conditional perl-core
+```
 
-## 2. TPM* Library Installation (for Ubuntu* OS version 20.04)
+OpenSSL* toolkit version 1.1.1n.
+
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1n
+
+1. If libssl-dev is installed, remove it:
+	```
+	sudo apt-get remove --auto-remove libssl-dev
+	sudo apt-get remove --auto-remove libssl-dev:i386
+	```
+2. Pull the tarball:
+	```
+	wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
+	```
+3. Unpack the tarball with:
+	```
+	tar -zxf openssl-1.1.1n.tar.gz && cd openssl-1.1.1n
+	```
+4. Issue the command:
+	```
+	./config
+	```
+5. Issue the command:
+	```
+	make
+	```
+	  (You may need to run `sudo apt/yum install make gcc` before running this command successfully).
+
+6. Check for possible errors:
+	```
+	make test
+	```
+7. Backup the current OpenSSL* binary:
+	```
+	sudo mv /usr/bin/openssl ~/tmp
+	```
+8. Issue the command:
+	```
+	sudo make install
+	```
+9. Create a symbolic link from the newly installed binary to the default location:
+	```
+	sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
+	```
+10. Run the command to update symlinks and rebuild the library cache:
+	```
+	sudo ldconfig
+	```
+11. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.
+Issue the following command from the terminal:
+	```
+	openssl version
+	```
+	  Your output should be as follows:
+	```
+	OpenSSL* 1.1.1n  15 Mar 2022
+	```
+
+## 2. TPM* Library Installation
 
 TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
-* Script usage command
-
+**Script usage command**
+* **On Ubuntu OS version 20.04:**
 ```shell
-$ ./install_tpm_libs.sh -h
+sudo ./install_tpm_libs.sh -h
 ```
 
 * TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
 
-```shell
-# Command to install tpm-tss library
-$ ./install_tpm_libs.sh -t
-
-# Command to uninstall tpm-tss library
-$ ./install_tpm_libs.sh -d
-```
+	* Command to install tpm-tss library
+	```
+	sudo ./install_tpm_libs.sh -t
+	```
+	* Command to uninstall tpm-tss library
+	```
+	sudo ./install_tpm_libs.sh -d
+	```
 
 * TPM* setup to enable TPM* enabled FDO Client SDK code compilation and execution
 
-```shell
-# Command to install TPM* libraries
-$ ./install_tpm_libs.sh -i
+	* Command to install TPM* libraries
+	```
+	sudo ./install_tpm_libs.sh -i
+	```
 
-# Command to uninstall TPM* libraries
-$ ./install_tpm_libs.sh -u
+	* Command to uninstall TPM* libraries
+	```
+	sudo ./install_tpm_libs.sh -u
+	```
+* **On RHEL\* OS version 8.4:**
+> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4.
+```shell
+sudo ./install_tpm_libs_rhel.sh -h
 ```
-> ***NOTE***: Installation of these components may require elevated permissions. Please use 'sudo' to execute the script.
+
+* TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
+
+	* Command to install tpm-tss library
+	```
+	sudo ./install_tpm_libs_rhel.sh -t
+	```
+	* Command to uninstall tpm-tss library
+	```
+	sudo ./install_tpm_libs_rhel.sh -d
+	```
+
+* TPM* setup to enable TPM* enabled FDO Client SDK code compilation and execution
+
+	* Command to install TPM* libraries
+	```
+	sudo ./install_tpm_libs_rhel.sh -i
+	```
+
+	* Command to uninstall TPM* libraries
+	```
+	sudo ./install_tpm_libs_rhel.sh -u
+	```
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM*)
 
@@ -53,7 +148,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
 
@@ -67,7 +162,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see section on Compiling FDO.
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
@@ -79,7 +174,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
 
@@ -91,7 +186,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0.zip)
 
-  - Build and Install Process
+  - Build and Installation Process
 
     The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0/INSTALL.md)
 
@@ -100,8 +195,8 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
- $ mkdir obj
- $ make
+ mkdir obj
+ make
  ```
 After this step, `libsafestring.a` library will be created.
 
@@ -109,7 +204,7 @@ After this step, `libsafestring.a` library will be created.
 FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
 From the root of the TinyCBOR (named `tinycbor`), do the following:
  ```shell
- $ make
+ make
  ```
 
 ## 5. Environment Variables
@@ -117,13 +212,13 @@ From the root of the TinyCBOR (named `tinycbor`), do the following:
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
 Provide safestringlib and tinycbor path:
 ```shell
-$ export SAFESTRING_ROOT=path/to/safestringlib
-$ export TINYCBOR_ROOT=path/to/tinycbor
+export SAFESTRING_ROOT=path/to/safestringlib
+export TINYCBOR_ROOT=path/to/tinycbor
 ```
 
 ## 6. Compiling FDO Client SDK
 
-The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
+The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  It assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
 Refer the TPM* Library Setup steps given in section 2 to compile TPM* enabled FDO Client SDK. 
 
@@ -133,50 +228,47 @@ Example command to build TPM* enabled FDO Client SDK with the Resource Manager a
 
 ```shell
 make pristine
-cmake -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 .
+cmake -DDA=tpm20_ecdsa256 .
 make -j$(nproc)
 ```
 
 To use the in-kernel Resource Manager '/dev/tpmrm0', use the following command
 ```shell
 make pristine
-cmake -DPK_ENC=ecdsa -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
+cmake -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
 make -j$(nproc)
 ```
 
-Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), key-exchange methods (KEX), Public-key encoding (PK_ENC) type, and SSL support (TLS).
+Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section [FDO Build configurations](build_conf.md)
+
+> ***NOTE***: Currently, only Elliptic-Curve (EC) cryptography keys based on `NIST P-256` or `secp256r1` are supported for TPM* enabled FDO Client SDK due to limitations on testing with the available hardware that does not support keys based on `NIST P-384`. Consequently, this configuration only supports usage of 128-bit key for AES operations (GCM/CCM) and generates 256-bit HMAC.
 
 <a name="run_linux_fdo"></a>
 
 ## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
 The TPM* enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
-To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
-[FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
-[FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
+To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md), [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
-Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK
+Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK.
 
-After a successful compilation, the  FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
+After a successful compilation, the FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
 
-- Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer
+- Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer.
   Refer to [ Device Initialization Setup ](DI_setup.md).
   Then, execute the TPM* make ready script. Refer to [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh).
-  Alternatively, perform the steps listed in section 8.1 to initialise the device without using
-  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
+  Alternatively, perform the steps listed in section 7.1 to initialise the device without using [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script.
 
   Script execution command:
 
   ```shell
-  $ ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
+  ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
   ```
 
-- Once the TPM* make ready script is executed successfully, the device is now initialized
-  with the credentials and is ready for ownership transfer. To run the device against the
-  FDO PRI Manufacturer for the DI protocol, do the following:
+- Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
-  $ ./build/linux-client
+  ./build/linux-client
   ```
 
 - To enable the device for Transfer Ownership protocol (TO1 and TO2), configure the FDO PRI Rendezvous and Owner.
@@ -184,7 +276,7 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
   After these are set up, execute `linux-client` again.
   
   ```shell
-  $ ./build/linux-client
+  ./build/linux-client
   ```
 
 > ***NOTE***: If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
@@ -196,112 +288,55 @@ After a successful compilation, the  FDO Client SDK Linux device executable can 
   Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
 
   ```shell
-  $ tpm2_getcap handles-persistent
+  tpm2_getcap handles-persistent
   ```
 
 
 - Primary Key Generation from Endorsement Hierarchy
 
   ```shell
-  $ tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
+  tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
   ```
 
 - Load the Primary Key into TPM* Persistent Memory
 
   ```shell
-  $ tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
+  tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
   ```
 
 - Device ECDSA Key-Pair Generation
 
   ```shell
-  $ tpm2tss-genkey -a ecdsa -c nist_p256 data/tpm_ecdsa_priv_pub_blob.key -v -P 0x81000001
+  tpm2tss-genkey -a ecdsa -c nist_p256 data/tpm_ecdsa_priv_pub_blob.key -v -P 0x81000001
   ```
 
 - Generate Device MString
 
   ```shell
-  $ export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/; openssl req -new -engine tpm2tss -keyform engine -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
+  export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/; openssl req -new -engine tpm2tss -keyform engine -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
   ```
 
 ## 8. Troubleshooting Details
 
-- TPM* Authorization Failure while Running tpm2-tools Command.<br />
-  Clear TPM* from the BIOS. To run the TPM* enabled FDO Client SDK implementation, the TPM* on the device should not be owned.
-  To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your 
-  device, refer to your device manual.
+- TPM* Authorization Failure while Running tpm2-tools Command. <br />
+Clear TPM* from the BIOS. To run the TPM* enabled FDO Client SDK implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your device, refer to your device manual.
 
 - Clear the Used Persistent Index in TPM*.<br />
-  Use the tpm2_evictcontrol command to delete the content or clear TPM* from the BIOS. To run the TPM* based FDO 
-  implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*.
-  To find the location of the option in the BIOS of your device, refer to your device manual.
+Use the tpm2_evictcontrol command to delete the content or clear TPM* from the BIOS. To run the TPM* based FDO implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your device, refer to your device manual.
 
   Assuming that the index is 0x81000001, run the following command to delete the keys.
 
   ```shell
-  $ tpm2_evictcontrol -C o -c 0x81000001 -V
+  tpm2_evictcontrol -C o -c 0x81000001 -V
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1k for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 1.1.1n for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
-  $ openssl version
+  openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1k, follow the steps given in section 9 to update the OpenSSL* version to 1.1.1k.
+  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1n, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1n.
 
-## 9. Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1k
 
-```shell
-# 1. If libssl-dev is installed, remove it:
-
-  $ sudo apt-get remove --auto-remove libssl-dev
-  $ sudo apt-get remove --auto-remove libssl-dev:i386
-
-# 2. Pull the tarball: 
-
-  $ wget https://www.openssl.org/source/openssl-1.1.1k.tar.gz
-
-# 3. Unpack the tarball with 
-
-  $ tar -zxf openssl-1.1.1k.tar.gz && cd openssl-1.1.1k
-
-# 4. Issue the command 
-
-  $ ./config
-
-# 5. Issue the command 
-
-  $ make 
-  (You may need to run `sudo apt install make gcc` before running this command successfully).
-
-# 6. Check for possible errors.
-
-  $ make test
-
-# 7. Backup the current OpenSSL* binary
-
-  $ sudo mv /usr/bin/openssl ~/tmp
-
-# 8. Issue the command
-
-  $ sudo make install
-
-# 9. Create a symbolic link from the newly installed binary to the default location:
-
-  $ sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
-
-# 10. Run the command to update symlinks and rebuild the library cache.
-
-  $ sudo ldconfig
-
-# 11. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.
-# Issue the following command from the terminal:
-
-  $ openssl version
-
-  Your output should be as follows:
-
-  OpenSSL* 1.1.1k  25 Mar 2021
-```

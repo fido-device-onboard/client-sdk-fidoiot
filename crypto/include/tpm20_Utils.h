@@ -13,11 +13,7 @@
 #define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160 160
 #define TPM_HMAC_PUB_KEY_CONTEXT_SIZE 48
 
-#if defined(ECDSA256_DA)
 #define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P256
-#else
-#define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P384
-#endif
 
 #define TPM2_ZEROISE_FREE(ref)                                                 \
 	{                                                                      \
@@ -100,6 +96,8 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 			 size_t hmac_length, char *tpmHMACPub_key,
 			 char *tpmHMACPriv_key);
 int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key);
+int32_t fdo_tpm_commit_replacement_hmac_key(void);
+void fdo_tpm_clear_replacement_hmac_key(void);
 int32_t is_valid_tpm_data_protection_key_present(void);
 
 #endif /* #ifndef __TPM20_UTILS_H__ */

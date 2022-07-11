@@ -2,7 +2,7 @@ node('ccode'){
     withEnv([
         'REPO_Safestring=https://github.com/intel/safestringlib.git',
         'REPO_TinyCBOR=https://github.com/intel/tinycbor.git',
-        "TEST_DIR=${WORKSPACE}/sdo-test",
+        "TEST_DIR=${WORKSPACE}/test-fidoiot",
         "MANUFACTURER_DB_CONNECT_STRING=jdbc:mariadb://127.0.0.1:3306/sdo",
         "RESELLER_DB_CONNECT_STRING=jdbc:mariadb://127.0.0.1:4306/sdo"
       ])
@@ -42,24 +42,25 @@ node('ccode'){
         export TINYCBOR_ROOT=$WORKSPACE/tinycbor
         echo $TINYCBOR_ROOT
         cd $WORKSPACE/client-sdk
-        $WORKSPACE/client-sdk/cDevice_Build.sh
-        tar -cvzf x86_ecdsa256_c_sct_bin.tar.gz ecdsa256_c_sct_device_bin
-        tar -cvzf x86_ecdsa384_c_sct_bin.tar.gz ecdsa384_c_sct_device_bin
+        $WORKSPACE/client-sdk/build.sh
+        mkdir client-sdk-binaries
+        cd client-sdk-binaries
+        cp -r ../x86_ecdsa256_gcm_bin .
+        cp -r ../x86_ecdsa256_ccm_bin .
+        cp -r ../x86_ecdsa384_gcm_bin .
+        cp -r ../x86_ecdsa384_ccm_bin .
+        cp -r ../tpm_ecdsa256_gcm_bin .
+        cp -r ../tpm_ecdsa256_ccm_bin .
+        mkdir utils
+        cp ../utils/tpm_make_ready_ecdsa.sh utils/
+        cp ../utils/install_tpm_libs.sh utils/
+        cp ../utils/install_tpm_libs_rhel.sh utils/
+        cp ../utils/keys_gen.sh utils/
+        cd ..
+        tar -cvzf client-sdk-binaries.tar.gz client-sdk-binaries
       '''
       print "Archive the artifacts"
-      archiveArtifacts artifacts: 'client-sdk/x86_*.tar.gz', fingerprint: true, allowEmptyArchive: false
-    }
-
-    stage('Build TPM'){
-      sh '''
-        export SAFESTRING_ROOT=$WORKSPACE/safestringlib
-        export TINYCBOR_ROOT=$WORKSPACE/tinycbor
-        cd $WORKSPACE/client-sdk
-        ./cDevice_Build_tpm.sh
-        tar -cvzf tpm_ecdsa_c_device_bin.tar.gz tpm_ecdsa_c_device_bin
-      '''
-      print "Archive the artifacts"
-      archiveArtifacts artifacts: 'client-sdk/tpm_*.tar.gz', fingerprint: true, allowEmptyArchive: false
+      archiveArtifacts artifacts: 'client-sdk/client-sdk-binaries.tar.gz', fingerprint: true, allowEmptyArchive: false
     }
 
   try
@@ -67,38 +68,39 @@ node('ccode'){
     stage('Run Smoketest')
     {
       // Checking out the smoke test code
-      checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'sdo-test']], userRemoteConfigs: [[credentialsId: 'sdo-automationgithubtoken', url: 'https://github.com/secure-device-onboard-ci/sdo-test']]])
+      checkout([$class: 'GitSCM', branches: [[name: '*/master']], extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'test-fidoiot']], userRemoteConfigs: [[credentialsId: 'sdo-automationgithubtoken', url: 'https://github.com/secure-device-onboard/test-fidoiot']]])
 
       // Creating the required directories
       sh '''
-        mkdir -p sdo-test/binaries/pri-fidoiot
-        mkdir -p sdo-test/binaries/client-sdk-fidoiot
+        mkdir -p test-fidoiot/binaries/pri-fidoiot
+        mkdir -p test-fidoiot/binaries/client-sdk-fidoiot
       '''
 
       // Copying the contents to the folder
       print "Copying PRI and Client-SDK artifacts"
-      copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'sdo-test/binaries/pri-fidoiot/'
+      copyArtifacts filter: 'demo.tar.gz', fingerprintArtifacts: true, projectName: 'pri-fidoiot/master', selector: lastSuccessful(), target: 'test-fidoiot/binaries/pri-fidoiot/'
       print "Extracting PRI and Client-SDK artifacts"
       sh '''
-        tar -xvzf sdo-test/binaries/pri-fidoiot/demo.tar.gz
-        cp -r demo/* sdo-test/binaries/pri-fidoiot/
-        cp client-sdk/ecdsa256_c_sct_device_bin/linux-client sdo-test/binaries/client-sdk-fidoiot/
-        cp -r client-sdk/ecdsa256_c_sct_device_bin/data sdo-test/
+        tar -xvzf test-fidoiot/binaries/pri-fidoiot/demo.tar.gz
+        cp -r demo/* test-fidoiot/binaries/pri-fidoiot/
+
+        cp client-sdk/x86_ecdsa256_gcm_bin/linux-client test-fidoiot/binaries/client-sdk-fidoiot/
+        cp -r client-sdk/x86_ecdsa256_gcm_bin/data test-fidoiot/
+        bash client-sdk/utils/keys_gen.sh test-fidoiot/
       '''
 
-      // Updating the TO0 scheduling time interval
+      // Updating the manufacturer address
       sh '''
-        cd sdo-test/binaries/pri-fidoiot/owner
-        sed -i 's/300/60/g' owner.env
+        cd test-fidoiot/data
+        sed -i 's/8039/8080/g' manufacturer_addr.bin
       '''
-      
+
       // Setting the TEST_DIR and executing smoke test
       sh'''
-        cd sdo-test/
+        cd test-fidoiot/
         export TEST_DIR=`pwd`
         mvn clean test -Dgroups=fdo_clientsdk_smoketest
       '''
-    
     }
   }
   finally
@@ -106,10 +108,10 @@ node('ccode'){
     // Remove the files
     print "Removing the files"
     sh'''
-      rm -f sdo-test/linux64.sh
-      rm -f sdo-test/payload.bin
-      rm -f sdo-test/result.txt
-      rm -rf sdo-test/data
+      rm -f test-fidoiot/linux64.sh
+      rm -f test-fidoiot/payload.bin
+      rm -f test-fidoiot/result.txt
+      rm -rf test-fidoiot/data
     '''
     print "Pruning docker containers"
     sh'''

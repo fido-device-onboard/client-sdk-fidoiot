@@ -24,9 +24,10 @@
 // maximum supported length is 8192 + 700. Rounding it to 9000
 #define REST_MAX_MSGBODY_SIZE 9000
 #define HTTP_SUCCESS_OK 200
-#define DEFAULT_DELAYSEC 120
 #define IP_TAG_LEN 16   // e.g. 192.168.111.111
 #define MAX_PORT_SIZE 6 // max port size is 65536 + 1null char
+
+#define ISASCII(ch) ((ch & ~0x7f) == 0)
 
 // REST context
 typedef struct Rest_ctx_s {

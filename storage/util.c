@@ -29,8 +29,9 @@ bool file_exists(char const *filename)
 	}
 	fp = fopen(filename, "rb");
 	if (fp) {
-		if (fclose(fp) == EOF)
+		if (fclose(fp) == EOF) {
 			LOG(LOG_INFO, "Fclose Failed");
+		}
 		return true;
 	}
 	return false;
@@ -47,8 +48,9 @@ size_t get_file_size(char const *filename)
 	if (fp) {
 		fseek(fp, 0, SEEK_END);
 		file_length = ftell(fp);
-		if (fclose(fp) == EOF)
+		if (fclose(fp) == EOF) {
 			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	return file_length;
 }
@@ -56,7 +58,7 @@ size_t get_file_size(char const *filename)
 /**
  * Internal API
  */
-int read_buffer_from_file(const char *filename, void *buffer, size_t size)
+int read_buffer_from_file(const char *filename, uint8_t *buffer, size_t size)
 {
 	FILE *file = NULL;
 	size_t bytes_read = 0;
@@ -68,58 +70,17 @@ int read_buffer_from_file(const char *filename, void *buffer, size_t size)
 
 	bytes_read = fread(buffer, 1, size, file);
 	if (bytes_read != size) {
-		if (fclose(file) == EOF)
+		if (fclose(file) == EOF) {
 			LOG(LOG_INFO, "Fclose Failed");
+		}
 		return -1;
 	}
 
-	if (fclose(file) == EOF)
+	if (fclose(file) == EOF) {
 		LOG(LOG_INFO, "Fclose Failed");
+	}
 	return 0;
 }
-
-#if 0
-/* API not in use ! */
-/**
- * Internal API
- */
-void *new_buffer_from_file(const char *filename, size_t *size)
-{
-	void *buffer = NULL;
-	size_t len = 0;
-
-	if (!file_exists(filename)) {
-		LOG(LOG_ERROR, "Cannot access '%s'\n", filename);
-		return NULL;
-	}
-
-	len = get_file_size(filename);
-	if (len == 0) {
-		LOG(LOG_ERROR, "Cannot load empty file '%s'\n", filename);
-		return NULL;
-	}
-
-	buffer = fdo_alloc(len);
-	if (!buffer) {
-		LOG(LOG_ERROR, "Failed to allocate memory\n");
-		return NULL;
-	}
-
-	LOG(LOG_DEBUG, "Reading %s\n", filename);
-
-	if (0 != read_buffer_from_file(filename, buffer, len)) {
-		LOG(LOG_ERROR, "Failed to read from `%s`\n", filename);
-		fdo_free(buffer);
-		return NULL;
-	}
-
-	if (size) {
-		*size = len;
-	}
-
-	return buffer;
-}
-#endif
 
 /**
  * Internal API
@@ -248,12 +209,19 @@ void hexdump(const char *message, const void *buffer, size_t size)
 /**
  * Internal API
  */
-void *fdo_alloc(int size)
+void *fdo_alloc(size_t size)
 {
-	void *buf = malloc(size);
+	void *buf = NULL;
 
+	if (size == 0 || size > R_MAX_SIZE) {
+		LOG(LOG_ERROR, "Failed, size should be between 1 and %d\n",
+			R_MAX_SIZE);
+		goto end;
+	}
+
+	buf = malloc(size);
 	if (!buf) {
-		LOG(LOG_ERROR, "%s failed to allocate\n",__func__);
+		LOG(LOG_ERROR, "failed to allocate\n");
 		goto end;
 	}
 

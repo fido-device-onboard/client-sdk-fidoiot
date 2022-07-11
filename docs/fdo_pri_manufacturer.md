@@ -1,17 +1,18 @@
+
 # FIDO Device Onboard (FDO) Protocol Reference Implementation (PRI) Manufacturer
 The FDO PRI Manufacturer generates a device certificate based on the Elliptic Curve Digital Signature Algorithm (ECDSA) as part of the Device Initialization (DI) protocol, enabling a seamless Ownership Transfer of the device to the new owner.
 
 ## DI.AppStart
 - This is the first message sent by the device to start the Ownership Transfer.
 
-- The message is sent to the FDO PRI Manufacturer in the manufacturer’s premises with a Certificate Signing Request (CSR).
+- The message is sent to the FDO PRI Manufacturer in the manufacturer's premises with a Certificate Signing Request (CSR).
 
 - The FDO PRI Manufacturer uses this CSR to generate the Device Certificate and passes the Device Certificate on as an
   authentication mechanism for the device using the ECDSA public/private key cryptography.
 
 ## Supported Configuration
 ```
-make PK_ENC=ecdsa DA=ecdsa256
+make DA=ecdsa256
 ```
 
 ## Known Limitations
@@ -22,7 +23,7 @@ make PK_ENC=ecdsa DA=ecdsa256
    ```
    FILE: lib/m-string.c
    DeviceMfgInfo Format: [<key type id>, <serial number>, <model number>, <csr>]
-   key type id  : ECDSA256 = -7 and ECDSA384 = -35
+   key type id  : ECDSA256 = 10 and ECDSA384 = 11
    serial number: To be filled
    model number : Can be an empty string
    csr          : ECC-based Certificate Signing Request
@@ -58,3 +59,4 @@ make PK_ENC=ecdsa DA=ecdsa256
    ```
    Marked combinations in the preceding table are supported.
 
+4. If the onboarding fails during TO2, any artifacts created by the fdosys module may not be deleted. Delete these files from clients if the ServiceInfo fails halfway through.

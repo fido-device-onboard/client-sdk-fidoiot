@@ -336,6 +336,10 @@ err:
 	}
 	TPM2_ZEROISE_FREE(validation);
 	TPM2_ZEROISE_FREE(outHMAC);
+	memset_s(&unmarshalHMACPriv_key, sizeof(unmarshalHMACPriv_key), 0);
+	memset_s(&unmarshalHMACPub_key, sizeof(unmarshalHMACPub_key), 0);
+	memset_s(bufferTPMHMACPriv_key, sizeof(bufferTPMHMACPriv_key), 0);
+	memset_s(bufferTPMHMACPub_key, sizeof(bufferTPMHMACPub_key), 0);
 
 	return ret;
 }
@@ -619,6 +623,7 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 {
 	int ret = -1, is_failed = 0;
 	TSS2_TCTI_CONTEXT *tcti_context = NULL;
+	TSS2_RC rc = TPM2_RC_FAILURE;
 
 	if (!esys_context || !*esys_context) {
 		LOG(LOG_ERROR, "Invalid parameter received.\n");
@@ -650,11 +655,19 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 		}
 	}
 
-	Esys_GetTcti(*esys_context, &tcti_context);
+	rc = Esys_GetTcti(*esys_context, &tcti_context);
+	if (rc != TPM2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to cleanup TCTI.\n");
+		is_failed = 1;
+	}
 	Esys_Finalize(esys_context);
 
 	if (tcti_context) {
 		Tss2_TctiLdr_Finalize(&tcti_context);
+		if (tcti_context) {
+			LOG(LOG_ERROR, "Failed to finalize context.\n");
+			is_failed = 1;
+		}
 	}
 
 	if (is_failed) {
@@ -662,6 +675,109 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 	}
 
 	return 0;
+}
+
+/**
+ * Replace the TPM_HMAC_PRIV_KEY with TPM_HMAC_REPLACEMENT_PRIV_KEY and
+ * TPM_HMAC_PUB_KEY with TPM_HMAC_REPLACEMENT_PUB_KEY.
+ *
+ * @return
+ *		-1, error
+ *		0, success
+ */
+int32_t fdo_tpm_commit_replacement_hmac_key(void)
+{
+	size_t file_size = 0;
+	// internal return value
+	int32_t ret_val = -1;
+	// function return value
+	int32_t ret = -1;
+	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160] = {0};
+	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
+
+	if (!file_exists(TPM_HMAC_PRIV_KEY) ||
+		!file_exists(TPM_HMAC_PUB_KEY) ||
+		!file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY) ||
+		!file_exists(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
+		LOG(LOG_ERROR, "One or more HMAC objects are missing.\n");
+		goto err;
+	}
+
+	// read TPM_HMAC_REPLACEMENT_PRIV_KEY contents and write it into TPM_HMAC_PRIV_KEY
+	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PRIV_KEY);
+
+	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
+	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160) {
+		LOG(LOG_ERROR, "TPM HMAC Replacement Private Key file size incorrect.\n");
+		goto err;
+	}
+
+	LOG(LOG_DEBUG,
+	    "TPM HMAC Replacement Private Key file size retreived successfully.\n");
+
+	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PRIV_KEY, bufferTPMHMACPriv_key,
+					file_size);
+
+	if (ret_val != 0) {
+		LOG(LOG_ERROR,
+		    "Failed to load TPM HMAC Replacement Private Key into buffer.\n");
+		goto err;
+	}
+
+	if ((int32_t)file_size !=
+	    fdo_blob_write(TPM_HMAC_PRIV_KEY, FDO_SDK_RAW_DATA,
+			bufferTPMHMACPriv_key, file_size)) {
+		LOG(LOG_ERROR, "Failed to save the private HMAC key context.\n");
+		goto err;
+	}
+
+	// now, read TPM_HMAC_REPLACEMENT_PUB_KEY contents and write it into TPM_HMAC_PUB_KEY
+	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PUB_KEY);
+
+	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
+		LOG(LOG_ERROR, "TPM HMAC Replacement Public Key file size incorrect.\n");
+		goto err;
+	}
+
+	LOG(LOG_DEBUG,
+	    "TPM HMAC Replacement Public Key file size retreived successfully.\n");
+
+	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PUB_KEY, bufferTPMHMACPub_key,
+					file_size);
+
+	if (ret_val != 0) {
+		LOG(LOG_ERROR,
+		    "Failed to load TPM HMAC Replacement Public key into buffer.\n");
+		goto err;
+	}
+
+	if ((int32_t)file_size !=
+	    fdo_blob_write(TPM_HMAC_PUB_KEY, FDO_SDK_RAW_DATA,
+			bufferTPMHMACPub_key, file_size)) {
+		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
+		goto err;
+	}
+	ret = 0;
+err:
+	return ret;
+}
+
+/**
+ * Clear the Replacement TPM HMAC key objects, if they exist.
+ * 
+ */
+void fdo_tpm_clear_replacement_hmac_key(void) {
+	// remove the files if they exist, else return
+	if (file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
+		if (0 != remove(TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
+			LOG(LOG_ERROR, "Failed to cleanup private object\n");
+		}
+	}
+	if (file_exists(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
+		if (0 != remove(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
+			LOG(LOG_ERROR, "Failed to cleanup public object\n");
+		}
+	}
 }
 
 /**

@@ -39,17 +39,19 @@ static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
 	int n = 0;
 	char c = 0;
 
-	if (!out || !size)
+	if (!out || !size) {
 		return false;
+	}
 
 	--size; // leave room for NULL
 	sz = 0;
 	for (;;) {
 
-		if (ssl)
+		if (ssl) {
 			n = fdo_ssl_read(ssl, (uint8_t *)&c, 1);
-		else
+		} else {
 			n = mos_socket_recv(handle, (uint8_t *)&c, 1, 0);
+		}
 
 		if (n <= 0) {
 			LOG(LOG_ERROR,
@@ -58,18 +60,21 @@ static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
 			    n, errno, __LINE__);
 			return false;
 		}
-		if (sz < size)
+		if (sz < size) {
 			out[sz++] = c;
+		}
 
-		if (c == '\n')
+		if (c == '\n') {
 			break;
+		}
 	}
 	out[sz] = 0;
 	/* remove \n and \r and don't process invalid string */
 	if ((sz < size) && (sz >= 1)) {
 		out[--sz] = 0; // remove NL
-		if ((sz >= 1) && (out[sz - 1] == '\r'))
+		if ((sz >= 1) && (out[sz - 1] == '\r')) {
 			out[--sz] = 0; // ... remove CRNL
+		}
 	}
 	return true;
 }
@@ -159,8 +164,9 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 	char *ipv4 = NULL;
 	char port_s[MAX_PORT_SIZE] = {0};
 
-	if (!ip_addr)
+	if (!ip_addr) {
 		goto end;
+	}
 	if (ssl) {
 		/*
 		 * Convert ip binary to string format as required by
@@ -203,8 +209,9 @@ end:
  */
 int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl)
 {
-	if (ssl) // SSL disconnect
+	if (ssl) { // SSL disconnect
 		fdo_ssl_close(ssl);
+	}
 
 	mos_socket_close(handle);
 	return 0;
@@ -228,11 +235,13 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	int32_t ret = -1;
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
 	char tmp[REST_MAX_MSGHDR_SIZE];
+	size_t tmplen;
 	size_t hdrlen;
 	rest_ctx_t *rest = NULL;
 
-	if (!protocol_version || !message_type || !msglen)
+	if (!protocol_version || !message_type || !msglen) {
 		goto err;
+	}
 
 	// read REST header
 	for (;;) {
@@ -248,12 +257,17 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		}
 
 		// end of header
-		if (tmp[0] == get_rest_hdr_body_separator())
+		if (tmp[0] == get_rest_hdr_body_separator()) {
 			break;
+		}
+
+		if (!tmplen || tmplen == REST_MAX_MSGHDR_SIZE) {
+			LOG(LOG_ERROR, "Strlen() failed!\n")
+			goto err;
+		}
 
 		// accumulate header content
-		if (strncat_s(hdr, REST_MAX_MSGHDR_SIZE, tmp,
-			      strnlen_s(tmp, REST_MAX_MSGHDR_SIZE)) != 0) {
+		if (strncat_s(hdr, REST_MAX_MSGHDR_SIZE, tmp, tmplen) != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
@@ -266,6 +280,10 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	}
 
 	hdrlen = strnlen_s(hdr, REST_MAX_MSGHDR_SIZE);
+	if (!hdrlen || hdrlen == REST_MAX_MSGHDR_SIZE) {
+		LOG(LOG_ERROR, "hdr is not NULL terminated.\n");
+		goto err;
+	}	
 
 	/* Process REST header and get content-length of body */
 	if (!get_rest_content_length(hdr, hdrlen, msglen)) {
@@ -306,14 +324,16 @@ int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
 	uint8_t *bufp = buf;
 	int sz = length;
 
-	if (!buf || !length)
+	if (!buf || !length) {
 		goto err;
+	}
 	do {
 		bufp = bufp + n;
-		if (ssl)
+		if (ssl) {
 			n = fdo_ssl_read(ssl, bufp, sz);
-		else
+		} else {
 			n = mos_socket_recv(handle, bufp, sz, 0);
+		}
 
 		LOG(LOG_DEBUG, "Expected %d , got %d\n", sz, n);
 		sz = sz - n;
@@ -348,8 +368,9 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 	char rest_hdr[REST_MAX_MSGHDR_SIZE] = {0};
 	size_t header_len = 0;
 
-	if (!buf || !length)
+	if (!buf || !length) {
 		goto err;
+	}
 
 	rest = get_rest_context();
 
@@ -407,10 +428,11 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			    header_len);
 			goto hdrerr;
 
-		} else
+		} else {
 			LOG(LOG_DEBUG,
 			    "Rest Header write returns %d/%u bytes\n\n", n,
 			    header_len);
+		}
 	}
 
 	LOG(LOG_DEBUG, "REST:header(%u):%s\n", header_len, rest_hdr);
@@ -442,10 +464,11 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			    n, length);
 			goto bodyerr;
 
-		} else
+		} else {
 			LOG(LOG_DEBUG,
 			    "Rest Body write returns %d/%u bytes\n\n", n,
 			    length);
+		}
 	}
 
 	return n;

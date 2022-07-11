@@ -11,10 +11,11 @@
 #include <stddef.h>
 #include "fdomodules.h"
 
+// Maximum buffer size to be used for reading/writing CBOR data
+#define MOD_MAX_BUFF_SIZE 8192
+
 // file path could also be supplied
 #define FILE_NAME_LEN 150
-
-#define MOD_MAX_MSG_LEN 10
 
 #define MOD_ACTIVE_TAG "active"
 #define MOD_ACTIVE_STATUS "1"
@@ -25,23 +26,51 @@
 #define MOD_MAX_EXEC_ARG_LEN 100
 
 /**
- * The registered callback method for 'fdo_sys' Owner ServiceInfo module.
+ * The registered callback method for 'fdo_sys' ServiceInfo module.
+ * The implementation is responsible for handling the received Owner ServiceInfo,
+ * and for generating the Device ServiceInfo to send.
  * 
- * The input FDOR object holds the CBOR-encoded binary stream for the entire
- * decrypted messsage of TO2.OwnerServiceInfo (Type 69), with the current position
- * set to the ServiceInfoVal.
- * The implementation 'MUST' directly parse and process ServiceInfoVal 'ONLY' 
- * that's currently being pointed at, depending on the given module message, and return.
+ * When module_message, module_val and module_val_sz are used as inputs in type
+ * 'FDO_SI_SET_OSI', these represent the moduleMessage, CBOR-encoded (bstr-unwrapped)
+ * module value i.e ServiceInfoVal cbor.bytes, as received in TO2.OwnerServiceInfo (Type 69),
+ * and its length.
+ * The implementation must parse and process the input module value
+ * depending on the given module message, and return.
+ *
+ * However, the same set of variables are used as output parameters in type 'FDO_SI_GET_DSI',
+ * wherein, module_message stores the current moduleMessage,
+ * module_val stores the response CBOR-encoded module value (ServiceInfoVal), and
+ * module_val_sz stores the corresponding length.
+ * The implementation is responsible for generating the CBOR-encoded module value using
+ * any mechanisms/third-party library. In the current implementation,
+ * the CBOR-encoder/decoder from 'lib/fdoblockio.c' is used.
+ * These 3 parameters are then, used to generate ServiceInfoKV at TO2.DeviceServiceInfo (Type 68),
+ * and sent to the Owner.
+ *
+ * The input FDOW object to be used to write the desired 'ServiceInfo' structure
+ * as per the specification, that will be sent to the Owner. The FDOW can also be used
+ * for other purposes such as ServiceInfo message partitioning (fit within MTU), or,
+ * determining has_more/is_more etc. The module implemenation is responsible for maintaining
+ * any internal state information, as needed.
  * 
  * The input fdo_sdk_si_type can be used to do specific tasks depending on the use-case.
- * However, it 'MUST' throw error on FDO_SI_GET_DSI.
  * (The types could be updated in the future)
  * 
- * @param type - enum value to describe the operation to be done.
- * @param fdor - FDOR object pointing to the ServiceInfoVal.
- * @param module_message - moduleMessage that decides how ServiceInfoVal is processed.
+ * @param type - [IN] enum value to describe the operation to be done.
+ * @param module_message - [IN/OUT] moduleMessage that decides how ServiceInfoVal is processed.
+ * @param module_val - [IN/OUT] bstr-unwrapped ServiceInfoVal corresponding to the moduleMessage.
+ * @param module_val_sz - [IN/OUT] ServiceInfoVal length corresponding to the moduleMessage.
+ * @param num_module_messages - [OUT] Number of ServiceInfoKVs to be sent. Currently UNUSED.
+ * @param has_more - [OUT] pointer to bool whose value must be set to
+ * 'true' if there is Device ServiceInfo to send NOW/immediately, OR,
+ * 'false' if there is no Device ServiceInfo to send NOW/immediately.
+ * @param is_more - [OUT] pointer to bool whose value must be set to
+ * 'true' if there is Device ServiceInfo to send in the NEXT ietration, OR,
+ * 'false' if there is no Device ServiceInfo to send in the NEXT iteration.
+ * @param mtu - [IN] MTU value to be used as the upper bound for the ServiceInfo length.
  * @return integer value FDO_SI_CONTENT_ERROR (0), FDO_SI_INTERNAL_ERROR (1), FDO_SI_SUCCESS (2).
  */
-int fdo_sys(fdo_sdk_si_type type, fdor_t *fdor, char *module_message);
+int fdo_sys(fdo_sdk_si_type type, char *module_message, uint8_t *module_val, size_t *module_val_sz,
+    uint16_t *num_module_messages, bool *has_more, bool *is_more, size_t mtu);
 
 #endif /* __FDO_SYS_H__ */

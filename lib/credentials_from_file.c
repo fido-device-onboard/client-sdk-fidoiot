@@ -17,7 +17,8 @@
 #include <stdlib.h>
 #include "util.h"
 #include "fdoCrypto.h"
-#define verbose_dump_packets 0
+
+static bool validate_state(fdo_sdk_device_status current_status);
 
 /**
  * Write the Device Credentials blob, contains our state
@@ -43,7 +44,9 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 #ifndef NO_PERSISTENT_STORAGE
 
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
-	if (!fdow || !fdow_init(fdow) || !fdo_block_alloc(&fdow->b) || !fdow_encoder_init(fdow)) {
+	if (!fdow || !fdow_init(fdow) ||
+		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_4K_BYTES) ||
+		!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
@@ -147,7 +150,9 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 #ifndef NO_PERSISTENT_STORAGE
 
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
-	if (!fdow || !fdow_init(fdow) || !fdo_block_alloc(&fdow->b) || !fdow_encoder_init(fdow)) {
+	if (!fdow || !fdow_init(fdow) ||
+		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_128_BYTES) ||
+		!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
@@ -160,7 +165,7 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 	/**
 	 * Blob format: DeviceCredential.DCHmacSecret as bstr.
 	 */
-	fdow_byte_string(fdow, (*ovkey)->bytes, INITIAL_SECRET_BYTES);
+	fdow_byte_string(fdow, (*ovkey)->bytes, (*ovkey)->byte_sz);
 	size_t encoded_secret_length = 0;
 	if (!fdow_encoded_length(fdow, &encoded_secret_length) || encoded_secret_length == 0) {
 		LOG(LOG_ERROR, "Failed to get encoded DeviceCredential.DCHmacSecret length\n");
@@ -196,11 +201,13 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 				    fdo_dev_cred_t *our_dev_cred)
 {
 	bool ret = false;
-	int32_t dev_cred_len = 0;
+	size_t dev_cred_len = 0;
 	fdor_t *fdor = NULL;
+	int dev_state = -1;
 
-	if (!our_dev_cred) {
-		goto end;
+	if (!dev_cred_file || !our_dev_cred) {
+		LOG(LOG_ERROR, "Invalid params\n");
+		return false;
 	}
 
 	if (our_dev_cred->owner_blk != NULL) {
@@ -224,7 +231,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		return true;
 	}
 
-	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRId32"\n", dev_cred_len);
+	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRIu64"\n", dev_cred_len);
 
 	fdor = fdo_alloc(sizeof(fdor_t));
 	if (!fdor || !fdor_init(fdor) || !fdo_block_alloc_with_size(&fdor->b, dev_cred_len)) {
@@ -248,12 +255,14 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 
-	if (!fdor_signed_int(fdor, &our_dev_cred->ST)) {
+	if (!fdor_signed_int(fdor, &dev_state)) {
 		LOG(LOG_ERROR, "DeviceCredential read: ST not found\n");
 		goto end;
 	}
+	our_dev_cred->ST = dev_state;
 
-	if (our_dev_cred->ST < FDO_DEVICE_STATE_READY1) {
+	if (!validate_state(our_dev_cred->ST)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Invalid ST\n");
 		goto end;
 	}
 
@@ -344,6 +353,11 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 	size_t dev_cred_len = 0;
 	fdo_byte_array_t *secret = NULL;
 
+	if (!dev_cred_file) {
+		LOG(LOG_DEBUG, "Invalid params\n");
+		return false;
+	}
+
 	(void)our_dev_cred; /* Unused Warning */
 
 	dev_cred_len = fdo_blob_size((char *)dev_cred_file, flags);
@@ -369,8 +383,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 
-	// TO-DO : Is it always 32 bytes? Could it be 48 bytes as well? Compare length.
-	secret = fdo_byte_array_alloc(INITIAL_SECRET_BYTES);
+	secret = fdo_byte_array_alloc(FDO_HMAC_KEY_LENGTH);
 	if (!secret) {
 		LOG(LOG_ERROR, "Dev_cred Secret malloc Failed.\n");
 		goto end;
@@ -381,7 +394,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 		goto end;
 	}
 
-	if (0 != set_ov_key(secret, INITIAL_SECRET_BYTES)) {
+	if (0 != set_ov_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		LOG(LOG_ERROR, "Failed to set HMAC secret.\n");
 		goto end;
 	}
@@ -396,32 +409,6 @@ end:
 	return ret;
 }
 
-#if 0
-/**
- * Internal API
- */
-static int fdoRFile_recv(fdor_t *fdor, int nbytes)
-{
-	fdo_block_t *fdob = &fdor->b;
-	FILE *f = fdor->receive_data;
-	int nread, limit;
-
-	limit = fdob->cursor + nbytes;
-	fdo_resize_block(fdob, limit + 1);
-	nread = fread(&fdob->block[fdob->cursor], 1, nbytes, f);
-
-	if (verbose_dump_packets)
-		LOG(LOG_DEBUG,
-		    "FDOR Read_file, cursor %u block_size:%u block_max:%u\n",
-		    fdob->cursor, fdob->block_size, fdob->block_max);
-	limit = fdob->cursor + nread;
-	fdob->block[limit] = 0;
-	if (verbose_dump_packets)
-		LOG(LOG_DEBUG, "%s\n", fdob->block);
-
-	return nread;
-}
-#endif
 /**
  * Write and save the device credentials passed as an parameter ocred of type
  * fdo_dev_cred_t.
@@ -452,20 +439,17 @@ int store_credential(fdo_dev_cred_t *ocred)
 }
 
 /**
- * load_credentials function loads the State & Owner_blk credentials from
+ * load_credentials function loads the State, Owner and Manufacturer credentials from
  * storage
  *
  * @return
  *        return 0 on success. -1 on failure.
  */
-int load_credential(void)
+int load_credential(fdo_dev_cred_t *ocred)
 {
-	fdo_dev_cred_t *ocred = app_alloc_credentials();
-
-	if (!ocred)
+	if (!ocred) {
 		return -1;
-
-	fdo_dev_cred_init(ocred);
+	}
 
 	/* Read in the blob and save the device credentials */
 	if (!read_normal_device_credentials((char *)FDO_CRED_NORMAL,
@@ -477,26 +461,74 @@ int load_credential(void)
 }
 
 /**
- * load_mfg_secret function loads the Secure & MFG credentials from storage
+ * load_device_secret function loads the Secure & credentials from storage
  *
  * @return
  *        return 0 on success. -1 on failure.
  */
 
-int load_mfg_secret(void)
+int load_device_secret(void)
 {
-	fdo_dev_cred_t *ocred = app_get_credentials();
-
-	if (!ocred)
-		return -1;
 
 #if !defined(DEVICE_TPM20_ENABLED)
 	// ReadHMAC Credentials
 	if (!read_secure_device_credentials((char *)FDO_CRED_SECURE,
-					    FDO_SDK_SECURE_DATA, ocred)) {
+					    FDO_SDK_SECURE_DATA, NULL)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
 #endif
 	return 0;
+}
+
+/**
+ * Read the Device status and store it in the out variable 'state'.
+ *
+ * @return
+ *        return true on success. false on failure.
+ */
+bool load_device_status(fdo_sdk_device_status *state) {
+
+	if (!state) {
+		return false;
+	}
+	size_t dev_cred_len = fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA);
+	// Device has not yet been initialized.
+	// Since, Normal.blob is empty, the file size will be 0
+	if (dev_cred_len == 0) {
+		LOG(LOG_DEBUG, "DeviceCredential is empty. Set state to run DI\n");
+		*state = FDO_DEVICE_STATE_PC;
+	} else {
+		LOG(LOG_DEBUG, "DeviceCredential is non-empty. Set state to run TO1/TO2\n");
+		// No Device state is being set currently
+	}
+	return true;
+}
+
+/**
+ * Store the Device status given by the variable 'state'.
+ * NOTE: Currently, it does nothing. This is a provision to store status separately
+ * and is unused in this specific implementation.
+ *
+ * @return
+ *        return true on success. false on failure.
+ */
+bool store_device_status(fdo_sdk_device_status *state) {
+	(void)state;
+	return true;
+}
+
+/**
+ * Validate the current status of the device.
+ */
+static bool validate_state(fdo_sdk_device_status current_status) {
+
+	if (current_status == FDO_DEVICE_STATE_READY1 ||
+		current_status == FDO_DEVICE_STATE_D1 ||
+		current_status == FDO_DEVICE_STATE_IDLE ||
+		current_status == FDO_DEVICE_STATE_READYN ||
+		current_status == FDO_DEVICE_STATE_DN) {
+		return true;
+	}
+	return false;
 }

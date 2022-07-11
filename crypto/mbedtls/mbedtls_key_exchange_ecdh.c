@@ -57,8 +57,9 @@ int32_t crypto_hal_kex_init(void **context)
 
 	/* Allocate key_ex_data*/
 	key_ex_data = fdo_alloc(sizeof(ecdh_context_t));
-	if (!key_ex_data)
+	if (!key_ex_data) {
 		goto error;
+	}
 
 	key_ex_data->_key = GROUP_ID_SIZE;
 	/* Generate Device Random bits */
@@ -76,8 +77,9 @@ int32_t crypto_hal_kex_init(void **context)
 		goto error;
 	}
 
-	if (compute_publicBECDH(key_ex_data) == false)
+	if (compute_publicBECDH(key_ex_data) == false) {
 		goto error;
+	}
 
 	*context = (void *)key_ex_data;
 	return 0;
@@ -108,17 +110,22 @@ int32_t crypto_hal_kex_close(void **context)
 		return -1;
 	}
 
-	if (key_ex_data->_shared_secret)
+	if (key_ex_data->_shared_secret) {
 		fdo_free(key_ex_data->_shared_secret);
-	if (key_ex_data->_publicA)
+	}
+	if (key_ex_data->_publicA) {
 		fdo_free(key_ex_data->_publicA);
-	if (key_ex_data->_publicB)
+	}
+	if (key_ex_data->_publicB) {
 		fdo_free(key_ex_data->_publicB);
-	if (key_ex_data->_Device_random)
+	}
+	if (key_ex_data->_Device_random) {
 		fdo_free(key_ex_data->_Device_random);
+	}
 	mbedtls_ecdh_free(&key_ex_data->ecdh);
-	if (key_ex_data)
+	if (key_ex_data) {
 		fdo_free(key_ex_data);
+	}
 
 	return 0;
 }
@@ -241,8 +248,9 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 error:
 	if (retval == false) {
 		LOG(LOG_ERROR, "compute_publicB failed\n");
-		if (temp)
+		if (temp) {
 			fdo_free(temp);
+		}
 	}
 	return retval;
 }

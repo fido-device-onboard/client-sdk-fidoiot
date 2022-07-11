@@ -5,7 +5,7 @@
 
 /*!
  * \file
- * \brief This file implements msg40 of TO2
+ * \brief This file implements msg60 of TO2
  */
 
 #include "fdoprot.h"
@@ -13,11 +13,12 @@
 #include "fdoCrypto.h"
 
 /**
- * msg60() - TO2.Hello_device
+ * msg60() - TO2.HelloDevice
  * This message starts the Transfer of ownership of device to new owner. The
  * device sends some parameters to setup up trust with the owner
  *
  * TO2.HelloDevice = [
+ *   maxDeviceMessageSize,
  *   Guid,
  *   NonceTO2ProveOV,
  *   kexSuiteName,
@@ -29,16 +30,32 @@ int32_t msg60(fdo_prot_t *ps)
 {
 	int ret = -1;
 	fdo_string_t *kx = fdo_get_device_kex_method();
-	fdo_string_t *cs = fdo_get_device_crypto_suite();
+	size_t cs = fdo_get_device_crypto_suite();
+
+	if (!ps) {
+		LOG(LOG_ERROR, "Invalid protocol state\n");
+		return ret;
+	}
 
 	LOG(LOG_DEBUG, "TO2.HelloDevice started\n");
 
 	fdow_next_block(&ps->fdow, FDO_TO2_HELLO_DEVICE);
 
 	/* Begin the message */
-	if (!fdow_start_array(&ps->fdow, 5)) {
+	if (!fdow_start_array(&ps->fdow, 6)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to start array\n");
 		return false;
+	}
+
+	/* Fill in the maxDeviceMessageSize */
+	if (!fdow_unsigned_int(&ps->fdow, ps->max_device_message_size)) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write maxDeviceMessageSize\n");
+		return false;
+	}
+
+	if (ps->max_device_message_size > MAX_NEGO_MSG_SIZE) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: maxDeviceMessageSize can not be greater than 65535\n");
+		goto err;
 	}
 
 	/* Fill in the GUID */
@@ -66,12 +83,12 @@ int32_t msg60(fdo_prot_t *ps)
 	}
 
 	/* Fill in the ciphersuite info */
-	if (!fdow_text_string(&ps->fdow, cs->bytes, cs->byte_sz)) {
+	if (!fdow_signed_int(&ps->fdow, cs)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write cipherSuiteName\n");
 		return false;
 	}
 
-	/* Write the eA info */
+	/* Write the eASiginfo */
 	if (!fdo_siginfo_write(&ps->fdow)) {
 		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write eASigInfo\n");
 		return false;
@@ -82,6 +99,17 @@ int32_t msg60(fdo_prot_t *ps)
 		return false;
 	}
 
+	if (!fdow_encoded_length(&ps->fdow, &ps->fdow.b.block_size)) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to get encoded length for helloDeviceHash\n");
+		return false;
+	}
+
+	if (0 != fdo_crypto_hash(ps->fdow.b.block, ps->fdow.b.block_size,
+				    ps->hello_device_hash->hash->bytes,
+				    ps->hello_device_hash->hash->byte_sz)) {
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to generate helloDeviceHash\n");
+		return false;
+	}
 	/* Mark to move to next message */
 	ps->state = FDO_STATE_TO2_RCV_PROVE_OVHDR;
 	ret = 0;

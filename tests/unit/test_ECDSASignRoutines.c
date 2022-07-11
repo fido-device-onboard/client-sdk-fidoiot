@@ -1,16 +1,17 @@
 /*
- * Copyright (C) 2017 Intel Corporation All Rights Reserved
+ * Copyright 2020 Intel Corporation
+ * SPDX-License-Identifier: Apache 2.0
  */
 
 /*!
  * \file
- * \brief Unit tests for RSA abstraction routines of FDO library.
+ * \brief Unit tests for ECDSA signature generation abstraction routines of FDO library.
  */
 
-#include "test_RSARoutines.h"
 #include "safe_lib.h"
 #include "fdoCryptoHal.h"
 #include "storage_al.h"
+#include "unity.h"
 
 //#define HEXDEBUG 1
 
@@ -193,10 +194,12 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	fdo_byte_array_t *testdata = getcleartext(CLR_TXT_LENGTH);
 	TEST_ASSERT_NOT_NULL(testdata);
 	size_t siglen = ECDSA_SIG_MAX_LENGTH;
-	unsigned char *sigtestdata = malloc(ECDSA_SIG_MAX_LENGTH);
+	unsigned char *sigtestdata = fdo_alloc(ECDSA_SIG_MAX_LENGTH);
 	TEST_ASSERT_NOT_NULL(sigtestdata);
 	unsigned char hash[SHA512_DIGEST_SIZE] = {0};
 	size_t hash_length = 0;
+	unsigned char *sig_r = NULL;
+	unsigned char *sig_s = NULL;
 
 #if defined(ECDSA256_DA)
 	hash_length = SHA256_DIGEST_SIZE;
@@ -209,6 +212,9 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	EC_KEY *avalidkey = generateECDSA_key();
 	TEST_ASSERT_NOT_NULL(avalidkey);
 	int privatekey_buflen = hash_length;
+	BIGNUM *r = NULL;
+	BIGNUM *s = NULL;
+	ECDSA_SIG *sig = NULL;
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_ecdsa_context ctx_sign = {0};
@@ -217,7 +223,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	int privatekey_buflen = mbedtls_mpi_size(&ctx_sign.d);
 #endif
 	// Extracting private key from mbedtls structure
-	unsigned char *privatekey = malloc(privatekey_buflen);
+	unsigned char *privatekey = fdo_alloc(privatekey_buflen);
 	TEST_ASSERT_NOT_NULL(privatekey);
 	memset_s(privatekey, 0, privatekey_buflen);
 
@@ -292,9 +298,29 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 #endif
 	TEST_ASSERT_EQUAL(0, result);
 
+	sig_r = fdo_alloc(siglen/2);
+	TEST_ASSERT_NOT_NULL(sig_r);
+	memcpy_s(sig_r, siglen/2, sigtestdata, siglen/2);
+	sig_s = fdo_alloc(siglen/2);
+	TEST_ASSERT_NOT_NULL(sig_s);
+	memcpy_s(sig_s, siglen/2, sigtestdata + siglen/2, siglen/2);
+	r = BN_bin2bn((const unsigned char*) sig_r, siglen/2, NULL);
+	TEST_ASSERT_NOT_NULL(r);
+	s = BN_bin2bn((const unsigned char*) sig_s, siglen/2, NULL);
+	TEST_ASSERT_NOT_NULL(s);
+
+	sig = ECDSA_SIG_new();
+	TEST_ASSERT_NOT_NULL(sig);
+	if (1 != ECDSA_SIG_set0(sig, r, s)) {
+		LOG(LOG_ERROR, "ECDSA Sig set failed\n");
+		BN_free(r);
+		BN_free(s);
+		result = -1;
+	}
+	TEST_ASSERT_EQUAL(0, result);
+
 	// verify the signature.
-	if (1 != ECDSA_verify(0, hash, hash_length, sigtestdata, siglen,
-			      avalidkey)) {
+	if (1 != ECDSA_do_verify(hash, hash_length, sig, avalidkey)) {
 		LOG(LOG_ERROR, "ECDSA Sig verification failed\n");
 		result = -1;
 	}
@@ -303,8 +329,23 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 
 	// Negative test case
 	sigtestdata[4] = 'a';
-	if (1 != ECDSA_verify(0, hash, hash_length, sigtestdata, siglen,
-			      avalidkey)) {
+	memcpy_s(sig_r, siglen/2, sigtestdata, siglen/2);
+	ECDSA_SIG_free(sig);
+	r = BN_bin2bn((const unsigned char*) sig_r, siglen/2, NULL);
+	TEST_ASSERT_NOT_NULL(r);
+	s = BN_bin2bn((const unsigned char*) sig_s, siglen/2, NULL);
+	TEST_ASSERT_NOT_NULL(s);
+	sig = ECDSA_SIG_new();
+	TEST_ASSERT_NOT_NULL(sig);
+	if (1 != ECDSA_SIG_set0(sig, r, s)) {
+		LOG(LOG_ERROR, "ECDSA Sig set failed\n");
+		BN_free(r);
+		BN_free(s);
+		result = -1;
+	}
+	TEST_ASSERT_EQUAL(0, result);
+
+	if (1 != ECDSA_do_verify(hash, hash_length, sig, avalidkey)) {
 		LOG(LOG_ERROR, "ECDSA Sig verification failed\n");
 		result = -1;
 	}
@@ -353,8 +394,18 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	EVP_PKEY_free(privkey);
 	BIO_free_all(outbio);
 #endif
-	if (avalidkey)
+	if (avalidkey) {
 		EC_KEY_free(avalidkey);
+	}
+	if (sig) {
+		ECDSA_SIG_free(sig);
+	}
+	if (sig_r) {
+		fdo_free(sig_r);
+	}
+	if (sig_s) {
+		fdo_free(sig_s);
+	}
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_ecdsa_free(&ctx_sign);
