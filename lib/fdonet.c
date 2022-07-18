@@ -12,6 +12,7 @@
 #include "storage_al.h"
 #include "rest_interface.h"
 #include "safe_str_lib.h"
+#include "snprintf_s.h"
 
 #if defined HTTPPROXY
 #ifdef TARGET_OS_FREERTOS
@@ -480,6 +481,7 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 	}
 
 	if (ssl) {
+		curl = curl_easy_init();
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
 			goto end;
@@ -488,10 +490,18 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_mfg_proxy_defined()) {
 #if defined HTTPPROXY
+	if (ssl) {
+		if (!fdo_curl_proxy(&mfgproxy_ip, mfgproxy_port)) {
+			LOG(LOG_ERROR,
+		    "Invalid Proxy Connection info for Manufacturer server!\n");
+			goto end;
+		}
+	} else {
 		ip = &mfgproxy_ip;
 		port = mfgproxy_port;
+	}
 
-		LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
+	LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
 		    mfgproxy_ip.addr[0], mfgproxy_ip.addr[1],
 		    mfgproxy_ip.addr[2], mfgproxy_ip.addr[3], mfgproxy_port);
 #endif
@@ -564,6 +574,7 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 	}
 
 	if (ssl) {
+		curl = curl_easy_init();
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
 			goto end;
@@ -572,14 +583,19 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_rv_proxy_defined()) {
 #if defined HTTPPROXY
+
+	if (ssl) {
+		if (!fdo_curl_proxy(&rvproxy_ip, rvproxy_port)) {
+			LOG(LOG_ERROR,
+		    "Invalid Proxy Connection info for Rendezvous server!\n");
+			goto end;
+		}
+	} else {
 		ip = &rvproxy_ip;
 		port = rvproxy_port;
-		// When connecting through proxy, the proxy server will
-		// establish tls connection. Device opens a normal connection to
-		// Proxy server
-		ssl = NULL;
+	}
 
-		LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
+	LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
 		    rvproxy_ip.addr[0], rvproxy_ip.addr[1], rvproxy_ip.addr[2],
 		    rvproxy_ip.addr[3], rvproxy_port);
 #endif
@@ -654,6 +670,7 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 	}
 
 	if (ssl) {
+		curl = curl_easy_init();
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
 			goto end;
@@ -662,10 +679,18 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_owner_proxy_defined()) {
 #if defined HTTPPROXY
+	if (ssl) {
+		if (!fdo_curl_proxy(&ownerproxy_ip, ownerproxy_port)) {
+			LOG(LOG_ERROR,
+		    "Invalid Proxy Connection info for Owner server!\n");
+			goto end;
+		}
+	} else {
 		ip = &ownerproxy_ip;
 		port = ownerproxy_port;
+	}
 
-		LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
+	LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
 		    ownerproxy_ip.addr[0], ownerproxy_ip.addr[1],
 		    ownerproxy_ip.addr[2], ownerproxy_ip.addr[3],
 		    ownerproxy_port);

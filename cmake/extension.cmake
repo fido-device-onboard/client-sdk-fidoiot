@@ -12,7 +12,7 @@ add_library(client_sdk_interface INTERFACE)
 if(${TARGET_OS} MATCHES linux)
   add_library(client_sdk STATIC "")
 endif()
- 
+
 
 #############################################################
 #functions for ease of use
@@ -24,11 +24,11 @@ function(client_sdk_sources)
     else()
       set(path ${CMAKE_CURRENT_SOURCE_DIR}/${arg})
     endif()
-    
+
     if(IS_DIRECTORY ${path})
       message(FATAL_ERROR "client_sdk_sources() was called on a directory")
     endif()
-    
+
     target_sources(client_sdk PRIVATE ${path})
   endforeach()
 endfunction()
@@ -70,7 +70,7 @@ endfunction()
 function(client_sdk_ld_options)
   foreach(arg ${ARGV})
     target_link_libraries(client_sdk_interface INTERFACE ${arg})
-  endforeach()  
+  endforeach()
 endfunction()
 
 
@@ -138,7 +138,7 @@ if(TARGET_OS MATCHES linux)
     -DTARGET_OS_LINUX)
 elseif (${TARGET_OS} STREQUAL mbedos)
   client_sdk_compile_definitions(
-    -DTARGET_OS_MBEDOS)  
+    -DTARGET_OS_MBEDOS)
   set(TLS mbedtls)
 endif()
 
@@ -232,6 +232,10 @@ if(${HTTPPROXY} STREQUAL true)
   if(${PROXY_DISCOVERY} STREQUAL true)
     client_sdk_compile_definitions(-DPROXY_DISCOVERY)
   endif()
+endif()
+
+if(${SELF_SIGNED_CERTS} STREQUAL true)
+  client_sdk_compile_definitions(-DSELF_SIGNED_CERTS_SUPPORTED)
 endif()
 
 if(${RESALE} STREQUAL true)

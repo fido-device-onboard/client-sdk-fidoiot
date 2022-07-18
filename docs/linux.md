@@ -9,7 +9,7 @@ The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1n. Users mu
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04:
 ```shell
-sudo apt-get install python-setuptools clang-format dos2unix ruby \
+sudo apt-get install python-setuptools clang-format dos2unix ruby libcurl4-openssl-dev \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
 ```
 
@@ -20,7 +20,7 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 ```
-sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby \
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby libcurl-devel \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial
 ```
 ## 2. Packages Requirements when Executing Binaries:

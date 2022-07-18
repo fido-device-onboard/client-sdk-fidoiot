@@ -65,6 +65,9 @@ HTTPPROXY=true        # http-proxy enabled (default)
 HTTPPROXY=false       # http-proxy disabled
 PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 
+Option to enable self signed certs:
+SELF_SIGNED_CERTS=true # self signed certs check enabled for HTTPS connection (default = false)
+
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
 REUSE=false           # Reuse feature disabled

@@ -22,6 +22,7 @@
 #include "load_credentials.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
+#include "rest_interface.h"
 
 #define CONNECTION_RETRY 2
 
@@ -269,7 +270,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			ret = -1;
 			break;
 		}
-		
+
 		/* ========================================================== */
 		/*  Transmit outbound packet */
 
@@ -351,10 +352,16 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
+		char tmp_buf[REST_MAX_MSGHDR_SIZE];
+		size_t ctr = 0;
+		if (memset_s(tmp_buf, sizeof(tmp_buf), 0) != 0) {
+				LOG(LOG_ERROR, "Memset() failed!\n");
+				return false;
+			}
 
 		ret = fdo_con_recv_msg_header(prot_ctx->sock_hdl, &protver,
 					      (uint32_t *)&fdor->msg_type,
-					      &msglen, prot_ctx->ssl);
+					      &msglen, prot_ctx->ssl, tmp_buf, &ctr);
 		if (ret == -1) {
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
@@ -372,7 +379,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			do {
 				n = fdo_con_recv_msg_body(
 				    prot_ctx->sock_hdl, &fdor->b.block[0], msglen,
-				    prot_ctx->ssl);
+				    prot_ctx->ssl, tmp_buf, ctr);
 				if (n < 0) {
 					if (fdo_con_disconnect(
 						prot_ctx->sock_hdl,

@@ -82,7 +82,7 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl);
 int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 				uint32_t *protocol_version,
 				uint32_t *message_type, uint32_t *msglen,
-				void *ssl);
+				void *ssl, char *tmp_buf, size_t *ctr);
 
 /*
  * Receive(read) incoming fdo packet.
@@ -94,7 +94,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
-			      size_t length, void *ssl);
+			      size_t length, void *ssl, char *tmp_buf, size_t ctr);
 
 /*
  * Send(write) data.
@@ -139,5 +139,23 @@ const char *get_device_serial_number(void);
 
 /* generate random number */
 int fdo_random(void);
+
+/*
+ * Open a connection specified by IP address and port via Curl API.
+ *
+ * @param[in] addr: IP Address to connect to.
+ * @param[in] port: port number to connect to.
+ * @retval -1 on failure, connection handle on success.
+ */
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port);
+
+/*
+ * Set up the proxy connection via curl API
+ *
+ * @param[in] ip_addr - pointer to IP address info
+ * @param[in] port - port number to connect
+ * @return true on success. false value on failure
+ */
+bool fdo_curl_proxy(fdo_ip_address_t *ip_addr, uint16_t port);
 
 #endif /* __NETWORK_AL_H__ */

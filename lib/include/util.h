@@ -98,7 +98,7 @@ typedef enum log_level {
    - to be used in strnlen_s()/strcat_s()
    - as a replacement for strlen()/strcat()
 */
-#define FDO_MAX_STR_SIZE BUFF_SIZE_512_BYTES
+#define FDO_MAX_STR_SIZE BUFF_SIZE_1K_BYTES
 
 /// Test if file exists
 /*!
