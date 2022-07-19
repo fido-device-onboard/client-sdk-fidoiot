@@ -3,7 +3,7 @@
 
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 or above / RHEL* OS version 8.4 or above / Debian 11` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO build and execution depend on OpenSSL* toolkit version 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
