@@ -185,6 +185,34 @@ set(CACHED_HTTPPROXY ${HTTPPROXY} CACHE STRING "Selected HTTPPROXY")
 message("Selected HTTPPROXY ${HTTPPROXY}")
 
 ###########################################
+# FOR PROXY_DISCOVERY
+get_property(cached_proxy_discovery_value CACHE PROXY_DISCOVERY PROPERTY VALUE)
+
+set(proxy_discovery_cli_arg ${cached_proxy_discovery_value})
+if(proxy_discovery_cli_arg STREQUAL CACHED_PROXY_DISCOVERY)
+  unset(proxy_discovery_cli_arg)
+endif()
+
+set(proxy_discovery_app_cmake_lists ${PROXY_DISCOVERY})
+if(cached_proxy_discovery_value STREQUAL PROXY_DISCOVERY)
+  unset(proxy_discovery_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_PROXY_DISCOVERY)
+  if ((DEFINED proxy_discovery_cli_arg) AND (NOT(CACHED_PROXY_DISCOVERY STREQUAL proxy_discovery_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(PROXY_DISCOVERY ${CACHED_PROXY_DISCOVERY})
+elseif(DEFINED proxy_discovery_cli_arg)
+  set(PROXY_DISCOVERY ${proxy_discovery_cli_arg})
+elseif(DEFINED proxy_discovery_app_cmake_lists)
+  set(PROXY_DISCOVERY ${proxy_discovery_app_cmake_lists})
+endif()
+
+set(CACHED_PROXY_DISCOVERY ${PROXY_DISCOVERY} CACHE STRING "Selected PROXY_DISCOVERY")
+message("Selected PROXY_DISCOVERY ${PROXY_DISCOVERY}")
+
+###########################################
 # FOR SELF_SIGNED_CERTS
 get_property(cached_self_signed_certs_value CACHE SELF_SIGNED_CERTS PROPERTY VALUE)
 

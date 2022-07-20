@@ -230,7 +230,7 @@ void test_fdo_con_recv_message(void)
 	fdo_con_handle handle = &g_handle;
 	ssize_t nbytes = 5;
 	TEST_ASSERT_EQUAL_INT(33,
-			      fdo_con_recv_msg_body(handle, buf, nbytes, NULL));
+			      fdo_con_recv_msg_body(handle, buf, nbytes, NULL, NULL, 0));
 }
 
 #ifdef TARGET_OS_FREERTOS

@@ -67,6 +67,7 @@ PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 
 Option to enable self signed certs:
 SELF_SIGNED_CERTS=true # self signed certs check enabled for HTTPS connection (default = false)
+> ***WARN***: Accepting Self Signed Certificates is not recommended. If compromised, self-signed certificates can pose serious security risks.
 
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
