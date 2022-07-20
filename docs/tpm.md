@@ -3,13 +3,13 @@
 
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04 or above / RHEL* OS version 8.4 or above / Debian 11` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO build and execution depend on OpenSSL* toolkit version 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM* 2.0
 
-* On RHEL* OS version 8.4:
+* On RHEL* OS version 8.4 or 8.6:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -80,7 +80,7 @@ TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
 **Script usage command**
-* **On Ubuntu OS version 20.04:**
+* **On Ubuntu OS version 20.04 or 22.04 / Debian 11.4:**
 ```shell
 sudo ./install_tpm_libs.sh -h
 ```
@@ -107,8 +107,8 @@ sudo ./install_tpm_libs.sh -h
 	```
 	sudo ./install_tpm_libs.sh -u
 	```
-* **On RHEL\* OS version 8.4:**
-> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4.
+* **On RHEL\* OS version 8.4 or 8.6:**
+> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4 or 8.6.
 ```shell
 sudo ./install_tpm_libs_rhel.sh -h
 ```

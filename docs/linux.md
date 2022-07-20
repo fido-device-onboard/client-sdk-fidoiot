@@ -2,18 +2,18 @@
 
 
 # Linux* OS
-The development and execution OS used was `Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
-* For Ubuntu* OS version 20.04 or above:
+* For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
 sudo apt-get install python-setuptools clang-format dos2unix ruby \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
 ```
 
-* For RHEL* OS version 8.4 or above:
+* For RHEL* OS version 8.4 or 8.6:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -144,7 +144,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
-- If the client-sdk binary is built on openssl 1.1.1q environment and then executed with openssl 3 environment, it may fail with libssl.so.1.1 not found error. Inorder to successfully execute it, build the openssl 1.1.1 dependant libraries and make it available as well:
+- If the client-sdk binary is built on openssl 1.1.1q environment and then executed with openssl 3 environment, it may fail with "libssl.so.1.1 not found" error. In order to successfully execute it,  build the specific 1.1.1 version dependent libraries and make it available as well:
     wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
     tar -zxf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
     ./config
