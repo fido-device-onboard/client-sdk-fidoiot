@@ -4,7 +4,7 @@
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
