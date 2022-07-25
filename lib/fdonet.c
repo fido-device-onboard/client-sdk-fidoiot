@@ -396,6 +396,10 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		goto end;
 	}
 
+	if (ssl) {
+		curl = curl_easy_init();
+	}
+
 	if (ip_list && num_ofIPs > 0) {
 		// Iterate over IP-list to connect
 		uint32_t iter = 0;
@@ -435,6 +439,10 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 end:
 	if (ip_list) { // free ip_list
 		fdo_free(ip_list);
+	}
+
+	if (!ret && ssl && curl) {
+		curl_easy_cleanup(curl);
 	}
 	return ret;
 }

@@ -38,6 +38,10 @@ typedef enum {
 	FDO_STATE_ERROR
 } fdo_sdk_device_state;
 
+#if defined(SELF_SIGNED_CERTS_SUPPORTED)
+extern bool useSelfSignedCerts;
+#endif
+
 fdo_sdk_status fdo_sdk_run(void);
 
 fdo_sdk_status fdo_sdk_resale(void);

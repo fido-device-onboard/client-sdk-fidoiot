@@ -51,6 +51,10 @@ static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
 
+#if defined(SELF_SIGNED_CERTS_SUPPORTED)
+bool useSelfSignedCerts = false;
+#endif
+
 #ifdef RETRY_FALSE
 #define ERROR_RETRY_COUNT 1
 #else

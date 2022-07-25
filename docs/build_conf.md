@@ -66,9 +66,16 @@ HTTPPROXY=false       # http-proxy disabled
 PROXY_DISCOVERY=true  # network discovery enabled (default = false)
 
 Option to enable self signed certs:
-SELF_SIGNED_CERTS=true # self signed certs check enabled for HTTPS connection (default = false)
+SELF_SIGNED_CERTS=true # self signed certs check enabled for HTTPS connection. (default)
+SELF_SIGNED_CERTS=false # self signed certs check disabled for HTTPS connection.
+```
+> ***Note***: For accepting self-signed certs, additional runtime argument '5' is required.
+```shell
+$ ./build/linux-client 5
+```
 > ***WARN***: Accepting Self Signed Certificates is not recommended. If compromised, self-signed certificates can pose serious security risks.
 
+```
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
 REUSE=false           # Reuse feature disabled

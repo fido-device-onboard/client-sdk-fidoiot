@@ -27,7 +27,6 @@
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "rest_interface.h"
-#include "fdonet.h"
 
 /* Auxiliary function that waits on the socket. */
 static int wait_on_socket(curl_socket_t sockfd, int for_recv, long timeout_ms)
@@ -369,27 +368,29 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port)
 			goto err;
 		}
 
-	#if defined(SELF_SIGNED_CERTS_SUPPORTED)
-		// Add options if using self-signed certificates
-		curlCode = CURLE_OK;
-		curlCode = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-		if (curlCode != CURLE_OK) {
-			LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify peer\n");
-			goto err;
-		}
+#if defined(SELF_SIGNED_CERTS_SUPPORTED)
+		if (useSelfSignedCerts) {
+			// Add options if using self-signed certificates
+			curlCode = CURLE_OK;
+			curlCode = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+			if (curlCode != CURLE_OK) {
+				LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify peer\n");
+				goto err;
+			}
 
-		curlCode = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-		if (curlCode != CURLE_OK) {
-			LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify host\n");
-			goto err;
-		}
-		LOG(LOG_INFO, "Set connection for self signed certificate usage.\n");
-	#endif
+			curlCode = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+			if (curlCode != CURLE_OK) {
+				LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify host\n");
+				goto err;
+			}
+			LOG(LOG_INFO, "Set connection for self signed certificate usage.\n");
+			}
+#endif
 
-		curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-		if (curlCode != CURLE_OK) {
-			LOG(LOG_ERROR, "CURL_ERROR: Could not enable ssl\n");
-			goto err;
+			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+			if (curlCode != CURLE_OK) {
+				LOG(LOG_ERROR, "CURL_ERROR: Could not enable ssl\n");
+				goto err;
 		}
 
 		curl_easy_setopt(curl, CURLOPT_URL, url);

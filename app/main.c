@@ -277,7 +277,11 @@ int app_main(bool is_resale)
 	if  (is_resale == true) {
 		do_resale = true;
 	}
-
+#endif
+#if defined SELF_SIGNED_CERTS_SUPPORTED
+	if  (argc > 1 && (*argv[1] == '5' || *argv[2] == '5')) {
+		useSelfSignedCerts = true;
+	}
 #endif
 	if (is_ownership_transfer(do_resale)) {
 		ret = 0;
