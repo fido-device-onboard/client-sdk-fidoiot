@@ -351,14 +351,14 @@ void fdo_net_init(void)
  * @param dn: Domain name of the server
  * @param ip: A valid IP address mapping to this dn.
  * @param port: A valid port number mapping to this dn.
- * @param ssl: ssl context in case of ssl connection.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  * @param proxy: proxy enabled for this ip access.
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
-		void **ssl, bool proxy)
+		bool tls, bool proxy)
 {
 	bool ret = false;
 	uint32_t num_ofIPs = 0;
@@ -396,7 +396,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		goto end;
 	}
 
-	if (ssl) {
+	if (tls) {
 		curl = curl_easy_init();
 	}
 
@@ -408,7 +408,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		       sock_hdl == FDO_CON_INVALID_HANDLE) {
 
 			sock_hdl = fdo_con_connect((ip_list + iter), port,
-						   ssl);
+						   tls);
 			if (sock_hdl == FDO_CON_INVALID_HANDLE) {
 				LOG(LOG_ERROR, "Failed to connect to "
 					       "server: retrying...\n");
@@ -417,7 +417,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		}
 
 		if (FDO_CON_INVALID_HANDLE != sock_hdl) {
-			fdo_con_disconnect(sock_hdl, (ssl ? *ssl : NULL));
+			fdo_con_disconnect(sock_hdl, tls);
 			if (!cache_host_dns(dn)) {
 				LOG(LOG_ERROR, "REST DNS caching failed!\n");
 				goto end;
@@ -441,7 +441,7 @@ end:
 		fdo_free(ip_list);
 	}
 
-	if (!ret && ssl && curl) {
+	if (!ret && tls && curl) {
 		curl_easy_cleanup(curl);
 	}
 	return ret;
@@ -454,13 +454,13 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
- * @param ssl:  ssl fd for subsequent read/write/close in case of https.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
-			     fdo_con_handle *sock_hdl, void **ssl)
+			     fdo_con_handle *sock_hdl, bool tls)
 {
 	bool ret = false;
 	int retries = MANUFACTURER_CONNECT_RETRIES;
@@ -488,7 +488,7 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (ssl) {
+	if (tls) {
 		curl = curl_easy_init();
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
@@ -498,10 +498,10 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_mfg_proxy_defined()) {
 #if defined HTTPPROXY
-	if (ssl) {
+	if (tls) {
 		if (!fdo_curl_proxy(&mfgproxy_ip, mfgproxy_port)) {
 			LOG(LOG_ERROR,
-		    "Invalid Proxy Connection info for Manufacturer server!\n");
+		    "Failed to setup Proxy Connection info for Manufacturer server!\n");
 			goto end;
 		}
 	} else {
@@ -518,7 +518,7 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, port, ssl);
+		*sock_hdl = fdo_con_connect(ip, port, tls);
 		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO, "Failed to connect to Manufacturer "
@@ -548,13 +548,13 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
- * @param ssl:  ssl fd for subsequent read/write/close in case of https.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
-			   fdo_con_handle *sock_hdl, void **ssl)
+			   fdo_con_handle *sock_hdl, bool tls)
 {
 	bool ret = false;
 	int retries = RENDEZVOUS_CONNECT_RETRIES;
@@ -581,7 +581,7 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (ssl) {
+	if (tls) {
 		curl = curl_easy_init();
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
@@ -592,10 +592,10 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 	if (is_rv_proxy_defined()) {
 #if defined HTTPPROXY
 
-	if (ssl) {
+	if (tls) {
 		if (!fdo_curl_proxy(&rvproxy_ip, rvproxy_port)) {
 			LOG(LOG_ERROR,
-		    "Invalid Proxy Connection info for Rendezvous server!\n");
+		    "Failed to setup Proxy Connection info for Rendezvous server!\n");
 			goto end;
 		}
 	} else {
@@ -612,7 +612,7 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, port, ssl);
+		*sock_hdl = fdo_con_connect(ip, port, tls);
 		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO, "Failed to connect to Rendezvous server: "
@@ -643,13 +643,13 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
- * @param ssl:  ssl fd for subsequent read/write/close in case of https.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
-		      fdo_con_handle *sock_hdl, void **ssl)
+		      fdo_con_handle *sock_hdl, bool tls)
 {
 	bool ret = false;
 	int retries = OWNER_CONNECT_RETRIES;
@@ -677,7 +677,7 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (ssl) {
+	if (tls) {
 		curl = curl_easy_init();
 		if (!cache_tls_connection()) {
 			LOG(LOG_ERROR, "REST TLS caching failed!\n");
@@ -687,10 +687,10 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_owner_proxy_defined()) {
 #if defined HTTPPROXY
-	if (ssl) {
+	if (tls) {
 		if (!fdo_curl_proxy(&ownerproxy_ip, ownerproxy_port)) {
 			LOG(LOG_ERROR,
-		    "Invalid Proxy Connection info for Owner server!\n");
+		    "Failed to setup Proxy Connection info for Owner server!\n");
 			goto end;
 		}
 	} else {
@@ -708,7 +708,7 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, port, ssl);
+		*sock_hdl = fdo_con_connect(ip, port, tls);
 		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO,
@@ -735,7 +735,7 @@ end:
  *
  * @param prot_ctx
  *        handle to protocol context containing connection info such as
- * IP/Port/ssl
+ * IP/Port
  * handle etc..
  * @retval 0 on success. -1 on failure.
  */
@@ -745,7 +745,7 @@ int fdo_connection_restablish(fdo_prot_ctx_t *prot_ctx)
 
 	/* re-connect using server-IP */
 	while (((prot_ctx->sock_hdl = fdo_con_connect(
-		     prot_ctx->host_ip, prot_ctx->host_port, prot_ctx->ssl)) ==
+		     prot_ctx->host_ip, prot_ctx->host_port, prot_ctx->tls)) ==
 		FDO_CON_INVALID_HANDLE) &&
 	       retries--) {
 		LOG(LOG_INFO, "Failed reconnecting to server: retrying...");

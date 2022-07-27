@@ -270,7 +270,7 @@ TEST_CASE("read_until_new_line", "[OS][HAL][fdo]")
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	handle.sockfd = 100;
 	prot_ctx->sock_hdl = (fdo_con_handle)&handle;
-	prot_ctx->ssl = NULL;
+	// prot_ctx->ssl = NULL;
 
 	recv_configured = 0;
 	retval = read_until_new_line(prot_ctx->sock_hdl, buff, bufsize);

@@ -28,7 +28,14 @@
 #include "snprintf_s.h"
 #include "rest_interface.h"
 
-/* Auxiliary function that waits on the socket. */
+/**
+ * Auxiliary function that waits on the socket while receiving data from connected socket.
+ *
+ * @param sockfd - socket struct for read.
+ * @param for_recv -  bit for receive (1 or 0)
+ * @param timeout_ms - timeout in milliseconds.
+ * @retval returns the number of signalled sockets or -1.
+ */
 static int wait_on_socket(curl_socket_t sockfd, int for_recv, long timeout_ms)
 {
 	struct timeval tv;
@@ -63,11 +70,13 @@ struct fdo_sock_handle {
  * @param handle - socket struct for read.
  * @param out -  out pointer for REST header line.
  * @param size - out REST header line length.
- * @param ssl -  SSL pointer if TLS is active
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param curl_buf: data buffer to read into msg received by curl.
+ * @param curl_buf_offset: pointer to track curl_buf.
  * @retval true if line read was successful, false otherwise.
  */
 static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
-				void *ssl, size_t *ctr, char *tmp_buf)
+				bool tls, char *curl_buf, size_t *curl_buf_offset)
 {
 	size_t sz, n;
 	char c;
@@ -83,8 +92,8 @@ static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
 
 	for (;;) {
 
-		if (ssl) {
-			c = tmp_buf[*ctr + sz];
+		if (tls) {
+			c = curl_buf[*curl_buf_offset + sz];
 			n = 1;
 		} else {
 			n = recv(sockfd, (uint8_t *)&c, 1, MSG_WAITALL);
@@ -107,8 +116,8 @@ static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size,
 		}
 
 		if (c == '\n') {
-			if (ssl) {
-				*ctr = *ctr + sz;
+			if (tls) {
+				*curl_buf_offset += sz;
 			}
 			break;
 		}
@@ -242,14 +251,13 @@ end:
 /**
  * fdo_curl_proxy set up the proxy connection via curl API
  *
- * @param ip_addr - pointer to IP address info
- * @param port - port number to connect
+ * @param ip_addr - pointer to IP address of proxy
+ * @param port - proxy port number to connect
  * @return true on success. false value on failure
  */
 bool fdo_curl_proxy(fdo_ip_address_t *ip_addr, uint16_t port)
 {
-	char temp[HTTP_MAX_URL_SIZE] = {0};
-	char proxy_url[REST_MAX_MSGHDR_SIZE] = {0};
+	char proxy_url[HTTP_MAX_URL_SIZE] = {0};
 	char *ip_ascii = NULL;
 	bool ret = false;
 
@@ -268,21 +276,23 @@ bool fdo_curl_proxy(fdo_ip_address_t *ip_addr, uint16_t port)
 		}
 	}
 
-	if (snprintf_s_si(temp, sizeof(temp), "%s:%d",
+	if (snprintf_s_si(proxy_url, HTTP_MAX_URL_SIZE, "%s:%d",
 				ip_ascii, port) < 0) {
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(proxy_url, REST_MAX_MSGHDR_SIZE, temp) != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
-		goto err;
-	}
-
 	if (curl) {
 
-		curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1);
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+		if (curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1) != CURLE_OK) {
+			LOG(LOG_ERROR, "CURL_PROXY: Cannot set HTTP proxy tunnel.\n");
+			goto err;
+		}
+
+		if (curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1) != CURLE_OK) {
+			LOG(LOG_ERROR, "CURL_PROXY: Cannot redirect proxy.\n");
+			goto err;
+		}
 
 		if (curl_easy_setopt(curl, CURLOPT_PROXY, proxy_url) != CURLE_OK) {
 			LOG(LOG_ERROR, "CURL_PROXY: Cannot set proxy.\n");
@@ -307,7 +317,7 @@ err:
 }
 
 /**
- * fdo_curl_setup connects to the network socket via curl API
+ * fdo_curl_setup connects to the given ip_addr via curl API
  *
  * @param ip_addr - pointer to IP address info
  * @param port - port number to connect
@@ -320,14 +330,14 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port)
 	CURLcode curlCode = CURLE_OK;
 	int ret = -1;
 	char temp[HTTP_MAX_URL_SIZE] = {0};
-	char url[REST_MAX_MSGHDR_SIZE] = {0};
+	char url[HTTP_MAX_URL_SIZE] = {0};
 	char *ip_ascii = NULL;
 
 	if (!ip_addr) {
 		goto err;
 	}
 
-	if (strcpy_s(url, REST_MAX_MSGHDR_SIZE, "https://") != 0) {
+	if (strcpy_s(url, HTTP_MAX_URL_SIZE, "https://") != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -343,13 +353,13 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port)
 		}
 	}
 
-	if (snprintf_s_si(temp, sizeof(temp), "%s:%d",
+	if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 			ip_ascii, port) < 0) {
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(url, REST_MAX_MSGHDR_SIZE, temp) != 0) {
+	if (strcat_s(url, HTTP_MAX_URL_SIZE, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
@@ -374,31 +384,40 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port)
 			curlCode = CURLE_OK;
 			curlCode = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 			if (curlCode != CURLE_OK) {
-				LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify peer\n");
+				LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify peer.\n");
 				goto err;
 			}
 
 			curlCode = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 			if (curlCode != CURLE_OK) {
-				LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify host\n");
+				LOG(LOG_ERROR, "CURL_ERROR: Could not disable verify host.\n");
 				goto err;
 			}
 			LOG(LOG_INFO, "Set connection for self signed certificate usage.\n");
-			}
+		}
 #endif
-
-			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-			if (curlCode != CURLE_OK) {
-				LOG(LOG_ERROR, "CURL_ERROR: Could not enable ssl\n");
-				goto err;
+		curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+		if (curlCode != CURLE_OK) {
+			LOG(LOG_ERROR, "CURL_ERROR: Could not enable ssl.\n");
+			goto err;
 		}
 
-		curl_easy_setopt(curl, CURLOPT_URL, url);
+
+		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
+		if (curlCode != CURLE_OK) {
+			LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");
+			goto err;
+		}
+
 		/* Do not do the transfer - only connect to host */
-		curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
+		curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
+		if (curlCode != CURLE_OK) {
+			LOG(LOG_ERROR, "CURL_ERROR: Could not able connect to host.\n");
+			goto err;
+		}
 		res = curl_easy_perform(curl);
 
-		if(res != CURLE_OK) {
+		if (res != CURLE_OK) {
 			LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
 			goto err;
 		}
@@ -407,7 +426,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port)
 		waiting. */
 		res = curl_easy_getinfo(curl, CURLINFO_ACTIVESOCKET, &sockfd);
 
-		if(res != CURLE_OK) {
+		if (res != CURLE_OK) {
 			LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
 			goto err;
 		}
@@ -434,12 +453,12 @@ err:
  *
  * @param ip_addr - pointer to IP address info
  * @param port - port number to connect
- * @param ssl - ssl handler in case of tls connection.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  * @return connection handle on success. -ve value on failure
  */
 
 fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
-			       void **ssl)
+			       bool tls)
 {
 	struct fdo_sock_handle *sock_hdl = FDO_CON_INVALID_HANDLE;
 	struct sockaddr_in haddr;
@@ -517,12 +536,11 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 #endif
 
 #if defined(USE_OPENSSL)
-	if (ssl) {
+	if (tls) {
 		sock_hdl->sockfd = fdo_curl_setup(ip_addr, port);
 		if (sock_hdl->sockfd < 0) {
 			goto end;
 		}
-		*ssl = (void *)(intptr_t)(sock_hdl->sockfd);
 	} else {
 		sock_hdl->sockfd = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock_hdl->sockfd < 0) {
@@ -551,10 +569,10 @@ end:
  * Disconnect the connection for a given connection handle.
  *
  * @param handle - connection handler (for ex: socket-id)
- * @param ssl - SSL handler in case of tls connection.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl)
+int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls)
 {
 	int sockfd = 0, ret = -1;
 	struct fdo_sock_handle *sock_hdl = handle;
@@ -565,7 +583,7 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl)
 
 	sockfd = sock_hdl->sockfd;
 
-	if (ssl && curl) {
+	if (tls && curl) {
 		curl_easy_cleanup(curl);
 		ret = 0;
 
@@ -591,13 +609,15 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl)
  * @param protocol_version - out FDO protocol version
  * @param message_type - out message type of incoming FDO message.
  * @param msglen - out Number of received bytes.
- * @param ssl - handler in case of tls connection.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param curl_buf: data buffer to read into msg received by curl.
+ * @param curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 				uint32_t *protocol_version,
 				uint32_t *message_type, uint32_t *msglen,
-				void *ssl, char *tmp_buf, size_t *ctr)
+				bool tls, char *curl_buf, size_t *curl_buf_offset)
 {
 	int32_t ret = -1;
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
@@ -610,23 +630,26 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		goto err;
 	}
 
-	if (ssl) {
+	if (tls) {
 		struct fdo_sock_handle *sock_hdl = handle;
 		int sockfd = sock_hdl->sockfd;
 		CURLcode res;
 		size_t nread;
+		int max_iteration = 100;
+		int itr = 0;
 
 		LOG(LOG_INFO,"Reading response.\n");
 
 		do {
 			nread = 0;
-			res = curl_easy_recv(curl, tmp_buf, REST_MAX_MSGHDR_SIZE, &nread);
+			res = curl_easy_recv(curl, curl_buf, REST_MAX_MSGHDR_SIZE, &nread);
 
-			if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 1, 60000L)) {
+			if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 1, MAX_TIME_OUT)) {
 				LOG(LOG_ERROR,"Error: timeout.\n");
-				return 1;
+				goto err;
 			}
-		} while (res == CURLE_AGAIN);
+			itr++;
+		} while (res == CURLE_AGAIN && itr < max_iteration);
 
 		if (res != CURLE_OK) {
 			LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
@@ -649,7 +672,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		}
 
 		if (!read_until_new_line(handle, tmp, REST_MAX_MSGHDR_SIZE,
-					 ssl, ctr, tmp_buf)) {
+					 tls, curl_buf, curl_buf_offset)) {
 			LOG(LOG_ERROR, "read_until_new_line() failed!\n");
 			goto err;
 		}
@@ -712,11 +735,14 @@ err:
  * @param handle - connection handler (for ex: socket-id)
  * @param buf - data buffer to read into.
  * @param length - Number of received bytes.
- * @param ssl - handler in case of tls connection.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param curl_buf: data buffer to read into msg received by curl.
+ * @param curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, number of bytes read on success.
  */
 int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
-			      size_t length, void *ssl, char *tmp_buf, size_t ctr)
+			      size_t length, bool tls, char *curl_buf,
+				  size_t curl_buf_offset)
 {
 	int n;
 	int32_t ret = -1;
@@ -729,8 +755,8 @@ int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
 
 	sockfd = sock_hdl->sockfd;
 
-	if (ssl) {
-		if (memcpy_s(buf, length, tmp_buf + ctr, length)) {
+	if (tls) {
+		if (memcpy_s(buf, length, curl_buf + curl_buf_offset, length)) {
 			LOG(LOG_ERROR, "Failed to copy msg data in byte array\n");
 			goto err;
 		}
@@ -756,12 +782,12 @@ err:
  * @param message_type - message type of outgoing FDO message.
  * @param buf - data buffer to write from.
  * @param length - Number of sent bytes.
- * @param ssl - handler in case of tls connection.
+ * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, number of bytes written.
  */
 int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			     uint32_t message_type, const uint8_t *buf,
-			     size_t length, void *ssl)
+			     size_t length, bool tls)
 {
 	int ret = -1;
 	int n;
@@ -788,7 +814,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 	rest->prot_ver = protocol_version;
 	rest->msg_type = message_type;
 	rest->content_length = length;
-	if (ssl) {
+	if (tls) {
 		rest->tls = true;
 	}
 
@@ -805,24 +831,27 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 	}
 
 	/* Send REST header */
-	if (ssl) {
+	if (tls) {
 		CURLcode res;
 		size_t nsent_total = 0;
 		LOG(LOG_INFO,"Sending REST header.\n");
 
 		do {
 			size_t nsent;
+			int max_iteration = 100;
+			int itr = 0;
 			do {
 				nsent = 0;
 				res = curl_easy_send(curl, rest_hdr + nsent_total,
-					header_len - nsent_total, &nsent);
+							header_len - nsent_total, &nsent);
 				nsent_total += nsent;
 
-				if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 0, 60000L)) {
+				if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 0, MAX_TIME_OUT)) {
 					LOG(LOG_ERROR,"Error: timeout.\n");
 					goto hdrerr;
 				}
-			} while (res == CURLE_AGAIN);
+				itr++;
+			} while (res == CURLE_AGAIN && itr < max_iteration);
 
 			if (res != CURLE_OK) {
 				LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
@@ -845,7 +874,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			    "errno=%d, %d\n",
 			    n, errno, __LINE__);
 
-			if (fdo_con_disconnect(handle, ssl)) {
+			if (fdo_con_disconnect(handle, tls)) {
 				LOG(LOG_ERROR, "Error during socket close()\n");
 				goto hdrerr;
 			}
@@ -867,7 +896,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 	LOG(LOG_DEBUG, "REST:header(%zu):%s\n", header_len, rest_hdr);
 
 	/* Send REST body */
-	if (ssl) {
+	if (tls) {
 
 		CURLcode res;
 		size_t nsent_total = 0;
@@ -875,17 +904,20 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 
 		do {
 			size_t nsent;
+			int max_iteration = 100;
+			int itr = 0;
 			do {
 				nsent = 0;
 				res = curl_easy_send(curl, buf + nsent_total,
 					length - nsent_total, &nsent);
 				nsent_total += nsent;
 
-				if	(res == CURLE_AGAIN && !wait_on_socket(sockfd, 0, 60000L)) {
+				if	(res == CURLE_AGAIN && !wait_on_socket(sockfd, 0, MAX_TIME_OUT)) {
 					LOG(LOG_ERROR,"Error: timeout.\n");
 					goto bodyerr;
 				}
-			} while (res == CURLE_AGAIN);
+				itr++;
+			} while (res == CURLE_AGAIN && itr < max_iteration);
 
 			if (res != CURLE_OK) {
 				LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
@@ -907,7 +939,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			    "errno=%d, %d\n",
 			    n, errno, __LINE__);
 
-			if (fdo_con_disconnect(handle, ssl)) {
+			if (fdo_con_disconnect(handle, tls)) {
 				LOG(LOG_ERROR, "Error during socket close()\n");
 				goto bodyerr;
 			}

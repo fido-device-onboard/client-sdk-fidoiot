@@ -128,7 +128,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
 					prot_ctx->host_port,
-					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
+					prot_ctx->tls,
 					is_mfg_proxy_defined())) {
 				ret = false;
 				break;
@@ -142,7 +142,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			      prot_ctx->resolved_ip ? prot_ctx->resolved_ip : prot_ctx->host_ip,
 			      prot_ctx->host_port,
 			      &prot_ctx->sock_hdl,
-			      (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+			      prot_ctx->tls);
 		break;
 	case FDO_STATE_T01_SND_HELLO_FDO: /* type 30 */
 		ATTRIBUTE_FALLTHROUGH;
@@ -154,7 +154,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
 					prot_ctx->host_port,
-					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
+					prot_ctx->tls,
 					is_rv_proxy_defined())) {
 				ret = false;
 				fdo_free(prot_ctx->resolved_ip);
@@ -167,11 +167,11 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		// try DNS's resolved IP first, if it fails, try given IP address
 		ret = connect_to_rendezvous(
 		    prot_ctx->resolved_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
-		    (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+		    prot_ctx->tls);
 		if (!ret) {
 			ret = connect_to_rendezvous(
 				prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
-				(prot_ctx->tls ? &prot_ctx->ssl : NULL));
+				prot_ctx->tls);
 		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
@@ -184,7 +184,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
 					prot_ctx->host_port,
-					(prot_ctx->tls ? &prot_ctx->ssl : NULL),
+					prot_ctx->tls,
 					is_owner_proxy_defined())) {
 				ret = false;
 				fdo_free(prot_ctx->resolved_ip);
@@ -212,10 +212,10 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
 		// try DNS's resolved IP first, if it fails, try given IP address
 		ret = connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+				       &prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
 			ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, (prot_ctx->tls ? &prot_ctx->ssl : NULL));
+				       &prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	default:
@@ -317,11 +317,11 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			n = fdo_con_send_message(
 			    prot_ctx->sock_hdl, FDO_PROT_SPEC_VERSION,
 			    fdow->msg_type, &fdow->b.block[0], size,
-			    prot_ctx->ssl);
+			    prot_ctx->tls);
 
 			if (n <= 0) {
 				if (fdo_con_disconnect(prot_ctx->sock_hdl,
-						       prot_ctx->ssl)) {
+						       prot_ctx->tls)) {
 					LOG(LOG_ERROR,
 					    "Error during socket close()\n");
 					ret = -1;
@@ -352,16 +352,16 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
-		char tmp_buf[REST_MAX_MSGHDR_SIZE];
-		size_t ctr = 0;
-		if (memset_s(tmp_buf, sizeof(tmp_buf), 0) != 0) {
+		char curl_buf[REST_MAX_MSGHDR_SIZE];
+		size_t curl_buf_offset = 0;
+		if (memset_s(curl_buf, sizeof(curl_buf), 0) != 0) {
 				LOG(LOG_ERROR, "Memset() failed!\n");
 				return false;
 			}
 
 		ret = fdo_con_recv_msg_header(prot_ctx->sock_hdl, &protver,
 					      (uint32_t *)&fdor->msg_type,
-					      &msglen, prot_ctx->ssl, tmp_buf, &ctr);
+					      &msglen, prot_ctx->tls, curl_buf, &curl_buf_offset);
 		if (ret == -1) {
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
@@ -379,11 +379,11 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			do {
 				n = fdo_con_recv_msg_body(
 				    prot_ctx->sock_hdl, &fdor->b.block[0], msglen,
-				    prot_ctx->ssl, tmp_buf, ctr);
+				    prot_ctx->tls, curl_buf, curl_buf_offset);
 				if (n < 0) {
 					if (fdo_con_disconnect(
 						prot_ctx->sock_hdl,
-						prot_ctx->ssl)) {
+						prot_ctx->tls)) {
 						LOG(LOG_ERROR, "Error during "
 							       "socket "
 							       "close()\n");
@@ -411,7 +411,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			}
 		}
 
-		if (fdo_con_disconnect(prot_ctx->sock_hdl, prot_ctx->ssl)) {
+		if (fdo_con_disconnect(prot_ctx->sock_hdl, prot_ctx->tls)) {
 			LOG(LOG_ERROR, "Error during socket close()\n");
 			ret = -1;
 			break;

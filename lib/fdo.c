@@ -30,7 +30,6 @@ typedef struct app_data_s {
 	bool recovery_enabled;
 	bool (*state_fn)(void);
 	fdo_dev_cred_t *devcred;
-	void *ssl;
 	fdo_prot_t prot;
 	int err;
 	fdo_service_info_t *service_info;
