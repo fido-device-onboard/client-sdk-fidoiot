@@ -3,22 +3,22 @@
 
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO build and execution depend on OpenSSL* toolkit version 1.1.1n. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM* 2.0
 
-* On RHEL* OS version 8.4:
+* On RHEL* OS version 8.4 or 8.6:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 
-OpenSSL* toolkit version 1.1.1n.
+OpenSSL* toolkit version 1.1.1q.
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1n
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
 
 1. If libssl-dev is installed, remove it:
 	```
@@ -27,11 +27,11 @@ OpenSSL* toolkit version 1.1.1n.
 	```
 2. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
+	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
 	```
 3. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1n.tar.gz && cd openssl-1.1.1n
+	tar -zxf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
 	```
 4. Issue the command:
 	```
@@ -70,7 +70,7 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1n  15 Mar 2022
+	OpenSSL* 1.1.1q  05 Jul 2022
 	```
 
 ## 2. TPM* Library Installation
@@ -80,7 +80,7 @@ TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
 **Script usage command**
-* **On Ubuntu OS version 20.04:**
+* **On Ubuntu OS version 20.04 or 22.04 / Debian 11.4:**
 ```shell
 sudo ./install_tpm_libs.sh -h
 ```
@@ -107,8 +107,8 @@ sudo ./install_tpm_libs.sh -h
 	```
 	sudo ./install_tpm_libs.sh -u
 	```
-* **On RHEL\* OS version 8.4:**
-> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4.
+* **On RHEL\* OS version 8.4 or 8.6:**
+> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4 or 8.6.
 ```shell
 sudo ./install_tpm_libs_rhel.sh -h
 ```
@@ -192,7 +192,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
 ## 3. Compiling Intel safestringlib
 
-FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
+FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
  mkdir obj
@@ -331,12 +331,12 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1n for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 1.1.1q for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
   openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1n, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1n.
+  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1q, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1q.
 
 

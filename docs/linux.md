@@ -2,18 +2,18 @@
 
 
 # Linux* OS
-The development and execution OS used was `Ubuntu* OS version 20.04 / RHEL* OS version 8.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version 1.1.1n. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
-* For Ubuntu* OS version 20.04:
+* For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
 sudo apt-get install python-setuptools clang-format dos2unix ruby libcurl4-openssl-dev \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
 ```
 
-* For RHEL* OS version 8.4:
+* For RHEL* OS version 8.4 or 8.6:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -25,17 +25,17 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
-OpenSSL* toolkit version 1.1.1n
+OpenSSL* toolkit version 1.1.1q
 GCC version > 7.5
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1n
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
 
 1. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
+	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1n.tar.gz && cd openssl-1.1.1n
+	tar -zxf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
 	```
 3. Issue the command:
 	```
@@ -74,11 +74,11 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1n  15 Mar 2022
+	OpenSSL* 1.1.1q  05 Jul 2022
 	```
 
 ## 3. Compiling Intel safestringlib
-FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.0.0` and follow these instructions to build:
+FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
  mkdir obj
@@ -144,3 +144,12 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
+- If the client-sdk binary is built on openssl 1.1.1q environment and then executed with openssl 3 environment, it may fail with "libssl.so.1.1 not found" error. In order to successfully execute it,  build the specific 1.1.1 version dependent libraries and make it available as well:
+    wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
+    tar -zxf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
+    ./config
+    make
+    cp libssl.so.1.1 /usr/lib/x86_64-linux-gnu/
+    cp libcrypto.so.1.1 /usr/lib/x86_64-linux-gnu/
+
+
