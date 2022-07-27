@@ -637,12 +637,15 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		size_t nread;
 		int max_iteration = 100;
 		int itr = 0;
+		size_t nread_total = 0;
 
 		LOG(LOG_INFO,"Reading response.\n");
 
 		do {
 			nread = 0;
-			res = curl_easy_recv(curl, curl_buf, REST_MAX_MSGHDR_SIZE, &nread);
+			res = curl_easy_recv(curl, curl_buf + nread_total,
+						REST_MAX_MSGBODY_SIZE - nread_total, &nread);
+			nread_total += nread;
 
 			if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 1, MAX_TIME_OUT)) {
 				LOG(LOG_ERROR,"Error: timeout.\n");
@@ -656,13 +659,13 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 			goto err;
 		}
 
-		if (nread == 0) {
-			/* end of the response */
+		if (nread_total == 0) {
+			LOG(LOG_ERROR,"No response recevied! \n");
 			goto err;
 		}
 
 		LOG(LOG_INFO,"Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-			(curl_off_t)nread);
+			(curl_off_t)nread_total);
 	}
 
 	for (;;) {

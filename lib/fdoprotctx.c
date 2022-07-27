@@ -352,9 +352,10 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
-		char curl_buf[REST_MAX_MSGHDR_SIZE];
+		char curl_buf[REST_MAX_MSGBODY_SIZE];
 		size_t curl_buf_offset = 0;
-		if (memset_s(curl_buf, sizeof(curl_buf), 0) != 0) {
+
+		if (memset_s(curl_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
 				LOG(LOG_ERROR, "Memset() failed!\n");
 				return false;
 			}

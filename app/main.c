@@ -279,7 +279,13 @@ int app_main(bool is_resale)
 	}
 #endif
 #if defined SELF_SIGNED_CERTS_SUPPORTED
-	if  (argc > 1 && (*argv[1] == '5' || *argv[2] == '5')) {
+	int strcmp_ss = 1;
+	int res = -1;
+
+	res = (int)strcmp_s((char *)argv[1], DATA_CONTENT_SIZE, "-ss",
+						&strcmp_ss);
+
+	if  (argc > 1 && (!res && !strcmp_ss)) {
 		useSelfSignedCerts = true;
 	}
 #endif

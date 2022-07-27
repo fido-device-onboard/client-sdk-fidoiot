@@ -441,9 +441,6 @@ end:
 		fdo_free(ip_list);
 	}
 
-	if (!ret && tls && curl) {
-		curl_easy_cleanup(curl);
-	}
 	return ret;
 }
 
