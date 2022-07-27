@@ -351,7 +351,7 @@ void fdo_net_init(void)
  * @param dn: Domain name of the server
  * @param ip: A valid IP address mapping to this dn.
  * @param port: A valid port number mapping to this dn.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param proxy: proxy enabled for this ip access.
  *
  * @return ret
@@ -454,7 +454,7 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
@@ -548,7 +548,7 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
@@ -643,7 +643,7 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.

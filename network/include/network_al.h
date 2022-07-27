@@ -55,7 +55,7 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
  *
  * @param[in] addr: IP Address to connect to.
  * @param[in] port: port number to connect to.
- * @param[in] tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, connection handle on success.
  */
 fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
@@ -65,7 +65,7 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
  * Disconnect the connection.
  *
  * @param[in] handle: connection handler (for ex: socket-id)
- * @param[in] tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
@@ -77,7 +77,7 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
  * @param[out] protocol_version: FDO protocol version
  * @param[out] message_type: message type of incoming FDO message.
  * @param[out] msglen: length of incoming message.
- * @param[in] tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param[out] curl_buf: data buffer to read into msg received by curl.
  * @param[out] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
@@ -93,7 +93,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
  * @param[in] handle: connection handler (for ex: socket-id)
  * @param[out] buf: data buffer to read into.
  * @param[in] length: Number of received bytes to be read.
- * @param[in] tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param[in] curl_buf: data buffer to read into msg received by curl.
  * @param[in] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
@@ -109,7 +109,7 @@ int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
  * @param[in] message_type: message type of outgoing FDO message.
  * @param[in] buf: data buffer to write from.
  * @param[in] length: Number of sent bytes.
- * @param[in] tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,

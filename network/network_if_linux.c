@@ -70,7 +70,7 @@ struct fdo_sock_handle {
  * @param handle - socket struct for read.
  * @param out -  out pointer for REST header line.
  * @param size - out REST header line length.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param curl_buf: data buffer to read into msg received by curl.
  * @param curl_buf_offset: pointer to track curl_buf.
  * @retval true if line read was successful, false otherwise.
@@ -453,7 +453,7 @@ err:
  *
  * @param ip_addr - pointer to IP address info
  * @param port - port number to connect
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @return connection handle on success. -ve value on failure
  */
 
@@ -569,7 +569,7 @@ end:
  * Disconnect the connection for a given connection handle.
  *
  * @param handle - connection handler (for ex: socket-id)
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls)
@@ -609,7 +609,7 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls)
  * @param protocol_version - out FDO protocol version
  * @param message_type - out message type of incoming FDO message.
  * @param msglen - out Number of received bytes.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param curl_buf: data buffer to read into msg received by curl.
  * @param curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
@@ -735,7 +735,7 @@ err:
  * @param handle - connection handler (for ex: socket-id)
  * @param buf - data buffer to read into.
  * @param length - Number of received bytes.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param curl_buf: data buffer to read into msg received by curl.
  * @param curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, number of bytes read on success.
@@ -782,7 +782,7 @@ err:
  * @param message_type - message type of outgoing FDO message.
  * @param buf - data buffer to write from.
  * @param length - Number of sent bytes.
- * @param tls: flag describibg whether HTTP (false) or HTTPS (true) is
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, number of bytes written.
  */
 int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
