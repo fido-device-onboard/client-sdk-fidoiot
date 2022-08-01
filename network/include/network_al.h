@@ -99,7 +99,8 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
-			      size_t length, bool tls, char *tmp_buf, size_t ctr);
+			      size_t length, bool tls, char *curl_buf,
+				  size_t curl_buf_offset);
 
 /*
  * Send(write) data.

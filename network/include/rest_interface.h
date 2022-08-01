@@ -45,7 +45,7 @@ typedef struct Rest_ctx_s {
 	bool is_dns;
 } rest_ctx_t;
 
-CURL *curl;
+extern CURL *curl;
 
 bool cache_host_dns(const char *dns);
 bool cache_host_ip(fdo_ip_address_t *ip);

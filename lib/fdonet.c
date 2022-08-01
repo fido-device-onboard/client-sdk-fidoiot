@@ -36,6 +36,8 @@ static fdo_ip_address_t ownerproxy_ip;
 static uint16_t ownerproxy_port;
 #endif // defined HTTPPROXY
 
+CURL *curl;
+
 /**
  * Internal API
  */
