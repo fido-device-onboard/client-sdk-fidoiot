@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #define IPV4_ADDR_LEN 4
+#define MAX_TIME_OUT  60000L
 
 #ifndef TARGET_OS_MBEDOS
 typedef void *fdo_con_handle;
@@ -54,20 +55,20 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
  *
  * @param[in] addr: IP Address to connect to.
  * @param[in] port: port number to connect to.
- * @param[in] ssl: SSL handler in case of tls connection.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, connection handle on success.
  */
 fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
-			       void **ssl);
+			       bool tls);
 
 /*
  * Disconnect the connection.
  *
  * @param[in] handle: connection handler (for ex: socket-id)
- * @param[in] ssl: SSL handler in case of tls connection.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl);
+int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
 
 /*
  * Receive(read) length of incoming fdo packet.
@@ -76,13 +77,15 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, void *ssl);
  * @param[out] protocol_version: FDO protocol version
  * @param[out] message_type: message type of incoming FDO message.
  * @param[out] msglen: length of incoming message.
- * @param[in] ssl handler in case of tls connection.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
+ * @param[out] curl_buf: data buffer to read into msg received by curl.
+ * @param[out] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 				uint32_t *protocol_version,
 				uint32_t *message_type, uint32_t *msglen,
-				void *ssl);
+				bool tls, char *curl_buf, size_t *curl_buf_offset);
 
 /*
  * Receive(read) incoming fdo packet.
@@ -90,11 +93,14 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
  * @param[in] handle: connection handler (for ex: socket-id)
  * @param[out] buf: data buffer to read into.
  * @param[in] length: Number of received bytes to be read.
- * @param[in] ssl handler in case of tls connection.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
+ * @param[in] curl_buf: data buffer to read into msg received by curl.
+ * @param[in] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
-			      size_t length, void *ssl);
+			      size_t length, bool tls, char *curl_buf,
+				  size_t curl_buf_offset);
 
 /*
  * Send(write) data.
@@ -104,12 +110,12 @@ int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
  * @param[in] message_type: message type of outgoing FDO message.
  * @param[in] buf: data buffer to write from.
  * @param[in] length: Number of sent bytes.
- * @param[in] ssl handler in case of tls connection.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			     uint32_t message_type, const uint8_t *buf,
-			     size_t length, void *ssl);
+			     size_t length, bool tls);
 
 /*
  * Network Connection tear down.
@@ -139,5 +145,23 @@ const char *get_device_serial_number(void);
 
 /* generate random number */
 int fdo_random(void);
+
+/**
+ * fdo_curl_setup connects to the given ip_addr via curl API
+ *
+ * @param ip_addr[in] - pointer to IP address info
+ * @param port[in] - port number to connect
+ * @return connection handle on success. -ve value on failure
+ */
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port);
+
+/**
+ * fdo_curl_proxy set up the proxy connection via curl API
+ *
+ * @param ip_addr[in] - pointer to IP address of proxy
+ * @param port[in] - proxy port number to connect
+ * @return true on success. false value on failure
+ */
+bool fdo_curl_proxy(fdo_ip_address_t *ip_addr, uint16_t port);
 
 #endif /* __NETWORK_AL_H__ */

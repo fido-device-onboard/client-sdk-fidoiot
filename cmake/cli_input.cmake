@@ -15,6 +15,7 @@ set (BUILD debug)
 set (TARGET_OS linux)
 set (HTTPPROXY true)
 set (PROXY_DISCOVERY false)
+set (SELF_SIGNED_CERTS true)
 set (OPTIMIZE 1)
 set (DA_FILE der)
 set (CRYPTO_HW false)
@@ -212,6 +213,34 @@ set(CACHED_PROXY_DISCOVERY ${PROXY_DISCOVERY} CACHE STRING "Selected PROXY_DISCO
 message("Selected PROXY_DISCOVERY ${PROXY_DISCOVERY}")
 
 ###########################################
+# FOR SELF_SIGNED_CERTS
+get_property(cached_self_signed_certs_value CACHE SELF_SIGNED_CERTS PROPERTY VALUE)
+
+set(self_signed_certs_cli_arg ${cached_self_signed_certs_value})
+if(self_signed_certs_cli_arg STREQUAL CACHED_SELF_SIGNED_CERTS)
+  unset(self_signed_certs_cli_arg)
+endif()
+
+set(self_signed_certs_app_cmake_lists ${SELF_SIGNED_CERTS})
+if(cached_self_signed_certs_value STREQUAL SELF_SIGNED_CERTS)
+  unset(self_signed_certs_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_SELF_SIGNED_CERTS)
+  if ((DEFINED self_signed_certs_cli_arg) AND (NOT(CACHED_SELF_SIGNED_CERTS STREQUAL self_signed_certs_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(SELF_SIGNED_CERTS ${CACHED_SELF_SIGNED_CERTS})
+elseif(DEFINED self_signed_certs_cli_arg)
+  set(SELF_SIGNED_CERTS ${self_signed_certs_cli_arg})
+elseif(DEFINED self_signed_certs_app_cmake_lists)
+  set(SELF_SIGNED_CERTS ${self_signed_certs_app_cmake_lists})
+endif()
+
+set(CACHED_SELF_SIGNED_CERTS ${SELF_SIGNED_CERTS} CACHE STRING "Selected SELF_SIGNED_CERTS")
+message("Selected SELF_SIGNED_CERTS ${SELF_SIGNED_CERTS}")
+
+###########################################
 # FOR DA_FILE
 get_property(cached_da_file_value CACHE DA_FILE PROPERTY VALUE)
 
@@ -321,7 +350,7 @@ elseif(DEFINED unit-test_app_cmake_lists)
 endif()
 
 set(CACHED_UNIT-TEST ${unit-test} CACHE STRING "Selected unit-test")
-if (${unit-test} STREQUAL true)  
+if (${unit-test} STREQUAL true)
   message("Selected UNIT-TEST ${unit-test}")
 endif()
 

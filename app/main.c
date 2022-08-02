@@ -277,7 +277,17 @@ int app_main(bool is_resale)
 	if  (is_resale == true) {
 		do_resale = true;
 	}
+#endif
+#if defined SELF_SIGNED_CERTS_SUPPORTED
+	int strcmp_ss = 1;
+	int res = -1;
 
+	res = (int)strcmp_s((char *)argv[1], DATA_CONTENT_SIZE, "-ss",
+						&strcmp_ss);
+
+	if  (argc > 1 && (!res && !strcmp_ss)) {
+		useSelfSignedCerts = true;
+	}
 #endif
 	if (is_ownership_transfer(do_resale)) {
 		ret = 0;

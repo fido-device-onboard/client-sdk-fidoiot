@@ -30,7 +30,6 @@ typedef struct app_data_s {
 	bool recovery_enabled;
 	bool (*state_fn)(void);
 	fdo_dev_cred_t *devcred;
-	void *ssl;
 	fdo_prot_t prot;
 	int err;
 	fdo_service_info_t *service_info;
@@ -50,6 +49,10 @@ typedef struct app_data_s {
 static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
+
+#if defined(SELF_SIGNED_CERTS_SUPPORTED)
+bool useSelfSignedCerts = false;
+#endif
 
 #ifdef RETRY_FALSE
 #define ERROR_RETRY_COUNT 1
@@ -812,7 +815,7 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
  *
  * @param buffer Buffer containing the network address
  * @param buffer_sz Size of the above buffer
- * @param tls Output flag describibg whether HTTP (false) or HTTPS (true) is used
+ * @param tls Output flag describing whether HTTP (false) or HTTPS (true) is used
  * @param mfg_ip
  * Output structure to store IP. Memory allocation is done in this method.
  * If IP address is found while parsing, this allocated structure is returned that must

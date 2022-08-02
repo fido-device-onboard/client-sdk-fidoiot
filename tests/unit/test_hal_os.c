@@ -230,7 +230,7 @@ void test_fdo_con_recv_message(void)
 	fdo_con_handle handle = &g_handle;
 	ssize_t nbytes = 5;
 	TEST_ASSERT_EQUAL_INT(33,
-			      fdo_con_recv_msg_body(handle, buf, nbytes, NULL));
+			      fdo_con_recv_msg_body(handle, buf, nbytes, NULL, NULL, 0));
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -270,7 +270,7 @@ TEST_CASE("read_until_new_line", "[OS][HAL][fdo]")
 	TEST_ASSERT_EQUAL_INT(0, ret);
 	handle.sockfd = 100;
 	prot_ctx->sock_hdl = (fdo_con_handle)&handle;
-	prot_ctx->ssl = NULL;
+	// prot_ctx->ssl = NULL;
 
 	recv_configured = 0;
 	retval = read_until_new_line(prot_ctx->sock_hdl, buff, bufsize);

@@ -18,9 +18,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <curl/curl.h>
 
 #define HTTP_MAX_URL_SIZE 150
-#define REST_MAX_MSGHDR_SIZE 512
+#define REST_MAX_MSGHDR_SIZE 1024
 // maximum supported length is 8192 + 700. Rounding it to 9000
 #define REST_MAX_MSGBODY_SIZE 9000
 #define HTTP_SUCCESS_OK 200
@@ -44,6 +45,8 @@ typedef struct Rest_ctx_s {
 	bool is_dns;
 } rest_ctx_t;
 
+extern CURL *curl;
+
 bool cache_host_dns(const char *dns);
 bool cache_host_ip(fdo_ip_address_t *ip);
 bool cache_host_port(uint16_t port);
@@ -54,5 +57,5 @@ bool construct_rest_header(rest_ctx_t *rest, char *header, size_t header_len);
 char get_rest_hdr_body_separator(void);
 bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len);
 void exit_rest_context(void);
-
+bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii);
 #endif // __REST_INTERFACE_H__

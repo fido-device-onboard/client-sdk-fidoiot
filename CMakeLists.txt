@@ -103,6 +103,7 @@ if(${TARGET_OS} MATCHES linux)
     -L$ENV{TINYCBOR_ROOT}/lib/
     -l:libtinycbor.a
     -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
+    -lcurl
     )
 
   if (${TLS} STREQUAL openssl)

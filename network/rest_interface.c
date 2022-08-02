@@ -190,7 +190,7 @@ err:
  * @param ip_ascii - IP address output in string format.
  * @retval true if conversion was successful, false otherwise.
  */
-static bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
+bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
 {
 	char temp[IP_TAG_LEN + 1] = {0};
 	uint8_t octlet_size = 4; // e.g 192.168.0.100, max 3char +1 null/oct.
@@ -415,7 +415,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	bool ret = false;
 	char *rem = NULL, *p1 = NULL, *p2 = NULL;
 	size_t remlen = 0;
-	char tmp[BUFF_SIZE_512_BYTES] = {0};
+	char tmp[BUFF_SIZE_1K_BYTES] = {0};
 	char *eptr = NULL;
 	size_t tmplen = 0;
 	long rcode = 0;
