@@ -997,7 +997,8 @@ bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip)
 	}
 
 	size_t ip_length;
-	if (!fdor_string_length(fdor, &ip_length) || ip_length != IPV4_ADDR_LEN) {
+	if (!fdor_string_length(fdor, &ip_length) || (ip_length != IPV6_ADDR_LEN &&
+			ip_length != IPV4_ADDR_LEN)) {
 		LOG(LOG_ERROR, "Invalid IP Address length\n");
 		fdo_byte_array_free(IP);
 		return false;

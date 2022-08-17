@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #define IPV4_ADDR_LEN 4
+#define IPV6_ADDR_LEN 16
 #define MAX_TIME_OUT  60000L
 
 #ifndef TARGET_OS_MBEDOS
@@ -47,7 +48,7 @@ int32_t fdo_con_setup(char *medium, char **params, uint32_t count);
  * @param[out] ip_list_size: number of IP address in ip_list
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
+int32_t fdo_con_dns_lookup(char *url, fdo_ip_address_t **ip_list,
 			   uint32_t *ip_list_size);
 
 /*
@@ -65,10 +66,9 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
  * Disconnect the connection.
  *
  * @param[in] handle: connection handler (for ex: socket-id)
- * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
+int32_t fdo_con_disconnect(fdo_con_handle handle);
 
 /*
  * Receive(read) length of incoming fdo packet.
@@ -77,7 +77,6 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
  * @param[out] protocol_version: FDO protocol version
  * @param[out] message_type: message type of incoming FDO message.
  * @param[out] msglen: length of incoming message.
- * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param[out] curl_buf: data buffer to read into msg received by curl.
  * @param[out] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
@@ -85,21 +84,18 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
 int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 				uint32_t *protocol_version,
 				uint32_t *message_type, uint32_t *msglen,
-				bool tls, char *curl_buf, size_t *curl_buf_offset);
+				char *curl_buf, size_t *curl_buf_offset);
 
 /*
  * Receive(read) incoming fdo packet.
  *
- * @param[in] handle: connection handler (for ex: socket-id)
  * @param[out] buf: data buffer to read into.
  * @param[in] length: Number of received bytes to be read.
- * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @param[in] curl_buf: data buffer to read into msg received by curl.
  * @param[in] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
-			      size_t length, bool tls, char *curl_buf,
+int32_t fdo_con_recv_msg_body(uint8_t *buf, size_t length, char *curl_buf,
 				  size_t curl_buf_offset);
 
 /*
@@ -147,13 +143,22 @@ const char *get_device_serial_number(void);
 int fdo_random(void);
 
 /**
+ * @brief Check the version of given IP address
+ *
+ * @param ip_addr input IP address
+ * @return int protocol family no. of socket
+ */
+int check_ip_version(char *ip_addr);
+
+/**
  * fdo_curl_setup connects to the given ip_addr via curl API
  *
  * @param ip_addr[in] - pointer to IP address info
  * @param port[in] - port number to connect
+ * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @return connection handle on success. -ve value on failure
  */
-int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port);
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls);
 
 /**
  * fdo_curl_proxy set up the proxy connection via curl API

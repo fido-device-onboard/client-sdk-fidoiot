@@ -24,6 +24,7 @@
 #include "safe_lib.h"
 #include "fdodeviceinfo.h"
 #include <ctype.h>
+#include <arpa/inet.h>
 
 typedef struct app_data_s {
 	bool error_recovery;
@@ -49,6 +50,7 @@ typedef struct app_data_s {
 static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
+bool is_ipv6 = false;
 
 #if defined(SELF_SIGNED_CERTS_SUPPORTED)
 bool useSelfSignedCerts = false;
@@ -874,18 +876,37 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		LOG(LOG_ERROR, "memset failed\n");
 		goto end;
 	}
-	while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) && index < buffer_sz) {
-		if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.') {
-			LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in Manufacturer address\n");
-			goto end;
-		} else {
-			mfg_dns[dns_index] = buffer[index];
-			if (isalpha(buffer[index])) {
-				count_dns_alphabets++;
+
+	if (buffer[index] == '[') {
+		index++;
+		while (buffer[index] != ']' && (dns_index < mfg_dns_sz - 1) && index < buffer_sz) {
+			if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.' && buffer[index] != '[' && buffer[index] != ':') {
+				LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in Manufacturer address\n");
+				goto end;
+			} else {
+				mfg_dns[dns_index] = buffer[index];
+				if (isalpha(buffer[index])) {
+					count_dns_alphabets++;
+				}
 			}
+			index++;
+			dns_index++;
 		}
 		index++;
-		dns_index++;
+	} else {
+		while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) && index < buffer_sz) {
+			if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.') {
+				LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in Manufacturer address\n");
+				goto end;
+			} else {
+				mfg_dns[dns_index] = buffer[index];
+				if (isalpha(buffer[index])) {
+					count_dns_alphabets++;
+				}
+			}
+			index++;
+			dns_index++;
+		}
 	}
 
 	if (!isalnum(mfg_dns[0]) || !isalnum(mfg_dns[dns_index - 1])) {
@@ -956,6 +977,17 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	// allocate IP structure here
 	// if a valid IP is found, return the IP structure conatining IP, that must be freed by caller
 	// if a valid IP is not found, free the IP structure immediately and return NULL IP structure
+	int ip_info = check_ip_version(mfg_dns);
+
+	if (ip_info == AF_INET) {
+		LOG(LOG_INFO, "%s is an ipv4 address\n", mfg_dns);
+	} else if (ip_info == AF_INET6) {
+		LOG(LOG_INFO,"%s is an ipv6 address\n", mfg_dns);
+		is_ipv6 = true;
+	} else {
+		LOG(LOG_DEBUG,"%s is an unknown address format %d\n", mfg_dns, ip_info);
+	}
+
 	*mfg_ip = fdo_ipaddress_alloc();
 	if (!*mfg_ip) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
@@ -965,7 +997,11 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	result = fdo_printable_to_net(mfg_dns, (*mfg_ip)->addr);
 	if (result > 0) {
 		// valid IP address
-		(*mfg_ip)->length = IPV4_ADDR_LEN;
+		if (is_ipv6) {
+			(*mfg_ip)->length = IPV6_ADDR_LEN;
+		} else {
+			(*mfg_ip)->length = IPV4_ADDR_LEN;
+		}
 		LOG(LOG_DEBUG, "Manufacturer IP will be used\n");
 	} else if (result == 0) {
 		// not an IP address, so treat it as DNS address
