@@ -877,10 +877,11 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		goto end;
 	}
 
+	// remove '[]' from the network address if present
 	if (buffer[index] == '[') {
 		index++;
 		while (buffer[index] != ']' && (dns_index < mfg_dns_sz - 1) && index < buffer_sz) {
-			if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.' && buffer[index] != '[' && buffer[index] != ':') {
+			if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.' && buffer[index] != ':') {
 				LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in Manufacturer address\n");
 				goto end;
 			} else {

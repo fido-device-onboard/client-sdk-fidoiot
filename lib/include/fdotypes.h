@@ -10,6 +10,7 @@
 #include "fdoblockio.h"
 #include "fdomodules.h"
 #include <stddef.h>
+#include <netinet/in.h>
 
 /*
  * Wrapper around a URL
@@ -119,7 +120,7 @@ typedef fdo_byte_array_t fdo_key_exchange_t;
 
 typedef struct {
 	uint8_t length;
-	uint8_t addr[46];
+	uint8_t addr[INET6_ADDRSTRLEN];
 } fdo_ip_address_t;
 
 fdo_ip_address_t *fdo_ipaddress_alloc(void);

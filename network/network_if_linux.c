@@ -65,7 +65,7 @@ struct fdo_sock_handle {
 	int sockfd;
 };
 /**
- * Read from socket until new-line is encountered.
+ * Read from curl buffer until new-line is encountered.
  *
  * @param out -  out pointer for REST header line.
  * @param size - out REST header line length.
@@ -196,9 +196,9 @@ int32_t fdo_con_dns_lookup(char *url, fdo_ip_address_t **ip_list,
 		if (result->ai_family == AF_INET) {
 	#if LOG_LEVEL == LOG_MAX_LEVEL
 			// for trace purpose
-			char host[16];
+			char host[INET_ADDRSTRLEN];
 
-			inet_ntop(AF_INET, &(sa_in->sin_addr), host, 16);
+			inet_ntop(AF_INET, &(sa_in->sin_addr), host, INET_ADDRSTRLEN);
 			LOG(LOG_DEBUG, "Resolved into IP-Address: <%s>\n", host);
 	#endif
 			sa_in = (struct sockaddr_in *)it->ai_addr;
@@ -213,9 +213,9 @@ int32_t fdo_con_dns_lookup(char *url, fdo_ip_address_t **ip_list,
 		} else if (result->ai_family == AF_INET6) {
 	#if LOG_LEVEL == LOG_MAX_LEVEL
 			// for trace purpose
-			char host[46];
+			char host[INET6_ADDRSTRLEN];
 
-			inet_ntop(AF_INET6, &(sa_in6->sin6_addr), host, 46);
+			inet_ntop(AF_INET6, &(sa_in6->sin6_addr), host, INET6_ADDRSTRLEN);
 			LOG(LOG_DEBUG, "Resolved into IP-Address: <%s>\n", host);
 	#endif
 			is_ipv6 = true;
