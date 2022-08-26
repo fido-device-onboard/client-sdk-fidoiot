@@ -9,6 +9,8 @@
  * The file implements REST layer for FDO.
  */
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "util.h"
 #include "network_al.h"
 #include "fdoCryptoHal.h"
@@ -251,13 +253,26 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	}
 
 	if (rest_ctx->host_ip) {
-		ip_ascii = fdo_alloc(IP_TAG_LEN);
-		if (!ip_ascii) {
-			goto err;
-		}
+		if (is_ipv6) {
+			ip_ascii = fdo_alloc(INET6_ADDRSTRLEN);
+			if (!ip_ascii) {
+				goto err;
+			}
 
-		if (!ip_bin_to_ascii(rest_ctx->host_ip, ip_ascii)) {
-			goto err;
+			if (!inet_ntop(AF_INET6, rest_ctx->host_ip->addr, ip_ascii,
+						INET6_ADDRSTRLEN)) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+		} else {
+			ip_ascii = fdo_alloc(IP_TAG_LEN);
+			if (!ip_ascii) {
+				goto err;
+			}
+
+			if (!ip_bin_to_ascii(rest_ctx->host_ip, ip_ascii)) {
+				goto err;
+			}
 		}
 	}
 
@@ -275,17 +290,34 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 
 	if (rest_ctx->host_dns) {
 		/* DNS */
-		if (snprintf_s_si(temp, sizeof(temp), "%s:%d",
-				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
-			LOG(LOG_ERROR, "Snprintf() failed!\n");
-			goto err;
+		if (is_ipv6) {
+			if (snprintf_s_si(temp, sizeof(temp), "[%s]:%d",
+						rest_ctx->host_dns, rest_ctx->portno) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+		} else {
+			if (snprintf_s_si(temp, sizeof(temp), "%s:%d",
+						rest_ctx->host_dns, rest_ctx->portno) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
 		}
+
 	} else if (rest_ctx->host_ip && ip_ascii) {
 		/* IP */
-		if (snprintf_s_si(temp, sizeof(temp), "%s:%d", ip_ascii,
-				  rest_ctx->portno) < 0) {
-			LOG(LOG_ERROR, "Snprintf() failed!\n");
-			goto err;
+		if (is_ipv6) {
+			if (snprintf_s_si(temp, sizeof(temp), "[%s]:%d", ip_ascii,
+						rest_ctx->portno) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+		} else {
+			if (snprintf_s_si(temp, sizeof(temp), "%s:%d", ip_ascii,
+						rest_ctx->portno) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
 		}
 	} else {
 		LOG(LOG_ERROR, "Host IP and DNS both are NULL!\n");
@@ -331,17 +363,33 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 
 	if (rest_ctx->host_dns) {
 		/* DNS */
-		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d\r\n",
-				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
+		if (is_ipv6) {
+			if (snprintf_s_si(temp, sizeof(temp), "HOST:[%s]:%d\r\n",
+					rest_ctx->host_dns, rest_ctx->portno) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+		} else {
+			if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d\r\n",
+				rest_ctx->host_dns, rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
+			}
 		}
 	} else if (rest_ctx->host_ip && ip_ascii) {
 		/* IP */
-		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d\r\n",
-				  ip_ascii, rest_ctx->portno) < 0) {
+		if (is_ipv6) {
+			if (snprintf_s_si(temp, sizeof(temp), "HOST:[%s]:%d\r\n",
+					ip_ascii, rest_ctx->portno) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+		} else {
+			if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d\r\n",
+				ip_ascii, rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
+			}
 		}
 	}
 

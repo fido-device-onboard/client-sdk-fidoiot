@@ -41,6 +41,8 @@ typedef enum {
 #if defined(SELF_SIGNED_CERTS_SUPPORTED)
 extern bool useSelfSignedCerts;
 #endif
+extern bool is_ipv6;
+extern char *curl_interface;
 
 fdo_sdk_status fdo_sdk_run(void);
 

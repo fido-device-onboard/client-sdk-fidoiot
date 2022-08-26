@@ -28,14 +28,14 @@ typedef struct fdo_prot_ctx_s {
 	bool (*protrun)(fdo_prot_t *ps);
 	fdo_ip_address_t *host_ip;
 	uint16_t host_port;
-	const char *host_dns;
+	char *host_dns;
 	fdo_ip_address_t *resolved_ip;
 } fdo_prot_ctx_t;
 
 fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 				   fdo_prot_t *protdata,
 				   fdo_ip_address_t *host_ip,
-				   const char *host_dns, uint16_t host_port,
+				   char *host_dns, uint16_t host_port,
 				   bool tls);
 
 int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx);
