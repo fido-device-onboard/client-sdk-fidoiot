@@ -396,7 +396,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 				LOG(LOG_ERROR, "CURL_PROXY: Cannot set proxy.\n");
 				goto err;
 			}
-			if (curl_easy_setopt(curl, CURLOPT_INTERFACE, "ens18") != CURLE_OK) {
+			if (curl_easy_setopt(curl, CURLOPT_INTERFACE, curl_interface) != CURLE_OK) {
 				LOG(LOG_ERROR, "CURLOPT_INTERFACE: Cannot set interface.\n");
 				goto err;
 			}
@@ -569,7 +569,6 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 
 end:
 	if (sock_hdl) {
-		curl_easy_cleanup(curl);
 		fdo_free(sock_hdl);
 	}
 	return FDO_CON_INVALID_HANDLE;

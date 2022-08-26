@@ -51,6 +51,7 @@ static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
 bool is_ipv6 = false;
+char *curl_interface = NULL;
 
 #if defined(SELF_SIGNED_CERTS_SUPPORTED)
 bool useSelfSignedCerts = false;
@@ -910,7 +911,8 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		}
 	}
 
-	if (!isalnum(mfg_dns[0]) || !isalnum(mfg_dns[dns_index - 1])) {
+	if ((!isalnum(mfg_dns[0]) && mfg_dns[0] != ':') || !isalnum(mfg_dns
+			[dns_index - 1])) {
 		LOG(LOG_ERROR, "Invalid DNS/IP in Manufacturer address\n");
 		goto end;
 	}

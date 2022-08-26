@@ -28,6 +28,7 @@
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
 #define ERROR_RETRY_COUNT 5
+#define MAX_INTERFACE_SIZE 12
 
 static bool is_ownership_transfer(bool do_resale)
 {
@@ -278,16 +279,46 @@ int app_main(bool is_resale)
 		do_resale = true;
 	}
 #endif
+
+// provide curl interface for IPv6
+if (argc > 1) {
+	int strcmp_int = 1;
+	int res = -1;
+
+	res = (int)strcmp_s((char *)argv[1], MAX_INTERFACE_SIZE, "--interface",
+						&strcmp_int);
+
+	if  (!res && !strcmp_int) {
+		curl_interface = argv[2];
+	} else {
+		res = (int)strcmp_s((char *)argv[2], MAX_INTERFACE_SIZE, "--interface",
+							&strcmp_int);
+
+		if  (!res && !strcmp_int) {
+			curl_interface = argv[3];
+		}
+	}
+}
+
 #if defined SELF_SIGNED_CERTS_SUPPORTED
+if (argc > 1) {
 	int strcmp_ss = 1;
 	int res = -1;
 
 	res = (int)strcmp_s((char *)argv[1], DATA_CONTENT_SIZE, "-ss",
 						&strcmp_ss);
 
-	if  (argc > 1 && (!res && !strcmp_ss)) {
+	if  (!res && !strcmp_ss) {
 		useSelfSignedCerts = true;
+	} else {
+		res = (int)strcmp_s((char *)argv[3], DATA_CONTENT_SIZE, "-ss",
+							&strcmp_ss);
+
+		if  (!res && !strcmp_ss) {
+			useSelfSignedCerts = true;
+		}
 	}
+}
 #endif
 	if (is_ownership_transfer(do_resale)) {
 		ret = 0;
