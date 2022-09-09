@@ -79,16 +79,6 @@ int32_t crypto_hal_kex_init(void **context)
 		goto error;
 	}
 
-	/*key_ex_data->evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
-	if (!key_ex_data->evp_ctx) {
-		LOG(LOG_ERROR, "Failed to create evp ctx context \n");
-		goto error;
-	}
-
-	if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(key_ex_data->evp_ctx, KEY_CURVE) <= 0) {
-		LOG(LOG_ERROR, "Failed to set the curve name \n");
-		goto error;
-    }*/
 	key_ex_data->group_name_nid = KEY_CURVE;
 
 	/* Generate Device Random bits(384) */
@@ -140,10 +130,6 @@ int32_t crypto_hal_kex_close(void **context)
 		EVP_PKEY_free(key_ex_data->_key);
 		key_ex_data->_key = NULL;
 	}
-	/*if (key_ex_data->evp_ctx != NULL) {
-		EVP_PKEY_CTX_free(key_ex_data->evp_ctx);
-		key_ex_data->evp_ctx = NULL;
-	}*/
 	if (key_ex_data->_pubB) {
 		fdo_free(key_ex_data->_pubB);
 	}
@@ -186,14 +172,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 		LOG(LOG_ERROR, "BN context get failed\n");
 		goto exit;
 	}
-
-	/*if (EVP_PKEY_CTX_get_group_name(key_ex_data->evp_ctx, group_name, sizeof(group_name)) <= 0)
-	{
-		LOG(LOG_ERROR, "Failed to get the group name \n");
-		ret = -1;
-		goto exit;
-	}
-	int group_nid = OBJ_sn2nid(group_name);*/	
+	
 	group = EC_GROUP_new_by_curve_name(key_ex_data->group_name_nid);
 	if (group == NULL)
 	{

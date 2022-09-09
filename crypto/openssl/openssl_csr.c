@@ -103,14 +103,6 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		ret = -1;
 		goto err;
 	}
-
-	/* Set the evp_key instance with both public/private key */
-	/*ret = EC_KEY_set_public_key(evp_key, pub_key);
-	if (!ret) {
-		LOG(LOG_ERROR, "Failed to set the public key\n");
-		ret = -1;
-		goto err;
-	}*/
 	
 	pub_key_size = EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, NULL, 0, NULL);
     octet_pub_key = fdo_byte_array_alloc(pub_key_size);
@@ -120,6 +112,7 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		ret = -1;
 		goto err;           
 	}
+    // Set the evp_key instance with public key
 	if (!EVP_PKEY_set_octet_string_param(evp_key, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY, octet_pub_key->bytes,
 		                                     octet_pub_key->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to set the public key\n");
@@ -149,13 +142,6 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		ret = -1;
 		goto err;
 	}
-
-	/*ret = EVP_PKEY_assign_EC_KEY(ec_pkey, evp_key);
-	if (!ret) {
-		LOG(LOG_ERROR, "Failed to get evp_key reference\n");
-		ret = -1;
-		goto err;
-	}*/
 
 	/* Set the public key on the CSR */
 	ret = X509_REQ_set_pubkey(x509_req, evp_key);
@@ -226,10 +212,6 @@ err:
 	if (csr_mem_bio) {
 		BIO_free(csr_mem_bio);
 	}
-	/*if (ec_pkey) {
-		EVP_PKEY_free(ec_pkey);
-		evp_key = NULL; // evp_pkey_free clears attached evp_key too
-	}*/
 	if (evp_key) {
 		EVP_PKEY_free(evp_key);
 	}

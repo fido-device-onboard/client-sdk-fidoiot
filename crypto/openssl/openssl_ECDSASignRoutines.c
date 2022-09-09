@@ -171,7 +171,5 @@ end:
 	if (sig_s) {
 		fdo_free(sig_s);
 	}
-
 	return ret;
-	
 }

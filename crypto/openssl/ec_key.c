@@ -110,16 +110,15 @@ EVP_PKEY *get_evp_key(void)
 								  OSSL_PARAM_END 
 								  };
     if (EVP_PKEY_fromdata_init(evp_ctx) <=0) {
-	//|| EVP_PKEY_fromdata(evp_ctx,&evp_key_ec,EVP_PKEY_KEYPAIR, params) <=0) {
 		LOG(LOG_ERROR, "Failed to init the ec key from data object\n");
 		goto err;
     	}
 
-	//const OSSL_PARAM *params2 = EVP_PKEY_fromdata_settable(evp_ctx, OSSL_KEYMGMT_SELECT_ALL);
 		if ( EVP_PKEY_fromdata(evp_ctx,&evp_key_ec,EVP_PKEY_KEYPAIR, params) <=0) {
 		LOG(LOG_ERROR, "Failed to create the ec key from data\n");// %s", (char *)params2);
 		goto err;
     	}
+        ret = 1; // success
 
 	/*OSSL_PARAM  *keypair_params = NULL;
 	ret = EVP_PKEY_todata(evp_key_ec, EVP_PKEY_KEYPAIR, &keypair_params);
@@ -137,7 +136,7 @@ err:
 		}
 		fdo_free(privkey);
 	}
-	if (evp_key_ec && ret) {
+	if (evp_key_ec && !ret) {
 		EVP_PKEY_free(evp_key_ec);
 		evp_key_ec = NULL;
 	}
