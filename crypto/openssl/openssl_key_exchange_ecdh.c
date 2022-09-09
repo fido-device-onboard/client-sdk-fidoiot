@@ -15,6 +15,7 @@
 #include "BN_support.h"
 #include "openssl/ec.h"
 #include "openssl/objects.h"
+#include "openssl/core_names.h"
 #include "safe_lib.h"
 #define DECLARE_BIGNUM(bn) bignum_t *bn
 
@@ -29,9 +30,11 @@
 typedef struct {
 	DECLARE_BIGNUM(_Device_random);
 	DECLARE_BIGNUM(_publicA); /* The server's A public value */
-	EC_KEY *_key;
+	//EVP_PKEY_CTX *evp_ctx;
+	uint32_t group_name_nid;
+	EVP_PKEY *_key;
 
-	const DECLARE_BIGNUM(_secretb); /* Out bit secret */
+	DECLARE_BIGNUM(_secretb); /* Out bit secret */
 	DECLARE_BIGNUM(_publicB);       /* Our B public value */
 	DECLARE_BIGNUM(_shared_secret);
 	uint8_t *_pubB;
@@ -49,7 +52,6 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data);
 int32_t crypto_hal_kex_init(void **context)
 {
 	ecdh_context_t *key_ex_data = NULL;
-	EC_KEY *key = NULL;
 
 	if (!context) {
 		LOG(LOG_ERROR, "Invalid parameters\n");
@@ -77,18 +79,22 @@ int32_t crypto_hal_kex_init(void **context)
 		goto error;
 	}
 
-	key = EC_KEY_new_by_curve_name(KEY_CURVE);
+	/*key_ex_data->evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+	if (!key_ex_data->evp_ctx) {
+		LOG(LOG_ERROR, "Failed to create evp ctx context \n");
+		goto error;
+	}
+
+	if (EVP_PKEY_CTX_set_ec_paramgen_curve_nid(key_ex_data->evp_ctx, KEY_CURVE) <= 0) {
+		LOG(LOG_ERROR, "Failed to set the curve name \n");
+		goto error;
+    }*/
+	key_ex_data->group_name_nid = KEY_CURVE;
+
 	/* Generate Device Random bits(384) */
 	if (bn_rand(key_ex_data->_Device_random, BN_RANDOM_SIZE)) {
 		goto error;
 	}
-
-	if (key == NULL) {
-		LOG(LOG_ERROR, "failed to get the curve parameters\n");
-		goto error;
-	}
-
-	key_ex_data->_key = key;
 
 	if (compute_publicBECDH(key_ex_data) == false) {
 		goto error;
@@ -131,9 +137,13 @@ int32_t crypto_hal_kex_close(void **context)
 		BN_clear_free(key_ex_data->_Device_random);
 	}
 	if (key_ex_data->_key != NULL) {
-		EC_KEY_free(key_ex_data->_key);
+		EVP_PKEY_free(key_ex_data->_key);
 		key_ex_data->_key = NULL;
 	}
+	/*if (key_ex_data->evp_ctx != NULL) {
+		EVP_PKEY_CTX_free(key_ex_data->evp_ctx);
+		key_ex_data->evp_ctx = NULL;
+	}*/
 	if (key_ex_data->_pubB) {
 		fdo_free(key_ex_data->_pubB);
 	}
@@ -152,9 +162,6 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	BN_CTX *ctx = NULL;
 
 	const EC_GROUP *group = NULL;
-	EC_KEY *key = NULL;
-
-	const EC_POINT *point = NULL;
 	BIGNUM *x = NULL, *y = NULL;
 	unsigned char *temp = NULL;
 	int size = 0;
@@ -180,37 +187,38 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 		goto exit;
 	}
 
-	key = key_ex_data->_key;
-	if (!key) {
-		LOG(LOG_ERROR, "EC key  is wrong\n");
+	/*if (EVP_PKEY_CTX_get_group_name(key_ex_data->evp_ctx, group_name, sizeof(group_name)) <= 0)
+	{
+		LOG(LOG_ERROR, "Failed to get the group name \n");
+		ret = -1;
 		goto exit;
 	}
-	group = EC_KEY_get0_group(key);
-	if (!group) {
-		LOG(LOG_ERROR, "EC group get failed\n");
+	int group_nid = OBJ_sn2nid(group_name);*/	
+	group = EC_GROUP_new_by_curve_name(key_ex_data->group_name_nid);
+	if (group == NULL)
+	{
+		LOG(LOG_ERROR, "Failed to get the EC group\n");
+		ret = -1;
 		goto exit;
 	}
 
 	/* generate the public key and private key */
-	if (EC_KEY_generate_key(key) == 0) {
+	key_ex_data->_key = EVP_EC_gen(OBJ_nid2sn(key_ex_data->group_name_nid));
+	if (!key_ex_data->_key) {
 		LOG(LOG_ERROR, "EC key generation failed\n");
 		goto exit;
 	}
 
 	/* Store the private key */
-	key_ex_data->_secretb = EC_KEY_get0_private_key(key);
-	if (!key_ex_data->_secretb) {
+	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_PRIV_KEY, &(key_ex_data->_secretb))) {
 		LOG(LOG_ERROR, "EC private key get failed\n");
+		ret = -1;
 		goto exit;
 	}
 
-	/* Get the public key */
-	point = EC_KEY_get0_public_key(key);
-	if (!point) {
-		LOG(LOG_ERROR, "EC public key get failed\n");
-		goto exit;
-	}
-	if (EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx) == 0) {
+	/* Get the public key co-ordinates in x and y*/
+	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_X, &x) || 
+	!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
 		LOG(LOG_ERROR, "EC cordinate get failed\n");
 		goto exit;
 	}
@@ -386,7 +394,6 @@ int32_t crypto_hal_set_peer_random(void *context,
 	const EC_GROUP *group = NULL;
 	EC_POINT *point = NULL;
 	EC_POINT *Sh_se_point = NULL;
-	EC_KEY *key = NULL;
 	int ret = -1;
 
 	Ax_bn = BN_new();
@@ -468,14 +475,18 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto error;
 	}
 
-	key = key_ex_data->_key;
-	group = EC_KEY_get0_group(key);
+	group = EC_GROUP_new_by_curve_name(key_ex_data->group_name_nid);
+	if (group == NULL)
+	{
+		LOG(LOG_ERROR, "Failed to get the EC group\n");
+		goto error;
+	}
 	point = EC_POINT_new(group);
-	if (group == NULL || point == NULL || key == NULL) {
+	if (group == NULL || point == NULL) {
 		LOG(LOG_ERROR, "Error curve parameters are NULL\n");
 		goto error;
 	}
-	EC_POINT_set_affine_coordinates_GFp(group, point, Ax_bn, Ay_bn, ctx);
+	EC_POINT_set_affine_coordinates(group, point, Ax_bn, Ay_bn, ctx);
 	shx = fdo_alloc(bn_num_bytes(Ax_bn));
 	if (!shx) {
 		goto error;
@@ -505,7 +516,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
-	if (EC_POINT_get_affine_coordinates_GFp(group, Sh_se_point, Shx_bn,
+	if (EC_POINT_get_affine_coordinates(group, Sh_se_point, Shx_bn,
 						Shy_bn, ctx) == 0) {
 		EC_POINT_free(Sh_se_point);
 		goto error;
