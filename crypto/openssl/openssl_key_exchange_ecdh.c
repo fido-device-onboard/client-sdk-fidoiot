@@ -74,7 +74,7 @@ int32_t crypto_hal_kex_init(void **context)
 	key_ex_data->_Device_random = BN_new();
 
 	if (!key_ex_data->_publicB || !key_ex_data->_publicA ||
-	    !key_ex_data->_shared_secret || !key_ex_data->_Device_random) {
+			!key_ex_data->_shared_secret || !key_ex_data->_Device_random) {
 		LOG(LOG_ERROR, "BN alloc failed\n");
 		goto error;
 	}
@@ -147,7 +147,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 {
 	BN_CTX *ctx = NULL;
 
-	const EC_GROUP *group = NULL;
+	EC_GROUP *group = NULL;
 	BIGNUM *x = NULL, *y = NULL;
 	unsigned char *temp = NULL;
 	int size = 0;
@@ -172,12 +172,10 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 		LOG(LOG_ERROR, "BN context get failed\n");
 		goto exit;
 	}
-	
+
 	group = EC_GROUP_new_by_curve_name(key_ex_data->group_name_nid);
-	if (group == NULL)
-	{
+	if (group == NULL) {
 		LOG(LOG_ERROR, "Failed to get the EC group\n");
-		ret = -1;
 		goto exit;
 	}
 
@@ -191,13 +189,12 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	/* Store the private key */
 	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_PRIV_KEY, &(key_ex_data->_secretb))) {
 		LOG(LOG_ERROR, "EC private key get failed\n");
-		ret = -1;
 		goto exit;
 	}
 
 	/* Get the public key co-ordinates in x and y*/
-	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_X, &x) || 
-	!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
+	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_X, &x) ||
+			!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
 		LOG(LOG_ERROR, "EC cordinate get failed\n");
 		goto exit;
 	}
@@ -207,29 +204,29 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	char *hexbuf1 = BN_bn2hex(x);
 
 	LOG(LOG_DEBUG, "Bx %s : bytes %d, %s\n",
-	    BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x),
-	    hexbuf1);
+			BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x),
+			hexbuf1);
 	OPENSSL_free(hexbuf1);
 
 	char *hexbuf2 = BN_bn2hex(y);
 
 	LOG(LOG_DEBUG, "By %s : bytes %d, %s\n",
-	    BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y),
-	    hexbuf2);
+			BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y),
+			hexbuf2);
 	OPENSSL_free(hexbuf2);
 
 	char *hexbuf3 = BN_bn2hex(key_ex_data->_Device_random);
 
 	LOG(LOG_DEBUG, "Device Random  %s : bytes %d, %s\n",
-	    BN_is_negative(key_ex_data->_Device_random) ? "Negative"
-							: "Positive",
-	    bn_num_bytes(key_ex_data->_Device_random), hexbuf3);
+			BN_is_negative(key_ex_data->_Device_random) ? "Negative"
+			: "Positive",
+			bn_num_bytes(key_ex_data->_Device_random), hexbuf3);
 	OPENSSL_free(hexbuf3);
 #endif
 
 	/* 2byte for each blen 3x2 =6 */
 	allocbytes = (bn_num_bytes(x) + bn_num_bytes(y) +
-		      bn_num_bytes(key_ex_data->_Device_random) + 6);
+			bn_num_bytes(key_ex_data->_Device_random) + 6);
 	temp = fdo_alloc(allocbytes);
 	if (!temp) {
 		LOG(LOG_ERROR, "Mem alloc failed\n");
@@ -279,19 +276,22 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	key_ex_data->_publicB_length = allocbytes;
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	hexdump("_publicB::", key_ex_data->_publicB,
-		key_ex_data->_publicB_length);
+			key_ex_data->_publicB_length);
 	{
 		char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
 
 		LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, %s\n",
-		    BN_is_negative(key_ex_data->_publicB) ? "Negative"
-							  : "Positive",
-		    bn_num_bytes(key_ex_data->_publicB), hexbuf);
+				BN_is_negative(key_ex_data->_publicB) ? "Negative"
+				: "Positive",
+				bn_num_bytes(key_ex_data->_publicB), hexbuf);
 		OPENSSL_free(hexbuf);
 	}
 #endif
 	ret = true;
 exit:
+	if (group) {
+		EC_GROUP_free(group);
+	}
 	if (temp) {
 		fdo_free(temp);
 	}
@@ -300,6 +300,9 @@ exit:
 	}
 	if (y) {
 		BN_clear(y);
+	}
+	if (!ret && key_ex_data->_secretb) {
+		BN_clear_free(key_ex_data->_secretb);
 	}
 	/* Consider using the bn cache in ctx. */
 	if (ctx) {
@@ -319,7 +322,7 @@ exit:
  * @return 0 if success, else -1
  */
 int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
-				     uint32_t *dev_rand_length)
+		uint32_t *dev_rand_length)
 {
 	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
@@ -337,7 +340,7 @@ int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
 	}
 
 	if (memcpy_s(dev_rand_value, *dev_rand_length, key_ex_data->_pubB,
-		     *dev_rand_length) != 0) {
+				*dev_rand_length) != 0) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
 		return -1;
 	}
@@ -353,8 +356,8 @@ int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
  * @return 0 if success, else false.
  */
 int32_t crypto_hal_set_peer_random(void *context,
-				   const uint8_t *peer_rand_value,
-				   uint32_t peer_rand_length)
+		const uint8_t *peer_rand_value,
+		uint32_t peer_rand_length)
 {
 	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
@@ -370,7 +373,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 	int size = 0;
 	BIGNUM *Ax_bn = NULL, *Ay_bn = NULL, *owner_random_bn = NULL;
 	BIGNUM *Shx_bn = NULL, *Shy_bn = NULL;
-	const EC_GROUP *group = NULL;
+	EC_GROUP *group = NULL;
 	EC_POINT *point = NULL;
 	EC_POINT *Sh_se_point = NULL;
 	int ret = -1;
@@ -393,8 +396,8 @@ int32_t crypto_hal_set_peer_random(void *context,
 	char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
 
 	LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, 0x%s\n",
-	    BN_is_negative(key_ex_data->_publicB) ? "Negative" : "Positive",
-	    bn_num_bytes(key_ex_data->_publicB), hexbuf);
+			BN_is_negative(key_ex_data->_publicB) ? "Negative" : "Positive",
+			bn_num_bytes(key_ex_data->_publicB), hexbuf);
 	OPENSSL_free(hexbuf);
 #endif
 	bn_bin2bn(peer_rand_value, peer_rand_length, key_ex_data->_publicA);
@@ -404,10 +407,10 @@ int32_t crypto_hal_set_peer_random(void *context,
 	char *hexbuf1 = BN_bn2hex(key_ex_data->_publicA);
 
 	LOG(LOG_DEBUG,
-	    "Device Received: key_ex_data->_publicA %s : "
-	    "bytes %d, 0x%s\n",
-	    BN_is_negative(key_ex_data->_publicA) ? "Negative" : "Positive",
-	    bn_num_bytes(key_ex_data->_publicA), hexbuf1);
+			"Device Received: key_ex_data->_publicA %s : "
+			"bytes %d, 0x%s\n",
+			BN_is_negative(key_ex_data->_publicA) ? "Negative" : "Positive",
+			bn_num_bytes(key_ex_data->_publicA), hexbuf1);
 	OPENSSL_free(hexbuf1);
 #endif
 
@@ -432,20 +435,20 @@ int32_t crypto_hal_set_peer_random(void *context,
 	char *hexbuf2 = BN_bn2hex(Ax_bn);
 
 	LOG(LOG_DEBUG, "Device Reveived: Ax %s : bytes %d, %s\n",
-	    BN_is_negative(Ax_bn) ? "Negative" : "Positive",
-	    bn_num_bytes(Ax_bn), hexbuf2);
+			BN_is_negative(Ax_bn) ? "Negative" : "Positive",
+			bn_num_bytes(Ax_bn), hexbuf2);
 	OPENSSL_free(hexbuf2);
 	char *hexbuf3 = BN_bn2hex(Ay_bn);
 
 	LOG(LOG_DEBUG, "Device Received: Ay %s : bytes %d, %s\n",
-	    BN_is_negative(Ay_bn) ? "Negative" : "Positive",
-	    bn_num_bytes(Ay_bn), hexbuf3);
+			BN_is_negative(Ay_bn) ? "Negative" : "Positive",
+			bn_num_bytes(Ay_bn), hexbuf3);
 	OPENSSL_free(hexbuf3);
 	char *hexbuf4 = BN_bn2hex(owner_random_bn);
 
 	LOG(LOG_DEBUG, "Device Reveived: Owner Random  %s : bytes %d, %s\n",
-	    BN_is_negative(owner_random_bn) ? "Negative" : "Positive",
-	    bn_num_bytes(owner_random_bn), hexbuf4);
+			BN_is_negative(owner_random_bn) ? "Negative" : "Positive",
+			bn_num_bytes(owner_random_bn), hexbuf4);
 	OPENSSL_free(hexbuf4);
 #endif
 	ctx = BN_CTX_new();
@@ -491,12 +494,12 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto error;
 	}
 	if (EC_POINT_mul(group, Sh_se_point, NULL, point, key_ex_data->_secretb,
-			 ctx) == 0) {
+				ctx) == 0) {
 		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
 	if (EC_POINT_get_affine_coordinates(group, Sh_se_point, Shx_bn,
-						Shy_bn, ctx) == 0) {
+				Shy_bn, ctx) == 0) {
 		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
@@ -509,7 +512,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 	EC_POINT_free(Sh_se_point);
 #endif
 	shse = fdo_alloc(bn_num_bytes(key_ex_data->_Device_random) +
-			 size_owner_random + bn_num_bytes(Shx_bn));
+			size_owner_random + bn_num_bytes(Shx_bn));
 	if (!shse) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
 		goto error;
@@ -539,6 +542,9 @@ int32_t crypto_hal_set_peer_random(void *context,
 
 	ret = 0;
 error:
+	if (group) {
+		EC_GROUP_free(group);
+	}
 	if (point) {
 		EC_POINT_free(point);
 	}
@@ -579,7 +585,7 @@ error:
  *  @return 0 on success or -1 on failure.
  */
 int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
-			      uint32_t *secret_length)
+		uint32_t *secret_length)
 {
 	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
@@ -594,7 +600,7 @@ int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
 	}
 
 	if (*secret_length <
-	    (uint32_t)bn_num_bytes(key_ex_data->_shared_secret)) {
+			(uint32_t)bn_num_bytes(key_ex_data->_shared_secret)) {
 		LOG(LOG_ERROR, "Invalid buff size\n");
 		return -1;
 	}

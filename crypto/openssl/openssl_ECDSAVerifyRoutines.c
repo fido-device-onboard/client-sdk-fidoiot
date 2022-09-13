@@ -34,15 +34,15 @@
  * @param key_param2Length - not used
  * @return 0 if true, else -1.
 
- */
+*/
 int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
-			      const uint8_t *message, uint32_t message_length,
-			      const uint8_t *message_signature,
-			      uint32_t signature_length,
-			      const uint8_t *key_param1,
-			      uint32_t key_param1Length,
-			      const uint8_t *key_param2,
-			      uint32_t key_param2Length)
+		const uint8_t *message, uint32_t message_length,
+		const uint8_t *message_signature,
+		uint32_t signature_length,
+		const uint8_t *key_param1,
+		uint32_t key_param1Length,
+		const uint8_t *key_param2,
+		uint32_t key_param2Length)
 {
 	int32_t ret = -1;
 	EVP_PKEY *eckey = NULL;
@@ -59,16 +59,16 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	/* Check validity of key type. */
 	// Only COSEKEY and X509 are currently supported
 	if ((key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_X509 &&
-		 key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY) ||
-	    (key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
-	     key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
+				key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY) ||
+			(key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
+			 key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		goto end;
 	}
 
 	if (NULL == message_signature || 0 == signature_length ||
-		0 != (signature_length % 2) ||
-	    NULL == message || 0 == message_length) {
+			0 != (signature_length % 2) ||
+			NULL == message || 0 == message_length) {
 		LOG(LOG_ERROR, "Invalid arguments!\n");
 		goto end;
 	}
@@ -99,12 +99,12 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 		const char* group_name = OBJ_nid2sn(group_name_nid);
 		evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
 		if (!evp_ctx) {
-		LOG(LOG_ERROR, "Failed to create evp ctx context \n");
-		goto end;
+			LOG(LOG_ERROR, "Failed to create evp ctx context \n");
+			goto end;
 		}
 
 		if (NULL == key_param1 || 0 == key_param1Length ||
-			NULL == key_param2 || 0 == key_param2Length) {
+				NULL == key_param2 || 0 == key_param2Length) {
 			LOG(LOG_ERROR, "Invalid params!\n");
 			goto end;
 		}
@@ -120,9 +120,9 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 			OSSL_PARAM_BN(OSSL_PKEY_PARAM_EC_PUB_Y, &y, sizeof(y)),
 			OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)group_name, strlen(group_name)),
 			OSSL_PARAM_END
-			};
+		};
 		if(EVP_PKEY_fromdata_init(evp_ctx) <= 0 ||
-		EVP_PKEY_fromdata(evp_ctx, &eckey, EVP_PKEY_KEYPAIR, params) <= 0) {
+				EVP_PKEY_fromdata(evp_ctx, &eckey, EVP_PKEY_KEYPAIR, params) <= 0) {
 			LOG(LOG_ERROR, "Failed to create EC Key from affine-x and affine-y!\n");
 			goto end;
 		}
@@ -130,24 +130,24 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 
 	if(!(mdctx = EVP_MD_CTX_create())) {
 		LOG(LOG_ERROR, "Msg Digest init failed \n");
-			goto end;
+		goto end;
 	}
 	if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) {
 		if(1 != EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, eckey)){
 			LOG(LOG_ERROR, "EVP verify init failed \n");
 			goto end;
-    	}
+		}
 	}
 	else {
 		if(1 != EVP_DigestVerifyInit(mdctx, NULL, EVP_sha384(), NULL, eckey)){
 			LOG(LOG_ERROR, "EVP verify init failed \n");
 			goto end;
-    	}
+		}
 	}
 
 	if(1 != EVP_DigestVerifyUpdate(mdctx, message, message_length)) {
 		LOG(LOG_ERROR, "EVP verify update failed \n");
-			goto end;
+		goto end;
 	}
 
 	// Convert the raw signature to DER encoded format
@@ -156,17 +156,17 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	BIGNUM *s = BN_bin2bn(message_signature + signature_length/2, signature_length/2, NULL);
 	if (!sig || !r || !s || (1 != ECDSA_SIG_set0(sig, r, s))) {
 		LOG(LOG_ERROR, "Failure in parsing the signature \n");
-			goto end;
+		goto end;
 	}
 	der_sig_len = i2d_ECDSA_SIG(sig, NULL);
 	if (!der_sig_len) {
 		LOG(LOG_ERROR, "Failure in format conversion of signature \n");
-			goto end;
+		goto end;
 	}
 	der_sig_len = i2d_ECDSA_SIG(sig, &der_sig);
 	if (!der_sig_len || !der_sig) {
 		LOG(LOG_ERROR, "Failure in format conversion of signature \n");
-			goto end;
+		goto end;
 	}
 
 	if(1 != EVP_DigestVerifyFinal(mdctx, der_sig, der_sig_len)) {
@@ -185,7 +185,7 @@ end:
 		evp_ctx = NULL;
 	}
 	if (mdctx) {
-		EVP_MD_CTX_destroy(mdctx);
+		EVP_MD_CTX_free(mdctx);
 		mdctx = NULL;
 	}
 	if (x) {
