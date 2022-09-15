@@ -98,10 +98,9 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 	// Decode DER encoded signature to convert to raw format
 	sig = ECDSA_SIG_new();
-	unsigned char ** sig_input = &der_sig;
-	if (!sig || d2i_ECDSA_SIG(&sig, (const unsigned char **)sig_input, der_sig_len) == NULL) {
+	const unsigned char *sig_input = der_sig;
+	if (!sig || d2i_ECDSA_SIG(&sig, &sig_input, der_sig_len) == NULL) {
 		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
-		ret = -1;
 		goto end;
 	}
 
@@ -166,10 +165,10 @@ end:
 	if (sig_s) {
 		fdo_free(sig_s);
 	}
-	//TO-DO: Check if we can free der_sig
-	// if (der_sig) {
-	// 	fdo_free(der_sig);
-	// }
+	if (der_sig) {
+		fdo_free(der_sig);
+		sig_input = NULL;
+	}
 	if (mdctx) {
 		EVP_MD_CTX_free(mdctx);
 		mdctx = NULL;

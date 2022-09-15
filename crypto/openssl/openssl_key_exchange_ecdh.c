@@ -123,6 +123,9 @@ int32_t crypto_hal_kex_close(void **context)
 	if (key_ex_data->_shared_secret) {
 		BN_clear_free(key_ex_data->_shared_secret);
 	}
+	if (key_ex_data->_secretb) {
+		BN_clear_free(key_ex_data->_secretb);
+	}
 	if (key_ex_data->_Device_random) {
 		BN_clear_free(key_ex_data->_Device_random);
 	}
@@ -300,9 +303,6 @@ exit:
 	}
 	if (y) {
 		BN_clear(y);
-	}
-	if (!ret && key_ex_data->_secretb) {
-		BN_clear_free(key_ex_data->_secretb);
 	}
 	/* Consider using the bn cache in ctx. */
 	if (ctx) {
