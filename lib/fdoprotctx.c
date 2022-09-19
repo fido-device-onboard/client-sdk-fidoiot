@@ -320,8 +320,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			    prot_ctx->tls);
 
 			if (n <= 0) {
-				if (fdo_con_disconnect(prot_ctx->sock_hdl,
-						       prot_ctx->tls)) {
+				if (fdo_con_disconnect(prot_ctx->sock_hdl)) {
 					LOG(LOG_ERROR,
 					    "Error during socket close()\n");
 					ret = -1;
@@ -362,7 +361,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		ret = fdo_con_recv_msg_header(prot_ctx->sock_hdl, &protver,
 					      (uint32_t *)&fdor->msg_type,
-					      &msglen, prot_ctx->tls, curl_buf, &curl_buf_offset);
+					      &msglen, curl_buf, &curl_buf_offset);
 		if (ret == -1) {
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
@@ -378,13 +377,11 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			retries = CONNECTION_RETRY;
 			n = 0;
 			do {
-				n = fdo_con_recv_msg_body(
-				    prot_ctx->sock_hdl, &fdor->b.block[0], msglen,
-				    prot_ctx->tls, curl_buf, curl_buf_offset);
+				n = fdo_con_recv_msg_body(&fdor->b.block[0], msglen,
+				    curl_buf, curl_buf_offset);
 				if (n < 0) {
 					if (fdo_con_disconnect(
-						prot_ctx->sock_hdl,
-						prot_ctx->tls)) {
+						prot_ctx->sock_hdl)) {
 						LOG(LOG_ERROR, "Error during "
 							       "socket "
 							       "close()\n");
@@ -412,7 +409,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			}
 		}
 
-		if (fdo_con_disconnect(prot_ctx->sock_hdl, prot_ctx->tls)) {
+		if (fdo_con_disconnect(prot_ctx->sock_hdl)) {
 			LOG(LOG_ERROR, "Error during socket close()\n");
 			ret = -1;
 			break;
