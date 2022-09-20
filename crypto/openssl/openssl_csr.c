@@ -39,7 +39,6 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 
 	BIGNUM *privkey_bn = NULL;
 	X509_NAME *x509_name = NULL;
-	//EVP_PKEY *ec_pkey = EVP_PKEY_new();
 	X509_REQ *x509_req = X509_REQ_new();
 	fdo_byte_array_t *csr_byte_arr = NULL;
 

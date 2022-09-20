@@ -30,7 +30,6 @@
 typedef struct {
 	DECLARE_BIGNUM(_Device_random);
 	DECLARE_BIGNUM(_publicA); /* The server's A public value */
-	//EVP_PKEY_CTX *evp_ctx;
 	uint32_t group_name_nid;
 	EVP_PKEY *_key;
 
@@ -204,27 +203,17 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Print the co-ordinates */
-	char *hexbuf1 = BN_bn2hex(x);
 
-	LOG(LOG_DEBUG, "Bx %s : bytes %d, %s\n",
-			BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x),
-			hexbuf1);
-	OPENSSL_free(hexbuf1);
+	LOG(LOG_DEBUG, "Bx %s : bytes %d\n",
+			BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x));
 
-	char *hexbuf2 = BN_bn2hex(y);
+	LOG(LOG_DEBUG, "By %s : bytes %d\n",
+			BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y));
 
-	LOG(LOG_DEBUG, "By %s : bytes %d, %s\n",
-			BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y),
-			hexbuf2);
-	OPENSSL_free(hexbuf2);
-
-	char *hexbuf3 = BN_bn2hex(key_ex_data->_Device_random);
-
-	LOG(LOG_DEBUG, "Device Random  %s : bytes %d, %s\n",
+	LOG(LOG_DEBUG, "Device Random  %s : bytes %d\n",
 			BN_is_negative(key_ex_data->_Device_random) ? "Negative"
 			: "Positive",
-			bn_num_bytes(key_ex_data->_Device_random), hexbuf3);
-	OPENSSL_free(hexbuf3);
+			bn_num_bytes(key_ex_data->_Device_random));
 #endif
 
 	/* 2byte for each blen 3x2 =6 */
@@ -281,13 +270,11 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	hexdump("_publicB::", key_ex_data->_publicB,
 			key_ex_data->_publicB_length);
 	{
-		char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
 
-		LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, %s\n",
+		LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d\n",
 				BN_is_negative(key_ex_data->_publicB) ? "Negative"
 				: "Positive",
-				bn_num_bytes(key_ex_data->_publicB), hexbuf);
-		OPENSSL_free(hexbuf);
+				bn_num_bytes(key_ex_data->_publicB));
 	}
 #endif
 	ret = true;
@@ -393,25 +380,20 @@ int32_t crypto_hal_set_peer_random(void *context,
 	LOG(LOG_DEBUG, "set_publicA : bytes : %u\n", peer_rand_length);
 	hexdump("Public A", peer_rand_value, peer_rand_length);
 	/* Display public - B */
-	char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
 
-	LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, 0x%s\n",
+	LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d\n",
 			BN_is_negative(key_ex_data->_publicB) ? "Negative" : "Positive",
-			bn_num_bytes(key_ex_data->_publicB), hexbuf);
-	OPENSSL_free(hexbuf);
+			bn_num_bytes(key_ex_data->_publicB));
 #endif
 	bn_bin2bn(peer_rand_value, peer_rand_length, key_ex_data->_publicA);
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Display Public - A */
-	char *hexbuf1 = BN_bn2hex(key_ex_data->_publicA);
-
 	LOG(LOG_DEBUG,
 			"Device Received: key_ex_data->_publicA %s : "
-			"bytes %d, 0x%s\n",
+			"bytes %d\n",
 			BN_is_negative(key_ex_data->_publicA) ? "Negative" : "Positive",
-			bn_num_bytes(key_ex_data->_publicA), hexbuf1);
-	OPENSSL_free(hexbuf1);
+			bn_num_bytes(key_ex_data->_publicA));
 #endif
 
 	temp = peer_rand_value;
@@ -432,24 +414,18 @@ int32_t crypto_hal_set_peer_random(void *context,
 	BN_bin2bn(&temp[size], size_owner_random, owner_random_bn);
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
-	char *hexbuf2 = BN_bn2hex(Ax_bn);
 
-	LOG(LOG_DEBUG, "Device Reveived: Ax %s : bytes %d, %s\n",
+	LOG(LOG_DEBUG, "Device Reveived: Ax %s : bytes %d\n",
 			BN_is_negative(Ax_bn) ? "Negative" : "Positive",
-			bn_num_bytes(Ax_bn), hexbuf2);
-	OPENSSL_free(hexbuf2);
-	char *hexbuf3 = BN_bn2hex(Ay_bn);
+			bn_num_bytes(Ax_bn));
 
-	LOG(LOG_DEBUG, "Device Received: Ay %s : bytes %d, %s\n",
+	LOG(LOG_DEBUG, "Device Received: Ay %s : bytes %d\n",
 			BN_is_negative(Ay_bn) ? "Negative" : "Positive",
-			bn_num_bytes(Ay_bn), hexbuf3);
-	OPENSSL_free(hexbuf3);
-	char *hexbuf4 = BN_bn2hex(owner_random_bn);
+			bn_num_bytes(Ay_bn));
 
-	LOG(LOG_DEBUG, "Device Reveived: Owner Random  %s : bytes %d, %s\n",
+	LOG(LOG_DEBUG, "Device Reveived: Owner Random  %s : bytes %d\n",
 			BN_is_negative(owner_random_bn) ? "Negative" : "Positive",
-			bn_num_bytes(owner_random_bn), hexbuf4);
-	OPENSSL_free(hexbuf4);
+			bn_num_bytes(owner_random_bn));
 #endif
 	ctx = BN_CTX_new();
 	if (!ctx) {

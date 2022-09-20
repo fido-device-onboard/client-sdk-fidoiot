@@ -82,7 +82,6 @@ EVP_PKEY *get_evp_key(void)
 	int ret = 0;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
-	//BIGNUM *ec_key_bn = NULL;
 	int32_t curve = NID_X9_62_prime256v1;
 	EVP_PKEY *evp_key_ec = NULL;
 	EVP_PKEY_CTX *evp_ctx = NULL;
@@ -119,10 +118,6 @@ EVP_PKEY *get_evp_key(void)
 		goto err;
     	}
         ret = 1; // success
-
-	/*OSSL_PARAM  *keypair_params = NULL;
-	ret = EVP_PKEY_todata(evp_key_ec, EVP_PKEY_KEYPAIR, &keypair_params);
-	LOG(LOG_ERROR, "Value of ret: %d\n",ret);*/
 
 err:
 	if (evp_ctx) {
