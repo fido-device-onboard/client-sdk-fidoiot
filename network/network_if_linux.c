@@ -362,8 +362,8 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 				LOG(LOG_INFO, "SSL support verified.\n");
 			}
 
-			// Add option to force the https TLS connection to TLS v1.3
-			curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
+			// Add option to force the https TLS connection to TLS v1.2
+			curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
 			if (curlCode != CURLE_OK) {
 				goto err;
 			}
