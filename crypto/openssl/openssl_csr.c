@@ -10,6 +10,7 @@
 
 #include <openssl/ec.h>
 #include <openssl/x509.h>
+#include <openssl/core_names.h>
 
 #include "fdotypes.h"
 #include "util.h"
@@ -26,26 +27,29 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 	int ret = -1;
 	uint8_t *csr_data = NULL;
 	size_t csr_size = 0;
-	EC_KEY *ec_key = NULL;
+	EVP_PKEY *evp_key = NULL;
+	size_t group_name_size;
+	char group_name[64];
+	size_t pub_key_size;
+	fdo_byte_array_t* octet_pub_key = NULL;
 
-	const EC_GROUP *ec_grp = NULL;
+	EC_GROUP *ec_grp = NULL;
 	BIO *csr_mem_bio = NULL;
 	EC_POINT *pub_key = NULL;
 
-	const BIGNUM *privkey_bn = NULL;
+	BIGNUM *privkey_bn = NULL;
 	X509_NAME *x509_name = NULL;
-	EVP_PKEY *ec_pkey = EVP_PKEY_new();
 	X509_REQ *x509_req = X509_REQ_new();
 	fdo_byte_array_t *csr_byte_arr = NULL;
 
-	if (!ec_pkey || !x509_req) {
+	if (!x509_req) {
 		ret = -1;
 		goto err;
 	}
 
 	/* Get the EC private key from storage */
-	ec_key = get_ec_key();
-	if (!ec_key) {
+	evp_key = get_evp_key();
+	if (!evp_key) {
 		LOG(LOG_ERROR, "Failed to load the ec key for CSR\n");
 		ret = -1;
 		goto err;
@@ -57,9 +61,24 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 	 * b. Generate a new point
 	 * c. Create the public key
 	 */
-	ec_grp = EC_KEY_get0_group(ec_key);
-	if (!ec_grp) {
-		LOG(LOG_ERROR, "Failed to create a group on ec curve\n");
+	EVP_PKEY_get_utf8_string_param(evp_key, OSSL_PKEY_PARAM_GROUP_NAME, NULL, 0, &group_name_size);
+	if (group_name_size >= sizeof(group_name)) {
+		LOG(LOG_ERROR, "Unexpected long group name : %zu for EC key\n",group_name_size);
+		ret = -1;
+		goto err;
+	}
+	if (!EVP_PKEY_get_utf8_string_param(evp_key, OSSL_PKEY_PARAM_GROUP_NAME, group_name, sizeof(group_name),
+												&group_name_size))
+	{
+		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
+		ret = -1;
+		goto err;
+	}
+	int group_nid = OBJ_sn2nid(group_name);	
+	ec_grp = EC_GROUP_new_by_curve_name(group_nid);
+	if (ec_grp == NULL)
+	{
+		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
 		ret = -1;
 		goto err;
 	}
@@ -71,8 +90,7 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		goto err;
 	}
 
-	privkey_bn = EC_KEY_get0_private_key(ec_key);
-	if (!privkey_bn) {
+	if (!EVP_PKEY_get_bn_param(evp_key, OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
 		LOG(LOG_ERROR, "Failed to get private key bn\n");
 		ret = -1;
 		goto err;
@@ -84,15 +102,22 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		ret = -1;
 		goto err;
 	}
-
-	/* Set the ec_key instance with both public/private key */
-	ret = EC_KEY_set_public_key(ec_key, pub_key);
-	if (!ret) {
+	
+	pub_key_size = EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, NULL, 0, NULL);
+    octet_pub_key = fdo_byte_array_alloc(pub_key_size);
+	if (!EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, octet_pub_key->bytes,
+		                       octet_pub_key->byte_sz, NULL)) {
+		LOG(LOG_ERROR, "Failed to process public key\n");
+		ret = -1;
+		goto err;           
+	}
+    // Set the evp_key instance with public key
+	if (!EVP_PKEY_set_octet_string_param(evp_key, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY, octet_pub_key->bytes,
+		                                     octet_pub_key->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to set the public key\n");
 		ret = -1;
 		goto err;
 	}
-
 	/* Fill in the the data associated with this device */
 	x509_name = X509_REQ_get_subject_name(x509_req);
 	if (!x509_name) {
@@ -117,15 +142,8 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		goto err;
 	}
 
-	ret = EVP_PKEY_assign_EC_KEY(ec_pkey, ec_key);
-	if (!ret) {
-		LOG(LOG_ERROR, "Failed to get ec_key reference\n");
-		ret = -1;
-		goto err;
-	}
-
 	/* Set the public key on the CSR */
-	ret = X509_REQ_set_pubkey(x509_req, ec_pkey);
+	ret = X509_REQ_set_pubkey(x509_req, evp_key);
 	if (!ret) {
 		LOG(LOG_ERROR, "Failed to set the public key in CSR\n");
 		ret = -1;
@@ -133,7 +151,7 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 	}
 
 	/* Sign to generate the final CSR */
-	ret = X509_REQ_sign(x509_req, ec_pkey, EVP_sha256());
+	ret = X509_REQ_sign(x509_req, evp_key, EVP_sha256());
 	if (!ret) {
 		LOG(LOG_ERROR, "Failed to generate CSR data\n");
 		ret = -1;
@@ -193,16 +211,21 @@ err:
 	if (csr_mem_bio) {
 		BIO_free(csr_mem_bio);
 	}
-	if (ec_pkey) {
-		EVP_PKEY_free(ec_pkey);
-		ec_key = NULL; // evp_pkey_free clears attached ec_key too
-	}
-	if (ec_key) {
-		EC_KEY_free(ec_key);
+	if (evp_key) {
+		EVP_PKEY_free(evp_key);
 	}
 	if (pub_key) {
 		EC_POINT_free(pub_key);
 	}
+	if (ec_grp) {
+		EC_GROUP_free(ec_grp);
+		}
+	if (octet_pub_key) {
+		fdo_byte_array_free(octet_pub_key);
+		}
+	if (privkey_bn) {
+		BN_clear_free(privkey_bn);
+		}
 	if (x509_req) {
 		X509_REQ_free(x509_req);
 	}
