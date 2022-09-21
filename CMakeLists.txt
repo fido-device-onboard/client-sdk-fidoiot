@@ -37,7 +37,6 @@ client_sdk_compile_options(
   -Wswitch-default
   -Wunused-parameter
   -Wsign-compare
-  -Wno-deprecated-declarations
   -Wpedantic
   -Werror
   -Wimplicit-function-declaration
