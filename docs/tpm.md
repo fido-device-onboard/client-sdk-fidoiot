@@ -5,7 +5,7 @@
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support openssl 3.0 version. If you are not prefering to migrate to openssl 3, please use the older v1.1.2 version of this repo that complies with 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM* 2.0
 
@@ -16,62 +16,81 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 
-OpenSSL* toolkit version 1.1.1q.
+OpenSSL* toolkit version 3.0.5.
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.5
 
-1. If libssl-dev is installed, remove it:
+You can either perform the steps in this section manually or use the install_openssl_curl.sh script from the source folder. Run this script with "sudo bash install_openssl_curl.sh -u 1.1.1q" to remove manually installed openssl 1.1.1 version. Then "sudo bash install_openssl_curl.sh -i 3.0.5" to install openssl 3 and curl upgraded with openssl 3.
+
+1. If libssl-dev, curl and libcurl are already installed, remove it:
 	```
 	sudo apt-get remove --auto-remove libssl-dev
 	sudo apt-get remove --auto-remove libssl-dev:i386
+	sudo apt remove curl libcurl4-openssl-dev
 	```
-2. Pull the tarball:
+    In case of RHEL OS, use below commands to uninstall:
 	```
+	yum remove curl libcurl-devel openssl-devel
+	```
+2. In case if openssl 1.1.1 version is manually installed on the system before, uninstall it.
+   Can skip this step if the system has only the default openssl that comes along with OS.
+    ```
 	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
-	```
-3. Unpack the tarball with:
-	```
-	tar -zxf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
-	```
-4. Issue the command:
-	```
+	tar -xvzf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
 	./config
+	make -j$(nproc)
+	sudo make uninstall
+	rm /usr/bin/openssl
+	rm -rf openssl-1.1.1q
+	rm -f openssl-1.1.1q.tar.gz
+	ldconfig
+	cd ..
 	```
-5. Issue the command:
-	```
-	make
-	```
-	  (You may need to run `sudo apt/yum install make gcc` before running this command successfully).
 
-6. Check for possible errors:
+3. Install openssl 3 manually with below steps:
 	```
-	make test
-	```
-7. Backup the current OpenSSL* binary:
-	```
+	#Pull the tarball
+	wget https://www.openssl.org/source/openssl-3.0.5.tar.gz
+	#Unpack the tarball
+	tar -zxf openssl-3.0.5.tar.gz && cd openssl-3.0.5
+	./config
+	make -j$(nproc)
+	#Backup the current OpenSSL* binary
 	sudo mv /usr/bin/openssl ~/tmp
-	```
-8. Issue the command:
-	```
 	sudo make install
-	```
-9. Create a symbolic link from the newly installed binary to the default location:
-	```
+	#Create a symbolic link from the newly installed binary to the default location
 	sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
+	#Run the command to update symlinks and rebuild the library cache
+	cat /usr/local/lib64/ >> /etc/ld.so.conf.d/libc.conf
+	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+	ldconfig
+	cd ..
 	```
-10. Run the command to update symlinks and rebuild the library cache:
-	```
-	sudo ldconfig
-	```
-11. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.
-Issue the following command from the terminal:
+    Assuming no errors in executing above steps, you should have successfully installed the new version of the OpenSSL* toolkit. Issue the following command from the terminal:
 	```
 	openssl version
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1q  05 Jul 2022
+	OpenSSL* 3.0.5  05 Jul 2022
 	```
+4. Download the curl 7.85 version source code, build and install with openssl 3 configuration:
+	```
+	wget "https://github.com/curl/curl/releases/download/curl-7_85_0/curl-7.85.0.tar.gz"
+	tar -xvzf curl-$7.85.0.tar.gz && cd curl-$7.85.0
+	./configure --with-openssl=<path_where_openssl-3.0.5_is_built_as given_in_previous_section>
+	make -j$(nproc)
+	sudo make install
+	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+	ldconfig
+	ln -fs /usr/lib/libcurl.so.4 /usr/local/lib/
+	ldconfig 
+	```
+     Assuming no errors in executing above steps, you should have successfully installed the curl that you built. Issue the following command from the terminal:
+	```
+	curl --version
+	```
+	  Your output contain the openssl version as 3.0.5
 
 ## 2. TPM* Library Installation
 
@@ -331,12 +350,12 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1q for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 3.0.5 for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
   openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1q, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1q.
+  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.5, follow the steps given in section 1 to update the OpenSSL* version to 3.0.5.
 
 
