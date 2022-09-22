@@ -68,7 +68,7 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
  * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
+int32_t fdo_con_disconnect(fdo_con_handle handle);
 
 /*
  * Receive(read) length of incoming fdo packet.
@@ -85,7 +85,7 @@ int32_t fdo_con_disconnect(fdo_con_handle handle, bool tls);
 int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 				uint32_t *protocol_version,
 				uint32_t *message_type, uint32_t *msglen,
-				bool tls, char *curl_buf, size_t *curl_buf_offset);
+				char *curl_buf, size_t *curl_buf_offset);
 
 /*
  * Receive(read) incoming fdo packet.
@@ -98,8 +98,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
  * @param[in] curl_buf_offset: pointer to track curl_buf.
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_recv_msg_body(fdo_con_handle handle, uint8_t *buf,
-			      size_t length, bool tls, char *curl_buf,
+int32_t fdo_con_recv_msg_body(uint8_t *buf, size_t length, char *curl_buf,
 				  size_t curl_buf_offset);
 
 /*
@@ -153,7 +152,7 @@ int fdo_random(void);
  * @param port[in] - port number to connect
  * @return connection handle on success. -ve value on failure
  */
-int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port);
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls);
 
 /**
  * fdo_curl_proxy set up the proxy connection via curl API

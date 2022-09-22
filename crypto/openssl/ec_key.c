@@ -12,6 +12,7 @@
 #include <openssl/ec.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
+#include <openssl/core_names.h>
 #include "fdotypes.h"
 #include "storage_al.h"
 #include "util.h"
@@ -20,12 +21,11 @@
 #include "safe_lib.h"
 
 #ifdef ECDSA_PEM
-EC_KEY *get_ec_key(void)
+EVP_PKEY *get_evp_key(void)
 {
 	int ret = -1;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
-	EC_KEY *ec_key = NULL;
 	BIO *ecprivkey_bio = NULL;
 	EVP_PKEY *ecprivkey_evp = NULL;
 
@@ -58,12 +58,6 @@ EC_KEY *get_ec_key(void)
 		goto err;
 	}
 
-	ec_key = EVP_PKEY_get1_EC_KEY(ecprivkey_evp);
-	if (!ec_key) {
-		LOG(LOG_ERROR, "Invalid EC key format\n");
-		goto err;
-	}
-
 err:
 	/* At this point ret is already 0 */
 	if (privkey) {
@@ -73,27 +67,24 @@ err:
 		}
 		fdo_free(privkey);
 	}
-	if (ecprivkey_evp) {
+	if (ecprivkey_evp && ret) {
 		EVP_PKEY_free(ecprivkey_evp);
+		ecprivkey_evp = NULL;
 	}
 	if (ecprivkey_bio) {
 		BIO_free(ecprivkey_bio);
 	}
-	if (ec_key && ret) {
-		EC_KEY_free(ec_key);
-		ec_key = NULL;
-	}
-	return ec_key;
+	return ecprivkey_evp;
 }
 #else
-EC_KEY *get_ec_key(void)
+EVP_PKEY *get_evp_key(void)
 {
 	int ret = 0;
 	uint8_t *privkey = NULL;
 	size_t privkey_size = 0;
-	EC_KEY *ec_key = NULL;
-	BIGNUM *ec_key_bn = NULL;
 	int32_t curve = NID_X9_62_prime256v1;
+	EVP_PKEY *evp_key_ec = NULL;
+	EVP_PKEY_CTX *evp_ctx = NULL;
 
 #ifdef ECDSA384_DA
 	curve = NID_secp384r1;
@@ -106,27 +97,33 @@ EC_KEY *get_ec_key(void)
 		goto err;
 	}
 
-	/* Load the key from memory into ec_key */
-	ec_key_bn = BN_bin2bn(privkey, privkey_size, NULL);
-	if (!ec_key_bn) {
-		LOG(LOG_ERROR, "Failed to create eckey BN\n");
+    evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+	if (!evp_ctx) {
+		LOG(LOG_ERROR, "Failed to create evp ctx context \n");
 		goto err;
 	}
 
-	/* Create and initialize openssl EC private key */
-	ec_key = EC_KEY_new_by_curve_name(curve);
-	if (!ec_key) {
-		LOG(LOG_ERROR, "Failed to allocate ec key\n");
+	const char* group_name = OBJ_nid2sn(curve);
+	OSSL_PARAM params[] = { OSSL_PARAM_BN(OSSL_PKEY_PARAM_PRIV_KEY, privkey, privkey_size),
+							OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)group_name, strlen(group_name)),
+								  OSSL_PARAM_END 
+								  };
+    if (EVP_PKEY_fromdata_init(evp_ctx) <=0) {
+		LOG(LOG_ERROR, "Failed to init the ec key from data object\n");
 		goto err;
-	}
+    	}
 
-	ret = EC_KEY_set_private_key(ec_key, ec_key_bn);
-	if (!ret) {
-		LOG(LOG_ERROR, "Failed to set ec private key\n");
+		if ( EVP_PKEY_fromdata(evp_ctx,&evp_key_ec,EVP_PKEY_KEYPAIR, params) <=0) {
+		LOG(LOG_ERROR, "Failed to create the ec key from data\n");// %s", (char *)params2);
 		goto err;
-	}
+    	}
+        ret = 1; // success
 
 err:
+	if (evp_ctx) {
+		EVP_PKEY_CTX_free(evp_ctx);
+		evp_ctx = NULL;
+		}
 	if (privkey) {
 		if (memset_s(privkey, privkey_size, 0) != 0) {
 			LOG(LOG_ERROR, "Memset Failed\n");
@@ -134,14 +131,10 @@ err:
 		}
 		fdo_free(privkey);
 	}
-	if (ec_key && !ret) {
-		EC_KEY_free(ec_key);
-		ec_key = NULL;
+	if (evp_key_ec && !ret) {
+		EVP_PKEY_free(evp_key_ec);
+		evp_key_ec = NULL;
 	}
-	if (ec_key_bn) {
-		BN_free(ec_key_bn);
-	}
-
-	return ec_key;
+	return evp_key_ec;
 }
 #endif
