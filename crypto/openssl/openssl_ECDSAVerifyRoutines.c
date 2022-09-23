@@ -13,7 +13,6 @@
 #include <openssl/ssl.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/ec.h>
-#include <openssl/core_names.h>
 #include "fdoCryptoHal.h"
 #include "util.h"
 #include "storage_al.h"
@@ -34,43 +33,74 @@
  * @param key_param2Length - not used
  * @return 0 if true, else -1.
 
-*/
+ */
 int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
-		const uint8_t *message, uint32_t message_length,
-		const uint8_t *message_signature,
-		uint32_t signature_length,
-		const uint8_t *key_param1,
-		uint32_t key_param1Length,
-		const uint8_t *key_param2,
-		uint32_t key_param2Length)
+			      const uint8_t *message, uint32_t message_length,
+			      const uint8_t *message_signature,
+			      uint32_t signature_length,
+			      const uint8_t *key_param1,
+			      uint32_t key_param1Length,
+			      const uint8_t *key_param2,
+			      uint32_t key_param2Length)
 {
 	int32_t ret = -1;
-	EVP_PKEY *eckey = NULL;
-	EVP_PKEY_CTX *evp_ctx = NULL;
-	EVP_MD_CTX *mdctx = NULL;
-	uint32_t group_name_nid;
+	EC_KEY *eckey = NULL;
+	uint8_t hash[SHA512_DIGEST_LENGTH] = {0};
+	size_t hash_length = 0;
 	const unsigned char *pub_key = (const unsigned char *)key_param1;
+	unsigned char *sig_r = NULL;
+	unsigned char *sig_s = NULL;
 	BIGNUM *x = NULL;
 	BIGNUM *y = NULL;
-	uint32_t der_sig_len = 0;
-	uint8_t * der_sig = NULL;
+	BIGNUM *r = NULL;
+	BIGNUM *s = NULL;
 	ECDSA_SIG *sig = NULL;
 
 	/* Check validity of key type. */
 	// Only COSEKEY and X509 are currently supported
 	if ((key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_X509 &&
-				key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY) ||
-			(key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
-			 key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
+		 key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY) ||
+	    (key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256 &&
+	     key_algorithm != FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384)) {
 		LOG(LOG_ERROR, "Incorrect key type\n");
 		goto end;
 	}
 
 	if (NULL == message_signature || 0 == signature_length ||
-			0 != (signature_length % 2) ||
-			NULL == message || 0 == message_length) {
+		0 != (signature_length % 2) ||
+	    NULL == message || 0 == message_length) {
 		LOG(LOG_ERROR, "Invalid arguments!\n");
 		goto end;
+	}
+
+	/* generate required EC_KEY based on type */
+	if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) { // P-256 NIST
+		eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+		if (NULL == eckey) {
+			LOG(LOG_ERROR, "EC_KEY allocation failed!\n");
+			goto end;
+		}
+		/* Perform SHA-256 digest of the message */
+		if (SHA256((const unsigned char *)message, message_length,
+			   hash) == NULL) {
+			LOG(LOG_ERROR, "SHA-256 calculation failed!\n");
+			goto end;
+		}
+		hash_length = SHA256_DIGEST_LENGTH;
+
+	} else { // P-384
+		eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
+		if (NULL == eckey) {
+			LOG(LOG_ERROR, "EC_KEY allocation failed!\n");
+			goto end;
+		}
+		/* Perform SHA-384 digest of the message */
+		if (SHA384((const unsigned char *)message, message_length,
+			   hash) == NULL) {
+			LOG(LOG_ERROR, "SHA-384 calculation failed!\n");
+			goto end;
+		}
+		hash_length = SHA384_DIGEST_LENGTH;
 	}
 
 	if (key_encoding == FDO_CRYPTO_PUB_KEY_ENCODING_X509) {
@@ -84,27 +114,13 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 		(void)key_param2Length;
 
 		/* decode EC_KEY struct from DER encoded EC public key */
-		if (d2i_PUBKEY(&eckey, &pub_key, (long)key_param1Length) == NULL) {
+		if (d2i_EC_PUBKEY(&eckey, &pub_key, (long)key_param1Length) == NULL) {
 			LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
 			goto end;
 		}
 	} else if (key_encoding == FDO_CRYPTO_PUB_KEY_ENCODING_COSEKEY) {
-		/* generate required EC_KEY based on type */
-		if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) {
-			group_name_nid = NID_X9_62_prime256v1;
-		}
-		else { // P-384
-			group_name_nid = NID_secp384r1;
-		}
-		const char* group_name = OBJ_nid2sn(group_name_nid);
-		evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
-		if (!evp_ctx) {
-			LOG(LOG_ERROR, "Failed to create evp ctx context \n");
-			goto end;
-		}
-
 		if (NULL == key_param1 || 0 == key_param1Length ||
-				NULL == key_param2 || 0 == key_param2Length) {
+			NULL == key_param2 || 0 == key_param2Length) {
 			LOG(LOG_ERROR, "Invalid params!\n");
 			goto end;
 		}
@@ -115,78 +131,75 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 			LOG(LOG_ERROR, "Failed to convert affine-x and/or affine-y\n");
 			goto end;
 		}
-		OSSL_PARAM params[] = {
-			OSSL_PARAM_BN(OSSL_PKEY_PARAM_EC_PUB_X, &x, sizeof(x)),
-			OSSL_PARAM_BN(OSSL_PKEY_PARAM_EC_PUB_Y, &y, sizeof(y)),
-			OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)group_name, strlen(group_name)),
-			OSSL_PARAM_END
-		};
-		if(EVP_PKEY_fromdata_init(evp_ctx) <= 0 ||
-				EVP_PKEY_fromdata(evp_ctx, &eckey, EVP_PKEY_KEYPAIR, params) <= 0) {
+		if (EC_KEY_set_public_key_affine_coordinates(eckey, x, y) == 0) {
 			LOG(LOG_ERROR, "Failed to create EC Key from affine-x and affine-y!\n");
 			goto end;
 		}
 	}
 
-	if(!(mdctx = EVP_MD_CTX_create())) {
-		LOG(LOG_ERROR, "Msg Digest init failed \n");
-		goto end;
-	}
-	if (key_algorithm == FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256) {
-		if(1 != EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, eckey)){
-			LOG(LOG_ERROR, "EVP verify init failed \n");
-			goto end;
-		}
-	}
-	else {
-		if(1 != EVP_DigestVerifyInit(mdctx, NULL, EVP_sha384(), NULL, eckey)){
-			LOG(LOG_ERROR, "EVP verify init failed \n");
-			goto end;
-		}
-	}
-
-	if(1 != EVP_DigestVerifyUpdate(mdctx, message, message_length)) {
-		LOG(LOG_ERROR, "EVP verify update failed \n");
-		goto end;
-	}
-
-	// Convert the raw signature to DER encoded format
+	// assemble r and s into a signature object
 	sig = ECDSA_SIG_new();
-	BIGNUM *r = BN_bin2bn(message_signature, signature_length/2, NULL);
-	BIGNUM *s = BN_bin2bn(message_signature + signature_length/2, signature_length/2, NULL);
-	if (!sig || !r || !s || (1 != ECDSA_SIG_set0(sig, r, s))) {
-		LOG(LOG_ERROR, "Failure in parsing the signature \n");
-		goto end;
-	}
-	der_sig_len = i2d_ECDSA_SIG(sig, NULL);
-	if (!der_sig_len) {
-		LOG(LOG_ERROR, "Failure in format conversion of signature \n");
-		goto end;
-	}
-	der_sig_len = i2d_ECDSA_SIG(sig, &der_sig);
-	if (!der_sig_len || !der_sig) {
-		LOG(LOG_ERROR, "Failure in format conversion of signature \n");
+	if (!sig) {
+		LOG(LOG_ERROR, "ECDSA Sig create failed\n");
 		goto end;
 	}
 
-	if(1 != EVP_DigestVerifyFinal(mdctx, der_sig, der_sig_len)) {
+	sig_r = fdo_alloc(signature_length/2);
+	if (!sig_r) {
+		LOG(LOG_ERROR, "Alloc of sig-r failed!\n");
+		goto end;
+	}
+	if (0 != memcpy_s(sig_r, signature_length/2,
+		message_signature, signature_length/2)) {
+		LOG(LOG_ERROR, "Copy of sig-r failed!\n");
+		goto end;
+	}
+	sig_s = fdo_alloc(signature_length/2);
+	if (!sig_s) {
+		LOG(LOG_ERROR, "Alloc of sig-s failed!\n");
+		goto end;
+	}
+	if (0 != memcpy_s(sig_s, signature_length/2,
+		message_signature + signature_length/2, signature_length/2)) {
+		LOG(LOG_ERROR, "Copy of sig-s failed!\n");
+		goto end;
+	}
+	// get r and s from buffers as BIGNUMs
+	r = BN_bin2bn((const unsigned char*) sig_r, signature_length/2, NULL);
+	if (!r) {
+		LOG(LOG_ERROR, "Failed to convert r\n");
+		goto end;
+	}
+	s = BN_bin2bn((const unsigned char*) sig_s, signature_length/2, NULL);
+	if (!s) {
+		LOG(LOG_ERROR, "Failed to convert s\n");
+		BN_free(r);
+		goto end;
+	}
+
+	// once set, this maintains r and s, no need to free explicitly
+	// free only in case of an error
+	if (1 != ECDSA_SIG_set0(sig, r, s)) {
+		LOG(LOG_ERROR, "ECDSA Sig set failed\n");
+		BN_free(r);
+		BN_free(s);
+		goto end;
+	}
+
+	if (1 != ECDSA_do_verify(hash, hash_length, sig, eckey)) {
 		LOG(LOG_ERROR, "ECDSA Sig verification failed\n");
 		goto end;
 	}
+
 	ret = 0;
 
 end:
 	if (eckey) {
-		EVP_PKEY_free(eckey);
-		eckey = NULL;
+		EC_KEY_free(eckey);
 	}
-	if (evp_ctx) {
-		EVP_PKEY_CTX_free(evp_ctx);
-		evp_ctx = NULL;
-	}
-	if (mdctx) {
-		EVP_MD_CTX_free(mdctx);
-		mdctx = NULL;
+	if (sig) {
+		// this method also frees BIGNUMs r and s
+		ECDSA_SIG_free(sig);
 	}
 	if (x) {
 		BN_free(x);
@@ -194,11 +207,11 @@ end:
 	if (y) {
 		BN_free(y);
 	}
-	if (sig) {
-		ECDSA_SIG_free(sig);
+	if (sig_r) {
+		fdo_free(sig_r);
 	}
-	if (der_sig) {
-		fdo_free(der_sig);
+	if (sig_s) {
+		fdo_free(sig_s);
 	}
 	return ret;
 }

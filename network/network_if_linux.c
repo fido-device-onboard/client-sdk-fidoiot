@@ -595,7 +595,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		goto err;
 	}
 
-	LOG(LOG_DEBUG,"Reading response.\n");
+	LOG(LOG_INFO,"Reading response.\n");
 
 	do {
 		nread = 0;
@@ -620,7 +620,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		goto err;
 	}
 
-	LOG(LOG_DEBUG,"Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
+	LOG(LOG_INFO,"Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
 		(curl_off_t)nread_total);
 
 	for (;;) {
@@ -773,7 +773,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 	/* Send REST header */
 	CURLcode res;
 	size_t nsent_total = 0;
-	LOG(LOG_DEBUG,"Sending REST header.\n");
+	LOG(LOG_INFO,"Sending REST header.\n");
 
 	do {
 		size_t nsent;
@@ -797,7 +797,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			goto hdrerr;
 		}
 
-		LOG(LOG_DEBUG,"Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
+		printf("Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
 			(curl_off_t)nsent);
 
 	} while (nsent_total < header_len);
@@ -831,7 +831,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 
 	/* Send REST body */
 	nsent_total = 0;
-	LOG(LOG_DEBUG,"Sending REST body.\n");
+	LOG(LOG_INFO,"Sending REST body.\n");
 
 	do {
 		size_t nsent;
@@ -855,7 +855,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 			goto bodyerr;
 		}
 
-		LOG(LOG_DEBUG,"Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
+		LOG(LOG_INFO,"Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
 			(curl_off_t)nsent);
 
 	} while (nsent_total < length);

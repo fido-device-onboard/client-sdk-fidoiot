@@ -9,12 +9,10 @@
  * \ tpm2.0(tpm-tss & tpm-tss-engine) and openssl library.
  */
 
+#include <openssl/engine.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/sha.h>
-#include <openssl/provider.h>
-#include <openssl/crypto.h>
-#include <openssl/store.h>
 #include "safe_lib.h"
 #include "util.h"
 #include "fdoCryptoHal.h"
@@ -29,117 +27,89 @@
  * @return 0 if success, else -1.
  */
 int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
-		unsigned char *message_signature,
-		size_t *signature_length)
+		       unsigned char *message_signature,
+		       size_t *signature_length)
 {
 	int32_t ret = -1;
+	const char *engine_id = "dynamic";
 	EVP_PKEY *pkey = NULL;
+	EC_KEY *eckey = NULL;
 	ECDSA_SIG *sig = NULL;
+	uint8_t digest[SHA384_DIGEST_SIZE] = {0};
+	ENGINE *engine = NULL;
+	size_t hash_length = 0;
 	unsigned char *sig_r = NULL;
 	int sig_r_len = 0;
 	unsigned char *sig_s = NULL;
 	int sig_s_len = 0;
-	unsigned char *der_sig = NULL;
-	size_t der_sig_len = 0;
-	OSSL_PROVIDER *prov = NULL;
-	EVP_MD_CTX *mdctx = NULL;
-	OSSL_STORE_CTX *ctx = NULL;
-	OSSL_STORE_INFO *info = NULL;
 
 	if (!data || !data_len || !message_signature || !signature_length) {
 		LOG(LOG_ERROR, "Invalid Parameters received.");
 		goto error;
 	}
-
-	// Load OpenSSL TPM provider
-	if ((prov = OSSL_PROVIDER_load(NULL, "tpm2")) == NULL) {
-		LOG(LOG_ERROR,"Failed to load tpm provider!\n");
-		goto error;
-	}
-
-	// Read the key
-	if ((ctx = OSSL_STORE_open(TPM_ECDSA_DEVICE_KEY, NULL, NULL, NULL, NULL)) == NULL) {
-		LOG(LOG_ERROR, "Error during OSSL_STORE_open\n");
-		goto error;
-	}
-
-	while (!OSSL_STORE_eof(ctx) && (info = OSSL_STORE_load(ctx)) != NULL) {
-		if (OSSL_STORE_INFO_get_type(info) == OSSL_STORE_INFO_PKEY) {
-			pkey = OSSL_STORE_INFO_get1_PKEY(info);
-			break;
-		}
-		OSSL_STORE_INFO_free(info);
-		info = NULL;
-	}
-
-	if (!pkey) {
-		LOG(LOG_ERROR, "Error during reading Private key.\n");
-		goto error;
-	}
-
-	LOG(LOG_DEBUG,"Private key successfully loaded in TPM format.\n");
-
-	// Set EVP properties to use TPM provider
-	if (EVP_set_default_properties(NULL, "provider=tpm2") == 0) {
-		LOG(LOG_ERROR,"failed to load tpm provider!\n");
-		goto error;
-	}
-
-	// Create the Message Digest Context
-	mdctx = EVP_MD_CTX_create();
-	if (!mdctx) {
-		LOG(LOG_ERROR, "Failed to create message digest context\n");
-		goto error;
-	}
-
 #if defined(ECDSA256_DA)
-	if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, pkey)) {
-		LOG(LOG_ERROR, "EVP sign init failed \n");
+	hash_length = SHA256_DIGEST_SIZE;
+	if (SHA256(data, data_len, digest) == NULL) {
+		LOG(LOG_DEBUG, "SHA256 digest generation failed.");
 		goto error;
 	}
 #elif defined(ECDSA384_DA)
-	if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha384(), NULL, pkey)) {
-		LOG(LOG_ERROR, "EVP sign init failed \n");
+	hash_length = SHA384_DIGEST_SIZE;
+	if (SHA384(data, data_len, digest) == NULL) {
+		LOG(LOG_DEBUG, "SHA384 digest generation failed.");
 		goto error;
 	}
 #endif
-	if (1 != EVP_DigestSignUpdate(mdctx, data, data_len)) {
-		LOG(LOG_ERROR, "EVP sign update failed \n");
-		goto error;
-	}
-	//First call with NULL param to obtain the DER encoded signature length
-	if (1 != EVP_DigestSignFinal(mdctx, NULL, &der_sig_len)) {
-		LOG(LOG_ERROR, "EVP sign final for size failed \n");
+
+	ENGINE_load_dynamic();
+
+	engine = ENGINE_by_id(engine_id);
+	if (engine == NULL) {
+		LOG(LOG_ERROR, "Could not find external engine.\n");
 		goto error;
 	}
 
-	if (der_sig_len <= 0) {
-		LOG(LOG_ERROR, "EVP_DigestSignFinal returned invalid signature length.\n");
+	if (!ENGINE_ctrl_cmd_string(engine, "SO_PATH", TPM2_TSS_ENGINE_SO_PATH,
+				    0)) {
+		LOG(LOG_ERROR, "Could not set TPM Engine path.\n");
 		goto error;
 	}
 
-	der_sig = fdo_alloc(der_sig_len);
-	if (!der_sig) {
-		LOG(LOG_ERROR, "Signature alloc Failed\n");
-		goto error;
-	}
-	//second call with actual param to obtain the DEr encoded signature
-	if (1 != EVP_DigestSignFinal(mdctx, der_sig, &der_sig_len)) {
-		LOG(LOG_ERROR, "EVP sign final failed \n");
+	if (!ENGINE_ctrl_cmd_string(engine, "LOAD", NULL, 0)) {
+		LOG(LOG_ERROR, "Could not load TPM engine.\n");
 		goto error;
 	}
 
-	//Set EVP properties back to default.
-	if (EVP_set_default_properties(NULL, "provider=default") == 0) {
-		LOG(LOG_DEBUG,"failed to load tpm provider!\n");
+	LOG(LOG_DEBUG, "TPM Engine successfully loaded.\n");
+
+	if (!ENGINE_init(engine)) {
+		LOG(LOG_ERROR, "Could not initialize TPM engine.\n");
 		goto error;
 	}
 
-	// Decode DER encoded signature to convert to raw format
-	sig = ECDSA_SIG_new();
-	const unsigned char *sig_input = der_sig;
-	if (!sig || d2i_ECDSA_SIG(&sig, &sig_input, der_sig_len) == NULL) {
-		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
+	pkey =
+	    ENGINE_load_private_key(engine, TPM_ECDSA_DEVICE_KEY, NULL, NULL);
+	if (NULL == pkey) {
+		LOG(LOG_DEBUG,
+		    "Could not load private Key in TPM Engine format.\n");
+		goto error;
+	}
+
+	LOG(LOG_DEBUG,
+	    "Private key successfully loaded in TPM Engine format.\n");
+
+	eckey = EVP_PKEY_get1_EC_KEY(pkey);
+	if (NULL == eckey) {
+		LOG(LOG_DEBUG, "Could not Load ECC Key.\n");
+		goto error;
+	}
+
+	LOG(LOG_DEBUG, "ECDSA signature generation - "
+		       "ECC key successfully loaded.\n");
+
+	sig = ECDSA_do_sign(digest, hash_length, eckey);
+	if (!sig) {
+		LOG(LOG_DEBUG, "Failed to generate ECDSA signature.\n");
 		goto error;
 	}
 
@@ -183,12 +153,12 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 	*signature_length = sig_r_len + sig_s_len;
 	if (memcpy_s(message_signature, *signature_length, (char *)sig_r,
-				(size_t)sig_r_len) != 0) {
+		     (size_t)sig_r_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto error;
 	}
 	if (memcpy_s(message_signature + sig_r_len, *signature_length, (char *)sig_s,
-				(size_t)sig_s_len) != 0) {
+		     (size_t)sig_s_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto error;
 	}
@@ -196,37 +166,25 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	ret = 0;
 
 error:
+	if (engine) {
+		ENGINE_finish(engine);
+		ENGINE_free(engine);
+		ENGINE_cleanup();
+	}
 	if (pkey) {
 		EVP_PKEY_free(pkey);
 	}
+	if (eckey) {
+		EC_KEY_free(eckey);
+	}
 	if (sig) {
 		ECDSA_SIG_free(sig);
-	}
-	if (der_sig) {
-		fdo_free(der_sig);
-		sig_input = NULL;
 	}
 	if (sig_r) {
 		fdo_free(sig_r);
 	}
 	if (sig_s) {
 		fdo_free(sig_s);
-	}
-	if (prov) {
-		OSSL_PROVIDER_unload(prov);
-		prov = NULL;
-	}
-	if (mdctx) {
-		EVP_MD_CTX_free(mdctx);
-		mdctx = NULL;
-	}
-	if (ctx) {
-		OSSL_STORE_close(ctx);
-		ctx = NULL;
-	}
-	if (info) {
-		OSSL_STORE_INFO_free(info);
-		info = NULL;
 	}
 	return ret;
 }
