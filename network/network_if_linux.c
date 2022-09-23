@@ -147,7 +147,7 @@ int32_t fdo_con_setup(char *medium, char **params, uint32_t count)
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
-		uint32_t *ip_list_size)
+			   uint32_t *ip_list_size)
 {
 	int idx;
 	struct addrinfo *result = NULL, *it = NULL;
@@ -204,8 +204,8 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
 		(ip_list_temp + idx)->length = IPV4_ADDR_LEN;
 
 		if (memcpy_s((ip_list_temp + idx)->addr, ip_list_temp->length,
-					&(sa_in->sin_addr.s_addr),
-					ip_list_temp->length) != 0) {
+			     &(sa_in->sin_addr.s_addr),
+			     ip_list_temp->length) != 0) {
 			LOG(LOG_ERROR, "Memcpy failed\n");
 			goto end;
 		}
@@ -343,7 +343,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 	}
 
 	if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
-				ip_ascii, port) < 0) {
+			ip_ascii, port) < 0) {
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
 		goto err;
 	}
@@ -356,30 +356,19 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 	if (curl) {
 		if (tls) {
 			// we are directed to enforce TLS
-			char *ciphers_list = "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:"
-				"TLS_AES_128_CCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:"
-				"ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
-				"ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-GCM-SHA256";
-
 			curl_version_info_data * vinfo = curl_version_info(CURLVERSION_NOW);
 			if (CURL_VERSION_SSL == (vinfo->features & CURL_VERSION_SSL)) {
 				// SSL support enabled
 				LOG(LOG_INFO, "SSL support verified.\n");
 			}
 
-			// Add option to force the https TLS connection to TLS v1.2
-			curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+			// Add option to force the https TLS connection to TLS v1.3
+			curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
 			if (curlCode != CURLE_OK) {
 				goto err;
 			}
 
-			// Add option to allow recommended ciphers list
-			curlCode = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, ciphers_list);
-			if (curlCode != CURLE_OK) {
-				goto err;
-			}
-
-#if defined(SELF_SIGNED_CERTS_SUPPORTED)
+	#if defined(SELF_SIGNED_CERTS_SUPPORTED)
 			if (useSelfSignedCerts) {
 				// Add options if using self-signed certificates
 				curlCode = CURLE_OK;
@@ -396,7 +385,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 				}
 				LOG(LOG_INFO, "Set connection for self signed certificate usage.\n");
 			}
-#endif
+	#endif
 			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 			if (curlCode != CURLE_OK) {
 				LOG(LOG_ERROR, "CURL_ERROR: Could not enable ssl.\n");
@@ -425,7 +414,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 		}
 
 		/* Extract the socket from the curl handle - we will need it for
-		   waiting. */
+		waiting. */
 		res = curl_easy_getinfo(curl, CURLINFO_ACTIVESOCKET, &sockfd);
 
 		if (res != CURLE_OK) {
@@ -460,7 +449,7 @@ err:
  */
 
 fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
-		bool tls)
+			       bool tls)
 {
 	struct fdo_sock_handle *sock_hdl = FDO_CON_INVALID_HANDLE;
 
@@ -481,7 +470,7 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 		char ipv4[IP_TAG_LEN] = {0};
 		char port_s[MAX_PORT_SIZE] = {0};
 		uint8_t octlet_size =
-			4; // e.g 192.168.0.100, max 3char + 1null/oct.
+		    4; // e.g 192.168.0.100, max 3char + 1null/oct.
 
 		if (!ip_addr) {
 			goto end;
@@ -492,16 +481,16 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 		 * mbed connect
 		 */
 		if ((snprintf_s_i(ipv4, octlet_size, "%d", ip_addr->addr[0]) <
-					0) ||
-				(snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
-					      octlet_size + 1, ".%d",
-					      ip_addr->addr[1]) < 0) ||
-				(snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
-					      octlet_size + 1, ".%d",
-					      ip_addr->addr[2]) < 0) ||
-				(snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
-					      octlet_size + 1, ".%d",
-					      ip_addr->addr[3]) < 0)) {
+		     0) ||
+		    (snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
+				  octlet_size + 1, ".%d",
+				  ip_addr->addr[1]) < 0) ||
+		    (snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
+				  octlet_size + 1, ".%d",
+				  ip_addr->addr[2]) < 0) ||
+		    (snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
+				  octlet_size + 1, ".%d",
+				  ip_addr->addr[3]) < 0)) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto end;
 		}
@@ -514,8 +503,8 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 
 		if (NULL == *ssl) {
 			LOG(LOG_ERROR, "TLS connection "
-					"setup "
-					"failed\n");
+				       "setup "
+				       "failed\n");
 			goto end;
 		}
 		return MBEDTLS_NET_DUMMY_SOCKET;
@@ -558,7 +547,7 @@ int32_t fdo_con_disconnect(fdo_con_handle handle)
 	sockfd = sock_hdl->sockfd;
 
 #ifdef USE_MBEDTLS
-	return 0;
+		return 0;
 #endif
 	// close() returns 0 on success
 
@@ -584,9 +573,9 @@ int32_t fdo_con_disconnect(fdo_con_handle handle)
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
-		uint32_t *protocol_version,
-		uint32_t *message_type, uint32_t *msglen,
-		char *curl_buf, size_t *curl_buf_offset)
+				uint32_t *protocol_version,
+				uint32_t *message_type, uint32_t *msglen,
+				char *curl_buf, size_t *curl_buf_offset)
 {
 	int32_t ret = -1;
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
@@ -611,7 +600,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	do {
 		nread = 0;
 		res = curl_easy_recv(curl, curl_buf + nread_total,
-				REST_MAX_MSGBODY_SIZE - nread_total, &nread);
+					REST_MAX_MSGBODY_SIZE - nread_total, &nread);
 		nread_total += nread;
 
 		if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 1, MAX_TIME_OUT)) {
@@ -632,7 +621,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	}
 
 	LOG(LOG_DEBUG,"Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-			(curl_off_t)nread_total);
+		(curl_off_t)nread_total);
 
 	for (;;) {
 		if (memset_s(tmp, sizeof(tmp), 0) != 0) {
@@ -653,7 +642,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		tmplen = strnlen_s(tmp, REST_MAX_MSGHDR_SIZE);
 		if (!tmplen || tmplen == REST_MAX_MSGHDR_SIZE) {
 			LOG(LOG_ERROR, "Strlen() failed!\n")
-				goto err;
+			goto err;
 		}
 
 		// accumulate header content
@@ -707,7 +696,7 @@ err:
  * @retval -1 on failure, number of bytes read on success.
  */
 int32_t fdo_con_recv_msg_body(uint8_t *buf, size_t length, char *curl_buf,
-		size_t curl_buf_offset)
+				  size_t curl_buf_offset)
 {
 	int32_t ret = -1;
 
@@ -737,8 +726,8 @@ err:
  * @retval -1 on failure, number of bytes written.
  */
 int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
-		uint32_t message_type, const uint8_t *buf,
-		size_t length, bool tls)
+			     uint32_t message_type, const uint8_t *buf,
+			     size_t length, bool tls)
 {
 	int ret = -1;
 	int n;
@@ -793,7 +782,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 		do {
 			nsent = 0;
 			res = curl_easy_send(curl, rest_hdr + nsent_total,
-					header_len - nsent_total, &nsent);
+						header_len - nsent_total, &nsent);
 			nsent_total += nsent;
 
 			if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 0, MAX_TIME_OUT)) {
@@ -809,16 +798,16 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 		}
 
 		LOG(LOG_DEBUG,"Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-				(curl_off_t)nsent);
+			(curl_off_t)nsent);
 
 	} while (nsent_total < header_len);
 	n = nsent_total;
 
 	if (n <= 0) {
 		LOG(LOG_ERROR,
-				"Curl send Failed, ret=%d, "
-				"errno=%d, %d\n",
-				n, errno, __LINE__);
+			"Curl send Failed, ret=%d, "
+			"errno=%d, %d\n",
+			n, errno, __LINE__);
 
 		if (fdo_con_disconnect(handle)) {
 			LOG(LOG_ERROR, "Error during socket close()\n");
@@ -828,14 +817,14 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 
 	} else if ((size_t)n < header_len) {
 		LOG(LOG_ERROR,
-				"Rest Header write returns %d/%zu bytes\n", n,
-				header_len);
+			"Rest Header write returns %d/%zu bytes\n", n,
+			header_len);
 		goto hdrerr;
 
 	} else {
 		LOG(LOG_DEBUG,
-				"Rest Header write returns %d/%zu bytes\n\n", n,
-				header_len);
+			"Rest Header write returns %d/%zu bytes\n\n", n,
+			header_len);
 	}
 
 	LOG(LOG_DEBUG, "REST:header(%zu):%s\n", header_len, rest_hdr);
@@ -851,7 +840,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 		do {
 			nsent = 0;
 			res = curl_easy_send(curl, buf + nsent_total,
-					length - nsent_total, &nsent);
+				length - nsent_total, &nsent);
 			nsent_total += nsent;
 
 			if	(res == CURLE_AGAIN && !wait_on_socket(sockfd, 0, MAX_TIME_OUT)) {
@@ -867,7 +856,7 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 		}
 
 		LOG(LOG_DEBUG,"Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-				(curl_off_t)nsent);
+			(curl_off_t)nsent);
 
 	} while (nsent_total < length);
 
@@ -875,9 +864,9 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 
 	if (n <= 0) {
 		LOG(LOG_ERROR,
-				"Curl send Failed, ret=%d, "
-				"errno=%d, %d\n",
-				n, errno, __LINE__);
+			"Curl send Failed, ret=%d, "
+			"errno=%d, %d\n",
+			n, errno, __LINE__);
 
 		if (fdo_con_disconnect(handle)) {
 			LOG(LOG_ERROR, "Error during socket close()\n");
@@ -887,13 +876,13 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 
 	} else if ((size_t)n < length) {
 		LOG(LOG_ERROR, "Rest Body write returns %d/%zu bytes\n",
-				n, length);
+			n, length);
 		goto bodyerr;
 
 	} else {
 		LOG(LOG_DEBUG,
-				"Rest Body write returns %d/%zu bytes\n\n", n,
-				length);
+			"Rest Body write returns %d/%zu bytes\n\n", n,
+			length);
 	}
 
 	return n;
