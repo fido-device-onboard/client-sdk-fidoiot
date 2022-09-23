@@ -366,14 +366,25 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port)
 
 	if (curl) {
 		// we are directed to enforce TLS
+		char *ciphers_list = "TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:"
+				"TLS_AES_128_CCM_SHA256:TLS_CHACHA20_POLY1305_SHA256:"
+				"ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
+				"ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-GCM-SHA256";
+
 		curl_version_info_data * vinfo = curl_version_info(CURLVERSION_NOW);
 		if (CURL_VERSION_SSL == (vinfo->features & CURL_VERSION_SSL)) {
 			// SSL support enabled
 			LOG(LOG_INFO, "SSL support verified.\n");
 		}
 
-		// Add option to force the https TLS connection to TLS v1.3
-		curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_3);
+		// Add option to force the https TLS connection to TLS v1.2
+		curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+		if (curlCode != CURLE_OK) {
+			goto err;
+		}
+
+		// Add option to allow recommended ciphers list
+		curlCode = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, ciphers_list);
 		if (curlCode != CURLE_OK) {
 			goto err;
 		}
