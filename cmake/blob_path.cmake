@@ -9,7 +9,7 @@
 # or export BLOB_PATH=<path>
 
 if(TARGET_OS MATCHES linux)
-
+  
   client_sdk_compile_definitions(
     -DSERIAL_FILE=\"${BLOB_PATH}/data/manufacturer_sn.bin\"
     -DMODEL_FILE=\"${BLOB_PATH}/data/manufacturer_mod.bin\"
@@ -32,9 +32,10 @@ if(TARGET_OS MATCHES linux)
        -DTPM_HMAC_REPLACEMENT_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_priv.key\"
        -DTPM_HMAC_DATA_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_pub.key\"
        -DTPM_HMAC_DATA_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_priv.key\"
+       -DTPM2_TSS_ENGINE_SO_PATH=\"/usr/local/lib/engines-1.1/libtpm2tss.so\"
 	)
     endif()
-
+  
     if (${unit-test} MATCHES true)
       if (${DA_FILE} MATCHES pem)
 	client_sdk_compile_definitions(
@@ -118,7 +119,7 @@ if(TARGET_OS MATCHES linux)
 	client_sdk_compile_definitions(
 	  -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.dat\")
       endif()
-
+  
     else()
       client_sdk_compile_definitions(
 	-DFDO_CACERT=\"${BLOB_PATH}/data/cacert.bin\"
@@ -145,7 +146,7 @@ if(TARGET_OS MATCHES linux)
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.dat\")
 	endif()
-
+	
       endif()
     endif()
     if (NOT(${HTTPPROXY} STREQUAL ""))

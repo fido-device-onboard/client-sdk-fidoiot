@@ -1,11 +1,11 @@
-TPM2_TSS_VER="3.2.0"
+TPM2_TSS_VER="3.0.3"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
-TPM2_ABRMD_VER="2.4.1"
+TPM2_ABRMD_VER="2.4.0"
 TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
-TPM2_TOOLS_VER="5.2"
+TPM2_TOOLS_VER="5.0"
 TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
-TPM2_OPENSSL_VER=1.1.0
-TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/1.1.0/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
+TPM2_TSS_ENGINE_VER=1.1.0
+TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v$TPM2_TSS_ENGINE_VER.zip"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -37,7 +37,7 @@ install_dependencies()
     pip install pyyaml PyYAML
 }
 
-install_tpm2tss()
+install_tpm2tss() 
 {
     echo "Build & Install tpm2-tss version : $TPM2_TSS_VER"
     cd $PARENT_DIR
@@ -49,7 +49,7 @@ install_tpm2tss()
     ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
     make -j$(nproc)
     make install
-
+    
     mkdir -p /var/lib/tpm
     userdel tss
     groupadd tss &&  useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
@@ -95,17 +95,18 @@ install_tpm2tools()
     make install
 }
 
-install_tpm2openssl()
+install_tpm2tssengine()
 {
-    echo "Build & Install tpm2-openssl..."
+    echo "Build & Install tpm2-tss-engine..."
     cd $PARENT_DIR
-    rm -f tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz
-    wget $TPM2_OPENSSL_LINK
-    tar -xvzf tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz
-    cd tpm2-openssl-$TPM2_OPENSSL_VER
+    rm -f v$TPM2_TSS_ENGINE_VER.zip
+    wget $TPM2_TSS_ENGINE_LINK
+    unzip v$TPM2_TSS_ENGINE_VER.zip
+    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
 
     ./bootstrap
-    ./configure
+    mkdir -p /usr/local/lib/engines-1.1/
+    ./configure --with-enginesdir=/usr/local/lib/engines-1.1/
     make -j$(nproc)
     make install
 }
@@ -135,11 +136,11 @@ uninstall_tpm2tools()
     make uninstall
 }
 
-uninstall_tpm2openssl()
+uninstall_tpm2tssengine()
 {
-    echo "Uninstall tpm2-openssl...."
+    echo "Uninstall tpm2-tss-engine...."
     cd $PARENT_DIR
-    cd tpm2-openssl-$TPM2_OPENSSL_VER
+    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
     make uninstall
 }
 
@@ -150,7 +151,7 @@ install()
     install_tpm2tss
     install_tpm2abrmd
     install_tpm2tools
-    install_tpm2openssl
+    install_tpm2tssengine
 }
 
 uninstall()
@@ -159,9 +160,10 @@ uninstall()
     uninstall_tpm2tss
     uninstall_tpm2abrmd
     uninstall_tpm2tools
-    uninstall_tpm2openssl
+    uninstall_tpm2tssengine
     cd $PARENT_DIR
-    rm -rf tpm2*
+    rm -rf tpm2* 
+    rm v$TPM2_TSS_ENGINE_VER.zip
 }
 
 usage()

@@ -12,13 +12,13 @@ verbose=0
 curve="nist_p256"
 primary_key_type="ecc256:aes128cfb"
 
-usage()
+usage() 
 {
     echo "Usage: $0 -p <path of the parent to C-Device data directory> [-v verbose] [-i use /dev/tpmrm0 as Resource Manager, if not provided TPM2-ABRMD will be used]"
     exit 2
 }
 
-parse_args()
+parse_args() 
 {
     OPTIND=1
     USE_TABRMD=2
@@ -36,13 +36,13 @@ parse_args()
             h|* ) usage;;
         esac
     done
-
+    
     if [ $found_path -eq 0 ]; then
         usage
     fi
 }
 
-execute_cmd_on_failure_exit()
+execute_cmd_on_failure_exit() 
 {
     eval exec_cmd="$1"
     eval success_msg="$2"
@@ -102,13 +102,13 @@ failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="TPM ECDSA key generation using $curve"
-cmd="openssl genpkey -provider tpm2 -algorithm EC -pkeyopt group:P-256 -pkeyopt parent:$TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -out $tpm_device_key_file"
+cmd="tpm2tss-genkey -a ecdsa -c $curve $tpm_device_key_file -v -P $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE"
 success_string="$task completed successfully at $tpm_device_key_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\${cmd}" "\${success_string}" "\${failure_string}" 1 1
 
 task="Device CSR generation from TPM"
-cmd="openssl req -new -provider tpm2 -provider default -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
+cmd="openssl req -new -engine tpm2tss -keyform engine -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
 success_string="$task completed successfully at $device_csr_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
