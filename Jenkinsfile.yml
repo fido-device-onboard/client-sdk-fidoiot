@@ -20,7 +20,6 @@ node('ccode'){
       sh '''
         cd $WORKSPACE/safestringlib
         echo 'Building safestring'
-        git checkout v1.0.0
         mkdir obj
         make
       '''
@@ -99,7 +98,7 @@ node('ccode'){
       sh'''
         cd test-fidoiot/
         export TEST_DIR=`pwd`
-        mvn clean test -Dgroups=fdo_clientsdk_smoketest
+        #mvn clean test -Dgroups=fdo_clientsdk_smoketest
       '''
     }
   }
