@@ -5,7 +5,7 @@
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support openssl 3.0 version. If you are not prefering to migrate to openssl 3, please use the older v1.1.2 version of this repo that complies with 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support openssl 3.0 version. If you are not prefering to migrate to openssl 3, please use the older v1.1.2 version of this repo(for the source code and Readme) that complies with 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Setting up TPM* 2.0
 
@@ -20,53 +20,35 @@ OpenSSL* toolkit version 3.0.5.
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.5
 
-You can either perform the steps in this section manually or use the install_openssl_curl.sh script from the source folder. Run this script with "sudo bash install_openssl_curl.sh -u 1.1.1q" to remove manually installed openssl 1.1.1 version. Then "sudo bash install_openssl_curl.sh -i 3.0.5" to install openssl 3 and curl upgraded with openssl 3.
+1. If libssl-dev is installed, remove it.
 
-1. If libssl-dev, curl and libcurl are already installed, remove it:
-	```
-	sudo apt-get remove --auto-remove libssl-dev
-	sudo apt-get remove --auto-remove libssl-dev:i386
-	sudo apt remove curl libcurl4-openssl-dev
-	```
-    In case of RHEL OS, use below commands to uninstall:
-	```
-	yum remove curl libcurl-devel openssl-devel
-	```
-2. In case if openssl 1.1.1 version is manually installed on the system before, uninstall it.
-   Can skip this step if the system has only the default openssl that comes along with OS.
-    ```
-	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
-	tar -xvzf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
-	./config
-	make -j$(nproc)
-	sudo make uninstall
-	rm /usr/bin/openssl
-	rm -rf openssl-1.1.1q
-	rm -f openssl-1.1.1q.tar.gz
-	ldconfig
-	cd ..
-	```
+    For Ubuntu* OS:
+    sudo apt remove libssl-dev
+    For RHEL* OS:
+    sudo yum remove libcurl-devel
 
-3. Install openssl 3 manually with below steps:
-	```
-	#Pull the tarball
-	wget https://www.openssl.org/source/openssl-3.0.5.tar.gz
-	#Unpack the tarball
-	tar -zxf openssl-3.0.5.tar.gz && cd openssl-3.0.5
-	./config
-	make -j$(nproc)
-	#Backup the current OpenSSL* binary
-	sudo mv /usr/bin/openssl ~/tmp
-	sudo make install
-	#Create a symbolic link from the newly installed binary to the default location
-	sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
-	#Run the command to update symlinks and rebuild the library cache
-	cat /usr/local/lib64/ >> /etc/ld.so.conf.d/libc.conf
-	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
-	ldconfig
-	cd ..
-	```
-    Assuming no errors in executing above steps, you should have successfully installed the new version of the OpenSSL* toolkit. Issue the following command from the terminal:
+2. If curl is installed, remove it.
+
+    For Ubuntu* OS:
+    sudo apt remove curl libcurl4-openssl-dev
+    For RHEL* OS:
+    sudo yum remove curl libcurl-devel (On Redhat)
+
+3. If OpenSSL manualy installed use script to remove it.
+    sudo bash install_openssl_curl -u -v 1.1.1n
+
+4. If fresh machine install below dependencies.
+
+    For Ubuntu* OS:
+    sudo apt install build-essential
+    For RHEL* OS:
+    sudo yum install gcc gcc-c++ make perl (Redhat)
+
+5. Execute the script to install openssl3 and curl/libcurl with openssl 3 configuation.
+    sudo bash install_openssl_curl -i -v 3.0.5
+
+6. Assuming no errors in executing above steps, you should have successfully installed the new version of the OpenSSL* toolkit and curl.
+Issue the following command from the terminal:
 	```
 	openssl version
 	```
@@ -74,27 +56,15 @@ You can either perform the steps in this section manually or use the install_ope
 	```
 	OpenSSL* 3.0.5  05 Jul 2022
 	```
-4. Download the curl 7.85 version source code, build and install with openssl 3 configuration:
-	```
-	wget "https://github.com/curl/curl/releases/download/curl-7_85_0/curl-7.85.0.tar.gz"
-	tar -xvzf curl-$7.85.0.tar.gz && cd curl-$7.85.0
-	./configure --with-openssl=<path_where_openssl-3.0.5_is_built_as given_in_previous_section>
-	make -j$(nproc)
-	sudo make install
-	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
-	ldconfig
-	ln -fs /usr/lib/libcurl.so.4 /usr/local/lib/
-	ldconfig 
-	```
-     Assuming no errors in executing above steps, you should have successfully installed the curl that you built. Issue the following command from the terminal:
+    Issue the following command from the terminal:
 	```
 	curl --version
 	```
-	  Your output contain the openssl version as 3.0.5
+	  Your output should point to the openssl version 3.0.5.
 
 ## 2. TPM* Library Installation
 
-TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM* enabled FDO Client SDK uses TPM2-TSS 3.2.0, TPM2-ABRMD 2.4.1, and TPM2-TOOLS 5.2 libraries for key and cryptography related operations. Note that these versions of TPM libraries require openssl 3 version. The TPM2-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
@@ -104,13 +74,13 @@ To compile and execute TPM* enabled FDO Client SDK use one of the appropriate co
 sudo ./install_tpm_libs.sh -h
 ```
 
-* TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
+* TPM2-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
 
-	* Command to install tpm-tss library
+	* Command to install tpm2-tss library
 	```
 	sudo ./install_tpm_libs.sh -t
 	```
-	* Command to uninstall tpm-tss library
+	* Command to uninstall tpm2-tss library
 	```
 	sudo ./install_tpm_libs.sh -d
 	```
@@ -132,13 +102,13 @@ sudo ./install_tpm_libs.sh -h
 sudo ./install_tpm_libs_rhel.sh -h
 ```
 
-* TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
+* TPM2-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
 
-	* Command to install tpm-tss library
+	* Command to install tpm2-tss library
 	```
 	sudo ./install_tpm_libs_rhel.sh -t
 	```
-	* Command to uninstall tpm-tss library
+	* Command to uninstall tpm2-tss library
 	```
 	sudo ./install_tpm_libs_rhel.sh -d
 	```
@@ -157,57 +127,57 @@ sudo ./install_tpm_libs_rhel.sh -h
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM*)
 
-Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup FDO TPM* libraries. Install only tpm2-tss library to enable TPM* enabled FDO Client SDK code compilation. To enable compilation and execution of TPM* enabled FDO Client SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-tss-engine.
+Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup FDO TPM* libraries. Install only tpm2-tss library to enable TPM* enabled FDO Client SDK code compilation. To enable compilation and execution of TPM* enabled FDO Client SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-openssl.
 
-- tpm2-tss-3.0.3
+- tpm2-tss-3.2.0
 
-  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 3.0.3 of the library.
+  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 3.2.0 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
+    The library can be downloaded from [tpm2-tss-3.2.0-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.2.0/tpm2-tss-3.2.0.tar.gz)
 
   - Build and Installation Process
 
-    The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
+    The build and installation process can be found at [tpm2-tss-3.2.0-install](https://github.com/tpm2-software/tpm2-tss/blob/3.2.x/INSTALL.md)
 
-- tpm2-abrmd-2.4.0
+- tpm2-abrmd-2.4.1
 
-  This is an optional but recommended library (daemon) to use TPM* in the device. This daemon will act as a resource manager for the TPM*, for all I/O calls that happen with the device. It uses release version 2.4.0 of the library.
+  This is an optional but recommended library (daemon) to use TPM* in the device. This daemon will act as a resource manager for the TPM*, for all I/O calls that happen with the device. It uses release version 2.4.1 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-abrmd-2.4.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.4.0/tpm2-abrmd-2.4.0.tar.gz)
+    The library can be downloaded from [tpm2-abrmd-2.4.1-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.4.1/tpm2-abrmd-2.4.1.tar.gz)
 
     Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see section on Compiling FDO.
 
   - Build and Installation Process
 
-    The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
+    The build and installation process found at [tpm2-abrmd-2.4.1-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
-- tpm2-tools-5.0
+- tpm2-tools-5.2
 
-  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.0 of the library.
-
-  - Source Code
-
-    The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
-
-  - Build and Installation Process
-
-    The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
-
-- tpm2-tss-engine-1.1.0
-
-  This library provides the OpenSSL* engine, which performs the OpenSSL* cryptography operation using the keys inside the TPM*. It uses release version 1.1.0 of the library.
+  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.2 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0.zip)
+    The library can be downloaded from [tpm2-tools-5.2-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.2/tpm2-tools-5.2.tar.gz)
 
   - Build and Installation Process
 
-    The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0/INSTALL.md)
+    The build and installation process can be found at [tpm2-tools-5.2-install](https://github.com/tpm2-software/tpm2-tools/blob/4.1.X/INSTALL.md)
+
+- tpm2-openssl-1.1.0
+
+  This library provides "TPM2" OpenSSL* provider, which performs the OpenSSL* cryptography operation using the keys inside the TPM*. It uses release version 1.1.0 of the library.
+
+  - Source Code
+
+    The library can be downloaded from [tpm2-openssl-1.1.0-download](https://github.com/tpm2-software/tpm2-openssl/releases/download/1.1.0/tpm2-openssl-1.1.0.tar.gz)
+
+  - Build and Installation Process
+
+    The build and installation process can be found at [tpm2-openssl-install](https://github.com/tpm2-software/tpm2-openssl/blob/1.1.0/docs/INSTALL.md)
 
 ## 3. Compiling Intel safestringlib
 

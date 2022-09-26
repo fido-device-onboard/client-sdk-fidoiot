@@ -4,13 +4,13 @@
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support openssl 3.0 version. If you are not prefering to migrate to openssl 3, please use the older v1.1.2 version of this repo that complies with 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support openssl 3.0 version. If you are not prefering to migrate to openssl 3, please use the older v1.1.2 version of this repo(for the source code and Readme) that complies with 1.1.1q. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
-sudo apt-get install python-setuptools clang-format dos2unix ruby libcurl4-openssl-dev \
-  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake libssl-dev mercurial
+sudo apt-get install python-setuptools clang-format dos2unix ruby \
+  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev libmozjs-52-0 doxygen cmake mercurial
 ```
 
 * For RHEL* OS version 8.4 or 8.6:
@@ -20,8 +20,8 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 ```
-sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby libcurl-devel \
-  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby \
+  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
@@ -29,54 +29,35 @@ OpenSSL* toolkit version 3.0.5.
 GCC version > 7.5
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.5
+1. If libssl-dev is installed, remove it.
 
-You can either perform the steps in this section manually or use the install_openssl_curl.sh script from the source folder. Run this script with "sudo bash install_openssl_curl.sh -u 1.1.1q" to remove manually installed openssl 1.1.1 version. Then "sudo bash install_openssl_curl.sh -i 3.0.5" to install openssl 3 and curl upgraded with openssl 3.
+    For Ubuntu* OS:
+    sudo apt remove libssl-dev
+    For RHEL* OS:
+    sudo yum remove libcurl-devel
 
-1. If libssl-dev, curl and libcurl are already installed, remove it:
-	```
-	sudo apt-get remove --auto-remove libssl-dev
-	sudo apt-get remove --auto-remove libssl-dev:i386
-	sudo apt remove curl libcurl4-openssl-dev
-	```
-    In case of RHEL OS, use below commands to uninstall:
-	```
-	yum remove curl libcurl-devel openssl-devel
-	```
-2. In case if openssl 1.1.1 version is manually installed on the system before, uninstall it.
-   Can skip this step if the system has only the default openssl that comes along with OS.
-    ```
-	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
-	tar -xvzf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
-	./config
-	make -j$(nproc)
-	sudo make uninstall
-	rm /usr/bin/openssl
-	rm -rf openssl-1.1.1q
-	rm -f openssl-1.1.1q.tar.gz
-	ldconfig
-	cd ..
-	```
+2. If curl is installed, remove it.
 
-3. Install openssl 3 manually with below steps:
-	```
-	#Pull the tarball
-	wget https://www.openssl.org/source/openssl-3.0.5.tar.gz
-	#Unpack the tarball
-	tar -zxf openssl-3.0.5.tar.gz && cd openssl-3.0.5
-	./config
-	make -j$(nproc)
-	#Backup the current OpenSSL* binary
-	sudo mv /usr/bin/openssl ~/tmp
-	sudo make install
-	#Create a symbolic link from the newly installed binary to the default location
-	sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
-	#Run the command to update symlinks and rebuild the library cache
-	cat /usr/local/lib64/ >> /etc/ld.so.conf.d/libc.conf
-	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
-	ldconfig
-	cd ..
-	```
-    Assuming no errors in executing above steps, you should have successfully installed the new version of the OpenSSL* toolkit. Issue the following command from the terminal:
+    For Ubuntu* OS:
+    sudo apt remove curl libcurl4-openssl-dev
+    For RHEL* OS:
+    sudo yum remove curl libcurl-devel (On Redhat)
+
+3. If OpenSSL manualy installed use script to remove it.
+    sudo bash install_openssl_curl -u -v 1.1.1n
+
+4. If fresh machine install below dependencies.
+
+    For Ubuntu* OS:
+    sudo apt install build-essential
+    For RHEL* OS:
+    sudo yum install gcc gcc-c++ make perl (Redhat)
+
+5. Execute the script to install openssl3 and curl/libcurl with openssl 3 configuation.
+    sudo bash install_openssl_curl -i -v 3.0.5
+
+6. Assuming no errors in executing above steps, you should have successfully installed the new version of the OpenSSL* toolkit and curl.
+Issue the following command from the terminal:
 	```
 	openssl version
 	```
@@ -84,23 +65,12 @@ You can either perform the steps in this section manually or use the install_ope
 	```
 	OpenSSL* 3.0.5  05 Jul 2022
 	```
-4. Download the curl 7.85 version source code, build and install with openssl 3 configuration:
-	```
-	wget "https://github.com/curl/curl/releases/download/curl-7_85_0/curl-7.85.0.tar.gz"
-	tar -xvzf curl-$7.85.0.tar.gz && cd curl-$7.85.0
-	./configure --with-openssl=<path_where_openssl-3.0.5_is_built_as given_in_previous_section>
-	make -j$(nproc)
-	sudo make install
-	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
-	ldconfig
-	ln -fs /usr/lib/libcurl.so.4 /usr/local/lib/
-	ldconfig 
-	```
-     Assuming no errors in executing above steps, you should have successfully installed the curl that you built. Issue the following command from the terminal:
+    Issue the following command from the terminal:
 	```
 	curl --version
 	```
-	  Your output contain the openssl version as 3.0.5
+	  Your output should point to the openssl version 3.0.5.
+
 ## 3. Compiling Intel safestringlib
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
 From the root of the safestringlib, do the following:

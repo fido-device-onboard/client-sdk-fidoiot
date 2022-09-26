@@ -9,9 +9,7 @@ cd $PARENT_DIR
 
 install() 
 {  
-	sudo apt remove curl libcurl4-openssl-dev
-    #yum remove curl libcurl-devel openssl-devel
-    OPENSSL_LINK="https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz --no-check-certificate"
+	OPENSSL_LINK="https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz --no-check-certificate"
     echo "Build & Install OpenSSL version : $OPENSSL_VER"
     cd $PARENT_DIR
     rm -f openssl-$OPENSSL_VER.tar.gz
@@ -25,7 +23,6 @@ install()
     make install
     
     ln -s /usr/local/bin/openssl /usr/bin/openssl
-	cat /usr/local/lib64/ >> /etc/ld.so.conf.d/libc.conf
 	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
     ldconfig
     openssl version
@@ -44,8 +41,6 @@ install()
     ldconfig
 	openssl version
     curl --version
-	ln -fs /usr/lib/libcurl.so.4 /usr/local/lib/
-	ldconfig
 	
 	
 }
@@ -55,8 +50,7 @@ uninstall()
 {
 	OPENSSL_LINK="https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz --no-check-certificate"
     echo "Uninstall OpenSSL version : $OPENSSL_VER"
-	apt remove curl libssl-dev libcurl4-openssl-dev
-	#yum remove curl libcurl-devel openssl-devel
+	
     cd $PARENT_DIR
     rm -f openssl-$OPENSSL_VER.tar.gz
     wget $OPENSSL_LINK
