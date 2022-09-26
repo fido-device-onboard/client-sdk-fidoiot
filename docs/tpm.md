@@ -17,37 +17,70 @@ sudo yum -y install perl-Module-Load-Conditional perl-core
 ```
 
 OpenSSL* toolkit version 3.0.5.
+Curl version 7.85
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.5
+#### Steps to remove the older openssl and curl packages
+1. If libssl-dev, curl and libcurl are already installed, remove it:
+	```
+	sudo apt-get remove --auto-remove libssl-dev
+	sudo apt-get remove --auto-remove libssl-dev:i386
+	sudo apt remove curl libcurl4-openssl-dev
+	```
+    In case of RHEL OS, use below commands to uninstall:
+	```
+	yum remove curl libcurl-devel openssl-devel
+	```
 
-1. If libssl-dev is installed, remove it.
+2. If OpenSSL manualy installed use script to remove it.
+    ```
+    sudo bash utils/install_openssl_curl.sh -u -v 1.1.1n
+    ```
 
-    For Ubuntu* OS:
-    sudo apt remove libssl-dev
-    For RHEL* OS:
-    sudo yum remove libcurl-devel
+#### Steps to upgrade  OpenSSL* Toolkit to Version 3.0.5 and curl configured with openssl 3
+Execute the script to install openssl3 and curl/libcurl with openssl 3 configuation. Alternatively you can perform the steps given in this section.
+    ```
+    sudo bash utils/install_openssl_curl.sh -i -v 3.0.5
+    ```
+1. Pull the tarball:
+	```
+	wget https://www.openssl.org/source/openssl-3.0.5.tar.gz
+	```
+2. Unpack the tarball with:
+	```
+	tar -zxf openssl-3.0.5.tar.gz && cd openssl-3.0.5
+	```
+3. Issue the command:
+	```
+	./config
+	```
+4. Issue the command:
+	```
+	make -j$(nproc)
+	```
+	  (You may need to run `sudo apt install make gcc` before running this command successfully).
 
-2. If curl is installed, remove it.
-
-    For Ubuntu* OS:
-    sudo apt remove curl libcurl4-openssl-dev
-    For RHEL* OS:
-    sudo yum remove curl libcurl-devel (On Redhat)
-
-3. If OpenSSL manualy installed use script to remove it.
-    sudo bash install_openssl_curl -u -v 1.1.1n
-
-4. If fresh machine install below dependencies.
-
-    For Ubuntu* OS:
-    sudo apt install build-essential
-    For RHEL* OS:
-    sudo yum install gcc gcc-c++ make perl (Redhat)
-
-5. Execute the script to install openssl3 and curl/libcurl with openssl 3 configuation.
-    sudo bash install_openssl_curl -i -v 3.0.5
-
-6. Assuming no errors in executing above steps, you should have successfully installed the new version of the OpenSSL* toolkit and curl.
+5. Check for possible errors:
+	```
+	make test
+	```
+6. Backup the current OpenSSL* binary:
+	```
+	sudo mv /usr/bin/openssl ~/tmp
+	```
+7. Issue the command:
+	```
+	sudo make install
+	```
+8. Create a symbolic link from the newly installed binary to the default location:
+	```
+	sudo ln -s /usr/local/bin/openssl /usr/bin/openssl
+	```
+9. Run the command to update symlinks and rebuild the library cache:
+	```
+	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+    sudo ldconfig
+	```
+10. Assuming no errors in executing steps 1 through 9, you should have successfully installed the new version of the OpenSSL* toolkit.
 Issue the following command from the terminal:
 	```
 	openssl version
@@ -55,12 +88,44 @@ Issue the following command from the terminal:
 	  Your output should be as follows:
 	```
 	OpenSSL* 3.0.5  05 Jul 2022
+    ```
+
+11. Pull the tarball:
 	```
-    Issue the following command from the terminal:
+	wget https://github.com/curl/curl/releases/download/curl-7_85_0/curl-7.85.0.tar.gz
+	```
+12. Unpack the tarball with:
+	```
+	tar -zxf curl-7.85.0.tar.gz && cd curl-7.85.0
+	```
+13. Issue the command to configure the curl with previously downloaded openssl 3:
+	```
+	./configure --with-openssl=../openssl-3.0.5
+	```
+14. Issue the command to build curl:
+	```
+	make -j$(nproc)
+	```
+	  (You may need to run `sudo apt install make gcc` before running this command successfully).
+
+15. Command to install curl:
+	```
+	sudo make install
+	```
+16. Run the command to update symlinks and rebuild the library cache:
+	```
+	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+    sudo ldconfig
+	```
+17. Assuming no errors in executing steps 11 through 16, you should have successfully installed curl configured with openssl 3.
+Issue the following command from the terminal:
 	```
 	curl --version
 	```
-	  Your output should point to the openssl version 3.0.5.
+	 Your output should point to the openssl version 3.0.5.
+    ```
+    curl 7.85.0 (x86_64-pc-linux-gnu) libcurl/7.85.0 OpenSSL/3.0.5 zlib/1.2.11
+    ```
 
 ## 2. TPM* Library Installation
 
