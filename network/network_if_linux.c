@@ -534,7 +534,6 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 
 end:
 	if (sock_hdl) {
-		curl_easy_cleanup(curl);
 		fdo_free(sock_hdl);
 	}
 	return FDO_CON_INVALID_HANDLE;
