@@ -52,8 +52,10 @@ install_tpm2tss()
     
     mkdir -p /var/lib/tpm
     userdel tss
-    groupadd tss &&  useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
-    udevadm control --reload-rules &&  udevadm trigger
+    groupadd tss
+    useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
+    udevadm control --reload-rules
+    udevadm trigger
     ldconfig
 }
 

@@ -1,3 +1,4 @@
+
 # Build Configuration
 Following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
@@ -10,7 +11,7 @@ Following are some of the options to choose when building the device:
 ## Default Configuration
 
 ```shell
-  BUILD = debug #build mode
+  BUILD = release #build mode
   TARGET_OS = linux #target OS. (`linux` denotes the Linux* OS.)
   AES_MODE = gcm #AES encryption type
   DA = ecdsa384 #device attestation method
@@ -25,17 +26,17 @@ The default configuration can be overridden by using more options in `cmake`.<br
 For example, to build the `STM32F429ZI` device:
 - BUILD: Debug mode
 - DA: ECDSA-256
-- AES_MODE: GCM
+- AES_MODE: CCM
 ```shell
-$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=gcm -DDA=ecdsa256 .
+$ cmake -DTARGET_OS=mbedos -DBOARD=NUCLEO_F429ZI -DBUILD=debug -DAES_MODE=ccm -DDA=ecdsa256 .
 $ make -j4
 ```
 
 For available build options:
 ```shell
 List of build modes:
-BUILD=debug           # Debug mode (default)
-BUILD=release         # Release mode
+BUILD=debug           # Debug mode 
+BUILD=release         # Release mode (default)
 
 List of supported TARGET_OS:
 TARGET_OS=linux       # (Default)
@@ -81,6 +82,10 @@ REUSE=true            # Reuse feature enabled (default)
 REUSE=false           # Reuse feature disabled
 RESALE=false          # Resale feature disabled
 RESALE=true           # Resale feature enabled (default)
+
+Option to enable/disable Error Recovery:
+RETRY=true            # Error Recovery enabled (default)
+RETRY=false           # Error Recovery disabled
 
 List of options to clean targets:
 pristine              # cleanup by remove generated files

@@ -1,7 +1,7 @@
 # FIDO Device Onboard (FDO) Client SDK
 
 This is a production-ready implementation of the Device component defined in
-[FIDO Device Onboard Spec](https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-RD-v1.1-20211214/)
+[FIDO Device Onboard Spec](https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-PS-v1.1-20220419/)
 published by the FIDO Alliance. Appropriate security measures should be taken for storing the device
 credentials while porting this to different platforms.
 

@@ -68,7 +68,7 @@ FDO implementation for ARM devices uses Microchip AT608A as the secure element.
    $ export CRYPTOAUTHLIB_ROOT=~/cryptoauthlib
    ```
 
-7. Do a [regular build](./linux.md) of FDO with an additional parameter CRYPTO_HW=true.
+7. Do a [regular build](linux.md) of FDO with an additional parameter CRYPTO_HW=true.
    ***NOTE***: Only ECDSA is supported from SE.
    ```bash
    $ cd <client-sdk folder>

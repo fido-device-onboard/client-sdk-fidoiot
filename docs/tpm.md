@@ -1,30 +1,46 @@
 
 
 
+
 # Linux* TPM* Implementation
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
 The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
-## 1. Packages Requirements when Setting up TPM* 2.0
+## 1. Packages Requirements when Building Binaries with TPM* 2.0:
+* For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
+```shell
+sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby libcurl4-openssl-dev \
+  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake mercurial
+```
 
-* On RHEL* OS version 8.4 or 8.6:
+* For RHEL* OS version 8.4 or 8.6:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-sudo yum -y install perl-Module-Load-Conditional perl-core
+```
+```
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby libcurl-devel \
+  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 
 OpenSSL* toolkit version 1.1.1q.
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
 
-1. If libssl-dev is installed, remove it:
-	```
+1. If libssl-dev is installed, uninstall it:
+	
+```
 	sudo apt-get remove --auto-remove libssl-dev
 	sudo apt-get remove --auto-remove libssl-dev:i386
-	```
+```
+ 
+ On RHEL
+ 
+ ```
+	sudo yum remove openssl-devel
+```
 2. Pull the tarball:
 	```
 	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
@@ -41,7 +57,6 @@ OpenSSL* toolkit version 1.1.1q.
 	```
 	make
 	```
-	  (You may need to run `sudo apt/yum install make gcc` before running this command successfully).
 
 6. Check for possible errors:
 	```

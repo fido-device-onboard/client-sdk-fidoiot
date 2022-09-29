@@ -4,7 +4,7 @@ FIDO Device Onboard (FDO) Client SDK is a portable implementation of the FIDO De
 
 At present, FDO Client SDK is tested to run on following platform showcasing FDO capabilities:
 
-1. Linux* x86 machine (with Ubuntu* OS version 20.04): Reference implementation.
+1. Linux* x86 machine (with Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4): Reference implementation.
 
 FDO Client SDK has not been updated to run on the following platforms yet. Support for the same will be added in future releases:
 1. [NUCLEO-F429ZI](https://www.st.com/en/evaluation-tools/nucleo-f429zi.html) STM32 Nucleo* development board running [STM32F429ZI](https://os.mbed.com/platforms/ST-Nucleo-F429ZI/) Arm* Cortex*-M4 MCU over Arm* Mbed* OS.
