@@ -618,7 +618,8 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 			goto err;
 		}
 		itr++;
-	} while (res == CURLE_AGAIN && itr < max_iteration);
+	} while ((res == CURLE_OK && (nread_total >= MAX_SOCKET_MTU && nread)) ||
+			(res == CURLE_AGAIN && itr < max_iteration));
 
 	if (res != CURLE_OK) {
 		LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
