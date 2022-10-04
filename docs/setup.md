@@ -77,7 +77,7 @@ The following are steps to generate the private key file for ECDSA-based devices
 <a name="serviceinfo_mtu"></a>
 ## 5.  Setting the Maximum ServiceInfo Size (Maximum Message Buffer Size)
 
-The maximum permissible ServiceInfo size (both Device and Owner) size that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The maximum Message buffer size can also be set using the same `max_serviceinfo_sz.bin` file. The value must lie between 256 and 65535 (both inclusive). If the set value of ServiceInfo is less than 256, the value would default to 256. Similarly, if the value is greater than 65535, the value would default to 65535.
+The maximum permissible ServiceInfo size (both Device and Owner) size that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The maximum Message buffer size can also be set using the same `max_serviceinfo_sz.bin` file. The value must lie between 256 and 64000 (both inclusive). If the set value of ServiceInfo is less than 256, the value would default to 256. Similarly, if the value is greater than 64000, the value would default to 64000.
 
 This value is sent as TO2.DeviceServiceInfoReady.maxOwnerServiceInfoSz and is compared with the TO2.OwnerServiceInfoReady.maxDeviceServiceInfoSz.
 

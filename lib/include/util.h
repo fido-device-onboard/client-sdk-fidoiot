@@ -91,7 +91,7 @@ typedef enum log_level {
 #define BUFF_SIZE_4K_BYTES 4096
 #define BUFF_SIZE_8K_BYTES 8192
 
-#define BUFF_SIZE_64K_BYTES 64000
+#define BUFF_SIZE_64K_BYTES 65536
 #define R_MAX_SIZE BUFF_SIZE_64K_BYTES // Maximum file size to read/write
 
 /* Macro for MAX string length size

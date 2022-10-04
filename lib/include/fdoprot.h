@@ -98,7 +98,7 @@
 // minimum ServiceInfo size
 #define MIN_SERVICEINFO_SZ 256
 // maximum ServiceInfo size
-#define MAX_SERVICEINFO_SZ 65535
+#define MAX_SERVICEINFO_SZ 64000
 // the margin considered while trying to fit Device ServiceInfo within MTU
 // which allows us to avoid sending more than the MTU at all times
 // For large numbers of ServiceInfoKeyVal to be sent, a larger number might be needed
