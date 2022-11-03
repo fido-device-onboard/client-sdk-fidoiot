@@ -9,7 +9,7 @@ The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we su
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
-sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby libcurl4-openssl-dev \
+sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby build-essential \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake libssl-dev mercurial
 ```
 
@@ -19,13 +19,26 @@ sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpm
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 ```
 ```
-sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby libcurl-devel \
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby gcc gcc-c++ make perl \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial perl
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
 OpenSSL* toolkit version 1.1.1q
 GCC version > 7.5
+Curl version 7.85
+
+#### Steps to remove the older curl packages
+
+1. If curl and libcurl are already installed, remove it:
+	```
+	sudo apt remove curl libcurl4-openssl-dev
+	```
+    In case of RHEL OS, use below commands to uninstall:
+	```
+	yum remove curl libcurl-devel
+	```
+
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
 
 1. Pull the tarball:
@@ -74,6 +87,46 @@ Issue the following command from the terminal:
 	```
 	OpenSSL* 1.1.1q  05 Jul 2022
 	```
+
+#### Steps to install curl version 7.85 configured with openssl
+
+After installing openssl, proceed with the installation of curl.
+
+1. Pull the tarball:
+	```
+	wget https://github.com/curl/curl/releases/download/curl-7_85_0/curl-7.85.0.tar.gz
+	```
+2. Unpack the tarball with:
+	```
+	tar -zxf curl-7.85.0.tar.gz && cd curl-7.85.0
+	```
+3. Issue the command to configure the curl with previously downloaded openssl 3:
+	```
+	./configure --with-openssl
+	```
+4. Issue the command to build curl:
+	```
+	make -j$(nproc)
+	```
+
+5. Command to install curl:
+	```
+	sudo make install
+	```
+6. Run the command to update symlinks and rebuild the library cache:
+	```
+	grep -qxF '/usr/local/lib/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+    sudo ldconfig
+	```
+7. Assuming no errors in executing steps 11 through 16, you should have successfully installed curl configured with openssl
+Issue the following command from the terminal:
+	```
+	curl --version
+	```
+	 Your output should point to the openssl version which you installed.
+    ```
+    curl 7.85.0 (x86_64-pc-linux-gnu) libcurl/7.85.0 OpenSSL/1.1.1q zlib/1.2.11
+    ```
 
 ## 3. Compiling Intel safestringlib
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
