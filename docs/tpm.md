@@ -31,7 +31,7 @@ Curl version 7.85
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
 
-1. If libssl-dev, curl and libcurl are is installed, uninstall it:
+1. If libssl-dev, curl and libcurl are installed, uninstall it:
 	
 	```
 	sudo apt-get remove --auto-remove libssl-dev
@@ -115,12 +115,8 @@ After installing openssl, proceed with the installation of curl.
 	```
 	sudo make install
 	```
-6. Run the command to update symlinks and rebuild the library cache:
-	```
-	grep -qxF '/usr/local/lib/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
-    sudo ldconfig
-	```
-7. Assuming no errors in executing steps 11 through 16, you should have successfully installed curl configured with openssl
+
+6. Assuming no errors in executing steps 1 through 5, you should have successfully installed curl configured with openssl
 Issue the following command from the terminal:
 	```
 	curl --version
@@ -129,6 +125,10 @@ Issue the following command from the terminal:
     ```
     curl 7.85.0 (x86_64-pc-linux-gnu) libcurl/7.85.0 OpenSSL/1.1.1q zlib/1.2.11
     ```
+Note: If above command is not successful, then link the path where curl is installed to the system path
+	```
+	sudo ln -s /usr/local/bin/curl /usr/bin/curl
+	```
 
 ## 2. TPM* Library Installation
 
