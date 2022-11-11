@@ -26,7 +26,7 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 
 OpenSSL* toolkit version 1.1.1q
 GCC version > 7.5
-Curl version 7.85
+Curl version 7.86
 
 #### Steps to remove the older curl packages
 
@@ -88,21 +88,21 @@ Issue the following command from the terminal:
 	OpenSSL* 1.1.1q  05 Jul 2022
 	```
 
-#### Steps to install curl version 7.85 configured with openssl
+#### Steps to install curl version 7.86 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://github.com/curl/curl/releases/download/curl-7_85_0/curl-7.85.0.tar.gz
+	wget https://github.com/curl/curl/releases/download/curl-7_86_0/curl-7.86.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-7.85.0.tar.gz && cd curl-7.85.0
+	tar -zxf curl-7.86.0.tar.gz && cd curl-7.86.0
 	```
 3. Issue the command to configure the curl with previously downloaded openssl 3:
 	```
-	./configure --with-openssl
+	./configure --with-openssl --enable-versioned-symbols
 	```
 4. Issue the command to build curl:
 	```
@@ -121,12 +121,17 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 7.85.0 (x86_64-pc-linux-gnu) libcurl/7.85.0 OpenSSL/1.1.1q zlib/1.2.11
+    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/1.1.1q zlib/1.2.11
     ```
-Note: If above command is not successful, then link the path where curl is installed to the system path
+Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
 	```
+Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 7.86 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
+
+Single IP address example: no_proxy="10.60.132.45/32"
+Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
+Range of IP addresses example: no_proxy="10.60.0.0/16"
 
 ## 3. Compiling Intel safestringlib
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
