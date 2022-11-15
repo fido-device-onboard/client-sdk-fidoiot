@@ -150,6 +150,9 @@ int read_buffer_from_file(const char *filename, uint8_t *buffer, size_t size);
  */
 void *fdo_alloc(size_t size);
 
+/* String duplicates */
+char *strdup_s(const char *str);
+
 /* Print timestamp */
 int print_timestamp(void);
 
