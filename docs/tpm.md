@@ -9,9 +9,10 @@
 The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries with TPM* 2.0:
+
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
-sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby libcurl4-openssl-dev \
+sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby build-essential \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake mercurial
 ```
 
@@ -21,26 +22,27 @@ sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpm
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 ```
 ```
-sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby libcurl-devel \
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby gcc gcc-c++ make perl glibc-static \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 
 OpenSSL* toolkit version 1.1.1q.
+Curl version 7.86
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
 
-1. If libssl-dev is installed, uninstall it:
+1. If libssl-dev, curl and libcurl are installed, uninstall it:
 	
-```
+	```
 	sudo apt-get remove --auto-remove libssl-dev
 	sudo apt-get remove --auto-remove libssl-dev:i386
-```
+	sudo apt remove curl libcurl4-openssl-dev
+	```
+    In case of RHEL OS, use below commands to uninstall:
  
- On RHEL
- 
- ```
-	sudo yum remove openssl-devel
-```
+	```
+	sudo yum remove libcurl-devel openssl-devel
+	```
 2. Pull the tarball:
 	```
 	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
@@ -87,6 +89,58 @@ Issue the following command from the terminal:
 	```
 	OpenSSL* 1.1.1q  05 Jul 2022
 	```
+
+#### Steps to install curl version 7.86 configured with openssl
+
+After installing openssl, proceed with the installation of curl.
+
+1. Pull the tarball:
+	```
+	wget https://github.com/curl/curl/releases/download/curl-7_86_0/curl-7.86.0.tar.gz
+	```
+2. Unpack the tarball with:
+	```
+	tar -zxf curl-7.86.0.tar.gz && cd curl-7.86.0
+	```
+3. Issue the command to configure the curl with previously downloaded openssl 3:
+	```
+	./configure --with-openssl --enable-versioned-symbols
+	```
+4. Issue the command to build curl:
+	```
+	make -j$(nproc)
+	```
+
+5. Command to install curl:
+	```
+	sudo make install
+	```
+
+6. Assuming no errors in executing steps 1 through 5, you should have successfully installed curl configured with openssl
+Issue the following command from the terminal:
+	```
+	curl --version
+	```
+	 Your output should point to the openssl version which you installed.
+    ```
+    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/1.1.1q zlib/1.2.11
+    ```
+Note 1: If above command is not successful, then link the path where curl is installed to the system path
+	```
+	sudo ln -s /usr/local/bin/curl /usr/bin/curl
+	```
+
+Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 7.86. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) 
+
+Single IP address example: no_proxy="10.60.132.45/32"
+Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
+Range of IP addresses example: no_proxy="10.60.0.0/16"
+
+Note 3: On RHEL, Curl could also be installed using yum package manager as shown below:
+	```
+	sudo yum -y install libcurl-devel
+	```
+
 
 ## 2. TPM* Library Installation
 
