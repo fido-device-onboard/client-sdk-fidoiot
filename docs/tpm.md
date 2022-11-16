@@ -129,11 +129,18 @@ Note 1: If above command is not successful, then link the path where curl is ins
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
 	```
+
 Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 7.86. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) 
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
 Range of IP addresses example: no_proxy="10.60.0.0/16"
+
+Note 3: On RHEL, Curl could also be installed using yum package manager as shown below:
+	```
+	sudo yum -y install libcurl-devel
+	```
+
 
 ## 2. TPM* Library Installation
 

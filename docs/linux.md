@@ -127,11 +127,18 @@ Note 1: If above command is not successful, then link the path where curl is ins
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
 	```
+
 Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 7.86 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
 Range of IP addresses example: no_proxy="10.60.0.0/16"
+
+Note 3: On RHEL, Curl could also be installed using yum package manager as shown below:
+	```
+	sudo yum -y install libcurl-devel
+	```
+
 
 ## 3. Compiling Intel safestringlib
 FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
