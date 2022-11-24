@@ -234,6 +234,41 @@ void *fdo_alloc(size_t size)
 end:
 	return buf;
 }
+
+/**
+ * Internal API to create string duplicate
+ */
+char *strdup_s(const char *str) {
+
+	if (NULL == str) {
+		return NULL;
+	}
+
+	unsigned int len = strnlen_s(str, FDO_MAX_STR_SIZE) + 1;
+	char *buf = NULL;
+
+	buf = malloc(len);
+	if (!buf) {
+		LOG(LOG_ERROR, "failed to allocate\n");
+		goto end;
+	}
+
+	if (memset_s(buf, len, 0) != 0) {
+		LOG(LOG_ERROR, "Memset Failed\n");
+		fdo_free(buf);
+		goto end;
+	}
+
+	if (memcpy_s(buf, len - 1, str, len - 1)) {
+		LOG(LOG_ERROR, "Copying cleartext failed\n");
+		fdo_free(buf);
+		goto end;
+	}
+
+end:
+	return buf;
+}
+
 /**
  * Internal API
  */

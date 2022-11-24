@@ -574,7 +574,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 				// the ONLY requirement is that the Client MUST cache the received token once
 				// and transmit the same in subsequent messages.
 			} else {
-				rest->authorization = strdup(p1);
+				rest->authorization = strdup_s(p1);
 			}
 			if (rest->authorization) {
 				LOG(LOG_DEBUG, "Authorization: %s\n",
@@ -584,7 +584,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			   strcasecmp_s(tmp, tmplen, "X-Token",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
-			rest->x_token_authorization = strdup(p1);
+			rest->x_token_authorization = strdup_s(p1);
 			if (rest->x_token_authorization) {
 				LOG(LOG_DEBUG, "X-Token: %s\n",
 				    rest->x_token_authorization);
@@ -614,7 +614,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			if (rest->x_token_authorization) {
 				fdo_free(rest->x_token_authorization);
 			}
-			rest->x_token_authorization = strdup(p1);
+			rest->x_token_authorization = strdup_s(p1);
 			LOG(LOG_DEBUG, "Body: %s\n", tmp);
 		}
 		// consume \n
