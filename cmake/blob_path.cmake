@@ -9,7 +9,7 @@
 # or export BLOB_PATH=<path>
 
 if(TARGET_OS MATCHES linux)
-  
+
   client_sdk_compile_definitions(
     -DSERIAL_FILE=\"${BLOB_PATH}/data/manufacturer_sn.bin\"
     -DMODEL_FILE=\"${BLOB_PATH}/data/manufacturer_mod.bin\"
@@ -35,7 +35,7 @@ if(TARGET_OS MATCHES linux)
        -DTPM2_TSS_ENGINE_SO_PATH=\"/usr/local/lib/engines-1.1/libtpm2tss.so\"
 	)
     endif()
-  
+
     if (${unit-test} MATCHES true)
       if (${DA_FILE} MATCHES pem)
 	client_sdk_compile_definitions(
@@ -119,7 +119,7 @@ if(TARGET_OS MATCHES linux)
 	client_sdk_compile_definitions(
 	  -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/test_ecdsaprivkey.dat\")
       endif()
-  
+
     else()
       client_sdk_compile_definitions(
 	-DFDO_CACERT=\"${BLOB_PATH}/data/cacert.bin\"
@@ -146,7 +146,7 @@ if(TARGET_OS MATCHES linux)
 	  client_sdk_compile_definitions(
 	    -DECDSA_PRIVKEY=\"${BLOB_PATH}/data/ecdsa384privkey.dat\")
 	endif()
-	
+
       endif()
     endif()
     if (NOT(${HTTPPROXY} STREQUAL ""))
@@ -170,4 +170,3 @@ file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
 file(WRITE ${BLOB_PATH}/data/Normal.blob "")
 file(WRITE ${BLOB_PATH}/data/Secure.blob "")
 file(WRITE ${BLOB_PATH}/data/raw.blob "")
-file(WRITE ${BLOB_PATH}/data/max_serviceinfo_sz.bin "")
