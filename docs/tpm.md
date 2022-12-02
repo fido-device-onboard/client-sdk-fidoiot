@@ -6,7 +6,7 @@
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1q (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1s (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries with TPM* 2.0:
 
@@ -26,10 +26,10 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 
-OpenSSL* toolkit version 1.1.1q.
+OpenSSL* toolkit version 1.1.1s.
 Curl version 7.86
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1q
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1s
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
 	
@@ -45,11 +45,11 @@ Curl version 7.86
 	```
 2. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1q.tar.gz
+	wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
 	```
 3. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1q.tar.gz && cd openssl-1.1.1q
+	tar -zxf openssl-1.1.1s.tar.gz && cd openssl-1.1.1s
 	```
 4. Issue the command:
 	```
@@ -87,7 +87,7 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1q  05 Jul 2022
+	OpenSSL* 1.1.1s  1 Nov 2022
 	```
 
 #### Steps to install curl version 7.86 configured with openssl
@@ -123,7 +123,7 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/1.1.1q zlib/1.2.11
+    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/1.1.1s zlib/1.2.11
     ```
 Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
@@ -400,12 +400,12 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 1.1.1q for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 1.1.1s for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
   openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1q, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1q.
+  If the OpenSSL* toolkit version in your machine is earlier than version 1.1.1s, follow the steps given in section 1 to update the OpenSSL* version to 1.1.1s.
 
 
