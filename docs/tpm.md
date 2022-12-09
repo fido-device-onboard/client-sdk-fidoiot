@@ -6,7 +6,7 @@
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depend on OpenSSL* toolkit version. Currently we support 1.1.1s (and 3.0) version. In this release, to support openssl 3, the deprecated 1.1.1 APIs usage warnings are suppressed and actual porting will be done in a future release. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1s version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries with TPM* 2.0:
 
@@ -102,7 +102,7 @@ After installing openssl, proceed with the installation of curl.
 	```
 	tar -zxf curl-7.86.0.tar.gz && cd curl-7.86.0
 	```
-3. Issue the command to configure the curl with previously downloaded openssl 3:
+3. Issue the command to configure the curl with openssl:
 	```
 	./configure --with-openssl --enable-versioned-symbols
 	```
