@@ -1339,8 +1339,18 @@ static bool _STATE_TO1(void)
 		// Found the  needed entries of the current directive. Prepare to move to next.
 		g_fdo_data->current_rvdirective = g_fdo_data->current_rvdirective->next;
 
-		if (skip_rv || (!ip && !dns) || port == 0) {
-			// If any of the IP/DNS/Port values are missing, or
+		if (0 == port) {
+			if (tls) {
+				port = 443;
+				}
+			else  {
+				port = 80;
+				}
+			LOG(LOG_INFO, "Assigned default port: %d \n", port);
+			}
+
+		if (skip_rv || (!ip && !dns)) {
+			// If all of the IP/DNS values are missing, or
 			// if RVOwnerOnly is present in the current directive, or
 			// if unsupported/invalid RVProtocolValue was found
 			// skip the current directive and check for the same in the next directives.
@@ -1542,9 +1552,18 @@ static bool _STATE_TO2(void)
 			g_fdo_data->current_rvto2addrentry = g_fdo_data->current_rvto2addrentry->next;
 
 		}
+		if (0 == port) {
+			if (tls) {
+				port = 443;
+				}
+			else  {
+				port = 80;
+				}
+			LOG(LOG_INFO, "Assigned default port: %d \n", port);
+			}
 
-		if (skip_rv || (!ip && !dns && !port)) {
-			// If all of the IP/DNS/Port values are missing, or
+		if (skip_rv || (!ip && !dns)) {
+			// If all of the IP/DNS values are missing, or
 			// if RVOwnerOnly is present in the current directive, or
 			// if unsupported/invalid RVProtocolValue/RVProtocol was found
 			// for rvbypass, goto TO1
