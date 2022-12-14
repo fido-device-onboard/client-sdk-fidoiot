@@ -70,6 +70,12 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
  */
 int32_t fdo_con_disconnect(fdo_con_handle handle);
 
+bool hasFullHeader(char *buf,
+		size_t header_start_offset);
+
+uint32_t getMsgLength(char *curl_buf,
+		size_t *cur_offset);
+
 /*
  * Receive(read) length of incoming fdo packet.
  *
