@@ -70,10 +70,25 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
  */
 int32_t fdo_con_disconnect(fdo_con_handle handle);
 
-bool hasFullHeader(char *buf,
+/*
+ * Check the REST header for given REST response buffer and offset.
+ *
+ * @param[in] curl_buf: Input buffer that contains the REST header
+ * @param[in] header_start_offset: offset in the buffer that points to the start of REST header
+ * @retval true if header is valid and complete and false otherwise.
+ */
+bool has_header(char *buf,
 		size_t header_start_offset);
 
-uint32_t getMsgLength(char *curl_buf,
+/*
+ * Get the message length from the given REST response buffer.
+ *
+ * @param[in] curl_buf: Input buffer that contains the REST header
+ * @param[in/out] cur_offset: offset in the buffer that initially points to the start of REST header.
+ *                            This gets updated to point to start of message body after successful parsing
+ * @retval Message length as specified in the REST header, returns 0 in case of invalid/incomplete content.
+ */
+uint32_t get_msg_length(char *curl_buf,
 		size_t *cur_offset);
 
 /*

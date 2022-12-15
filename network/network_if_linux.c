@@ -571,7 +571,14 @@ int32_t fdo_con_disconnect(fdo_con_handle handle)
 	return ret;
 }
 
-bool hasFullHeader(char *buf,
+/*
+ * Check the REST header for given REST response buffer and offset.
+ *
+ * @param[in] curl_buf: Input buffer that contains the REST header
+ * @param[in] header_start_offset: offset in the buffer that points to the start of REST header
+ * @retval true if header is valid and complete and false otherwise.
+ */
+bool has_header(char *buf,
 		size_t header_start_offset)
 {
 	char tmp[REST_MAX_MSGHDR_SIZE];
@@ -596,7 +603,15 @@ bool hasFullHeader(char *buf,
 	return ret;
 }
 
-uint32_t getMsgLength(char *curl_buf,
+/*
+ * Get the message length from the given REST response buffer.
+ *
+ * @param[in] curl_buf: Input buffer that contains the REST header
+ * @param[in/out] cur_offset: offset in the buffer that initially points to the start of REST header.
+ *                            This gets updated to point to start of message body after successful parsing
+ * @retval Message length as specified in the REST header, returns 0 in case of invalid/incomplete content.
+ */
+uint32_t get_msg_length(char *curl_buf,
 		size_t *cur_offset)
 {
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
@@ -693,16 +708,18 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		res = curl_easy_recv(curl, curl_buf + nread_total,
 				REST_MAX_MSGBODY_SIZE - nread_total, &nread);
 		nread_total += nread;
-		if (!*msglen && nread_total && hasFullHeader(curl_buf, curl_tmp_offset)) {
-			*msglen = getMsgLength(curl_buf, &curl_tmp_offset);
+		if (!*msglen && nread_total && has_header(curl_buf, curl_tmp_offset)) {
+			// If we already received the header and not yet parsed the message length
+			*msglen = get_msg_length(curl_buf, &curl_tmp_offset);
 			if (0 == *msglen) {
 				LOG(LOG_ERROR, "Msg len parsing from REST Header failed!!\n");
 				goto err;
 			}
 		}
 		if (*msglen && ((curl_tmp_offset+*msglen) <= (*curl_buf_offset+nread_total))) {
-				// expected msg length is equal or included in received message length
+				// expected total length is equal or included in already received buffer length
 				*curl_buf_offset = curl_tmp_offset;
+				// curl_buf_offset now points to the start of message body
 				break;
 		}
 
