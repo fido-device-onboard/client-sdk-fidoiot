@@ -86,10 +86,11 @@ bool has_header(char *buf,
  * @param[in] curl_buf: Input buffer that contains the REST header
  * @param[in/out] cur_offset: offset in the buffer that initially points to the start of REST header.
  *                            This gets updated to point to start of message body after successful parsing
- * @retval Message length as specified in the REST header, returns 0 in case of invalid/incomplete content.
+ * @param[out] msglen:  Message length as specified in the REST header
+ * @retval bool returns true for success and false in case of invalid/incomplete content/parsing failure.
  */
-uint32_t get_msg_length(char *curl_buf,
-		size_t *cur_offset);
+bool get_msg_length(char *curl_buf,
+		size_t *cur_offset, uint32_t *msglen);
 
 /*
  * Receive(read) length of incoming fdo packet.

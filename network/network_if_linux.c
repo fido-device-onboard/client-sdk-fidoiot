@@ -609,16 +609,17 @@ bool has_header(char *buf,
  * @param[in] curl_buf: Input buffer that contains the REST header
  * @param[in/out] cur_offset: offset in the buffer that initially points to the start of REST header.
  *                            This gets updated to point to start of message body after successful parsing
- * @retval Message length as specified in the REST header, returns 0 in case of invalid/incomplete content.
+ * @param[out] msglen:  Message length as specified in the REST header
+ * @retval bool returns true for success and false in case of invalid/incomplete content/parsing failure.
  */
-uint32_t get_msg_length(char *curl_buf,
-		size_t *cur_offset)
+bool get_msg_length(char *curl_buf,
+		size_t *cur_offset, uint32_t *msglen)
 {
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
 	char tmp[REST_MAX_MSGHDR_SIZE];
 	size_t tmplen;
 	size_t hdrlen;
-	uint32_t msglen = 0;
+	bool ret = false;
 	for (;;) {
 		if (memset_s(tmp, sizeof(tmp), 0) != 0) {
 			LOG(LOG_ERROR, "Memset() failed!\n");
@@ -661,13 +662,14 @@ uint32_t get_msg_length(char *curl_buf,
 	}
 
 	/* Process REST header and get content-length of body */
-	if (!get_rest_content_length(hdr, hdrlen, &msglen)) {
+	if (!get_rest_content_length(hdr, hdrlen, msglen)) {
 		LOG(LOG_ERROR, "REST Header processing failed!!\n");
-		msglen = 0;
+		*msglen = 0;
 		goto err;
 	}
+	ret = true;
 	err:
-	return msglen;
+	return ret;
 }
 
 /**
@@ -696,6 +698,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	int max_iteration = 100;
 	int itr = 0;
 	size_t nread_total = 0;
+	bool headerParsed = false;
 
 	if (!protocol_version || !message_type || !msglen) {
 		goto err;
@@ -708,15 +711,15 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 		res = curl_easy_recv(curl, curl_buf + nread_total,
 				REST_MAX_MSGBODY_SIZE - nread_total, &nread);
 		nread_total += nread;
-		if (!*msglen && nread_total && has_header(curl_buf, curl_tmp_offset)) {
+		if (!headerParsed && nread_total && has_header(curl_buf, curl_tmp_offset)) {
 			// If we already received the header and not yet parsed the message length
-			*msglen = get_msg_length(curl_buf, &curl_tmp_offset);
-			if (0 == *msglen) {
+			if (!get_msg_length(curl_buf, &curl_tmp_offset, msglen)) {
 				LOG(LOG_ERROR, "Msg len parsing from REST Header failed!!\n");
 				goto err;
 			}
+			headerParsed = true;
 		}
-		if (*msglen && ((curl_tmp_offset+*msglen) <= (*curl_buf_offset+nread_total))) {
+		if (headerParsed && ((curl_tmp_offset+*msglen) <= (*curl_buf_offset+nread_total))) {
 				// expected total length is equal or included in already received buffer length
 				*curl_buf_offset = curl_tmp_offset;
 				// curl_buf_offset now points to the start of message body
