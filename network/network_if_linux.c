@@ -9,15 +9,24 @@
  * The file implements an abstraction layer for Linux OS running on PC.
  */
 
+
+#ifdef WIN32
+#define _WINSOCKAPI_
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#else
 #include <netinet/in.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netdb.h> //hostent
+#include <arpa/inet.h>
+#endif // !WIN32
+
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <netdb.h> //hostent
-#include <arpa/inet.h>
 
 #include "util.h"
 #include "network_al.h"
@@ -347,6 +356,8 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
 		goto err;
 	}
+	//test
+
 
 	if (strcat_s(url, HTTP_MAX_URL_SIZE, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
@@ -405,6 +416,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 
 		}
 
+		//strcpy_s(url, 255, "http://localhost:8080");
 		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
 		if (curlCode != CURLE_OK) {
 			LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");
@@ -417,6 +429,15 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 			LOG(LOG_ERROR, "CURL_ERROR: Could not able connect to host.\n");
 			goto err;
 		}
+
+#ifndef HTTPPROXY
+		curlCode = curl_easy_setopt(curl, CURLOPT_PROXY, "");
+		if (curlCode != CURLE_OK) {
+			LOG(LOG_ERROR,
+			    "CURL_ERROR: unable to disable proxy");
+			goto err;
+		}
+#endif
 		res = curl_easy_perform(curl);
 
 		if (res != CURLE_OK) {
@@ -618,8 +639,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 			goto err;
 		}
 		itr++;
-	} while ((res == CURLE_OK && (nread_total >= MAX_SOCKET_MTU && nread)) ||
-			(res == CURLE_AGAIN && itr < max_iteration));
+	} while (res == CURLE_AGAIN && itr < max_iteration);
 
 	if (res != CURLE_OK) {
 		LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
@@ -929,7 +949,13 @@ int32_t fdo_con_teardown(void)
  */
 void fdo_sleep(int sec)
 {
+#ifdef WIN32
+	Sleep(sec);
+#else
 	sleep(sec);
+#endif // WIN32
+
+
 }
 
 /**

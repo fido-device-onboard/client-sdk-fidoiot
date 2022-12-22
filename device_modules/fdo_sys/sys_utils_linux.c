@@ -7,8 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#ifndef WIN32
 #include <sys/wait.h>
 #include <unistd.h>
+#else
+#define pid_t int
+#define SIGTERM 0
+#define WNOHANG 0
+#define FILE_NAME_LEN 150
+#endif // !WIN32
+
+
 #include "fdo_sys_utils.h"
 #include "fdo_sys.h"
 
@@ -182,7 +191,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 		}
 
 		printf("fdo_sys exec : Executing command...\n");
-		exec_pid = fork();
+		//exec_pid = fork();
 		if (exec_pid < 0) {
 			// error
 #ifdef DEBUG_LOGS
@@ -191,7 +200,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			return false;
 		} else if (exec_pid == 0) {
 			// child process
-			status = execv(command[0], command);
+			//status = execv(command[0], command);
 			if (status == -1) {
 #ifdef DEBUG_LOGS
 				printf("fdo_sys exec : Failed to execute command.\n");
@@ -202,15 +211,15 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			// parent process
 			// if exec, block until process completes
 			if (type == FDO_SYS_MOD_MSG_EXEC) {
-				waitpid(exec_pid, &status, 0);
-				if (WIFEXITED(status)) {
-					if (WEXITSTATUS(status) != 0) {
+				//waitpid(exec_pid, &status, 0);
+				//if (WIFEXITED(status)) {
+					//if (WEXITSTATUS(status) != 0) {
 #ifdef DEBUG_LOGS
 						printf("fdo_sys exec : Proces execution failed.\n");
 #endif
 						goto end;
 
-					} else {
+					//} else {
 #ifdef DEBUG_LOGS
 						printf("fdo_sys exec : Process execution completed.\n");
 #endif
@@ -218,8 +227,8 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 						exec_pid = -1;
 						ret = true;
 						goto end;
-					}
-				}
+					//}
+				//}
 			} else {
 				if (!status_iscomplete || !status_resultcode || !status_waitsec) {
 #ifdef DEBUG_LOGS
@@ -256,7 +265,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 		}
 		if (*status_iscomplete && exec_pid > 0) {
 			// kill the process as requested by the Owner
-			kill(exec_pid, SIGTERM);
+			//kill(exec_pid, SIGTERM);
 			*status_iscomplete = true;
 			*status_resultcode = 0;
 			*status_waitsec = 0;
@@ -264,16 +273,16 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			goto end;
 		} else {
 			// check for process status every second, until the given waitsec
-			int wait_timer = *status_waitsec;
-			while (wait_timer > 0) {
-				if (waitpid(exec_pid, &status, WNOHANG) == -1) {
+			//int wait_timer = *status_waitsec;
+			//while (wait_timer > 0) {
+			//	if (waitpid(exec_pid, &status, WNOHANG) == -1) {
 #ifdef DEBUG_LOGS
 					printf("fdo_sys status_cb : Error occurred while checking process status\n");
 #endif
 					return ret;
-				}
-				if (WIFEXITED(status)) {
-					*status_resultcode = WEXITSTATUS(status);
+				//}
+				//if (WIFEXITED(status)) {
+					//*status_resultcode = WEXITSTATUS(status);
 					*status_iscomplete = true;
 					*status_waitsec = 0;
 #ifdef DEBUG_LOGS
@@ -283,10 +292,10 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 					exec_pid = -1;
 					ret = true;
 					goto end;
-				}
-				sleep(1);
-				wait_timer--;
-			}
+				//}
+				//sleep(1);
+				//wait_timer--;
+			//}
 			*status_iscomplete = false;
 			*status_resultcode = 0;
 		}
@@ -298,7 +307,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 	if (type == FDO_SYS_MOD_MSG_EXIT) {
 		if (exec_pid > 0) {
 			// kill the process as a part of clea-up operations
-			kill(exec_pid, SIGTERM);
+			//kill(exec_pid, SIGTERM);
 		}
 		ret = true;
 	}
@@ -313,7 +322,7 @@ end:
 	}
 	// upon error, kill the forked process
 	if (!ret && exec_pid > 0) {
-		kill(exec_pid, SIGTERM);
+		//kill(exec_pid, SIGTERM);
 		exec_pid = -1;
 	}
 	return ret;

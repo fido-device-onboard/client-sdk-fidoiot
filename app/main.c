@@ -18,7 +18,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif // !WIN32
+
 #include "blob.h"
 #include "safe_lib.h"
 #ifdef SECURE_ELEMENT

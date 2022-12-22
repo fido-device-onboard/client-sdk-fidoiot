@@ -70,14 +70,14 @@ The following are steps to generate the private key file for ECDSA-based devices
    ```
 
    The respective ecdsaXXXprivkey.dat file will be used by the FDO target binary (Linux* or Arm* Mbed* OS) while ECDSA sign operation.
-
+   
 
 * **Option2:** To use the private key in PEM format, rename key.pem to ecdsaXXXprivkey.pem (`ecdsa256privkey.pem` for EC curve P-256 and `ecdsa384privkey.pem` for EC curve P-384). Use the compilation flag `DA_FILE=pem` during binary creation.
 
 <a name="serviceinfo_mtu"></a>
-## 5.  Setting the Maximum ServiceInfo Size (Maximum Message Buffer Size)
+## 5.  Setting the Maximum ServiceInfo Size
 
-The maximum permissible ServiceInfo size (both Device and Owner) size that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The maximum Message buffer size can also be set using the same `max_serviceinfo_sz.bin` file. The value must lie between 256 and 64000 (both inclusive). If the set value of ServiceInfo is less than 256, the value would default to 256. Similarly, if the value is greater than 64000, the value would default to 64000.
+The maximum permissible ServiceInfo size (both Device and Owner) that FDO Client SDK can process should be set in the file `max_serviceinfo_sz.bin`. The value must lie between 256 and 8192 (both inclusive). If the set value is less than 256, the value would default to 256. Similarly, if the value is greater than 8192, the value would default to 8192.
 
 This value is sent as TO2.DeviceServiceInfoReady.maxOwnerServiceInfoSz and is compared with the TO2.OwnerServiceInfoReady.maxDeviceServiceInfoSz.
 

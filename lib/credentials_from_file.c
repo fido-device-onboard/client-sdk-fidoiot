@@ -13,7 +13,9 @@
 #include "safe_lib.h"
 #include "load_credentials.h"
 #include "storage_al.h"
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include "util.h"
 #include "fdoCrypto.h"
@@ -231,7 +233,9 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		return true;
 	}
 
-	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRIu64"\n", dev_cred_len);
+	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %d\n",dev_cred_len);
+
+	//LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRIu64"\n", dev_cred_len);
 
 	fdor = fdo_alloc(sizeof(fdor_t));
 	if (!fdor || !fdor_init(fdor) || !fdo_block_alloc_with_size(&fdor->b, dev_cred_len)) {

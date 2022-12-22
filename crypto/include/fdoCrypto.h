@@ -9,8 +9,12 @@
 #include "crypto_utils.h"
 #include "util.h"
 #include <stdlib.h>
+#ifdef WIN32
+#include "winutil.h"
+#else
 #include "safe_lib.h"
 #include "snprintf_s.h"
+#endif // WIN32
 #include "fdoCryptoCtx.h"
 #include "fdoCryptoCommons.h"
 

@@ -49,7 +49,7 @@ typedef enum log_level {
 #define LOG_MAX_LEVEL 4 /* LOG_MAX_LEVEL = LOG_ALL */
 
 #if defined(TARGET_OS_LINUX) || defined(TARGET_OS_FREERTOS) ||                 \
-    defined(TARGET_OS_MBEDOS) || defined(TARGET_OS_OPTEE)
+    defined(TARGET_OS_MBEDOS) || defined(TARGET_OS_OPTEE) || defined(WIN32)
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -58,7 +58,8 @@ typedef enum log_level {
 	{                                                                      \
 		if (level <= LOG_LEVEL) {                                      \
 			if (level == LOG_ERROR) {                              \
-				printf("ERROR:[%s():%d] ", __func__, __LINE__);\
+				printf("ERROR:[%s():%d] ", __func__,           \
+				       __LINE__);                              \
 			}                                                      \
 			if (level == LOG_DEBUG) {                              \
 				if (print_timestamp() != 0)                    \
@@ -91,7 +92,7 @@ typedef enum log_level {
 #define BUFF_SIZE_4K_BYTES 4096
 #define BUFF_SIZE_8K_BYTES 8192
 
-#define BUFF_SIZE_64K_BYTES 65536
+#define BUFF_SIZE_64K_BYTES 64000
 #define R_MAX_SIZE BUFF_SIZE_64K_BYTES // Maximum file size to read/write
 
 /* Macro for MAX string length size
@@ -149,9 +150,6 @@ int read_buffer_from_file(const char *filename, uint8_t *buffer, size_t size);
  * Allocate a buffer and set its contents to 0 before using it.
  */
 void *fdo_alloc(size_t size);
-
-/* String duplicates */
-char *strdup_s(const char *str);
 
 /* Print timestamp */
 int print_timestamp(void);

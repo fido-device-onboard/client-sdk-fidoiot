@@ -15,8 +15,17 @@
 #include "fdoprotctx.h"
 #include <stdlib.h>
 #include "fdonet.h"
+#ifdef WIN32
+//#include "winutil.h"
+#else
+#define _strdup strdup
+#endif
+
 #include "safe_lib.h"
 #include "snprintf_s.h"
+
+
+
 #include "rest_interface.h"
 
 // Global REST context is allocated ?
@@ -292,10 +301,16 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
+	strcpy_s(temp, 1, "\0");
+	strcpy_s(g_URL, post_url_len, "POST ");
+
 	if (strcat_s(g_URL, post_url_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
+
+	
+	
 
 	if (snprintf_s_i(temp, sizeof(temp), "/fdo/%d", rest_ctx->prot_ver) <
 	    0) {
@@ -574,7 +589,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 				// the ONLY requirement is that the Client MUST cache the received token once
 				// and transmit the same in subsequent messages.
 			} else {
-				rest->authorization = strdup_s(p1);
+				rest->authorization = _strdup(p1);
 			}
 			if (rest->authorization) {
 				LOG(LOG_DEBUG, "Authorization: %s\n",
@@ -584,7 +599,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			   strcasecmp_s(tmp, tmplen, "X-Token",
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
-			rest->x_token_authorization = strdup_s(p1);
+			rest->x_token_authorization = _strdup(p1);
 			if (rest->x_token_authorization) {
 				LOG(LOG_DEBUG, "X-Token: %s\n",
 				    rest->x_token_authorization);
@@ -599,8 +614,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 				LOG(LOG_ERROR, "Invalid value read for Message-Type\n");
 				goto err;
 			}
-			LOG(LOG_DEBUG, "Message-Type: %"PRIu32"\n",
-				rest->msg_type);
+			//TODO:LOG(LOG_DEBUG, "Message-Type: %"PRIu32""\n",rest->msg_type);
 		} else {
 			/* TODO: This looks like dead code, remove this
 			 */
@@ -614,7 +628,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			if (rest->x_token_authorization) {
 				fdo_free(rest->x_token_authorization);
 			}
-			rest->x_token_authorization = strdup_s(p1);
+			rest->x_token_authorization = _strdup(p1);
 			LOG(LOG_DEBUG, "Body: %s\n", tmp);
 		}
 		// consume \n

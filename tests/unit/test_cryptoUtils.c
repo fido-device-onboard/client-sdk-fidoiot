@@ -61,7 +61,13 @@ extern bool g_malloc_fail;
 bool g_memset_fail;
 #endif
 
-#ifdef TARGET_OS_LINUX
+
+#ifdef WIN32
+extern bool g_malloc_fail;
+bool g_memset_fail;
+#endif
+
+#ifdef TARGET_OS_LINUX 
 bool g_malloc_fail = false;
 int __real_malloc(size_t size);
 int __wrap_malloc(size_t size)

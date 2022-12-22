@@ -7,7 +7,11 @@
 #include "safe_lib.h"
 #include "load_credentials.h"
 #include "storage_al.h"
+#ifndef WIN32
 #include <unistd.h>
+#endif // !WIN32
+
+
 #include <stdlib.h>
 #include "util.h"
 #include "safe_lib.h"

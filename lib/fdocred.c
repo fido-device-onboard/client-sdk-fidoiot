@@ -682,6 +682,7 @@ fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 {
 
 	bool ret = false;
+	fdo_hash_t *hmac = NULL;
 
 	// fdow_t to generate CBOR encoded OVHeader. Used to generate HMAC.
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
@@ -697,7 +698,7 @@ fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 		goto exit;
 	}
 
-	fdo_hash_t *hmac =
+	hmac =
 	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 
 	if (hmac &&

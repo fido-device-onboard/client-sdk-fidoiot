@@ -17,7 +17,9 @@
 #include "fdo.h"
 #include <stdlib.h>
 #include <inttypes.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "fdodeviceinfo.h"
@@ -1748,9 +1750,9 @@ bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv)
 
 	// size_t index;
 	size_t key_buf_sz = 24;
-	char key_buf[key_buf_sz];
+	char key_buf[24];
 	size_t str_buf_sz = 80;
-	char str_buf[str_buf_sz];
+	char str_buf[80];
 	uint8_t *rvvalue = NULL;
 	size_t rvvalue_sz = 0;
 
@@ -4482,9 +4484,6 @@ void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr) {
  */
 bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_entry) {
 	size_t num_rvto2addr_entry_items = 0;
-	size_t rvip_length = 0;
-	size_t rvdns_length = 0;
-
 	if (!fdor_array_length(fdor, &num_rvto2addr_entry_items) ||
 		num_rvto2addr_entry_items != 4) {
 		LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read/Invalid array length\n");
@@ -4496,13 +4495,13 @@ bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_ent
 		return false;
 	}
 
-	if (fdor_is_value_null(fdor) || !fdor_string_length(fdor, &rvip_length) || rvip_length == 0) {
+	if (fdor_is_value_null(fdor)) {
 		if (!fdor_next(fdor)) {
 			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to skip NULL RVIP\n");
 			return false;
 		}
 	} else {
-		rvip_length = 0;
+		size_t rvip_length = 0;
 		if (!fdor_string_length(fdor, &rvip_length) || rvip_length == 0) {
 			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVIP length\n");
 			return false;
@@ -4518,13 +4517,13 @@ bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_ent
 		}
 	}
 
-	if (fdor_is_value_null(fdor) || !fdor_string_length(fdor, &rvdns_length) || rvdns_length == 0) {
+	if (fdor_is_value_null(fdor)) {
 		if (!fdor_next(fdor)) {
 			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to skip NULL RVDNS\n");
 			return false;
 		}
 	} else {
-		rvdns_length = 0;
+		size_t rvdns_length = 0;
 		if (!fdor_string_length(fdor, &rvdns_length) || rvdns_length == 0) {
 			LOG(LOG_ERROR, "RVTO2AddrEntry: Failed to read RVDNS length\n");
 			return false;

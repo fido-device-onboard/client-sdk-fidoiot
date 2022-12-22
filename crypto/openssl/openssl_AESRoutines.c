@@ -117,6 +117,9 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	EVP_CIPHER_CTX *ctx = NULL;
 	int len = 0;
 
+	int kl = KEY_LENGTH_LOCAL;
+	int tagl = TAG_LENGTH;
+
 	/*
 	 * Check all parameters except cipher_text, as if it's NULL,
 	 * cipher_length needs to be filled in with the expected size

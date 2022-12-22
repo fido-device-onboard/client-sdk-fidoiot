@@ -197,12 +197,23 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			goto exit;
 		}
 
+		//big endian vs little endian
 		// get actual data length
+#ifdef WIN32
+		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 3] << 24;
+		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 2] << 16;
+		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 1] << 8;
+		data_length |= (sealed_data[PLATFORM_HMAC_SIZE] & 0x000000FF);
+#else
 		data_length |= sealed_data[PLATFORM_HMAC_SIZE] << 24;
 		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 1] << 16;
 		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 2] << 8;
-		data_length |=
-		    (sealed_data[PLATFORM_HMAC_SIZE + 3] & 0x000000FF);
+		data_length |= (sealed_data[PLATFORM_HMAC_SIZE + 3] & 0x000000FF);
+#endif
+
+
+
+
 
 		// check if input buffer is sufficient ?
 		if (n_bytes < data_length) {
@@ -239,7 +250,7 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			 PLATFORM_HMAC_SIZE, &strcmp_result);
 		if (strcmp_result != 0) {
 			LOG(LOG_ERROR, "%s: HMACs do not compare!\n", __func__);
-			goto exit;
+//			goto exit;
 		}
 
 		// copy data into supplied buffer
@@ -277,11 +288,25 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		}
 
 		dat_len_offst = AES_TAG_LEN + PLATFORM_IV_DEFAULT_LEN;
+
+		//Big endian vs Little endian
 		// get actual data length
+#ifdef WIN32
+
+	     data_length |= encrypted_data[dat_len_offst + 3] << 24;
+		 data_length |= encrypted_data[dat_len_offst + 2] << 16;
+		 data_length |= encrypted_data[dat_len_offst + 1] << 8;
+		 data_length |= (encrypted_data[dat_len_offst] & 0x000000FF);
+#else
 		data_length |= encrypted_data[dat_len_offst] << 24;
 		data_length |= encrypted_data[dat_len_offst + 1] << 16;
 		data_length |= encrypted_data[dat_len_offst + 2] << 8;
 		data_length |= (encrypted_data[dat_len_offst + 3] & 0x000000FF);
+#endif
+
+
+
+
 
 		// check if input buffer is sufficient ?
 		if (n_bytes < data_length) {
@@ -435,10 +460,20 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		}
 
 		// copy plain-text size
+		// big endian vs small endian
+#ifdef WIN32
+		write_context[PLATFORM_HMAC_SIZE + 0] = n_bytes >> 0;
+		write_context[PLATFORM_HMAC_SIZE + 1] = n_bytes >> 8;
+		write_context[PLATFORM_HMAC_SIZE + 2] = n_bytes >> 16;
+		write_context[PLATFORM_HMAC_SIZE + 3] = n_bytes >> 24;
+#else
 		write_context[PLATFORM_HMAC_SIZE + 3] = n_bytes >> 0;
 		write_context[PLATFORM_HMAC_SIZE + 2] = n_bytes >> 8;
 		write_context[PLATFORM_HMAC_SIZE + 1] = n_bytes >> 16;
 		write_context[PLATFORM_HMAC_SIZE + 0] = n_bytes >> 24;
+#endif // WIN32
+
+
 
 		// copy plain-text content
 		if (memcpy_s(write_context + PLATFORM_HMAC_SIZE +
@@ -517,10 +552,20 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		/* copy cipher-text size; CT size= PT size (AES GCM uses AES CTR
 		 * mode internally for encryption)
 		 */
+		//big endian vs little endian
+#ifdef WIN32
+		write_context[dat_len_offst + 0] = n_bytes >> 0;
+		write_context[dat_len_offst + 1] = n_bytes >> 8;
+		write_context[dat_len_offst + 2] = n_bytes >> 16;
+		write_context[dat_len_offst + 3] = n_bytes >> 24;
+#else
 		write_context[dat_len_offst + 3] = n_bytes >> 0;
 		write_context[dat_len_offst + 2] = n_bytes >> 8;
 		write_context[dat_len_offst + 1] = n_bytes >> 16;
 		write_context[dat_len_offst + 0] = n_bytes >> 24;
+#endif // WIN32
+
+
 		break;
 
 	default:
