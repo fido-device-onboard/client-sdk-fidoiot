@@ -91,7 +91,7 @@ typedef enum log_level {
 #define BUFF_SIZE_4K_BYTES 4096
 #define BUFF_SIZE_8K_BYTES 8192
 
-#define BUFF_SIZE_64K_BYTES 64000
+#define BUFF_SIZE_64K_BYTES 65536
 #define R_MAX_SIZE BUFF_SIZE_64K_BYTES // Maximum file size to read/write
 
 /* Macro for MAX string length size
@@ -149,6 +149,9 @@ int read_buffer_from_file(const char *filename, uint8_t *buffer, size_t size);
  * Allocate a buffer and set its contents to 0 before using it.
  */
 void *fdo_alloc(size_t size);
+
+/* String duplicates */
+char *strdup_s(const char *str);
 
 /* Print timestamp */
 int print_timestamp(void);
