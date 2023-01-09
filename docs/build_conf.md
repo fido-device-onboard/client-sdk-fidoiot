@@ -35,7 +35,7 @@ $ make -j4
 For available build options:
 ```shell
 List of build modes:
-BUILD=debug           # Debug mode 
+BUILD=debug           # Debug mode
 BUILD=release         # Release mode (default)
 
 List of supported TARGET_OS:
@@ -54,6 +54,7 @@ List of Device Attestation options:
 DA=ecdsa256           # Use ECDSA P256 based device attestation
 DA=ecdsa384           # Use ECDSA-P384 based device attestation(default)
 DA=tpm20_ecdsa256     # Use ECDSA-P256 based device attestation with TPM2.0 support
+DA=tpm20_ecdsa384     # Use ECDSA-P384 based device attestation with TPM2.0 support
 DA_FILE=pem           # only Use if ECDSA private keys are PEM encoded
 
 Underlying crypto library to be used:

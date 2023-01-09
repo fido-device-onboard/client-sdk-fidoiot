@@ -84,6 +84,8 @@ build_bin x86_ecdsa384_gcm_bin -DAES_MODE=gcm -DDA=ecdsa384
 build_bin x86_ecdsa384_ccm_bin -DAES_MODE=ccm -DDA=ecdsa384
 build_bin tpm_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=tpm20_ecdsa256
 build_bin tpm_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=tpm20_ecdsa256
+build_bin tpm_ecdsa384_gcm_bin -DAES_MODE=gcm -DDA=tpm20_ecdsa384
+build_bin tpm_ecdsa384_ccm_bin -DAES_MODE=ccm -DDA=tpm20_ecdsa384
 
 ######################
 ### Run Unit Tests ###

@@ -30,7 +30,7 @@ static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
  * @param data: pointer to the input data
  * @param data_length: length of the input data
  * @param hmac: output buffer to save the HMAC
- * @param hmac_length: length of the output HMAC buffer, equal to the SHA256
+ * @param hmac_length: length of the output HMAC buffer
  *hash length
  * @param tpmHMACPub_key: File name of the TPM HMAC public key
  * @param tpmHMACPriv_key: File name of the TPM HMAC private key
@@ -64,7 +64,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 	/* Validating all input parameters are passed in the function call*/
 
 	if (!data || !data_length || !tpmHMACPub_key || !tpmHMACPriv_key ||
-	    !hmac || (hmac_length != SHA256_DIGEST_SIZE)) {
+	    !hmac || (hmac_length != PLATFORM_HMAC_SIZE)) {
 		LOG(LOG_ERROR,
 		    "Failed to generate HMAC from TPM, invalid parameter"
 		    " received.\n");
@@ -189,11 +189,17 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 		LOG(LOG_DEBUG, "Data copied from input buffer to TPM data"
 			       " structure.\n");
 
+#if defined(ECDSA256_DA)
 		ret_val =
 		    Esys_HMAC(esys_context, hmac_key_handle,
 			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
 			      &block, TPM2_ALG_SHA256, &outHMAC);
-
+#else
+		ret_val =
+		    Esys_HMAC(esys_context, hmac_key_handle,
+			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
+			      &block, TPM2_ALG_SHA384, &outHMAC);
+#endif
 		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
 			goto err;
@@ -202,11 +208,17 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 		LOG(LOG_DEBUG, "HMAC created successfully.\n");
 
 	} else {
-
+#if defined(ECDSA256_DA)
 		ret_val = Esys_HMAC_Start(esys_context, hmac_key_handle,
 					  auth_session_handle, ESYS_TR_NONE,
 					  ESYS_TR_NONE, &null_auth,
 					  TPM2_ALG_SHA256, &sequence_handle);
+#else
+		ret_val = Esys_HMAC_Start(esys_context, hmac_key_handle,
+					  auth_session_handle, ESYS_TR_NONE,
+					  ESYS_TR_NONE, &null_auth,
+					  TPM2_ALG_SHA384, &sequence_handle);
+#endif
 
 		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
@@ -594,11 +606,17 @@ static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
 	int ret = -1;
 	TPMT_SYM_DEF symmetric = {0};
 	symmetric.algorithm = TPM2_ALG_NULL;
-
+#if defined(ECDSA256_DA)
 	TSS2_RC rval = Esys_StartAuthSession(
 	    esys_context, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
 	    ESYS_TR_NONE, ESYS_TR_NONE, NULL, TPM2_SE_HMAC, &symmetric,
 	    TPM2_ALG_SHA256, session_handle);
+#else
+	TSS2_RC rval = Esys_StartAuthSession(
+	    esys_context, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
+	    ESYS_TR_NONE, ESYS_TR_NONE, NULL, TPM2_SE_HMAC, &symmetric,
+	    TPM2_ALG_SHA384, session_handle);
+#endif
 	if (rval != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to start the auth session.\n");
 		return ret;
@@ -764,7 +782,7 @@ err:
 
 /**
  * Clear the Replacement TPM HMAC key objects, if they exist.
- * 
+ *
  */
 void fdo_tpm_clear_replacement_hmac_key(void) {
 	// remove the files if they exist, else return
