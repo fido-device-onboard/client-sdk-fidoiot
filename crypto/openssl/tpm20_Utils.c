@@ -45,7 +45,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 	int32_t ret = -1, ret_val = -1, file_size = 0;
 	size_t hashed_length = 0;
 	size_t offset = 0;
-	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160] = {0};
+	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
 	ESYS_CONTEXT *esys_context = NULL;
 	ESYS_TR primary_key_handle = ESYS_TR_NONE;
@@ -90,7 +90,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 	file_size = get_file_size(tpmHMACPriv_key);
 
 	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
-	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160) {
+	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
 		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
 		goto err;
 	}
@@ -189,17 +189,11 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 		LOG(LOG_DEBUG, "Data copied from input buffer to TPM data"
 			       " structure.\n");
 
-#if defined(ECDSA256_DA)
 		ret_val =
 		    Esys_HMAC(esys_context, hmac_key_handle,
 			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
-			      &block, TPM2_ALG_SHA256, &outHMAC);
-#else
-		ret_val =
-		    Esys_HMAC(esys_context, hmac_key_handle,
-			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
-			      &block, TPM2_ALG_SHA384, &outHMAC);
-#endif
+			      &block, FDO_TPM2_ALG_SHA, &outHMAC);
+
 		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
 			goto err;
@@ -208,17 +202,11 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 		LOG(LOG_DEBUG, "HMAC created successfully.\n");
 
 	} else {
-#if defined(ECDSA256_DA)
+
 		ret_val = Esys_HMAC_Start(esys_context, hmac_key_handle,
 					  auth_session_handle, ESYS_TR_NONE,
 					  ESYS_TR_NONE, &null_auth,
-					  TPM2_ALG_SHA256, &sequence_handle);
-#else
-		ret_val = Esys_HMAC_Start(esys_context, hmac_key_handle,
-					  auth_session_handle, ESYS_TR_NONE,
-					  ESYS_TR_NONE, &null_auth,
-					  TPM2_ALG_SHA384, &sequence_handle);
-#endif
+					  FDO_TPM2_ALG_SHA, &sequence_handle);
 
 		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Failed to create HMAC.\n");
@@ -383,7 +371,7 @@ int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 	TPML_PCR_SELECTION creationPCR = {0};
 	/* Using same buffer for both public and private context,
 	   private context size > public context size */
-	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160] = {0};
+	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	size_t offset = 0;
 
 	if (!tpmHMACPub_key || !tpmHMACPriv_key) {
@@ -606,17 +594,12 @@ static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
 	int ret = -1;
 	TPMT_SYM_DEF symmetric = {0};
 	symmetric.algorithm = TPM2_ALG_NULL;
-#if defined(ECDSA256_DA)
+
 	TSS2_RC rval = Esys_StartAuthSession(
 	    esys_context, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
 	    ESYS_TR_NONE, ESYS_TR_NONE, NULL, TPM2_SE_HMAC, &symmetric,
-	    TPM2_ALG_SHA256, session_handle);
-#else
-	TSS2_RC rval = Esys_StartAuthSession(
-	    esys_context, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
-	    ESYS_TR_NONE, ESYS_TR_NONE, NULL, TPM2_SE_HMAC, &symmetric,
-	    TPM2_ALG_SHA384, session_handle);
-#endif
+	    FDO_TPM2_ALG_SHA, session_handle);
+
 	if (rval != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to start the auth session.\n");
 		return ret;
@@ -710,7 +693,7 @@ int32_t fdo_tpm_commit_replacement_hmac_key(void)
 	int32_t ret_val = -1;
 	// function return value
 	int32_t ret = -1;
-	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160] = {0};
+	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
 
 	if (!file_exists(TPM_HMAC_PRIV_KEY) ||
@@ -725,7 +708,7 @@ int32_t fdo_tpm_commit_replacement_hmac_key(void)
 	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PRIV_KEY);
 
 	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
-	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160) {
+	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
 		LOG(LOG_ERROR, "TPM HMAC Replacement Private Key file size incorrect.\n");
 		goto err;
 	}
@@ -813,6 +796,6 @@ int32_t is_valid_tpm_data_protection_key_present(void)
 		file_exists(TPM_HMAC_DATA_PRIV_KEY) &&
 		(TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 ==
 		 get_file_size(TPM_HMAC_DATA_PRIV_KEY) ||
-		TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160 ==
+		TPM_HMAC_PRIV_KEY_CONTEXT_SIZE ==
 		 get_file_size(TPM_HMAC_DATA_PRIV_KEY)));
 }

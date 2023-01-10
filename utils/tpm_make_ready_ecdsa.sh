@@ -111,7 +111,7 @@ failure_string="$task failed"
 execute_cmd_on_failure_exit "\${cmd}" "\${success_string}" "\${failure_string}" 1 1
 
 task="Device CSR generation from TPM"
-cmd="openssl req -new -engine tpm2tss -keyform engine -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
+cmd="openssl req -new -engine tpm2tss -keyform engine -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -sha$ecc -verbose"
 success_string="$task completed successfully at $device_csr_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
