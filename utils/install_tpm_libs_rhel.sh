@@ -1,7 +1,7 @@
-TPM2_TSS_VER="3.2.0"
+TPM2_TSS_VER="4.0.0"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
-TPM2_OPENSSL_VER=1.1.0
-TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/1.1.0/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
+TPM2_OPENSSL_VER="1.1.1"
+TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/$TPM2_OPENSSL_VER/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -51,7 +51,7 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
+    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
 
@@ -91,9 +91,10 @@ install_tpm2openssl()
     cd tpm2-openssl-$TPM2_OPENSSL_VER
 
     ./bootstrap
-    ./configure
+    ./configure --with-modulesdir=/usr/local/lib64/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
+    libtool --finish /usr/local/lib64/ossl-modules/
     ldconfig
 
 }

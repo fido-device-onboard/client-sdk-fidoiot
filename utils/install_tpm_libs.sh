@@ -1,11 +1,11 @@
-TPM2_TSS_VER="3.2.0"
+TPM2_TSS_VER="4.0.0"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
-TPM2_ABRMD_VER="2.4.1"
+TPM2_ABRMD_VER="3.0.0"
 TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
-TPM2_TOOLS_VER="5.2"
+TPM2_TOOLS_VER="5.4"
 TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
-TPM2_OPENSSL_VER=1.1.0
-TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/1.1.0/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
+TPM2_OPENSSL_VER="1.1.1"
+TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/$TPM2_OPENSSL_VER/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -32,7 +32,9 @@ install_dependencies()
         doxygen \
         m4 \
         pandoc \
-        libcurl4-openssl-dev
+        libini-config-dev \
+        uuid-dev \
+        libltdl-dev
 
     pip install pyyaml PyYAML
 }
@@ -46,7 +48,7 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
+    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
     make -j$(nproc)
     make install
 
@@ -69,7 +71,7 @@ install_tpm2abrmd()
     cd tpm2-abrmd-$TPM2_ABRMD_VER
 
     ./configure --with-dbuspolicydir=/etc/dbus-1/system.d --with-systemdsystemunitdir=/lib/systemd/system/ --with-systemdpresetdir=/lib/systemd/system-preset/
-    make
+    make -j$(nproc)
     make install
 
     mv /usr/local/share/dbus-1/system-services/com.intel.tss2.Tabrmd.service /usr/share/dbus-1/system-services/
@@ -92,8 +94,8 @@ install_tpm2tools()
     tar -xvzf tpm2-tools-$TPM2_TOOLS_VER.tar.gz
     cd tpm2-tools-$TPM2_TOOLS_VER
 
-    ./configure
-    make
+    ./configure PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
+    make -j$(nproc)
     make install
 }
 
@@ -107,9 +109,11 @@ install_tpm2openssl()
     cd tpm2-openssl-$TPM2_OPENSSL_VER
 
     ./bootstrap
-    ./configure
+    ./configure --with-modulesdir=/usr/local/lib64/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
     make -j$(nproc)
     make install
+    libtool --finish /usr/local/lib64/ossl-modules/
+    ldconfig
 }
 
 uninstall_tpm2tss()
