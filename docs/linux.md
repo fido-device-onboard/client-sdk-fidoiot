@@ -4,7 +4,7 @@
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1s version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.7 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
@@ -24,7 +24,7 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
-OpenSSL* toolkit version 1.1.1s
+OpenSSL* toolkit version 3.0.7
 GCC version > 7.5
 Curl version 7.86
 
@@ -39,15 +39,15 @@ Curl version 7.86
 	yum remove curl libcurl-devel
 	```
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1s
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.7
 
 1. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
+	wget https://www.openssl.org/source/openssl-3.0.7.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1s.tar.gz && cd openssl-1.1.1s
+	tar -zxf openssl-3.0.7.tar.gz && cd openssl-3.0.7
 	```
 3. Issue the command:
 	```
@@ -76,6 +76,7 @@ Curl version 7.86
 	```
 9. Run the command to update symlinks and rebuild the library cache:
 	```
+	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
 	sudo ldconfig
 	```
 10. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.
@@ -85,7 +86,7 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1s  1 Nov 2022
+	OpenSSL* 3.0.7  1 Nov 2022
 	```
 
 #### Steps to install curl version 7.86 configured with openssl
@@ -121,7 +122,7 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/1.1.1s zlib/1.2.11
+    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/3.0.7 zlib/1.2.11
     ```
 Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
@@ -207,10 +208,10 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
-- If the client-sdk binary is built on openssl 1.1.1s environment and then executed with openssl 3 environment, it may fail with "libssl.so.1.1 not found" error. In order to successfully execute it,  build the specific 1.1.1 version dependent libraries and make it available as well:
+- If the client-sdk binary is built on openssl 3.0.7 environment and then executed with openssl 3 environment, it may fail with "libssl.so.1.1 not found" error. In order to successfully execute it,  build the specific 1.1.1 version dependent libraries and make it available as well:
 ```
-    wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
-    tar -zxf openssl-1.1.1s.tar.gz && cd openssl-1.1.1s
+    wget https://www.openssl.org/source/openssl-3.0.7.tar.gz
+    tar -zxf openssl-3.0.7.tar.gz && cd openssl-3.0.7
     ./config
     make
     cp libssl.so.1.1 /usr/lib/x86_64-linux-gnu/

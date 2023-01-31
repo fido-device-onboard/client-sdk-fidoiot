@@ -29,12 +29,10 @@ install_dependencies()
         doxygen \
         m4 \
         pandoc \
-        libcurl-devel \
         uriparser-devel \
         dbus-devel \
         glib2-devel \
         dbus-x11 \
-        libgcrypt-devel \
         libuuid-devel \
         diffutils
 
