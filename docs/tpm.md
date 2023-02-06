@@ -2,6 +2,7 @@
 
 
 
+
 # Linux* TPM* Implementation
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
@@ -105,7 +106,7 @@ After installing openssl, proceed with the installation of curl.
 	```
 3. Issue the command to configure the curl with openssl:
 	```
-	./configure --with-openssl --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --enable-versioned-symbols
 	```
 4. Issue the command to build curl:
 	```
@@ -126,6 +127,18 @@ Issue the following command from the terminal:
     ```
     curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/3.0.7 zlib/1.2.11
     ```
+Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
+**Script usage command**
+
+* Command to install OpenSSL and Curl
+	```
+	sudo ./install_openssl_curl.sh -i -v 3.0.7
+	```
+
+* Command to uninstall OpenSSL
+	```
+	sudo ./install_openssl_curl.sh -u
+	```
 Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
@@ -145,7 +158,7 @@ Note 3: On RHEL, Curl could also be installed using yum package manager as shown
 
 ## 2. TPM* Library Installation
 
-TPM* enabled FDO Client SDK uses TPM-TSS 3.0.3, TPM2-ABRMD 2.4.0, and TPM2-TOOLS 5.0 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM* enabled FDO Client SDK uses TPM-TSS 4.0.0, TPM2-ABRMD 3.0.0, and TPM2-TOOLS 5.4 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
@@ -210,55 +223,55 @@ sudo ./install_tpm_libs_rhel.sh -h
 
 Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup FDO TPM* libraries. Install only tpm2-tss library to enable TPM* enabled FDO Client SDK code compilation. To enable compilation and execution of TPM* enabled FDO Client SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-tss-engine.
 
-- tpm2-tss-3.0.3
+- tpm2-tss-4.0.0
 
-  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 3.0.3 of the library.
+  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 4.0.0 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-tss-3.0.3-download](https://github.com/tpm2-software/tpm2-tss/releases/download/3.0.3/tpm2-tss-3.0.3.tar.gz)
+    The library can be downloaded from [tpm2-tss-4.0.0-download](https://github.com/tpm2-software/tpm2-tss/releases/download/4.0.0/tpm2-tss-4.0.0.tar.gz)
 
   - Build and Installation Process
 
-    The build and installation process can be found at [tpm2-tss-3.0.3-install](https://github.com/tpm2-software/tpm2-tss/blob/2.3.x/INSTALL.md)
+    The build and installation process can be found at [tpm2-tss-4.0.0-install](https://github.com/tpm2-software/tpm2-tss/blob/4.0.0/INSTALL.md)
 
-- tpm2-abrmd-2.4.0
+- tpm2-abrmd-3.0.0
 
-  This is an optional but recommended library (daemon) to use TPM* in the device. This daemon will act as a resource manager for the TPM*, for all I/O calls that happen with the device. It uses release version 2.4.0 of the library.
+  This is an optional but recommended library (daemon) to use TPM* in the device. This daemon will act as a resource manager for the TPM*, for all I/O calls that happen with the device. It uses release version 3.0.0 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-abrmd-2.4.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/2.4.0/tpm2-abrmd-2.4.0.tar.gz)
+    The library can be downloaded from [tpm2-abrmd-3.0.0-download](https://github.com/tpm2-software/tpm2-abrmd/releases/download/3.0.0/tpm2-abrmd-3.0.0.tar.gz)
 
     Alternatively, the in-kernel RM /dev/tpmrm0 can be used. Please see section on Compiling FDO.
 
   - Build and Installation Process
 
-    The build and installation process found at [tpm2-abrmd-2.4.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
+    The build and installation process found at [tpm2-abrmd-3.0.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
-- tpm2-tools-5.0
+- tpm2-tools-5.4
 
-  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.0 of the library.
-
-  - Source Code
-
-    The library can be downloaded from [tpm2-tools-5.0-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.0/tpm2-tools-5.0.tar.gz)
-
-  - Build and Installation Process
-
-    The build and installation process can be found at [tpm2-tools-5.0-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
-
-- tpm2-tss-engine-1.1.0
-
-  This library provides the OpenSSL* engine, which performs the OpenSSL* cryptography operation using the keys inside the TPM*. It uses release version 1.1.0 of the library.
+  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.4 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-tss-engine-download](https://github.com/tpm2-software/tpm2-tss-engine/archive/v1.1.0.zip)
+    The library can be downloaded from [tpm2-tools-5.4-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.4/tpm2-tools-5.4.tar.gz)
 
   - Build and Installation Process
 
-    The build and installation process can be found at [tpm2-tss-engine-install](https://github.com/tpm2-software/tpm2-tss-engine/blob/v1.1.0/INSTALL.md)
+    The build and installation process can be found at [tpm2-tools-5.4-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
+
+- tpm2-openssl-1.1.1
+
+  This library implements a provider that integrates the TPM 2.0 operations to the OpenSSL 3.0 to perform the OpenSSL* cryptography operation using the keys inside the TPM*. It uses release version 1.1.1 of the library.
+
+  - Source Code
+
+    The library can be downloaded from [tpm2-openssl-download](https://github.com/tpm2-software/tpm2-openssl/releases/download/1.1.1/tpm2-openssl-1.1.1.tar.gz)
+
+  - Build and Installation Process
+
+    The build and installation process can be found at [tpm2-openssl](https://github.com/tpm2-software/tpm2-openssl/blob/master/docs/INSTALL.md)
 
 ## 3. Compiling Intel safestringlib
 
@@ -333,7 +346,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   Script execution command:
 
   ```shell
-  ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
+  sudo ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
   ```
 
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
@@ -349,7 +362,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ./build/linux-client
   ```
 
-> ***NOTE***: If the `linux-client` was built with flag TPM2_TCTI_TYPE=tpmrm0, running the it along with tpm_make_ready_ecdsa.sh, may require elevated privileges. Please use 'sudo' to execute.
+
 
 ### 7.1 Prepare FDO Client SDK Data Folder
 
@@ -383,7 +396,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
 - Generate Device MString
 
   ```shell
-  export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/; openssl req -new -engine tpm2tss -keyform engine -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
+  sudo openssl req -new -provider tpm2 -provider default -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
   ```
 
 ## 8. Troubleshooting Details

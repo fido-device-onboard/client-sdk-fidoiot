@@ -33,7 +33,7 @@ install()
     tar -xvzf curl-$CURL_VER.tar.gz
     cd curl-$CURL_VER
 
-    ./configure --with-openssl=$PARENT_DIR/openssl-$OPENSSL_VER
+    ./configure --with-openssl=$PARENT_DIR/openssl-$OPENSSL_VER --enable-versioned-symbols
     make -j$(nproc)
     make install
     

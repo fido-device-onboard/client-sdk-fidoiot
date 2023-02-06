@@ -1,6 +1,7 @@
 
 
 
+
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
@@ -10,7 +11,7 @@ The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.7 version. Users mu
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
 sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby build-essential \
-  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake libssl-dev mercurial
+  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake mercurial
 ```
 
 * For RHEL* OS version 8.4 or 8.6:
@@ -20,7 +21,7 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 ```
 ```
 sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby gcc gcc-c++ make perl glibc-static \
-  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial perl
+  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
@@ -28,15 +29,19 @@ OpenSSL* toolkit version 3.0.7
 GCC version > 7.5
 Curl version 7.86
 
-#### Steps to remove the older curl packages
+#### Steps to remove the older OpenSSL and curl packages
 
-1. If curl and libcurl are already installed, uninstall it:
+1. If libssl-dev, curl and libcurl are installed, uninstall it:
+
 	```
+	sudo apt-get remove --auto-remove libssl-dev
+	sudo apt-get remove --auto-remove libssl-dev:i386
 	sudo apt remove curl libcurl4-openssl-dev
 	```
     In case of RHEL OS, use below commands to uninstall:
+
 	```
-	yum remove curl libcurl-devel
+	sudo yum remove libcurl-devel openssl-devel
 	```
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.7
@@ -103,7 +108,7 @@ After installing openssl, proceed with the installation of curl.
 	```
 3. Issue the command to configure the curl with openssl:
 	```
-	./configure --with-openssl --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --enable-versioned-symbols
 	```
 4. Issue the command to build curl:
 	```
@@ -124,6 +129,19 @@ Issue the following command from the terminal:
     ```
     curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/3.0.7 zlib/1.2.11
     ```
+Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
+**Script usage command**
+
+* Command to install OpenSSL and Curl
+	```
+	sudo ./install_openssl_curl.sh -i -v 3.0.7
+	```
+
+* Command to uninstall OpenSSL
+	```
+	sudo ./install_openssl_curl.sh -u
+	```
+
 Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
