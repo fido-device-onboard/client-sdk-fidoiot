@@ -9,15 +9,22 @@
  * The file implements an abstraction layer for Linux OS running on PC.
  */
 
+#ifdef WIN32
+#define _WINSOCKAPI_
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#else
 #include <netinet/in.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netdb.h> //hostent
+#include <arpa/inet.h>
+#endif // !WIN32
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <netdb.h> //hostent
-#include <arpa/inet.h>
 
 #include "util.h"
 #include "network_al.h"
@@ -929,7 +936,11 @@ int32_t fdo_con_teardown(void)
  */
 void fdo_sleep(int sec)
 {
+#ifdef WIN32
+	Sleep(sec);
+#else
 	sleep(sec);
+#endif // WIN32
 }
 
 /**

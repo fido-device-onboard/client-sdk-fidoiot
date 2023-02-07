@@ -45,6 +45,16 @@
 #define SEPARATOR ";"
 #define NEWLINE "\n"
 #define PROGENV "sh"
+
+#elif defined WIN32
+#define OS_NAME "Windows"
+#define ARCH "x86"
+#define OS_VERSION "10.0"
+#define BIN_TYPE "x86"
+#define PATH_SEPARATOR "\\"
+#define SEPARATOR ";"
+#define NEWLINE "\n\r"
+#define PROGENV "cmd"
 #endif
 
 #endif

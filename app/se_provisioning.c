@@ -4,9 +4,13 @@
  */
 
 #include <stdio.h>
+#ifndef WIN32
 #include "safe_lib.h"
+#endif
 #include "util.h"
+#ifndef WIN32
 #include <safe_lib.h>
+#endif
 #include <atca_basic.h>
 #include <atcacert/atcacert_client.h>
 #include <atcacert/atcacert_def.h>

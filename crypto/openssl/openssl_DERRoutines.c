@@ -98,7 +98,7 @@ int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
 	/* bn_ctx is a temp var needed for only some openssl internal operations
 	 */
 	BN_CTX *bn_ctx = BN_CTX_new();
-	uint8_t *local_raw_key;
+	uint8_t *local_raw_key = NULL;
 	EC_KEY *eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	const BIGNUM *r = BN_new();
 	const BIGNUM *s = BN_new();

@@ -13,7 +13,9 @@
 #include "safe_lib.h"
 #include "load_credentials.h"
 #include "storage_al.h"
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include "util.h"
 #include "fdoCrypto.h"
@@ -231,7 +233,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 		return true;
 	}
 
-	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %"PRIu64"\n", dev_cred_len);
+	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %zu\n", dev_cred_len);
 
 	fdor = fdo_alloc(sizeof(fdor_t));
 	if (!fdor || !fdor_init(fdor) || !fdo_block_alloc_with_size(&fdor->b, dev_cred_len)) {
@@ -311,7 +313,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 
 	our_dev_cred->owner_blk->rvlst = fdo_rendezvous_list_alloc();
-	if (!our_dev_cred->owner_blk->rvlst || 
+	if (!our_dev_cred->owner_blk->rvlst ||
 		!fdo_rendezvous_list_read(fdor, our_dev_cred->owner_blk->rvlst)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCRVInfo not found\n");
 		goto end;

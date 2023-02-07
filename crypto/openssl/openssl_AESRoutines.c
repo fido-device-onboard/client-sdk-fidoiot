@@ -29,7 +29,7 @@
 #include <openssl/err.h>
 #include "safe_lib.h"
 
-// Specify Openssl constants depending on the AES MODES (GCM/CCM) 
+// Specify Openssl constants depending on the AES MODES (GCM/CCM)
 #ifdef AES_MODE_GCM_ENABLED
 // GCM mode enabled
 
