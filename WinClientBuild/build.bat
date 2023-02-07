@@ -1,8 +1,9 @@
 call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat" x86
-#call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+REM call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
 cd 3rdParty\openssl-1.1.1s
 perl Configure VC-WIN32
 nmake
+cd ..\..
 cd 3rdParty\curl-7.87.0\winbuild
 del ..\builds\* /F /Q
 nmake /f Makefile.vc mode=static ENABLE_WINSSL=yes
