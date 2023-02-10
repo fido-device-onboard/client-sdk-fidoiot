@@ -48,7 +48,7 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
+    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
     make -j$(nproc)
     make install
 
@@ -94,7 +94,7 @@ install_tpm2tools()
     tar -xvzf tpm2-tools-$TPM2_TOOLS_VER.tar.gz
     cd tpm2-tools-$TPM2_TOOLS_VER
 
-    ./configure PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
+    ./configure PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
     make -j$(nproc)
     make install
 }
@@ -109,10 +109,10 @@ install_tpm2openssl()
     cd tpm2-openssl-$TPM2_OPENSSL_VER
 
     ./bootstrap
-    ./configure --with-modulesdir=/usr/local/lib64/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
+    ./configure --with-modulesdir=/usr/local/lib/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
     make -j$(nproc)
     make install
-    libtool --finish /usr/local/lib64/ossl-modules/
+    libtool --finish /usr/local/lib/ossl-modules/
     ldconfig
 }
 

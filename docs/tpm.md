@@ -54,7 +54,7 @@ Curl version 7.86
 	```
 4. Issue the command:
 	```
-	./config
+	./config --libdir=/usr/local/lib
 	```
 5. Issue the command:
 	```
@@ -361,6 +361,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
+NOTE: linux-client may require elevated privileges. Please use 'sudo' to execute.
 
 
 

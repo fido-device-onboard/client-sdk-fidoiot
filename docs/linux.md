@@ -56,7 +56,7 @@ Curl version 7.86
 	```
 3. Issue the command:
 	```
-	./config
+	./config --libdir=/usr/local/lib
 	```
 4. Issue the command:
 	```
@@ -81,7 +81,7 @@ Curl version 7.86
 	```
 9. Run the command to update symlinks and rebuild the library cache:
 	```
-	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+	grep -qxF '/usr/local/lib/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
 	sudo ldconfig
 	```
 10. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.

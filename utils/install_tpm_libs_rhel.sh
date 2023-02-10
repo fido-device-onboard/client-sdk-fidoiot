@@ -36,8 +36,7 @@ install_dependencies()
         libuuid-devel \
         diffutils
 
-    dnf builddep tpm2-tss
-    pip3 install pyyaml PyYAML
+     pip3 install pyyaml PyYAML
 }
 
 install_tpm2tss()
@@ -49,15 +48,10 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig
+    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
-
-    mkdir -p /var/lib/tpm
-    userdel -f tss
-    groupdel tss
-    groupadd tss
-    useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
+    
     udevadm control --reload-rules
     udevadm trigger
     ldconfig
@@ -89,10 +83,10 @@ install_tpm2openssl()
     cd tpm2-openssl-$TPM2_OPENSSL_VER
 
     ./bootstrap
-    ./configure --with-modulesdir=/usr/local/lib64/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig
+    ./configure --with-modulesdir=/usr/local/lib/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
-    libtool --finish /usr/local/lib64/ossl-modules/
+    libtool --finish /usr/local/lib/ossl-modules/
     ldconfig
 
 }

@@ -17,13 +17,13 @@ install()
     tar -xvzf openssl-$OPENSSL_VER.tar.gz
     cd openssl-$OPENSSL_VER
 
-    ./config
+    ./config --libdir=/usr/local/lib
     make -j$(nproc)
     mv /usr/bin/openssl ~/tmp
     make install
     
     ln -s /usr/local/bin/openssl /usr/bin/openssl
-    grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+    grep -qxF '/usr/local/lib/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
     ldconfig
     openssl version
 	
