@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\crypto\common\fdoAes.c" />
+    <ClCompile Include="..\..\crypto\common\fdoCryptoCommon.c" />
+    <ClCompile Include="..\..\crypto\common\fdoDevAttest.c" />
+    <ClCompile Include="..\..\crypto\common\fdoDevSign.c" />
+    <ClCompile Include="..\..\crypto\common\fdoHmac.c" />
+    <ClCompile Include="..\..\crypto\common\fdoKeyExchange.c" />
+    <ClCompile Include="..\..\crypto\common\fdoOvVerify.c" />
+    <ClCompile Include="..\..\crypto\ecdsa\ecdsa_privkey.c" />
+    <ClCompile Include="..\..\crypto\openssl\BN_support.c" />
+    <ClCompile Include="..\..\crypto\openssl\ec_key.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_AESRoutines.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_cryptoSupport.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_csr.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_DERRoutines.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_ECDSASignRoutines.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_ECDSAVerifyRoutines.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_key_exchange_ecdh.c" />
+    <ClCompile Include="..\..\crypto\openssl\openssl_SSLRoutines.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{fd94d6e5-4c5c-4296-9593-f11024c7d334}</ProjectGuid>
+    <RootNamespace>crypto</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)..\include;$(SolutionDir)..\lib\include;$(SolutionDir)..\network\include;$(SolutionDir)..\storage\include;$(SolutionDir)..\crypto\include;$(SolutionDir)..\crypto\ecdsa;$(SolutionDir)\3rdParty\safestringlib-1.2.0\include;$(SolutionDir)\3rdParty\openssl-1.1.1s\include;$(SolutionDir)\3rdParty\tinycbor-0.6.0\src</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)..\include;$(SolutionDir)..\lib\include;$(SolutionDir)..\network\include;$(SolutionDir)..\storage\include;$(SolutionDir)..\crypto\include;$(SolutionDir)..\crypto\ecdsa;$(SolutionDir)\3rdParty\safestringlib-1.2.0\include;$(SolutionDir)\3rdParty\tinycbor-0.6.0\src;$(SolutionDir)\3rdParty\openssl-1.1.1s\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;LOG_LEVEL=3;_CRT_SECURE_NO_WARNINGS;__STDC_WANT_SECURE_LIB__=0;__STDC_FORMAT_MACROS=1;USE_OPENSSL;OPENSSL_NO_CRYPTO_MDEBUG;$(MyConstants);HTTPPROXY;MFG_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\mfg_proxy.dat";RV_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\rv_proxy.dat";OWNER_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\owner_proxy.dat";PLATFORM_HMAC_KEY="C:\\ProgramData\\Intel\\FDO\\data\\platform_hmac_key.bin";ECDSA_PEM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <DisableSpecificWarnings>4244;4996;4267</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;LOG_LEVEL=3;_CRT_SECURE_NO_WARNINGS;__STDC_WANT_SECURE_LIB__=0;__STDC_FORMAT_MACROS=1;USE_OPENSSL;OPENSSL_NO_CRYPTO_MDEBUG;AES_MODE_GCM_ENABLED;ECDSA256_DA;$(MyConstants);RESALE_SUPPORTED;REUSE_SUPPORTED;SELF_SIGNED_CERTS_SUPPORTED;HTTPPROXY;MFG_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\mfg_proxy.dat";RV_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\rv_proxy.dat";OWNER_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\owner_proxy.dat";PLATFORM_HMAC_KEY="C:\\ProgramData\\Intel\\FDO\\data\\platform_hmac_key.bin";ECDSA_PRIVKEY="C:\\ProgramData\\Intel\\FDO\\data\\ecdsa256privkey.pem";ECDSA_PEM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <DisableSpecificWarnings>4244;4996;4267;4127</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

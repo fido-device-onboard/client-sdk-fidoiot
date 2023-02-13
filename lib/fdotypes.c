@@ -17,7 +17,9 @@
 #include "fdo.h"
 #include <stdlib.h>
 #include <inttypes.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "fdodeviceinfo.h"
@@ -457,7 +459,7 @@ bool fdo_string_resize(fdo_string_t *b, int byte_sz)
 bool fdo_string_resize_with(fdo_string_t *b, int new_byte_sz, const char *data)
 {
 	if (!b || !data) {
-		return NULL;
+		return false;
 	}
 
 	if (fdo_string_resize(b, new_byte_sz + 1)) {
@@ -1748,9 +1750,9 @@ bool fdo_rendezvous_read(fdor_t *fdor, fdo_rendezvous_t *rv)
 
 	// size_t index;
 	size_t key_buf_sz = 24;
-	char key_buf[key_buf_sz];
+	char key_buf[24];
 	size_t str_buf_sz = 80;
-	char str_buf[str_buf_sz];
+	char str_buf[80];
 	uint8_t *rvvalue = NULL;
 	size_t rvvalue_sz = 0;
 

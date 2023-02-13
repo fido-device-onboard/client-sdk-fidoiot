@@ -181,10 +181,18 @@ int32_t configure_normal_blob(void)
 #endif
 #endif
 	// copy plain-text size
+	//big endian vs little endian
+#ifdef WIN32
+	signed_normal_blob[PLATFORM_HMAC_SIZE + 0] = raw_normal_blob_size >> 0;
+	signed_normal_blob[PLATFORM_HMAC_SIZE + 1] = raw_normal_blob_size >> 8;
+	signed_normal_blob[PLATFORM_HMAC_SIZE + 2] = raw_normal_blob_size >> 16;
+	signed_normal_blob[PLATFORM_HMAC_SIZE + 3] = raw_normal_blob_size >> 24;
+#else
 	signed_normal_blob[PLATFORM_HMAC_SIZE + 3] = raw_normal_blob_size >> 0;
 	signed_normal_blob[PLATFORM_HMAC_SIZE + 2] = raw_normal_blob_size >> 8;
 	signed_normal_blob[PLATFORM_HMAC_SIZE + 1] = raw_normal_blob_size >> 16;
 	signed_normal_blob[PLATFORM_HMAC_SIZE + 0] = raw_normal_blob_size >> 24;
+#endif // WIN32
 
 	// copy plain-text content
 	if (memcpy_s(signed_normal_blob + PLATFORM_HMAC_SIZE +

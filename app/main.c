@@ -18,7 +18,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif // !WIN32
 #include "blob.h"
 #include "safe_lib.h"
 #ifdef SECURE_ELEMENT
@@ -26,7 +28,11 @@
 #endif
 
 #define STORAGE_NAMESPACE "storage"
+#ifndef WIN32
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
+#else
+#define OWNERSHIP_TRANSFER_FILE "C:\\ProgramData\\Intel\\FDO\\data\\owner_transfer"
+#endif
 #define ERROR_RETRY_COUNT 5
 
 static bool is_ownership_transfer(bool do_resale)
@@ -219,7 +225,7 @@ static void print_device_status(void)
 #ifdef TARGET_OS_LINUX
 int main(int argc, char **argv)
 #else
-int app_main(bool is_resale)
+int app_main(bool is_resale, bool useSSCerts)
 #endif
 {
 	fdo_sdk_service_info_module *module_info = NULL;
@@ -277,8 +283,10 @@ int app_main(bool is_resale)
 	if  (is_resale == true) {
 		do_resale = true;
 	}
+
 #endif
 #if defined SELF_SIGNED_CERTS_SUPPORTED
+#if defined TARGET_OS_LINUX
 	int strcmp_ss = 1;
 	int res = -1;
 
@@ -288,6 +296,9 @@ int app_main(bool is_resale)
 	if  (argc > 1 && (!res && !strcmp_ss)) {
 		useSelfSignedCerts = true;
 	}
+#else
+	useSelfSignedCerts = useSSCerts;
+#endif
 #endif
 	if (is_ownership_transfer(do_resale)) {
 		ret = 0;

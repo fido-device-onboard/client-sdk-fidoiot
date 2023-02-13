@@ -361,7 +361,7 @@ static int32_t kex_kdf(void)
 	// Length of Output Keying Material, in bytes = SEK size for AES-GCM and AES-CCM modes
 	size_t keymat_bytes_sz = SEK_KEY_SIZE;
 	// Output Keying Material
-	uint8_t keymat[keymat_bytes_sz];
+	uint8_t keymat[SEK_KEY_SIZE];
 	// number of iterations of PRF
 	int n = 0;
 	// counter, that is an input to each iteration of PRF
