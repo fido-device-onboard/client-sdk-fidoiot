@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\safeclib\abort_handler_s.c" />
+    <ClCompile Include="..\..\safeclib\ignore_handler_s.c" />
+    <ClCompile Include="..\..\safeclib\memcmp16_s.c" />
+    <ClCompile Include="..\..\safeclib\memcmp32_s.c" />
+    <ClCompile Include="..\..\safeclib\memcmp_s.c" />
+    <ClCompile Include="..\..\safeclib\memcpy16_s.c" />
+    <ClCompile Include="..\..\safeclib\memcpy32_s.c" />
+    <ClCompile Include="..\..\safeclib\memcpy_s.c" />
+    <ClCompile Include="..\..\safeclib\memmove16_s.c" />
+    <ClCompile Include="..\..\safeclib\memmove32_s.c" />
+    <ClCompile Include="..\..\safeclib\memmove_s.c" />
+    <ClCompile Include="..\..\safeclib\memset16_s.c" />
+    <ClCompile Include="..\..\safeclib\memset32_s.c" />
+    <ClCompile Include="..\..\safeclib\memset_s.c" />
+    <ClCompile Include="..\..\safeclib\memzero16_s.c" />
+    <ClCompile Include="..\..\safeclib\memzero32_s.c" />
+    <ClCompile Include="..\..\safeclib\memzero_s.c" />
+    <ClCompile Include="..\..\safeclib\mem_primitives_lib.c" />
+    <ClCompile Include="..\..\safeclib\safe_mem_constraint.c" />
+    <ClCompile Include="..\..\safeclib\safe_str_constraint.c" />
+    <ClCompile Include="..\..\safeclib\snprintf_support.c" />
+    <ClCompile Include="..\..\safeclib\stpcpy_s.c" />
+    <ClCompile Include="..\..\safeclib\stpncpy_s.c" />
+    <ClCompile Include="..\..\safeclib\strcasecmp_s.c" />
+    <ClCompile Include="..\..\safeclib\strcasestr_s.c" />
+    <ClCompile Include="..\..\safeclib\strcat_s.c" />
+    <ClCompile Include="..\..\safeclib\strcmpfld_s.c" />
+    <ClCompile Include="..\..\safeclib\strcmp_s.c" />
+    <ClCompile Include="..\..\safeclib\strcpyfldin_s.c" />
+    <ClCompile Include="..\..\safeclib\strcpyfldout_s.c" />
+    <ClCompile Include="..\..\safeclib\strcpyfld_s.c" />
+    <ClCompile Include="..\..\safeclib\strcpy_s.c" />
+    <ClCompile Include="..\..\safeclib\strcspn_s.c" />
+    <ClCompile Include="..\..\safeclib\strfirstchar_s.c" />
+    <ClCompile Include="..\..\safeclib\strfirstdiff_s.c" />
+    <ClCompile Include="..\..\safeclib\strfirstsame_s.c" />
+    <ClCompile Include="..\..\safeclib\strisalphanumeric_s.c" />
+    <ClCompile Include="..\..\safeclib\strisascii_s.c" />
+    <ClCompile Include="..\..\safeclib\strisdigit_s.c" />
+    <ClCompile Include="..\..\safeclib\strishex_s.c" />
+    <ClCompile Include="..\..\safeclib\strislowercase_s.c" />
+    <ClCompile Include="..\..\safeclib\strismixedcase_s.c" />
+    <ClCompile Include="..\..\safeclib\strispassword_s.c" />
+    <ClCompile Include="..\..\safeclib\strisuppercase_s.c" />
+    <ClCompile Include="..\..\safeclib\strlastchar_s.c" />
+    <ClCompile Include="..\..\safeclib\strlastdiff_s.c" />
+    <ClCompile Include="..\..\safeclib\strlastsame_s.c" />
+    <ClCompile Include="..\..\safeclib\strljustify_s.c" />
+    <ClCompile Include="..\..\safeclib\strncat_s.c" />
+    <ClCompile Include="..\..\safeclib\strncpy_s.c" />
+    <ClCompile Include="..\..\safeclib\strnlen_s.c" />
+    <ClCompile Include="..\..\safeclib\strnterminate_s.c" />
+    <ClCompile Include="..\..\safeclib\strpbrk_s.c" />
+    <ClCompile Include="..\..\safeclib\strprefix_s.c" />
+    <ClCompile Include="..\..\safeclib\strremovews_s.c" />
+    <ClCompile Include="..\..\safeclib\strspn_s.c" />
+    <ClCompile Include="..\..\safeclib\strstr_s.c" />
+    <ClCompile Include="..\..\safeclib\strtok_s.c" />
+    <ClCompile Include="..\..\safeclib\strtolowercase_s.c" />
+    <ClCompile Include="..\..\safeclib\strtouppercase_s.c" />
+    <ClCompile Include="..\..\safeclib\strzero_s.c" />
+    <ClCompile Include="..\..\safeclib\wcpcpy_s.c" />
+    <ClCompile Include="..\..\safeclib\wcscat_s.c" />
+    <ClCompile Include="..\..\safeclib\wcscpy_s.c" />
+    <ClCompile Include="..\..\safeclib\wcsncat_s.c" />
+    <ClCompile Include="..\..\safeclib\wcsncpy_s.c" />
+    <ClCompile Include="..\..\safeclib\wcsnlen_s.c" />
+    <ClCompile Include="..\..\safeclib\wmemcmp_s.c" />
+    <ClCompile Include="..\..\safeclib\wmemcpy_s.c" />
+    <ClCompile Include="..\..\safeclib\wmemmove_s.c" />
+    <ClCompile Include="..\..\safeclib\wmemset_s.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{c45088f7-07a4-49a5-95a3-66f4dcbd1f7b}</ProjectGuid>
+    <RootNamespace>safestringstatic</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <ExternalIncludePath>$(SolutionDir)..\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <ExternalIncludePath>$(SolutionDir)..\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <ExternalIncludePath>$(SolutionDir)..\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <ExternalIncludePath>$(SolutionDir)..\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);_USE_STDLIB;__STDC_WANT_SECURE_LIB__=0</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_INC_WCHAR;_USE_STDLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32;_USE_STDLIB;_INC_WCHAR</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);WIN32;_USE_STDLIB;_INC_WCHAR</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
