@@ -9,6 +9,11 @@
 #include "fdomodules.h"
 #include <stdint.h>
 
+#if defined(DEVICE_CSE_ENABLED)
+#include <linux/mei.h>
+#include <metee.h>
+extern TEEHANDLE fdo_cse_handle;
+#endif
 typedef enum {
 	FDO_RV_TIMEOUT = 1,
 	FDO_CONN_TIMEOUT,

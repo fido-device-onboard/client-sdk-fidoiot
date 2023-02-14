@@ -25,6 +25,12 @@ if (NOT(DEFINED ENV{TINYCBOR_ROOT}))
   message(FATAL_ERROR "TINYCBOR_ROOT not set")
 endif()
 
+if( ${DA} MATCHES cse)
+  if (NOT(DEFINED ENV{METEE_ROOT}))
+    message(FATAL_ERROR "METEE_ROOT not set")
+  endif()
+endif()
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BASE_DIR}/build)
 set(CMAKE_BUILD_FILES_DIRECTORY ${BASE_DIR}/build)
 set(CMAKE_BUILD_DIRECTORY ${BASE_DIR}/build)
@@ -70,6 +76,10 @@ client_sdk_include_directories(
   include
   )
 
+if( ${DA} MATCHES cse)
+  client_sdk_include_directories($ENV{METEE_ROOT}/include)
+  add_subdirectory(cse)
+endif()
 
 add_subdirectory(lib)
 add_subdirectory(network)
@@ -96,6 +106,14 @@ if(${TARGET_OS} MATCHES linux)
   # Link all the individual static libs into one single executable
   target_link_libraries(linux-client client_sdk network storage crypto)
 
+  if( ${DA} MATCHES cse)
+  if(${CSE_CLEAR} STREQUAL true)
+  add_executable(cse-clear cse/clear_cse.c)
+  target_include_directories(cse-clear PRIVATE cse/include)
+  target_link_libraries(cse-clear metee)
+  endif()
+  endif()
+
 
   client_sdk_ld_options(
     -L$ENV{SAFESTRING_ROOT}/
@@ -119,6 +137,10 @@ if(${TARGET_OS} MATCHES linux)
 
   if( ${DA} MATCHES tpm)
     client_sdk_ld_options(-ltss2-esys -ltss2-mu -ltss2-tctildr)
+  endif()
+
+  if( ${DA} MATCHES cse)
+  client_sdk_ld_options(-L$ENV{METEE_ROOT} -l:libmetee.a)
   endif()
 
   if (${CRYPTO_HW} MATCHES true)

@@ -17,9 +17,14 @@
 #include <stdlib.h>
 #include "util.h"
 #include "fdoCrypto.h"
+#if defined(DEVICE_CSE_ENABLED)
+#include "cse_utils.h"
+#include "cse_tools.h"
+#endif
 
 static bool validate_state(fdo_sdk_device_status current_status);
 
+#if !defined(DEVICE_CSE_ENABLED)
 /**
  * Write the Device Credentials blob, contains our state
  * @param dev_cred_file - pointer of type const char to which credentails are
@@ -311,7 +316,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 
 	our_dev_cred->owner_blk->rvlst = fdo_rendezvous_list_alloc();
-	if (!our_dev_cred->owner_blk->rvlst || 
+	if (!our_dev_cred->owner_blk->rvlst ||
 		!fdo_rendezvous_list_read(fdor, our_dev_cred->owner_blk->rvlst)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCRVInfo not found\n");
 		goto end;
@@ -437,6 +442,137 @@ int store_credential(fdo_dev_cred_t *ocred)
 
 	return 0;
 }
+#endif
+
+#if defined(DEVICE_CSE_ENABLED)
+/**
+ * Populates the dev_cred structure by loading the OVH and DS file data from CSE flash.
+ * @param our_dev_cred - pointer to the device credentials block,
+ * @return true if read and parsed correctly, otherwise false.
+ */
+bool read_cse_device_credentials(fdo_dev_cred_t *our_dev_cred)
+{
+	bool ret = false;
+	uint32_t dev_cred_len = 0;
+	uint32_t dev_state_len = 0;
+	uint8_t dev_state[1] = {-1};
+	uint8_t *ds_ptr = (uint8_t*)&dev_state;
+	fdo_ownership_voucher_t *ov = NULL;
+	fdo_byte_array_t *ovheader = NULL;
+	fdo_byte_array_t *hmac_ptr = NULL;
+
+	if (!our_dev_cred) {
+		LOG(LOG_ERROR, "Invalid params\n");
+		goto end;
+	}
+
+	if (our_dev_cred->owner_blk != NULL) {
+		fdo_cred_owner_free(our_dev_cred->owner_blk);
+		our_dev_cred->owner_blk = NULL;
+	}
+
+	/* Memory allocating data.inside dev_cred. */
+	our_dev_cred->owner_blk = fdo_cred_owner_alloc();
+	if (!our_dev_cred->owner_blk) {
+		LOG(LOG_ERROR, "dev_cred's owner_blk allocation failed\n");
+		goto end;
+	}
+
+	if (our_dev_cred->mfg_blk != NULL) {
+		fdo_cred_mfg_free(our_dev_cred->mfg_blk);
+		our_dev_cred->mfg_blk = NULL;
+	}
+
+	our_dev_cred->mfg_blk = fdo_cred_mfg_alloc();
+	if (!our_dev_cred->mfg_blk) {
+		LOG(LOG_ERROR, "dev_cred's mfg_blk allocation failed\n");
+		goto end;
+	}
+
+	ovheader = fdo_byte_array_alloc(FDO_MAX_FILE_SIZE);
+	if (!ovheader) {
+		LOG(LOG_ERROR,"DeviceCredential read: Failed to allocate data for storing OVH data\n");
+		goto end;
+	}
+
+	hmac_ptr = fdo_byte_array_alloc(FDO_HMAC_384_SIZE);
+	if (!hmac_ptr) {
+		LOG(LOG_ERROR, "DeviceCredential read: Failed to allocate data for storing HMAC data \n");
+		goto end;
+	}
+
+	if (0 != cse_load_file(OVH_FILE_ID, ovheader->bytes, &dev_cred_len,
+			hmac_ptr->bytes, hmac_ptr->byte_sz)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Unable to load file form CSE\n");
+		goto end;
+	}
+
+	// Device has not yet been initialized.
+	if (dev_cred_len == 0) {
+		LOG(LOG_DEBUG, "DeviceCredential not found. Proceeding with DI\n");
+		our_dev_cred->ST = FDO_DEVICE_STATE_PC;
+		ret = true;
+		goto end;
+	}
+
+	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %u\n", dev_cred_len);
+	ovheader->byte_sz = dev_cred_len;
+
+	ov = fdo_ov_hdr_read(ovheader);
+	if (!ov) {
+		LOG(LOG_ERROR, "DeviceCredential read: Failed to read OVHeader\n");
+		goto end;
+	}
+
+	if (ov->prot_version != FDO_PROT_SPEC_VERSION) {
+		fdo_ov_free(ov);
+		LOG(LOG_ERROR, "DeviceCredential read: Invalid OVProtVer\n");
+		goto end;
+	}
+
+	if (0 != cse_load_file(DS_FILE_ID, ds_ptr, &dev_state_len, NULL, 0)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Unable to load file form CSE\n");
+		goto end;
+	}
+
+	our_dev_cred->ST = dev_state[0];
+	our_dev_cred->dc_active = false;
+	our_dev_cred->owner_blk->pv = ov->prot_version;
+	our_dev_cred->owner_blk->rvlst = ov->rvlst2;
+	our_dev_cred->owner_blk->guid = ov->g2;
+	our_dev_cred->mfg_blk->d = ov->dev_info;
+	our_dev_cred->owner_blk->pk = ov->mfg_pub_key;
+	our_dev_cred->owner_blk->pkh = fdo_pub_key_hash(our_dev_cred->owner_blk->pk);
+	if (!our_dev_cred->owner_blk->pkh) {
+		LOG(LOG_ERROR, "Hash creation of manufacturer pk failed\n");
+		goto end;
+	}
+
+	if (!validate_state(our_dev_cred->ST)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Invalid ST\n");
+		goto end;
+	}
+//TO_DO: Check blow for CSE
+	// our_dev_cred->mfg_blk->d->bytes[device_info_length] = '\0';
+	ret = true;
+end:
+	if (ov->hdc) {
+		fdo_hash_free(ov->hdc);
+	}
+	fdo_free(ov);
+
+	if (ovheader) {
+		fdo_byte_array_free(ovheader);
+		ovheader = NULL;
+	}
+
+	if (hmac_ptr) {
+		fdo_byte_array_free(hmac_ptr);
+		hmac_ptr = NULL;
+	}
+	return ret;
+}
+#endif
 
 /**
  * load_credentials function loads the State, Owner and Manufacturer credentials from
@@ -451,15 +587,24 @@ int load_credential(fdo_dev_cred_t *ocred)
 		return -1;
 	}
 
+#if defined(DEVICE_CSE_ENABLED)
+	/* Read the device credentials from CSE*/
+	if (!read_cse_device_credentials(ocred)) {
+		LOG(LOG_ERROR, "Could not parse the Device Credentials form CSE\n");
+		return -1;
+	}
+#else
 	/* Read in the blob and save the device credentials */
 	if (!read_normal_device_credentials((char *)FDO_CRED_NORMAL,
 					    FDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
+#endif
 	return 0;
 }
 
+#if !defined(DEVICE_CSE_ENABLED)
 /**
  * load_device_secret function loads the Secure & credentials from storage
  *
@@ -480,6 +625,7 @@ int load_device_secret(void)
 #endif
 	return 0;
 }
+#endif
 
 /**
  * Read the Device status and store it in the out variable 'state'.
@@ -492,7 +638,19 @@ bool load_device_status(fdo_sdk_device_status *state) {
 	if (!state) {
 		return false;
 	}
+
+#if defined(DEVICE_CSE_ENABLED)
+	uint32_t dev_cred_len;
+	uint8_t dev_state[1] = {-1};
+	uint8_t *ds_ptr = (uint8_t*)&dev_state;
+
+	if (0 != cse_load_file(DS_FILE_ID, ds_ptr, &dev_cred_len, NULL, 0)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Unable to load file form CSE\n");
+		return false;
+	}
+#else
 	size_t dev_cred_len = fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA);
+#endif
 	// Device has not yet been initialized.
 	// Since, Normal.blob is empty, the file size will be 0
 	if (dev_cred_len == 0) {
@@ -507,14 +665,39 @@ bool load_device_status(fdo_sdk_device_status *state) {
 
 /**
  * Store the Device status given by the variable 'state'.
- * NOTE: Currently, it does nothing. This is a provision to store status separately
- * and is unused in this specific implementation.
- *
- * @return
- *        return true on success. false on failure.
+ * @return return true on success. false on failure.
  */
 bool store_device_status(fdo_sdk_device_status *state) {
+#if defined(DEVICE_CSE_ENABLED)
+FDO_STATUS fdo_status;
+
+	if (TEE_SUCCESS != fdo_heci_load_file(&fdo_cse_handle, DS_FILE_ID,
+			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+		LOG(LOG_ERROR, "FDO HECI LOAD DS failed!! %u\n", fdo_status);
+		return false;
+	}
+	LOG(LOG_DEBUG, "FDO HECI LOAD DS succeeded %u\n", fdo_status);
+
+	if (TEE_SUCCESS != fdo_heci_update_file(&fdo_cse_handle, DS_FILE_ID,
+			(uint8_t *)state, 1, NULL, 0, &fdo_status) || FDO_STATUS_SUCCESS !=
+			fdo_status) {
+		LOG(LOG_ERROR, "FDO HECI UPDATE DS failed!! %u\n", fdo_status);
+		return false;
+	}
+	LOG(LOG_DEBUG, "FDO HECI UPDATE DS succeeded %u\n", fdo_status);
+
+	if (TEE_SUCCESS != fdo_heci_commit_file(&fdo_cse_handle, DS_FILE_ID,
+			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+		LOG(LOG_ERROR, "FDO DS COMMIT failed!! %u\n", fdo_status);
+		return false;
+	}
+	LOG(LOG_DEBUG, "FDO DS COMMIT succeeded %u\n", fdo_status);
+#else
+/** NOTE: Currently, it does nothing. This is a provision to store status separately
+ * and is unused in this specific implementation.
+ */
 	(void)state;
+#endif
 	return true;
 }
 

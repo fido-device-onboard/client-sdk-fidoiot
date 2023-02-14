@@ -104,13 +104,18 @@ int32_t msg32(fdo_prot_t *ps)
 		goto err;
 	}
 
+	fdo_byte_array_t *eat_maroe = NULL;
 	// generate the signature on Sig_structure
 	if (0 !=
 	    fdo_device_sign(eat_sig_structure->bytes, eat_sig_structure->byte_sz,
-			&eat->eat_signature)) {
+			&eat->eat_signature, &eat_maroe)) {
 		LOG(LOG_ERROR, "TO1.ProveToRV: Failed to generate signature\n");
-		goto err;		
+		goto err;
 	}
+#if defined(DEVICE_CSE_ENABLED)
+	eat->eat_uph->eatmaroeprefix = eat_maroe;
+#endif
+
 
 	/* Start writing the block for msg31 */
 	fdow_next_block(&ps->fdow, FDO_TO1_TYPE_PROVE_TO_FDO);
