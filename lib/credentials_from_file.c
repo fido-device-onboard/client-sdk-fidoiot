@@ -38,8 +38,8 @@ static bool validate_state(fdo_sdk_device_status current_status);
  */
 
 bool write_normal_device_credentials(const char *dev_cred_file,
-				     fdo_sdk_blob_flags flags,
-				     fdo_dev_cred_t *ocred)
+		fdo_sdk_blob_flags flags,
+		fdo_dev_cred_t *ocred)
 {
 	bool ret = true;
 
@@ -50,8 +50,8 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
 	if (!fdow || !fdow_init(fdow) ||
-		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_4K_BYTES) ||
-		!fdow_encoder_init(fdow)) {
+			!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_4K_BYTES) ||
+			!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
@@ -62,12 +62,12 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 	 * except the DeviceCredential.DCHmacSecret, and addition of 'State'.
 	 * DeviceCredential = [
 	 * 		State,
-     * 		DCActive,
-     *		DCProtVer,
-     * 		DCDeviceInfo,
-     * 		DCGuid,
-     * 		DCRVInfo,
-     * 		DCPubKeyHash
+	 * 		DCActive,
+	 *		DCProtVer,
+	 * 		DCDeviceInfo,
+	 * 		DCGuid,
+	 * 		DCRVInfo,
+	 * 		DCPubKeyHash
 	 * ]
 	 */
 	fdow_next_block(fdow, FDO_DI_SET_CREDENTIALS);
@@ -117,7 +117,7 @@ bool write_normal_device_credentials(const char *dev_cred_file,
 	fdow->b.block_size = encoded_cred_length;
 
 	if (fdo_blob_write((char *)dev_cred_file, flags, fdow->b.block,
-			   fdow->b.block_size) == -1) {
+				fdow->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Failed to write DeviceCredential blob\n");
 		ret = false;
 		goto end;
@@ -143,7 +143,7 @@ end:
  */
 
 bool write_secure_device_credentials(const char *dev_cred_file,
-				     fdo_sdk_blob_flags flags, fdo_dev_cred_t *ocred)
+		fdo_sdk_blob_flags flags, fdo_dev_cred_t *ocred)
 {
 	bool ret = true;
 	(void) *ocred;
@@ -156,8 +156,8 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
 	if (!fdow || !fdow_init(fdow) ||
-		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_128_BYTES) ||
-		!fdow_encoder_init(fdow)) {
+			!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_128_BYTES) ||
+			!fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
 		ret = false;
 		goto end;
@@ -180,7 +180,7 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 	fdow->b.block_size = encoded_secret_length;
 
 	if (fdo_blob_write((char *)dev_cred_file, flags, fdow->b.block,
-			   fdow->b.block_size) == -1) {
+				fdow->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Failed to write DeviceCredential.DCHmacSecret blob\n");
 		ret = false;
 		goto end;
@@ -202,8 +202,8 @@ end:
  * @return true if read and parsed correctly, otherwise false.
  */
 bool read_normal_device_credentials(const char *dev_cred_file,
-				    fdo_sdk_blob_flags flags,
-				    fdo_dev_cred_t *our_dev_cred)
+		fdo_sdk_blob_flags flags,
+		fdo_dev_cred_t *our_dev_cred)
 {
 	bool ret = false;
 	size_t dev_cred_len = 0;
@@ -245,7 +245,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 
 	if (fdo_blob_read((char *)dev_cred_file, flags, fdor->b.block,
-			  fdor->b.block_size) == -1) {
+				fdor->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Failed to read DeviceCredential blob : Normal.blob\n");
 		goto end;
 	}
@@ -295,8 +295,8 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 
 	our_dev_cred->mfg_blk->d = fdo_string_alloc_size(device_info_length);
 	if (!our_dev_cred->mfg_blk->d ||
-		!fdor_text_string(fdor, our_dev_cred->mfg_blk->d->bytes,
-		our_dev_cred->mfg_blk->d->byte_sz)) {
+			!fdor_text_string(fdor, our_dev_cred->mfg_blk->d->bytes,
+				our_dev_cred->mfg_blk->d->byte_sz)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCDeviceInfo not found\n");
 		goto end;
 	}
@@ -309,15 +309,15 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	}
 	our_dev_cred->owner_blk->guid = fdo_byte_array_alloc(guid_length);
 	if (!our_dev_cred->owner_blk->guid ||
-		!fdor_byte_string(fdor, our_dev_cred->owner_blk->guid->bytes,
-		our_dev_cred->owner_blk->guid->byte_sz)) {
+			!fdor_byte_string(fdor, our_dev_cred->owner_blk->guid->bytes,
+				our_dev_cred->owner_blk->guid->byte_sz)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCGuid not found\n");
 		goto end;
 	}
 
 	our_dev_cred->owner_blk->rvlst = fdo_rendezvous_list_alloc();
 	if (!our_dev_cred->owner_blk->rvlst ||
-		!fdo_rendezvous_list_read(fdor, our_dev_cred->owner_blk->rvlst)) {
+			!fdo_rendezvous_list_read(fdor, our_dev_cred->owner_blk->rvlst)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCRVInfo not found\n");
 		goto end;
 	}
@@ -325,7 +325,7 @@ bool read_normal_device_credentials(const char *dev_cred_file,
 	our_dev_cred->owner_blk->pkh =
 		fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!our_dev_cred->owner_blk->pkh ||
-		!fdo_hash_read(fdor, our_dev_cred->owner_blk->pkh)) {
+			!fdo_hash_read(fdor, our_dev_cred->owner_blk->pkh)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCPubKeyHash not found\n");
 		goto end;
 	}
@@ -351,8 +351,8 @@ end:
  * @return true if read and parsed correctly, otherwise false.
  */
 bool read_secure_device_credentials(const char *dev_cred_file,
-				    fdo_sdk_blob_flags flags,
-				    fdo_dev_cred_t *our_dev_cred)
+		fdo_sdk_blob_flags flags,
+		fdo_dev_cred_t *our_dev_cred)
 {
 	bool ret = false;
 	size_t dev_cred_len = 0;
@@ -378,7 +378,7 @@ bool read_secure_device_credentials(const char *dev_cred_file,
 	}
 
 	if (fdo_blob_read((char *)dev_cred_file, flags, fdor->b.block,
-			  fdor->b.block_size) == -1) {
+				fdor->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Failed to read DeviceCredential blob: Secure.blob\n");
 		goto end;
 	}
@@ -425,7 +425,7 @@ int store_credential(fdo_dev_cred_t *ocred)
 	/* Write in the file and save the Normal device credentials */
 	LOG(LOG_DEBUG, "Writing to %s blob\n", "Normal.blob");
 	if (!write_normal_device_credentials((char *)FDO_CRED_NORMAL,
-					     FDO_SDK_NORMAL_DATA, ocred)) {
+				FDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not write to Normal Credentials blob\n");
 		return -1;
 	}
@@ -434,7 +434,7 @@ int store_credential(fdo_dev_cred_t *ocred)
 	/* Write in the file and save the Secure device credentials */
 	LOG(LOG_DEBUG, "Writing to %s blob\n", "Secure.blob");
 	if (!write_secure_device_credentials((char *)FDO_CRED_SECURE,
-					     FDO_SDK_SECURE_DATA, ocred)) {
+				FDO_SDK_SECURE_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not write to Secure Credentials blob\n");
 		return -1;
 	}
@@ -502,7 +502,7 @@ bool read_cse_device_credentials(fdo_dev_cred_t *our_dev_cred)
 	}
 
 	if (0 != cse_load_file(OVH_FILE_ID, ovheader->bytes, &dev_cred_len,
-			hmac_ptr->bytes, hmac_ptr->byte_sz)) {
+				hmac_ptr->bytes, hmac_ptr->byte_sz)) {
 		LOG(LOG_ERROR, "DeviceCredential read: Unable to load file form CSE\n");
 		goto end;
 	}
@@ -543,6 +543,12 @@ bool read_cse_device_credentials(fdo_dev_cred_t *our_dev_cred)
 	our_dev_cred->mfg_blk->d = ov->dev_info;
 	our_dev_cred->owner_blk->pk = ov->mfg_pub_key;
 	our_dev_cred->owner_blk->pkh = fdo_pub_key_hash(our_dev_cred->owner_blk->pk);
+
+	if (ov->hdc) {
+		fdo_hash_free(ov->hdc);
+	}
+	fdo_free(ov);
+
 	if (!our_dev_cred->owner_blk->pkh) {
 		LOG(LOG_ERROR, "Hash creation of manufacturer pk failed\n");
 		goto end;
@@ -552,15 +558,9 @@ bool read_cse_device_credentials(fdo_dev_cred_t *our_dev_cred)
 		LOG(LOG_ERROR, "DeviceCredential read: Invalid ST\n");
 		goto end;
 	}
-//TO_DO: Check blow for CSE
-	// our_dev_cred->mfg_blk->d->bytes[device_info_length] = '\0';
+
 	ret = true;
 end:
-	if (ov->hdc) {
-		fdo_hash_free(ov->hdc);
-	}
-	fdo_free(ov);
-
 	if (ovheader) {
 		fdo_byte_array_free(ovheader);
 		ovheader = NULL;
@@ -596,7 +596,7 @@ int load_credential(fdo_dev_cred_t *ocred)
 #else
 	/* Read in the blob and save the device credentials */
 	if (!read_normal_device_credentials((char *)FDO_CRED_NORMAL,
-					    FDO_SDK_NORMAL_DATA, ocred)) {
+				FDO_SDK_NORMAL_DATA, ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
@@ -618,7 +618,7 @@ int load_device_secret(void)
 #if !defined(DEVICE_TPM20_ENABLED)
 	// ReadHMAC Credentials
 	if (!read_secure_device_credentials((char *)FDO_CRED_SECURE,
-					    FDO_SDK_SECURE_DATA, NULL)) {
+				FDO_SDK_SECURE_DATA, NULL)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
@@ -669,17 +669,17 @@ bool load_device_status(fdo_sdk_device_status *state) {
  */
 bool store_device_status(fdo_sdk_device_status *state) {
 #if defined(DEVICE_CSE_ENABLED)
-FDO_STATUS fdo_status;
+	FDO_STATUS fdo_status;
 
 	if (TEE_SUCCESS != fdo_heci_load_file(&fdo_cse_handle, DS_FILE_ID,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+				&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI LOAD DS failed!! %u\n", fdo_status);
 		return false;
 	}
 	LOG(LOG_DEBUG, "FDO HECI LOAD DS succeeded %u\n", fdo_status);
 
 	if (TEE_SUCCESS != fdo_heci_update_file(&fdo_cse_handle, DS_FILE_ID,
-			(uint8_t *)state, 1, NULL, 0, &fdo_status) || FDO_STATUS_SUCCESS !=
+				(uint8_t *)state, 1, NULL, 0, &fdo_status) || FDO_STATUS_SUCCESS !=
 			fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI UPDATE DS failed!! %u\n", fdo_status);
 		return false;
@@ -687,15 +687,15 @@ FDO_STATUS fdo_status;
 	LOG(LOG_DEBUG, "FDO HECI UPDATE DS succeeded %u\n", fdo_status);
 
 	if (TEE_SUCCESS != fdo_heci_commit_file(&fdo_cse_handle, DS_FILE_ID,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+				&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO DS COMMIT failed!! %u\n", fdo_status);
 		return false;
 	}
 	LOG(LOG_DEBUG, "FDO DS COMMIT succeeded %u\n", fdo_status);
 #else
-/** NOTE: Currently, it does nothing. This is a provision to store status separately
- * and is unused in this specific implementation.
- */
+	/** NOTE: Currently, it does nothing. This is a provision to store status separately
+	 * and is unused in this specific implementation.
+	 */
 	(void)state;
 #endif
 	return true;
@@ -707,10 +707,10 @@ FDO_STATUS fdo_status;
 static bool validate_state(fdo_sdk_device_status current_status) {
 
 	if (current_status == FDO_DEVICE_STATE_READY1 ||
-		current_status == FDO_DEVICE_STATE_D1 ||
-		current_status == FDO_DEVICE_STATE_IDLE ||
-		current_status == FDO_DEVICE_STATE_READYN ||
-		current_status == FDO_DEVICE_STATE_DN) {
+			current_status == FDO_DEVICE_STATE_D1 ||
+			current_status == FDO_DEVICE_STATE_IDLE ||
+			current_status == FDO_DEVICE_STATE_READYN ||
+			current_status == FDO_DEVICE_STATE_DN) {
 		return true;
 	}
 	return false;

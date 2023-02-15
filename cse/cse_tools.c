@@ -17,18 +17,18 @@ int32_t cse_get_cert_chain(fdo_byte_array_t **cse_cert)
 		return -1;
 	}
 
-    FDO_STATUS fdo_status;
-    int ret = -1;
+	FDO_STATUS fdo_status;
+	int ret = -1;
 	uint16_t lengths_of_certificates[FDO_ODCA_CHAIN_LEN];
-    uint8_t certificate_chain[FDO_MAX_CERT_CHAIN_SIZE];
-    uint8_t *cert_chain = (uint8_t*)&certificate_chain;
+	uint8_t certificate_chain[FDO_MAX_CERT_CHAIN_SIZE];
+	uint8_t *cert_chain = (uint8_t*)&certificate_chain;
 	uint16_t *len_cert = (uint16_t*)&lengths_of_certificates;
 	uint16_t total_cert_len = 0;
 	uint16_t total_cert_size = 0;
-    uint8_t *formatted_cert_chain = NULL;
+	uint8_t *formatted_cert_chain = NULL;
 
 	if (TEE_SUCCESS != fdo_heci_get_cert_chain(&fdo_cse_handle, cert_chain,
-			len_cert, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+				len_cert, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO GET CERT CHAIN failed!! %u\n", fdo_status);
 		goto err;
 	}
@@ -36,14 +36,14 @@ int32_t cse_get_cert_chain(fdo_byte_array_t **cse_cert)
 
 	for (int i = 0; i < FDO_ODCA_CHAIN_LEN; i++) {
 		total_cert_len += lengths_of_certificates[i];
-    }
+	}
 
 	total_cert_size = total_cert_len + 2 + sizeof(lengths_of_certificates);
 	formatted_cert_chain = calloc(total_cert_size, 1);
 	if (formatted_cert_chain == NULL) {
-        LOG(LOG_ERROR,"calloc(%u) failed\n", (unsigned)total_cert_size);
-        goto err;
-    }
+		LOG(LOG_ERROR,"calloc(%u) failed\n", (unsigned)total_cert_size);
+		goto err;
+	}
 
 	uint16_t *tmp_formatted_cert_chain = (uint16_t *)formatted_cert_chain;
 	// memset(formatted_cert_chain, 0, total_cert_size);
@@ -59,26 +59,26 @@ int32_t cse_get_cert_chain(fdo_byte_array_t **cse_cert)
 	}
 
 	if (memcpy_s(tmp_formatted_cert_chain, total_cert_len, certificate_chain,
-			total_cert_len) != 0) {
+				total_cert_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto err;
 	}
 
 	if (memcpy_s((*cse_cert)->bytes, (*cse_cert)->byte_sz,
-			formatted_cert_chain, total_cert_size) != 0) {
+				formatted_cert_chain, total_cert_size) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto err;
 	}
-    (*cse_cert)->byte_sz = total_cert_size;
+	(*cse_cert)->byte_sz = total_cert_size;
 
-    ret = 0;
-	err:
+	ret = 0;
+err:
 
-        if (formatted_cert_chain) {
-		    fdo_free(formatted_cert_chain);
-	    }
+	if (formatted_cert_chain) {
+		fdo_free(formatted_cert_chain);
+	}
 
-        return ret;
+	return ret;
 }
 
 /**
@@ -95,9 +95,11 @@ int32_t cse_get_cose_sig_structure(fdo_byte_array_t **cose_sig_structure, uint8_
 		return -1;
 	}
 
-    int ret = -1;
-    fdo_cose_t *cose = NULL;
-    cose = fdo_alloc(sizeof(fdo_cose_t));
+	int ret = -1;
+	fdo_byte_array_t *cose_sig_byte_arr = NULL;
+	fdo_cose_t *cose = NULL;
+
+	cose = fdo_alloc(sizeof(fdo_cose_t));
 	if (!cose) {
 		LOG(LOG_ERROR, "Failed to alloc COSE\n");
 		goto err;
@@ -117,32 +119,31 @@ int32_t cse_get_cose_sig_structure(fdo_byte_array_t **cose_sig_structure, uint8_
 
 	cose->cose_ph->ph_sig_alg = FDO_CRYPTO_SIG_TYPE_ECSDAp384;
 	if (memcpy_s(cose->cose_payload->bytes, cose->cose_payload->byte_sz,
-			data, data_len) != 0) {
+				data, data_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto err;
 	}
 
-    fdo_byte_array_t *cose_sig_byte_arr = NULL;
 	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload, NULL,
-			&cose_sig_byte_arr) || !cose_sig_byte_arr) {
+				&cose_sig_byte_arr) || !cose_sig_byte_arr) {
 		LOG(LOG_ERROR, "Failed to write COSE Sig_structure\n");
 		goto err;
 	}
-    ret = 0;
+	ret = 0;
 
-    err:
-        if (cose_sig_byte_arr && ret) {
-            fdo_byte_array_free(cose_sig_byte_arr);
-            cose_sig_byte_arr = NULL;
-        }
+err:
+	if (cose_sig_byte_arr && ret) {
+		fdo_byte_array_free(cose_sig_byte_arr);
+		cose_sig_byte_arr = NULL;
+	}
 
-        if (cose) {
-		    fdo_cose_free(cose);
-		    cose = NULL;
-	    }
+	if (cose) {
+		fdo_cose_free(cose);
+		cose = NULL;
+	}
 
-        *cose_sig_structure = cose_sig_byte_arr;
-        return ret;
+	*cose_sig_structure = cose_sig_byte_arr;
+	return ret;
 }
 
 /**
@@ -159,22 +160,22 @@ int32_t cse_get_test_sig(fdo_byte_array_t **cse_signature, fdo_byte_array_t
 		*data, size_t data_len)
 {
 	if (!cse_signature || !cse_maroeprefix || !cose_sig_structure ||
-		!data || !data_len) {
+			!data || !data_len) {
 		return -1;
 	}
 
-    FDO_STATUS fdo_status;
-    int ret = -1;
+	FDO_STATUS fdo_status;
+	int ret = -1;
 	uint32_t mp_len;
 
 	if (TEE_SUCCESS != fdo_heci_load_file(&fdo_cse_handle, OVH_FILE_ID,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+				&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI LOAD failed!! %u\n", fdo_status);
 		goto err;
 	}
 
 	if (TEE_SUCCESS != fdo_heci_update_file(&fdo_cse_handle, OVH_FILE_ID,
-			data, (uint32_t)data_len, NULL, 0, &fdo_status) ||
+				data, (uint32_t)data_len, NULL, 0, &fdo_status) ||
 			FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI UPDATE failed!! %u\n", fdo_status);
 		goto err;
@@ -182,7 +183,7 @@ int32_t cse_get_test_sig(fdo_byte_array_t **cse_signature, fdo_byte_array_t
 	LOG(LOG_DEBUG, "FDO HECI UPDATE succeeded %u\n", fdo_status);
 
 	if (TEE_SUCCESS != fdo_heci_commit_file(&fdo_cse_handle, OVH_FILE_ID,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+				&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO OVH COMMIT failed!! %u\n", fdo_status);
 		goto err;
 	}
@@ -194,18 +195,18 @@ int32_t cse_get_test_sig(fdo_byte_array_t **cse_signature, fdo_byte_array_t
 	 */
 
 	if (TEE_SUCCESS != fdo_heci_ecdsa_device_sign_challenge(&fdo_cse_handle,
-			cose_sig_structure->bytes, cose_sig_structure->byte_sz,
-			(*cse_signature)->bytes, (*cse_signature)->byte_sz,
-			(*cse_maroeprefix)->bytes, &mp_len, &fdo_status) ||
+				cose_sig_structure->bytes, cose_sig_structure->byte_sz,
+				(*cse_signature)->bytes, (*cse_signature)->byte_sz,
+				(*cse_maroeprefix)->bytes, &mp_len, &fdo_status) ||
 			FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI ECDSA DEVICE SIGN failed!! %u\n", fdo_status);
 		goto err;
 	}
-    (*cse_maroeprefix)->byte_sz = mp_len;
+	(*cse_maroeprefix)->byte_sz = mp_len;
 
-    ret = 0;
-    err:
-        return ret;
+	ret = 0;
+err:
+	return ret;
 
 }
 
@@ -226,25 +227,25 @@ int32_t cse_load_file(uint32_t file_id, uint8_t *data_ptr, uint32_t
 		return -1;
 	}
 
-    FDO_STATUS fdo_status;
-    int ret = -1;
+	FDO_STATUS fdo_status;
+	int ret = -1;
 
-    if (TEE_SUCCESS != fdo_heci_load_file(&fdo_cse_handle, file_id,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+	if (TEE_SUCCESS != fdo_heci_load_file(&fdo_cse_handle, file_id,
+				&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI LOAD failed!! %u\n", fdo_status);
 		goto err;
 	}
 
 	if (TEE_SUCCESS != fdo_heci_read_file(&fdo_cse_handle, file_id, data_ptr,
-			data_length, hmac_ptr, hmac_sz, &fdo_status) || FDO_STATUS_SUCCESS !=
+				data_length, hmac_ptr, hmac_sz, &fdo_status) || FDO_STATUS_SUCCESS !=
 			fdo_status) {
 		LOG(LOG_ERROR, "FDO HECI READ FILE failed!! %u\n", fdo_status);
 		goto err;
 	}
 	LOG(LOG_DEBUG, "FDO HECI READ FILE SUCCESS %u\n", fdo_status);
 
-    ret = 0;
-    err:
-        return ret;
+	ret = 0;
+err:
+	return ret;
 
 }
