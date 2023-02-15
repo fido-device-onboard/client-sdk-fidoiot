@@ -8,6 +8,11 @@ The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / R
 
 The CSE* enabled FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1s version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
+# Prerequisites for CSE support
+The system hardware should have the support for CSE FDO client with UUID: 125405e0-fca9-4110-8f88-b4dbcdcb876f
+
+The linux kernel should have the support to enable the CSE clients and have FDO in that list. This support is available in intel-next kernel version 5.9 onwards and is upstreamed in kernel.org version 6.2-rc7 onwards.
+
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
@@ -233,3 +238,6 @@ After a successful compilation, the CSE* enabled FDO Client SDK Linux device exe
 ```shell
   sudo ./build/cse-clear
 ```
+> ***NOTE***: Enabling CSE_SHUTDOWN flag in cmake/cli_input.cmake will disable CSE FDO interface as part of the cleanup routine.
+>  This flag is enabled by default. But note that this may require the user to reboot the system before any consecutive execution of linux-client. As a security measure, invoking linux-client as part of initialization script(init.d) will close the CSE interface for current boot.
+
