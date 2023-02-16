@@ -740,7 +740,11 @@ void fdo_sdk_deinit(void)
 	#if defined(CSE_SHUTDOWN)
 		FDO_STATUS fdo_status;
 		if (TEE_SUCCESS != fdo_heci_close_interface(&fdo_cse_handle, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
-			LOG(LOG_ERROR, "HECI GET CLOSE INTERFACE failed!!\n");
+			if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
+				LOG(LOG_ERROR, "CSE Interface is already Closed!!\n");
+			} else {
+				LOG(LOG_ERROR, "HECI GET CLOSE INTERFACE failed!!\n");
+			}
 		}
 	#endif
 	heci_deinit(&fdo_cse_handle);
