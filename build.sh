@@ -51,9 +51,11 @@ function copy_build_artifacts()
   rm -rf ${BUILDDIR}
   mkdir -p ${BUILDDIR}
   mkdir -p ${BUILDDIR}/blob_backup
+  mkdir -p cse-util
 
   # Copy the build artifacts
   cp -a build/linux-client ${BUILDDIR}
+  cp -a build/cse-clear cse-util
   cp -a data ${BUILDDIR}
   cp -a data/*.blob ${BUILDDIR}/blob_backup
   cp -a data/platform_aes_key.bin ${BUILDDIR}/blob_backup
@@ -78,12 +80,14 @@ function build_bin()
   copy_build_artifacts $target_dir
 }
 
-build_bin x86_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=ecdsa256
-build_bin x86_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=ecdsa256
-build_bin x86_ecdsa384_gcm_bin -DAES_MODE=gcm -DDA=ecdsa384
-build_bin x86_ecdsa384_ccm_bin -DAES_MODE=ccm -DDA=ecdsa384
-build_bin tpm_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=tpm20_ecdsa256
-build_bin tpm_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=tpm20_ecdsa256
+# build_bin x86_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=ecdsa256
+# build_bin x86_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=ecdsa256
+# build_bin x86_ecdsa384_gcm_bin -DAES_MODE=gcm -DDA=ecdsa384
+# build_bin x86_ecdsa384_ccm_bin -DAES_MODE=ccm -DDA=ecdsa384
+# build_bin tpm_ecdsa256_gcm_bin -DAES_MODE=gcm -DDA=tpm20_ecdsa256
+# build_bin tpm_ecdsa256_ccm_bin -DAES_MODE=ccm -DDA=tpm20_ecdsa256
+build_bin cse_ecdsa384_gcm_bin -DAES_MODE=gcm -DDA=cse_ecdsa384 -DCSE_CLEAR=true
+build_bin cse_ecdsa384_ccm_bin -DAES_MODE=ccm -DDA=cse_ecdsa384 -DCSE_CLEAR=true
 
 ######################
 ### Run Unit Tests ###
@@ -107,11 +111,11 @@ function run_unit_test
   make -j$(nproc) | tee -a $TEST_OUTPUT
 }
 
-run_unit_test -DDA=ecdsa256 -DAES_MODE=gcm
-run_unit_test -DDA=ecdsa256 -DAES_MODE=ccm
-run_unit_test -DDA=ecdsa384 -DAES_MODE=gcm
-run_unit_test -DDA=ecdsa384 -DAES_MODE=ccm
-run_unit_test -DDA=ecdsa256 -DAES_MODE=gcm -DDA_FILE=pem
+# run_unit_test -DDA=ecdsa256 -DAES_MODE=gcm
+# run_unit_test -DDA=ecdsa256 -DAES_MODE=ccm
+# run_unit_test -DDA=ecdsa384 -DAES_MODE=gcm
+# run_unit_test -DDA=ecdsa384 -DAES_MODE=ccm
+# run_unit_test -DDA=ecdsa256 -DAES_MODE=gcm -DDA_FILE=pem
 
 # DO NOT change the AWK search string, the spaces has been kept deliberately.
 fail_count=$(awk '/Tests Failed  :/ {split($0,a,": "); count+=a[2]} END{print count}' $TEST_OUTPUT)

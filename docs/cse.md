@@ -202,7 +202,6 @@ For an advanced build configuration, refer to [ Advanced Build Configuration ](b
 make pristine
 cmake -DDA=cse_ecdsa384 .
 make -j$(nproc)
-bash utils/keys_gen.sh .
 ```
 Refer to the section [FDO Build configurations](build_conf.md) for more build options.
 
