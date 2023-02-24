@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "safe_lib.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,7 +50,7 @@ typedef enum log_level {
 #define LOG_MAX_LEVEL 4 /* LOG_MAX_LEVEL = LOG_ALL */
 
 #if defined(TARGET_OS_LINUX) || defined(TARGET_OS_FREERTOS) ||                 \
-    defined(TARGET_OS_MBEDOS) || defined(TARGET_OS_OPTEE)
+    defined(TARGET_OS_MBEDOS) || defined(TARGET_OS_OPTEE) || defined(WIN32)
 #include <stdio.h>
 #include <time.h>
 #include <string.h>

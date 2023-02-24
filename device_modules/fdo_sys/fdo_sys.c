@@ -8,7 +8,9 @@
 #include "safe_lib.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif // !WIN32
 #include "fdo_sys_utils.h"
 
 // CBOR-decoder. Interchangeable with any other CBOR implementation.

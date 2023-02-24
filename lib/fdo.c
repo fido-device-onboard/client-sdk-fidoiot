@@ -20,7 +20,9 @@
 #include "fdoCrypto.h"
 #include "util.h"
 #include <stdlib.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include "safe_lib.h"
 #include "fdodeviceinfo.h"
 #include <ctype.h>
@@ -1736,3 +1738,30 @@ static bool _STATE_Shutdown_Error(void)
 	/* Return false becuase there has been a failure. */
 	return false;
 }
+
+#ifdef WIN32
+#include <stdarg.h>
+int snprintf_s_i(char *buffer, size_t count, const char *format, ...)
+{
+	va_list args;
+	int retval;
+
+    va_start(args, format);
+	retval = vsnprintf(buffer, count, format, args);
+	va_end(args);
+
+	return retval;
+}
+
+int snprintf_s_si(char *buffer, size_t count, const char *format, const char* encoding, ...)
+{
+	va_list args;
+	int retval;
+
+	va_start(args, format);
+	retval = vsnprintf(buffer, count, format, args);
+	va_end(args);
+
+	return retval;
+}
+#endif

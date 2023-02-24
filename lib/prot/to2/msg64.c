@@ -13,6 +13,7 @@
 #include "util.h"
 #include "fdoCrypto.h"
 
+
 /**
  * msg64() - TO2.ProveDevice
  * The device sends out data proving that it is authentic device.

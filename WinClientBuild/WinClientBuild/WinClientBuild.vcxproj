@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{d47a5616-6fee-4e8e-bf6e-e37910c09a40}</ProjectGuid>
+    <RootNamespace>WinClientBuild</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>app</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)..\include;$(SolutionDir)..\lib\include;$(SolutionDir)..\network\include;$(SolutionDir)..\storage\include;$(SolutionDir)..\crypto\include;$(SolutionDir)\3rdParty\safestringlib-1.2.0\include;$(SolutionDir)\3rdParty\tinycbor-0.6.0\src;$(SolutionDir)..\app\include;$(SolutionDir)\3rdParty\openssl-1.1.1s\include;$(SolutionDir)\3rdParty\curl-7.87.0\include</ExternalIncludePath>
+    <TargetName>win-client</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <TargetName>win-client</TargetName>
+    <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)..\include;$(SolutionDir)..\lib\include;$(SolutionDir)..\network\include;$(SolutionDir)..\storage\include;$(SolutionDir)..\crypto\include;$(SolutionDir)\3rdParty\safestringlib-1.2.0\include;$(SolutionDir)\3rdParty\tinycbor-0.6.0\src;$(SolutionDir)\3rdParty\curl-7.87.0\include;$(SolutionDir)..\app\include;$(SolutionDir)\3rdParty\openssl-1.1.1s\include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);LOG_LEVEL=3;_CRT_SECURE_NO_WARNINGS;__STDC_WANT_SECURE_LIB__=0;__STDC_FORMAT_MACROS=1;USE_OPENSSL;CURL_STATICLIB;OPENSSL_NO_CRYPTO_MDEBUG;$(MyConstants);SELF_SIGNED_CERTS_SUPPORTED;HTTPPROXY;MFG_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\mfg_proxy.dat";RV_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\rv_proxy.dat";OWNER_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\owner_proxy.dat";SERIAL_FILE="C:\\ProgramData\\Intel\\FDO\\data\\manufacturer_sn.bin";MODEL_FILE="C:\\ProgramData\\Intel\\FDO\\data\\manufacturer_mod.bin";PLATFORM_IV="C:\\ProgramData\\Intel\\FDO\\data\\platform_iv.bin";PLATFORM_HMAC_KEY="C:\\ProgramData\\Intel\\FDO\\data\\platform_hmac_key.bin";PLATFORM_AES_KEY="C:\\ProgramData\\Intel\\FDO\\data\\platform_aes_key.bin";MANUFACTURER_ADDR="C:\\ProgramData\\Intel\\FDO\\data\\manufacturer_addr.bin";MAX_SERVICEINFO_SZ_FILE="C:\\ProgramData\\Intel\\FDO\\data\\max_serviceinfo_sz.bin";FDO_CRED_NORMAL="C:\\ProgramData\\Intel\\FDO\\\\data\\Normal.blob";OWNERSHIP_TRANSFER_FILE="C:\\ProgramData\\Intel\\FDO\\data\\owner_transfer";DA_FILE=pem</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <DisableSpecificWarnings>4244;4996;4267</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <CompileAs>Default</CompileAs>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;advapi32.lib;crypt32.lib;normaliz.lib;ws2_32.lib;wldap32.lib;User32.lib;$(TargetDir)network.lib;$(TargetDir)storage.lib;$(TargetDir)crypto.lib;$(TargetDir)device_modules.lib;$(TargetDir)lib.lib;$(SolutionDir)3rdParty\curl-7.87.0\builds\libcurl-vc-x86-release-static-ipv6-sspi-schannel\lib\libcurl_a.lib;$(SolutionDir)3rdParty\tinycbor-0.6.0\WinCbor\Debug\WinCbor.lib;$(SolutionDir)3rdParty\safestringlib-1.2.0\WinBuild\Debug\safestring-static.lib;$(SolutionDir)3rdParty\openssl-1.1.1s\libcrypto_static.lib;$(SolutionDir)3rdParty\openssl-1.1.1s\libssl_static.lib</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>libcmtd.lib;msvcrtd.lib</IgnoreSpecificDefaultLibraries>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);LOG_LEVEL=3;_CRT_SECURE_NO_WARNINGS;__STDC_WANT_SECURE_LIB__=0;__STDC_FORMAT_MACROS=1;USE_OPENSSL;CURL_STATICLIB;OPENSSL_NO_CRYPTO_MDEBUG;ECDSA256_DA;AES_MODE_GCM_ENABLED;$(MyConstants);RESALE_SUPPORTED;REUSE_SUPPORTED;SELF_SIGNED_CERTS_SUPPORTED;HTTPPROXY;MFG_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\mfg_proxy.dat";RV_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\rv_proxy.dat";OWNER_PROXY="C:\\ProgramData\\Intel\\FDO\\data\\owner_proxy.dat";SERIAL_FILE="C:\\ProgramData\\Intel\\FDO\\data\\manufacturer_sn.bin";MODEL_FILE="C:\\ProgramData\\Intel\\FDO\\data\\manufacturer_mod.bin";PLATFORM_IV="C:\\ProgramData\\Intel\\FDO\\data\\platform_iv.bin";PLATFORM_HMAC_KEY="C:\\ProgramData\\Intel\\FDO\\data\\platform_hmac_key.bin";PLATFORM_AES_KEY="C:\\ProgramData\\Intel\\FDO\\data\\platform_aes_key.bin";MANUFACTURER_ADDR="C:\\ProgramData\\Intel\\FDO\\data\\manufacturer_addr.bin";MAX_SERVICEINFO_SZ_FILE="C:\\ProgramData\\Intel\\FDO\\data\\max_serviceinfo_sz.bin";FDO_CRED_NORMAL="C:\\ProgramData\\Intel\\FDO\\\\data\\Normal.blob";OWNERSHIP_TRANSFER_FILE="C:\\ProgramData\\Intel\\FDO\\data\\owner_transfer";DA_FILE=pem</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <DisableSpecificWarnings>4244;4996;4267;4127</DisableSpecificWarnings>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;advapi32.lib;crypt32.lib;normaliz.lib;ws2_32.lib;wldap32.lib;User32.lib;$(TargetDir)network.lib;$(TargetDir)storage.lib;$(TargetDir)crypto.lib;$(TargetDir)device_modules.lib;$(TargetDir)lib.lib;$(SolutionDir)3rdParty\curl-7.87.0\builds\libcurl-vc-x86-release-static-ipv6-sspi-schannel\lib\libcurl_a.lib;$(SolutionDir)3rdParty\tinycbor-0.6.0\WinCbor\Release\WinCbor.lib;$(SolutionDir)3rdParty\safestringlib-1.2.0\WinBuild\Release\safestring-static.lib;$(SolutionDir)3rdParty\openssl-1.1.1s\libcrypto_static.lib;$(SolutionDir)3rdParty\openssl-1.1.1s\libssl_static.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\app\blob.c" />
+    <ClCompile Include="..\..\app\main.c" />
+    <ClCompile Include="win_client.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

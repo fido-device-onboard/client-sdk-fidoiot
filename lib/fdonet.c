@@ -15,6 +15,11 @@
 #include "snprintf_s.h"
 
 #if defined HTTPPROXY
+#ifdef WIN32
+#define _WINSOCKAPI_
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#else
 #ifdef TARGET_OS_FREERTOS
 #endif // defined HTTPPROXY
 
@@ -22,10 +27,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif // !WIN32
 #if defined(PROXY_DISCOVERY)
 #include <proxy.h>
 #endif
 #endif
+
 
 /* HTTP Proxy parameters */
 static fdo_ip_address_t rvproxy_ip;
