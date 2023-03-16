@@ -107,9 +107,14 @@ int32_t msg11(fdo_prot_t *ps)
 	}
 
 	/* Parse the complete Ownership header and calcuate HMAC over it */
-	ov = fdo_ov_hdr_read(ovheader, &ps->new_ov_hdr_hmac);
+	ov = fdo_ov_hdr_read(ovheader);
 	if (!ov) {
 		LOG(LOG_ERROR, "DISetCredentials: Failed to read OVHeader\n");
+		goto err;
+	}
+
+	if (!fdo_ov_hdr_hmac(ovheader, &ps->new_ov_hdr_hmac)) {
+		LOG(LOG_ERROR, "DISetCredentials: Failed to get HMAC\n");
 		goto err;
 	}
 

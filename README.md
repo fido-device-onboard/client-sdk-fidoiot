@@ -17,6 +17,7 @@ credentials while porting this to different platforms.
 - [ HTTP_PROXY ](docs/setup.md#http_proxy)
 
 [ Linux* TPM* Reference Implementation ](docs/tpm.md) <br>
+[ Linux* CSE* Reference Implementation ](docs/cse.md) <br>
 [ Linux* Reference Implementation ](docs/linux.md) <br>
 [Security Implications](docs/security_implications.md)
 
