@@ -6,7 +6,7 @@
 # Linux* CSE* Implementation
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The CSE* enabled FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1s version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The CSE* enabled FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1t version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 # Prerequisites for CSE support
 The system hardware should have the support for CSE FDO client with UUID: 125405e0-fca9-4110-8f88-b4dbcdcb876f
@@ -31,9 +31,9 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
-OpenSSL* toolkit version 1.1.1s
+OpenSSL* toolkit version 1.1.1t
 GCC version > 7.5
-Curl version 7.86
+Curl version 7.88
 
 #### Steps to remove the older curl packages
 
@@ -46,15 +46,15 @@ Curl version 7.86
 	yum remove curl libcurl-devel
 	```
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1s
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 1.1.1t
 
 1. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
+	wget https://www.openssl.org/source/openssl-1.1.1t.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf openssl-1.1.1s.tar.gz && cd openssl-1.1.1s
+	tar -zxf openssl-1.1.1t.tar.gz && cd openssl-1.1.1t
 	```
 3. Issue the command:
 	```
@@ -92,20 +92,20 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 1.1.1s  1 Nov 2022
+	OpenSSL* 1.1.1t  7 Feb 2023
 	```
 
-#### Steps to install curl version 7.86 configured with openssl
+#### Steps to install curl version 7.88 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://github.com/curl/curl/releases/download/curl-7_86_0/curl-7.86.0.tar.gz
+	wget https://github.com/curl/curl/releases/download/curl-7.88_0/curl-7.88.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-7.86.0.tar.gz && cd curl-7.86.0
+	tar -zxf curl-7.88.0.tar.gz && cd curl-7.88.0
 	```
 3. Issue the command to configure the curl with openssl:
 	```
@@ -128,26 +128,26 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/1.1.1s zlib/1.2.11
+    curl 7.88.0 (x86_64-pc-linux-gnu) libcurl/7.88.0 OpenSSL/1.1.1t zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
 **Script usage command**
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 1.1.1s
+	sudo ./install_openssl_curl.sh -i -v 1.1.1t
 	```
 
 * Command to uninstall OpenSSL
 	```
-	sudo ./install_openssl_curl.sh -u -v 1.1.1s
+	sudo ./install_openssl_curl.sh -u -v 1.1.1t
 	```
 Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
 	```
 
-Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 7.86 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
+Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 7.88 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
