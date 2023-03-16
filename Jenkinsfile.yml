@@ -1,4 +1,4 @@
-node('ccode'){
+node('fdo-ccode'){
     withEnv([
         'REPO_Safestring=https://github.com/intel/safestringlib.git',
         'REPO_TinyCBOR=https://github.com/intel/tinycbor.git',
