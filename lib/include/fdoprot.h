@@ -109,7 +109,11 @@
 // minimum message buffer size to read/write protcol (DI/TO1/TO2)
 // if user-configured MAX_SERVICEINFO_SZ is more than this, that is used as the buffer length
 // else this is used as the message buffer length
+#if defined(DEVICE_CSE_ENABLED)
+#define MSG_BUFFER_SZ BUFF_SIZE_4K_BYTES
+#else
 #define MSG_BUFFER_SZ 1300
+#endif
 // margin that gets added to either max or min ServiceInfo size to create
 // the final buffer to read/write protcol (DI/TO1/TO2)
 #define MSG_METADATA_SIZE 700

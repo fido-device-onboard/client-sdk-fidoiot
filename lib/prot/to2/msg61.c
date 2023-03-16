@@ -183,13 +183,9 @@ int32_t msg61(fdo_prot_t *ps)
 	}
 
 	// Read the OVHeader
-	ps->ovoucher = fdo_ov_hdr_read(ovheader, &ps->new_ov_hdr_hmac);
+	ps->ovoucher = fdo_ov_hdr_read(ovheader);
 	if (!ps->ovoucher) {
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read OVHeader\n");
-		goto err;
-	}
-	if (!ps->new_ov_hdr_hmac) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to calculate OVHeader HMac\n");
 		goto err;
 	}
 
@@ -230,6 +226,24 @@ int32_t msg61(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to read HMac\n");
 		goto err;
 	}
+
+#if defined(DEVICE_CSE_ENABLED)
+/**
+ * Note: In the case of CSE implementation, it compares the received ovheader
+ * with the existing ovheader stored during DI.
+ * If verification succeeds it loads the existing HMAC.
+ *
+ */
+	if (!fdo_ov_hdr_cse_load_hmac(ovheader, &ps->new_ov_hdr_hmac)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to calculate OVHeader HMac\n");
+		goto err;
+	}
+#else
+	if (!fdo_ov_hdr_hmac(ovheader, &ps->new_ov_hdr_hmac)) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Failed to calculate OVHeader HMac\n");
+		goto err;
+	}
+#endif
 
 	/*
 	 * Compare the HMAC sent by owner with HMAC calculated by us. The key is

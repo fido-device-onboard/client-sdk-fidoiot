@@ -151,6 +151,7 @@ int random_close(void)
 	return 0;
 }
 
+#if !defined(DEVICE_CSE_ENABLED)
 /**
  * If g_random_initialised is true, generate random bytes of data
  * of size num_bytes passed as paramater, else return error.
@@ -171,6 +172,7 @@ int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 
 	return 0;
 }
+#endif
 #endif /* SECURE_ELEMENT */
 
 /**

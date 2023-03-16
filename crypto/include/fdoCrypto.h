@@ -56,7 +56,7 @@ int32_t fdo_to2_chained_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
 int set_currentIV(uint8_t *iv);
 
 int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
-			fdo_byte_array_t **signature);
+			fdo_byte_array_t **signature, fdo_byte_array_t **eat_maroe);
 
 fdo_dev_key_ctx_t *getfdo_dev_key_ctx(void);
 fdo_kex_ctx_t *getfdo_key_ctx(void);

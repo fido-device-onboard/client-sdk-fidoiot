@@ -10,6 +10,9 @@
 
 #include "load_credentials.h"
 #include "util.h"
+#if defined(DEVICE_CSE_ENABLED)
+#include "cse_utils.h"
+#endif
 
 /**
  * msg13() - DIDone, Type 13
@@ -70,11 +73,21 @@ int32_t msg13(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "Failed to store updated device status\n");
 		goto err;
 	}
+#if defined(DEVICE_CSE_ENABLED)
+	FDO_STATUS fdo_status;
 
+	if (TEE_SUCCESS != fdo_heci_commit_file(&fdo_cse_handle, OVH_FILE_ID,
+			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+		LOG(LOG_ERROR, "FDO OVH COMMIT failed!!\n");
+		return -1;
+	}
+	LOG(LOG_DEBUG, "FDO OVH COMMIT succeeded %u\n", fdo_status);
+#else
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "Failed to store updated device credentials\n");
 		goto err;
 	}
+#endif
 	LOG(LOG_DEBUG, "Device credentials successfully written!!\n");
 
 	/* Mark as success, and DI done */
