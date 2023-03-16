@@ -16,6 +16,10 @@
 #include "tpm20_Utils.h"
 #endif
 
+#if defined(DEVICE_CSE_ENABLED)
+#include "cse_utils.h"
+#endif
+
 /**
  * This function sets the Ownership Voucher hmac key in the structure.
  * Which will later be used by the OVHMAC function to get the hmac.
@@ -126,12 +130,24 @@ err:
 int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 			   size_t hmac_len, bool is_replacement_hmac)
 {
-	fdo_byte_array_t **keyset = NULL;
-
 	if (!OVHdr || !hmac) {
 		return -1;
 	}
 
+#if defined(DEVICE_CSE_ENABLED)
+	(void)is_replacement_hmac;
+
+	if (!OVHdr_len || !hmac_len) {
+		goto error;
+	}
+
+	if (0 != crypto_hal_hmac_cse(OVHdr, OVHdr_len, hmac, hmac_len)) {
+		LOG(LOG_ERROR, "Failed to perform HMAC\n");
+		goto error;
+	}
+	return 0;
+#else
+	fdo_byte_array_t **keyset = NULL;
 	if (is_replacement_hmac) {
 #if defined(DEVICE_TPM20_ENABLED)
 	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
@@ -148,7 +164,7 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 #endif
 	}
 	if (!keyset || !*keyset) {
-		return -1;
+		goto error;
 	}
 
 	uint8_t *hmac_key = (*keyset)->bytes;
@@ -164,6 +180,7 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 		goto error;
 	}
 	return 0;
+#endif
 error:
 	return -1;
 }

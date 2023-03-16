@@ -1,10 +1,17 @@
 
 
 
-# Linux* OS
+
+
+# Linux* CSE* Implementation
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1t version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The CSE* enabled FDO Client SDK execution depends on OpenSSL* toolkit 1.1.1t version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+
+# Prerequisites for CSE support
+The system hardware should have the support for CSE FDO client with UUID: 125405e0-fca9-4110-8f88-b4dbcdcb876f
+
+The linux kernel should have the support to enable the CSE clients and have FDO in that list. This support is available in intel-next kernel version 5.9 onwards and is upstreamed in kernel.org version 6.2-rc7 onwards.
 
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
@@ -102,7 +109,7 @@ After installing openssl, proceed with the installation of curl.
 	```
 3. Issue the command to configure the curl with openssl:
 	```
-	./configure --with-openssl --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --enable-versioned-symbols
 	```
 4. Issue the command to build curl:
 	```
@@ -123,6 +130,18 @@ Issue the following command from the terminal:
     ```
     curl 7.88.0 (x86_64-pc-linux-gnu) libcurl/7.88.0 OpenSSL/1.1.1t zlib/1.2.11
     ```
+Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
+**Script usage command**
+
+* Command to install OpenSSL and Curl
+	```
+	sudo ./install_openssl_curl.sh -i -v 1.1.1t
+	```
+
+* Command to uninstall OpenSSL
+	```
+	sudo ./install_openssl_curl.sh -u -v 1.1.1t
+	```
 Note 1: If above command is not successful, then link the path where curl is installed to the system path
 	```
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
@@ -141,7 +160,7 @@ Note 3: On RHEL, Curl could also be installed using yum package manager as shown
 
 
 ## 3. Compiling Intel safestringlib
-FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
+CSE* enabled FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
  mkdir obj
@@ -150,46 +169,52 @@ From the root of the safestringlib, do the following:
 After this step, `libsafestring.a` library will be created.
 
 ## 4. Compiling Intel TinyCBOR
-FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
+CSE* enabled FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
 From the root of the TinyCBOR (named `tinycbor`), do the following:
  ```shell
  make
  ```
+## 5. Compiling Intel ME TEE
+CSE* enabled FDO Client SDK uses ME TEE library to communicate with CSE through HECI. Download ME TEE from <a href="https://github.com/intel/metee">METEE</a>, and follow these instructions to build:
+From the root of the METEE(named `metee`), do the following:
+ ```shell
+ cmake .
+ make -j$(nproc)
+ sudo make install
+ ```
 
-## 5. Environment Variables
+## 6. Environment Variables
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
 Provide safestringlib and tinycbor paths:
 ```shell
 export SAFESTRING_ROOT=path/to/safestringlib
 export TINYCBOR_ROOT=path/to/tinycbor
+export METEE_ROOT=path/to/metee
 ```
 
-## 6. Compiling FDO Client SDK
+## 7. Compiling CSE* enabled FDO Client SDK
 
-The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. It assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
+The CSE* enabled FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>. It assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `cmake [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the CSE* enabled FDO Client SDK.
 
 For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md).
 
 ```shell
 make pristine
-cmake .
-make
-bash utils/keys_gen.sh .
+cmake -DDA=cse_ecdsa384 .
+make -j$(nproc)
 ```
-
-Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
-Refer to the section. [FDO Build configurations](build_conf.md)
+Refer to the section [FDO Build configurations](build_conf.md) for more build options.
 
 <a name="run_linux_fdo"></a>
 
-## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
-The FDO Client SDK Linux device is compatible with FDO PRI components namely: Manufacturer, Rendezvous, and Owner.
+## 8. Running the Application <!-- Ensuring generic updates are captured where applicable -->
+The CSE* enabled FDO Client SDK Linux device is compatible with FDO PRI components namely: Manufacturer, Rendezvous, and Owner.
 
-To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
+To test the CSE* enabled FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md),
 [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md), and
 [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
-After a successful compilation, the FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
+After a successful compilation, the CSE* enabled FDO Client SDK Linux device executable can be found at `<path-to-client-sdk-fidoiot>/build/linux-client`.
 > ***NOTE***: Built binary can be either `debug` or `release` based on the compilation step.
 
 - Before executing `linux-client`, prepare for Device Initialization (DI) by starting the FDO PRI Manufacturer.
@@ -197,7 +222,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   Then, execute `linux-client`. The device is now initialized with the credentials and is ready for ownership transfer.
 
   ```shell
-  ./build/linux-client
+  sudo ./build/linux-client
   ```
 
 - To enable the device for Transfer Ownership protocol (TO1 and TO2), configure the FDO PRI Rendezvous and Owner.
@@ -205,14 +230,13 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   After these are set up, execute `linux-client` again.
 
   ```shell
-  ./build/linux-client
+  sudo ./build/linux-client
   ```
-- If the client-sdk binary is built on openssl 1.1.1t environment and then executed with openssl 3 environment, it may fail with "libssl.so.1.1 not found" error. In order to successfully execute it,  build the specific 1.1.1 version dependent libraries and make it available as well:
+> ***NOTE***: To do the DI again we need to clear the Device status from CSE storage.
+> To clear the storage, compile the code with "-DCSE_CLEAR=true" flag and then execute the following command
+```shell
+  sudo ./build/cse-clear
 ```
-    wget https://www.openssl.org/source/openssl-1.1.1t.tar.gz
-    tar -zxf openssl-1.1.1t.tar.gz && cd openssl-1.1.1t
-    ./config
-    make
-    cp libssl.so.1.1 /usr/lib/x86_64-linux-gnu/
-    cp libcrypto.so.1.1 /usr/lib/x86_64-linux-gnu/
-```
+> ***NOTE***: Enabling CSE_SHUTDOWN flag in cmake/cli_input.cmake will disable CSE FDO interface as part of the cleanup routine.
+>  This flag is enabled by default. But note that this may require the user to reboot the system before any consecutive execution of linux-client. As a security measure, invoking linux-client as part of initialization script(init.d) will close the CSE interface for current boot.
+

@@ -134,12 +134,16 @@ int32_t msg64(fdo_prot_t *ps)
 	}
 
 	// generate the signature on encoded Sig_structure
+	fdo_byte_array_t *eat_maroe = NULL;
 	if (0 !=
 	    fdo_device_sign(eat_sig_structure->bytes, eat_sig_structure->byte_sz,
-			&eat->eat_signature)) {
+			&eat->eat_signature, &eat_maroe)) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to generate signature\n");
-		goto err;		
+		goto err;
 	}
+#if defined(DEVICE_CSE_ENABLED)
+	eat->eat_uph->eatmaroeprefix = eat_maroe;
+#endif
 
 	// Set the EAT.UnprotectedHeader contents
 	ps->nonce_to2setupdv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
@@ -150,7 +154,7 @@ int32_t msg64(fdo_prot_t *ps)
 	fdo_nonce_init_rand(ps->nonce_to2setupdv);
 
 	// copy NonceTO2SetupDv into the struct
-	eat->eat_uph->euphnonce =fdo_byte_array_alloc_with_byte_array(
+	eat->eat_uph->euphnonce = fdo_byte_array_alloc_with_byte_array(
 		ps->nonce_to2setupdv->bytes, ps->nonce_to2setupdv->byte_sz);
 	if (!eat->eat_uph->euphnonce) {
 		LOG(LOG_ERROR, "TO2.ProveDevice: Failed to copy NonceTO2SetupDv into EUPHNonce\n");

@@ -24,6 +24,10 @@
 #ifdef SECURE_ELEMENT
 #include "se_provisioning.h"
 #endif
+#if defined(DEVICE_CSE_ENABLED)
+#include "cse_utils.h"
+#include "cse_tools.h"
+#endif
 
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
@@ -235,12 +239,15 @@ int app_main(bool is_resale)
 	}
 #endif /* SECURE_ELEMENT */
 
+#if !defined(DEVICE_CSE_ENABLED)
+	LOG(LOG_DEBUG, "CSE not enabaled, Normal Blob Modules loaded!\n");
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");
 		ret = -1;
 		goto end;
 	}
+#endif
 
 	/* List and Init all Sv_info modules */
 	module_info = fdo_sv_info_modules_init();

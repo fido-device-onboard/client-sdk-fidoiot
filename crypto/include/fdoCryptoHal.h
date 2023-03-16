@@ -66,6 +66,12 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 			size_t output_length, const uint8_t *key,
 			size_t key_length);
 
+/* Calculate hmac of "buffer", and place the result in "output".
+ * "output" must be allocated already.
+ */
+int32_t crypto_hal_hmac_cse(uint8_t *buffer,size_t buffer_length,
+			uint8_t *output, size_t output_length);
+
 
 /* crypto_hal_sig_verify
  * Verify an RSA PKCS v1.5 Signature using provided public key
@@ -100,6 +106,11 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 /* Sign and generate ECDSA signature for a given message */
 int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
 		       unsigned char *signature, size_t *signature_len);
+
+/* Sign and generate ECDSA signature for a given message using CSE internal API*/
+int32_t crypto_hal_ecdsa_sign_cse(const uint8_t *data, size_t data_len,
+		uint8_t *message_signature, size_t message_sig_len, uint8_t *eat_maroe,
+		size_t *maroe_length);
 
 /* Encrypt "clear_text" using "key" and put the result in "cypher_text".
  * "cipher_txt" must point to a buffer large enough to store the

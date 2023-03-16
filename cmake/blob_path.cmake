@@ -19,6 +19,12 @@ if(TARGET_OS MATCHES linux)
     -DMANUFACTURER_ADDR=\"${BLOB_PATH}/data/manufacturer_addr.bin\"
     -DMAX_SERVICEINFO_SZ_FILE=\"${BLOB_PATH}/data/max_serviceinfo_sz.bin\"
     )
+  if (${DA} MATCHES cse)
+    client_sdk_compile_definitions(
+      -DDEVICE_CSE_ENABLED
+    )
+    endif()
+
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
