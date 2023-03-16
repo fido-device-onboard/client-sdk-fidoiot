@@ -396,11 +396,7 @@ static fdo_sdk_status app_initialize(void)
 	if (fsize == 0) {
 		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
-	#if defined(DEVICE_CSE_ENABLED)
-		g_fdo_data->prot.prot_buff_sz = BUFF_SIZE_4K_BYTES;
-	#else
 		g_fdo_data->prot.prot_buff_sz = MSG_BUFFER_SZ + MSG_METADATA_SIZE;
-	#endif
 	} else {
 		buffer = fdo_alloc(fsize + 1);
 		if (!buffer) {
@@ -426,15 +422,11 @@ static fdo_sdk_status app_initialize(void)
 			} else {
 				max_serviceinfo_sz = buffer_as_long;
 			}
-		#if defined(DEVICE_CSE_ENABLED)
-			g_fdo_data->prot.prot_buff_sz = BUFF_SIZE_4K_BYTES;
-		#else
 			if (max_serviceinfo_sz > MSG_BUFFER_SZ) {
 				g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
 			} else {
 				g_fdo_data->prot.prot_buff_sz = MSG_BUFFER_SZ + MSG_METADATA_SIZE;
 			}
-		#endif
 			g_fdo_data->prot.maxDeviceServiceInfoSz = max_serviceinfo_sz;
 			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
 		}
