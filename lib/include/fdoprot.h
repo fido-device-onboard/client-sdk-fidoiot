@@ -110,7 +110,7 @@
 // if user-configured MAX_SERVICEINFO_SZ is more than this, that is used as the buffer length
 // else this is used as the message buffer length
 #if defined(DEVICE_CSE_ENABLED)
-#define MSG_BUFFER_SZ BUFF_SIZE_4K_BYTES;
+#define MSG_BUFFER_SZ BUFF_SIZE_4K_BYTES
 #else
 #define MSG_BUFFER_SZ 1300
 #endif
