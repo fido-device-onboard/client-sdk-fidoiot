@@ -96,7 +96,7 @@ After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://github.com/curl/curl/releases/download/curl-7.88_0/curl-7.88.0.tar.gz
+	wget https://github.com/curl/curl/releases/download/curl-7_88_0/curl-7.88.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
