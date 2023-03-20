@@ -31,8 +31,7 @@ install_dependencies()
         autoconf \
         doxygen \
         m4 \
-        pandoc \
-        libcurl4-openssl-dev
+        pandoc
 
     pip install pyyaml PyYAML
 }
