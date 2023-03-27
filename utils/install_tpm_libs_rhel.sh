@@ -34,8 +34,11 @@ install_dependencies()
         glib2-devel \
         dbus-x11 \
         libuuid-devel \
-        diffutils
+        diffutils \
+        libcurl-devel \
+        libgcrypt-devel
         
+    dnf builddep tpm2-tss
     pip3 install pyyaml PyYAML
 }
 
