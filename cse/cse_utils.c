@@ -210,7 +210,7 @@ TEESTATUS fdo_heci_ecdsa_device_sign_challenge(TEEHANDLE *cl, uint8_t *data,
 		return -1;
 	}
 
-    if (data_length > FDO_MAX_FILE_SIZE || data_length < 0) {
+    if (data_length > FDO_MAX_DATA_TO_SIGN) {
         LOG(LOG_ERROR, "Invalid data length!\n");
 		return -1;
     }
@@ -301,7 +301,7 @@ TEESTATUS fdo_heci_generate_random(TEEHANDLE *cl, uint8_t *random_bytes,
         return -1;
     }
 
-    if (length > FDO_MAX_RANDOM || length < 0) {
+    if (length > FDO_MAX_RANDOM || length == 0) {
         return -1;
     }
 

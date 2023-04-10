@@ -2375,7 +2375,10 @@ bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list)
 		return false;
 	}
 
-	fdow_start_array(fdow, list->num_rv_directives);
+	if (!fdow_start_array(fdow, list->num_rv_directives)) {
+		LOG(LOG_ERROR, "Failed to start array\n");
+		return false;
+	}
 
 	int rv_directive_index;
 	for (rv_directive_index = 0; rv_directive_index < list->num_rv_directives;
@@ -2384,7 +2387,12 @@ bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list)
 		if (!directive) {
 			continue;
 		}
-		fdow_start_array(fdow, directive->num_entries);
+
+		if (!fdow_start_array(fdow, directive->num_entries)) {
+			LOG(LOG_ERROR, "Failed to start array\n");
+			return false;
+		}
+
 		int rv_instr_index;
 		for (rv_instr_index = 0; rv_instr_index < directive->num_entries; rv_instr_index++) {
 			fdo_rendezvous_t *entry_Ptr = fdo_rendezvous_list_get(directive, rv_instr_index);
@@ -2393,9 +2401,19 @@ bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list)
 			}
 			fdo_rendezvous_write(fdow, entry_Ptr);
 		}
-		fdow_end_array(fdow);
+
+		if (!fdow_end_array(fdow)) {
+			LOG(LOG_ERROR,
+		    	"%s : RendezvousInfo end array not found\n", __func__);
+			return false;
+		}
 	}
-	fdow_end_array(fdow);
+
+	if (!fdow_end_array(fdow)) {
+		LOG(LOG_ERROR,
+		    "%s : RendezvousInfo end array not found\n", __func__);
+		return false;
+	}
 
 	return true;
 }
@@ -5025,7 +5043,7 @@ bool fdo_serviceinfo_invalid_modname_add(char *module_name,
 			temp_next = temp_next->next;
 		}
 		temp_current->next = fdo_alloc(sizeof(fdo_sv_invalid_modnames_t));
-		if (!temp_current) {
+		if (!temp_current->next) {
 			LOG(LOG_ERROR,
 				"Failed to alloc for unsupported modules\n");
 			return false;
@@ -5175,7 +5193,10 @@ bool fdo_supply_serviceinfoval(char *module_name, char *module_message,
 				LOG(LOG_ERROR, "ServiceInfo: Received ServiceInfo for an inactive module %s\n",
 				    module_list->module.module_name);
 				// module is present, but is not the active module. skip this ServiceInfoVal
-				fdor_next(&temp_fdor);
+				if (!fdor_next(&temp_fdor)) {
+					LOG(LOG_DEBUG,"ServiceInfo: Failed to skip active module\n");
+					goto end;
+				}
 				retval = true;
 			}
 			break;
@@ -5188,7 +5209,10 @@ bool fdo_supply_serviceinfoval(char *module_name, char *module_message,
 			LOG(LOG_ERROR,
 				"ServiceInfo: Received ServiceInfo for an unsupported module %s\n",
 			    module_name);
-			fdor_next(&temp_fdor);
+			if (!fdor_next(&temp_fdor)) {
+					LOG(LOG_DEBUG,"ServiceInfo: Failed to skip unsupported module\n");
+					goto end;
+			}
 			*cb_return_val = FDO_SI_INVALID_MOD_ERROR;
 			retval = true;
 	}
@@ -6249,10 +6273,12 @@ bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1, fdo_rendezvous_t *en
 	}
 
 	if (entry1->ip != NULL && entry2->ip != NULL) {
-		memcmp_s(entry1->ip->addr, entry1->ip->length,
-			entry2->ip->addr,entry1->ip->length, &memcmp_diff);
-		if (memcmp_diff == 0) {
+		if (!memcmp_s(entry1->ip->addr, entry1->ip->length,
+			entry2->ip->addr,entry1->ip->length, &memcmp_diff) &&
+	    	!memcmp_diff) {
 			return true;
+		} else {
+			return false;
 		}
 	}
 
