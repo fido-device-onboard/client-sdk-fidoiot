@@ -2,6 +2,7 @@ node('ccode'){
     withEnv([
         'REPO_Safestring=https://github.com/intel/safestringlib.git',
         'REPO_TinyCBOR=https://github.com/intel/tinycbor.git',
+        'REPO_METEE=https://github.com/intel/metee.git',
         "TEST_DIR=${WORKSPACE}/test-fidoiot",
         "MANUFACTURER_DB_CONNECT_STRING=jdbc:mariadb://127.0.0.1:3306/sdo",
         "RESELLER_DB_CONNECT_STRING=jdbc:mariadb://127.0.0.1:4306/sdo"
@@ -14,6 +15,7 @@ node('ccode'){
       }
       sh 'git clone "${REPO_Safestring}"'
       sh 'git clone "${REPO_TinyCBOR}"'
+      sh 'git clone "${REPO_METEE}"'
       }
 
     stage('Build safestring'){
@@ -33,6 +35,16 @@ node('ccode'){
         make
       '''
     }
+    
+    stage('Build METEE'){
+      sh '''
+        cd $WORKSPACE/metee
+        echo 'Building METEE'
+        cmake .
+        make -j$(nproc)
+        sudo make install
+      '''
+    }
 
     stage('Build ClientSDK'){
       sh '''
@@ -40,8 +52,10 @@ node('ccode'){
         echo $SAFESTRING_ROOT
         export TINYCBOR_ROOT=$WORKSPACE/tinycbor
         echo $TINYCBOR_ROOT
+        export METEE_ROOT=$WORKSPACE/metee
+        echo $METEE_ROOT
         cd $WORKSPACE/client-sdk
-        $WORKSPACE/client-sdk/build.sh
+        $WORKSPACE/client-sdk/build.sh -s
         mkdir client-sdk-binaries
         cd client-sdk-binaries
         cp -r ../x86_ecdsa256_gcm_bin .
@@ -50,6 +64,8 @@ node('ccode'){
         cp -r ../x86_ecdsa384_ccm_bin .
         cp -r ../tpm_ecdsa256_gcm_bin .
         cp -r ../tpm_ecdsa256_ccm_bin .
+        cp -r ../cse_ecdsa384_gcm_bin .
+        cp -r ../cse_ecdsa384_ccm_bin .
         mkdir utils
         cp ../utils/tpm_make_ready_ecdsa.sh utils/
         cp ../utils/install_tpm_libs.sh utils/
@@ -88,6 +104,20 @@ node('ccode'){
         bash client-sdk/utils/keys_gen.sh test-fidoiot/
       '''
 
+      // Generating Keys and Copying it back.
+      sh '''
+        cd test-fidoiot/binaries/pri-fidoiot/scripts
+        bash demo_ca.sh
+        bash web_csr_req.sh
+        bash user_csr_req.sh
+        bash keys_gen.sh
+        chmod -R 777 secrets/
+        cp -r service.env secrets/ ../aio/
+        cp -r secrets/ ../db/
+        sed -i '/<security-constraint>/,/<.security-constraint>/d' ../aio/WEB-INF/web.xml
+        sed -i '/^innodb/d' ../db/custom/config-file.cnf
+      '''
+
       // Updating the manufacturer address
       sh '''
         cd test-fidoiot/data
@@ -98,7 +128,7 @@ node('ccode'){
       sh'''
         cd test-fidoiot/
         export TEST_DIR=`pwd`
-        #mvn clean test -Dgroups=fdo_clientsdk_smoketest
+        mvn clean test -Dgroups=fdo_clientsdk_smoketest
       '''
     }
   }
@@ -118,6 +148,6 @@ node('ccode'){
     '''
   }
 
-    cleanWs cleanWhenFailure: false, cleanWhenNotBuilt: false, notFailBuild: true   
+    cleanWs cleanWhenFailure: false, cleanWhenNotBuilt: false, notFailBuild: true
   }
 }

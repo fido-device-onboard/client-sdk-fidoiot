@@ -1,6 +1,6 @@
 #OPENSSL_VER=""
-CURL_VER="7.86.0"
-CURL_LINK="https://github.com/curl/curl/releases/download/curl-7_86_0/curl-7.86.0.tar.gz --no-check-certificate"
+CURL_VER="7.88.0"
+CURL_LINK="https://github.com/curl/curl/releases/download/curl-7_88_0/curl-7.88.0.tar.gz --no-check-certificate"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR

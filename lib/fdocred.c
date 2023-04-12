@@ -15,6 +15,10 @@
 #include "fdocred.h"
 #include <stdlib.h>
 #include "safe_lib.h"
+#if defined(DEVICE_CSE_ENABLED)
+#include "cse_utils.h"
+#include "cse_tools.h"
+#endif
 
 /*------------------------------------------------------------------------------
  * DeviceCredential's Owner Credential (fdo_cred_owner_t) routines
@@ -273,14 +277,12 @@ void fdo_ov_free(fdo_ownership_voucher_t *ov)
 /**
  * Read the OwnershipVoucher header passed in TO2.ProveOVHeader
  * @param ovheader - the received CBOR-encoded OVHeader
- * @param hmac a place top store the resulting HMAC
- * @param cal_hp_hc - calculate hp, hc if true.
  * @return A newly allocated OwnershipVoucher with the header completed
  */
-fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader, fdo_hash_t **hmac)
+fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 {
 
-	if (!ovheader || !hmac) {
+	if (!ovheader) {
 		return NULL;
 	}
 
@@ -404,8 +406,6 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader, fdo_hash_t 
 
 	fdor_end_array(&fdor);
 	LOG(LOG_DEBUG, "%s OVHeader read completed!\n", __func__);
-
-	fdo_ov_hdr_hmac(ovheader, hmac);
 	ret = 0;
 exit:
 	if (ret) {
@@ -419,14 +419,78 @@ exit:
 	return ov;
 }
 
+#if defined(DEVICE_CSE_ENABLED)
+/**
+ * Given an OwnershipVoucher header (OVHeader), proceed to load and compares with
+ * stored OVHeader from CSE. If verfication succeed it returns the stored HMAC.
+ * @param ovheader - the received CBOR-encoded OVHeader
+ * @param hmac a place top store the resulting HMAC
+ * @return true if hmac was successfully load and verified, false otherwise.
+ */
+bool fdo_ov_hdr_cse_load_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac)
+{
+
+	if (!ovheader || !hmac) {
+		return false;
+	}
+
+	bool ret = false;
+	uint32_t ovh_len = 0;
+	int result_memcmp = 0;
+	fdo_byte_array_t *ovh_data = NULL;
+
+	*hmac = fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	if (!*hmac) {
+		LOG(LOG_ERROR, "Failed to alloc for OVHeaderHmac\n");
+		goto exit;
+	}
+
+	ovh_data = fdo_byte_array_alloc(FDO_MAX_FILE_SIZE);
+	if (!ovh_data) {
+		LOG(LOG_ERROR,"Invalid OVHeader read: Failed to allocate data for storing OVH data\n");
+		goto exit;
+	}
+
+	if (0 != cse_load_file(OVH_FILE_ID, ovh_data->bytes, &ovh_len,
+			(*hmac)->hash->bytes, (*hmac)->hash->byte_sz)) {
+		LOG(LOG_ERROR, "Invalid OVHeader read: Unable to load file form CSE\n");
+		goto exit;
+	}
+	ovh_data->byte_sz = ovh_len;
+
+	ret = memcmp_s(ovh_data->bytes,
+		       ovh_data->byte_sz,
+		       ovheader->bytes,
+		       ovheader->byte_sz, &result_memcmp);
+	if (ret || result_memcmp != 0) {
+		LOG(LOG_ERROR, "TO2.ProveOVHdr: Invalid OVH received over OVHeader\n");
+		ret = false;
+		goto exit;
+	}
+	LOG(LOG_DEBUG, "TO2.ProveOVHdr: Valid Ownership Header received\n");
+	ret = true;
+exit:
+
+	if (ovh_data) {
+		fdo_byte_array_free(ovh_data);
+		ovh_data = NULL;
+	}
+
+	return ret;
+
+}
+#endif
 /**
  * Given an OwnershipVoucher header (OVHeader), proceed to generate hmac.
- * @param ov - the received CBOR-encoded OVHeader
+ * @param ovheader - the received CBOR-encoded OVHeader
  * @param hmac a place top store the resulting HMAC
- * @param num_ov_items - number of items in ownership voucher header
  * @return true if hmac was successfully generated, false otherwise.
  */
 bool fdo_ov_hdr_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac) {
+
+	if (!ovheader || !hmac) {
+		return false;
+	}
 
 	bool ret = false;
 	// Create the HMAC

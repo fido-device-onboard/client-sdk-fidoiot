@@ -24,6 +24,11 @@
 #include "safe_lib.h"
 #include "fdodeviceinfo.h"
 #include <ctype.h>
+#if defined(DEVICE_CSE_ENABLED)
+#include <linux/mei.h>
+#include <metee.h>
+#include "cse_utils.h"
+#endif
 
 typedef struct app_data_s {
 	bool error_recovery;
@@ -49,6 +54,10 @@ typedef struct app_data_s {
 static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
+
+#if defined(DEVICE_CSE_ENABLED)
+TEEHANDLE fdo_cse_handle;
+#endif
 
 #if defined(SELF_SIGNED_CERTS_SUPPORTED)
 bool useSelfSignedCerts = false;
@@ -452,7 +461,15 @@ static fdo_sdk_status app_initialize(void)
 
 	if ((g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READY1) ||
 			(g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READYN)) {
+	#if defined(DEVICE_CSE_ENABLED)
+		if (!read_cse_device_credentials(g_fdo_data->devcred)) {
+			LOG(LOG_ERROR, "Could not parse the Device Credentials form CSE\n");
+			return -1;
+		}
+		ret = 0;
+	#else
 		ret = load_device_secret();
+	#endif
 		if (ret == -1) {
 			LOG(LOG_ERROR, "Load HMAC Secret failed\n");
 			return FDO_ERROR;
@@ -711,6 +728,19 @@ void fdo_sdk_deinit(void)
 {
 	(void)fdo_crypto_close();
 
+#if defined(DEVICE_CSE_ENABLED)
+	#if defined(CSE_SHUTDOWN)
+		FDO_STATUS fdo_status;
+		if (TEE_SUCCESS != fdo_heci_close_interface(&fdo_cse_handle, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+			if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
+				LOG(LOG_ERROR, "CSE Interface is already Closed!!\n");
+			} else {
+				LOG(LOG_ERROR, "HECI GET CLOSE INTERFACE failed!!\n");
+			}
+		}
+	#endif
+	heci_deinit(&fdo_cse_handle);
+#endif
 	app_close();
 	if (g_fdo_data) {
 		fdo_free(g_fdo_data);
@@ -766,6 +796,28 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 		LOG(LOG_ERROR, "fdor_init() failed!\n");
 		return FDO_ERROR;
 	}
+
+#if defined(DEVICE_CSE_ENABLED)
+	if (TEE_SUCCESS != heci_init(&fdo_cse_handle)) {
+		LOG(LOG_ERROR, "HECI init failed!!\n");
+		return FDO_ERROR;
+	}
+	uint16_t major_v = 0;
+	uint16_t minor_v = 0;
+	FDO_STATUS fdo_status;
+
+	if (TEE_SUCCESS != fdo_heci_get_version(&fdo_cse_handle, &major_v, &minor_v, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+		if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
+			LOG(LOG_ERROR, "CSE Interface is Closed!! Reboot required.\n");
+		} else {
+			LOG(LOG_ERROR, "HECI GET VERSION failed!!\n");
+		}
+		return FDO_ERROR;
+	}
+
+	LOG(LOG_INFO, "FDO CSE major_version (%u)\n", major_v);
+    LOG(LOG_INFO, "FDO CSE minor_version (%u)\n", minor_v);
+#endif
 
 	/* Load credentials */
 	if (NULL == app_alloc_credentials()) {
@@ -1046,12 +1098,20 @@ fdo_sdk_status fdo_sdk_resale(void)
 	if (g_fdo_data->devcred->ST == FDO_DEVICE_STATE_IDLE) {
 		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_READYN;
 
+	#if defined(DEVICE_CSE_ENABLED)
+		if (!store_device_status(&g_fdo_data->devcred->ST)) {
+		LOG(LOG_ERROR, "Failed to store updated device status\n");
+			return FDO_ERROR;
+		}
+		ret = 0;
+	#else
 		if (load_device_secret()) {
 			LOG(LOG_ERROR, "Reading {Mfg|Secret} blob failied!\n");
 			return FDO_ERROR;
 		}
 
 		ret = store_credential(g_fdo_data->devcred);
+	#endif
 		if (!ret) {
 			LOG(LOG_INFO, "Set Resale complete\n");
 			r = FDO_SUCCESS;
@@ -1339,8 +1399,18 @@ static bool _STATE_TO1(void)
 		// Found the  needed entries of the current directive. Prepare to move to next.
 		g_fdo_data->current_rvdirective = g_fdo_data->current_rvdirective->next;
 
-		if (skip_rv || (!ip && !dns) || port == 0) {
-			// If any of the IP/DNS/Port values are missing, or
+		if (0 == port) {
+			if (tls) {
+				port = 443;
+				}
+			else  {
+				port = 80;
+				}
+			LOG(LOG_INFO, "Assigned default port: %d \n", port);
+			}
+
+		if (skip_rv || (!ip && !dns)) {
+			// If all of the IP/DNS values are missing, or
 			// if RVOwnerOnly is present in the current directive, or
 			// if unsupported/invalid RVProtocolValue was found
 			// skip the current directive and check for the same in the next directives.
@@ -1542,9 +1612,18 @@ static bool _STATE_TO2(void)
 			g_fdo_data->current_rvto2addrentry = g_fdo_data->current_rvto2addrentry->next;
 
 		}
+		if (0 == port) {
+			if (tls) {
+				port = 443;
+				}
+			else  {
+				port = 80;
+				}
+			LOG(LOG_INFO, "Assigned default port: %d \n", port);
+			}
 
-		if (skip_rv || (!ip && !dns && !port)) {
-			// If all of the IP/DNS/Port values are missing, or
+		if (skip_rv || (!ip && !dns)) {
+			// If all of the IP/DNS values are missing, or
 			// if RVOwnerOnly is present in the current directive, or
 			// if unsupported/invalid RVProtocolValue/RVProtocol was found
 			// for rvbypass, goto TO1

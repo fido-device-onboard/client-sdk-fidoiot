@@ -42,7 +42,11 @@ if (${TLS} STREQUAL openssl)
           client_sdk_sources_with_lib( crypto openssl/openssl_ECDSAVerifyRoutines.c)
     endif()
 
-
+    if (${DA} STREQUAL cse_ecdsa384)
+    client_sdk_sources_with_lib ( crypto
+    openssl/cse_cryptoSupport.c
+    )
+    endif()
 
 
     if (${DA} MATCHES tpm)

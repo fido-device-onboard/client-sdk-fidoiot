@@ -10,6 +10,9 @@
 #include "stdlib.h"
 #include "fdoCryptoCtx.h"
 #include "fdoCrypto.h"
+#if defined(DEVICE_CSE_ENABLED)
+#include "cse_utils.h"
+#endif
 
 #define ECDSA_SIGNATURE_MAX_LEN BUFF_SIZE_256_BYTES
 
@@ -25,20 +28,48 @@
  *                   stored after the signing operation is completed.
  *                   This buffer is allocated inside the API
  * @param  signature_length_in/Out_in: Size of the buffer pointed to by
- signature
+ * 					 signature
+ * @param  eat maroe In/Out_pointer to the buffer where the maroe is
+ *                   stored after the signing operation is completed.
+ *                   This buffer is allocated inside the API
  * @param Out: Size of the message signature
  * @return 0 on success and -1 on failure
 
  */
 int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
-			fdo_byte_array_t **signature)
+			fdo_byte_array_t **signature, fdo_byte_array_t **eat_maroe)
 {
 	int ret = -1;
 
 	if (!signature) {
 		return ret;
 	}
-#if defined(ECDSA256_DA) || defined(ECDSA384_DA)
+#if defined(DEVICE_CSE_ENABLED)
+	*signature = fdo_byte_array_alloc(FDO_SIGNATURE_LENGTH);
+	if (NULL == *signature) {
+		LOG(LOG_ERROR, "Alloc failed!\n");
+		goto end;
+	}
+
+	*eat_maroe = fdo_byte_array_alloc(FDO_MAX_MAROE_PREFIX_SIZE);
+	if (NULL == *eat_maroe) {
+		LOG(LOG_ERROR, "Alloc failed!\n");
+		goto end;
+	}
+
+	if (0 != crypto_hal_ecdsa_sign_cse(message, message_length, (*signature)->bytes,
+			(*signature)->byte_sz, (*eat_maroe)->bytes, &(*eat_maroe)->byte_sz)) {
+		LOG(LOG_ERROR, "ECDSA signing failed!\n");
+		fdo_byte_array_free(*signature);
+		fdo_byte_array_free(*eat_maroe);
+		*signature = NULL;
+		*eat_maroe = NULL;
+		goto end;
+	}
+
+	ret = 0;
+#elif defined(ECDSA256_DA) || defined(ECDSA384_DA)
+	(void)eat_maroe;
 	*signature = fdo_byte_array_alloc(ECDSA_SIGNATURE_MAX_LEN);
 	if (NULL == *signature) {
 		LOG(LOG_ERROR, "Alloc failed!\n");
