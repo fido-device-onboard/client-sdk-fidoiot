@@ -202,7 +202,7 @@ int32_t msg63(fdo_prot_t *ps)
 
 	if (temp_hash_hc->hash_type != FDO_CRYPTO_HASH_TYPE_USED) {
 		LOG(LOG_ERROR, "TO2.OVNextEntry: Invalid Hash Type at OVEntryPayload.OVEHashHdrInfo\n");
-		fdo_hash_free(temp_hash_hp);
+		fdo_hash_free(temp_hash_hc);
 		goto err;
 	}
 

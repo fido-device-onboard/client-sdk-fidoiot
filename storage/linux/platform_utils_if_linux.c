@@ -111,7 +111,9 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 
 end:
 	if (fp) {
-		fclose(fp);
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	if (p_iv) {
 		fdo_free(p_iv);
@@ -185,7 +187,9 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 
 end:
 	if (fp) {
-		fclose(fp);
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	return retval;
 }
@@ -255,7 +259,9 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 
 end:
 	if (fp) {
-		fclose(fp);
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	return retval;
 }

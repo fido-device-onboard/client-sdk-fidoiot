@@ -33,14 +33,14 @@ Curl version 7.86
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.7
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
-	
+
 	```
 	sudo apt-get remove --auto-remove libssl-dev
 	sudo apt-get remove --auto-remove libssl-dev:i386
 	sudo apt remove curl libcurl4-openssl-dev
 	```
     In case of RHEL OS, use below commands to uninstall:
- 
+
 	```
 	sudo yum remove libcurl-devel openssl-devel
 	```
@@ -144,7 +144,7 @@ Note 1: If above command is not successful, then link the path where curl is ins
 	sudo ln -s /usr/local/bin/curl /usr/bin/curl
 	```
 
-Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 7.86. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) 
+Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 7.86. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
@@ -303,9 +303,9 @@ export TINYCBOR_ROOT=path/to/tinycbor
 
 The FDO Client SDK build system is based on <a href="https://www.gnu.org/software/make/">GNU make</a>.  It assumes that all the requirements are set up according to [ FDO Compilation Setup ](setup.md). The application is built using the `make [options]` in the root of the repository for all supported platforms. The debug and release build modes are supported in building the FDO Client SDK.
 
-Refer the TPM* Library Setup steps given in section 2 to compile TPM* enabled FDO Client SDK. 
+Refer the TPM* Library Setup steps given in section 2 to compile TPM* enabled FDO Client SDK.
 
-For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md). 
+For an advanced build configuration, refer to [ Advanced Build Configuration ](build_conf.md).
 
 Example command to build TPM* enabled FDO Client SDK with the Resource Manager as TPM2-ABRMD (tabrmd)
 
@@ -325,7 +325,6 @@ make -j$(nproc)
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section [FDO Build configurations](build_conf.md)
 
-> ***NOTE***: Currently, only Elliptic-Curve (EC) cryptography keys based on `NIST P-256` or `secp256r1` are supported for TPM* enabled FDO Client SDK due to limitations on testing with the available hardware that does not support keys based on `NIST P-384`. Consequently, this configuration only supports usage of 128-bit key for AES operations (GCM/CCM) and generates 256-bit HMAC.
 
 <a name="run_linux_fdo"></a>
 
@@ -346,7 +345,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   Script execution command:
 
   ```shell
-  sudo ./tpm_make_ready_ecdsa.sh -p <FDO Client SDK data folder location>
+  ./tpm_make_ready_ecdsa.sh -e <ECDSA type 256 or 384> -p <FDO Client SDK data folder location>
   ```
 
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
@@ -357,7 +356,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
 - To enable the device for Transfer Ownership protocol (TO1 and TO2), configure the FDO PRI Rendezvous and Owner.
   Refer to [ Ownership Transfer Setup ](ownership_transfer.md).
   After these are set up, execute `linux-client` again.
-  
+
   ```shell
   ./build/linux-client
   ```

@@ -235,8 +235,11 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		}
 
 		// compare HMAC
-		memcmp_s(stored_hmac, PLATFORM_HMAC_SIZE, computed_hmac,
-			 PLATFORM_HMAC_SIZE, &strcmp_result);
+		if (memcmp_s(stored_hmac, PLATFORM_HMAC_SIZE, computed_hmac,
+			 PLATFORM_HMAC_SIZE, &strcmp_result) != 0) {
+			LOG(LOG_ERROR, "Failed to compare HMAC\n");
+			goto exit;
+		}
 		if (strcmp_result != 0) {
 			LOG(LOG_ERROR, "%s: HMACs do not compare!\n", __func__);
 			goto exit;

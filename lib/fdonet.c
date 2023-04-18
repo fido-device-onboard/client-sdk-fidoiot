@@ -417,7 +417,10 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		}
 
 		if (FDO_CON_INVALID_HANDLE != sock_hdl) {
-			fdo_con_disconnect(sock_hdl);
+			if (fdo_con_disconnect(sock_hdl)) {
+				LOG(LOG_ERROR, "Error during socket close()\n");
+				goto end;
+			}
 			if (!cache_host_dns(dn)) {
 				LOG(LOG_ERROR, "REST DNS caching failed!\n");
 				goto end;
