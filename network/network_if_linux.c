@@ -246,7 +246,7 @@ bool fdo_curl_proxy(fdo_ip_address_t *ip_addr, uint16_t port)
 		goto err;
 	}
 
-	if (ip_addr->addr) {
+	if (ip_addr) {
 		ip_ascii = fdo_alloc(IP_TAG_LEN);
 		if (!ip_ascii) {
 			goto err;
@@ -331,7 +331,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 		}
 	}
 
-	if (ip_addr->addr) {
+	if (ip_addr) {
 		ip_ascii = fdo_alloc(IP_TAG_LEN);
 		if (!ip_ascii) {
 			goto err;

@@ -197,9 +197,6 @@ err:
 		EVP_PKEY_free(ec_pkey);
 		ec_key = NULL; // evp_pkey_free clears attached ec_key too
 	}
-	if (ec_key) {
-		EC_KEY_free(ec_key);
-	}
 	if (pub_key) {
 		EC_POINT_free(pub_key);
 	}
