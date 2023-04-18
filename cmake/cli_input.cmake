@@ -29,6 +29,10 @@ set (TPM2_TCTI_TYPE tabrmd)
 set (RESALE true)
 set (REUSE true)
 
+#for CSE
+set (CSE_SHUTDOWN true)
+set (CSE_CLEAR false)
+
 #following are specific to only mbedos
 set (DATASTORE sd)
 set (WIFI_SSID " ")
@@ -736,4 +740,61 @@ endif()
 set(CACHED_REUSE ${REUSE} CACHE STRING "Selected REUSE")
 message("Selected REUSE ${REUSE}")
 
+###########################################
+# FOR CSE SHUTDOWN
+if (${DA} MATCHES cse)
+  get_property(cached_shutdown_value CACHE CSE_SHUTDOWN PROPERTY VALUE)
+
+  set(shutdown_cli_arg ${cached_shutdown_value})
+  if(shutdown_cli_arg STREQUAL CACHED_CSE_SHUTDOWN)
+    unset(shutdown_cli_arg)
+  endif()
+
+  set(shutdown_app_cmake_lists ${CSE_SHUTDOWN})
+  if(cached_shutdown_value STREQUAL CSE_SHUTDOWN)
+    unset(shutdown_app_cmake_lists)
+  endif()
+
+  if(DEFINED CACHED_CSE_SHUTDOWN)
+    if ((DEFINED shutdown_cli_arg) AND (NOT(CACHED_CSE_SHUTDOWN STREQUAL shutdown_cli_arg)))
+      message(WARNING "Need to do make pristine before cmake args can change.")
+    endif()
+    set(CSE_SHUTDOWN ${CACHED_CSE_SHUTDOWN})
+  elseif(DEFINED shutdown_cli_arg)
+    set(CSE_SHUTDOWN ${shutdown_cli_arg})
+  elseif(DEFINED shutdown_app_cmake_lists)
+    set(CSE_SHUTDOWN ${shutdown_app_cmake_lists})
+  endif()
+
+  set(CACHED_CSE_SHUTDOWN ${CSE_SHUTDOWN} CACHE STRING "Selected CSE_SHUTDOWN")
+  message("Selected CSE_SHUTDOWN ${CSE_SHUTDOWN}")
+
+  ###########################################
+  # FOR CSE CLEAR CRED
+  get_property(cached_clear_value CACHE CSE_CLEAR PROPERTY VALUE)
+
+  set(clear_cli_arg ${cached_clear_value})
+  if(clear_cli_arg STREQUAL CACHED_CSE_CLEAR)
+    unset(clear_cli_arg)
+  endif()
+
+  set(clear_app_cmake_lists ${CSE_CLEAR})
+  if(cached_clear_value STREQUAL CSE_CLEAR)
+    unset(clear_app_cmake_lists)
+  endif()
+
+  if(DEFINED CACHED_CSE_CLEAR)
+    if ((DEFINED clear_cli_arg) AND (NOT(CACHED_CSE_CLEAR STREQUAL clear_cli_arg)))
+      message(WARNING "Need to do make pristine before cmake args can change.")
+    endif()
+    set(CSE_CLEAR ${CACHED_CSE_CLEAR})
+  elseif(DEFINED clear_cli_arg)
+    set(CSE_CLEAR ${clear_cli_arg})
+  elseif(DEFINED clear_app_cmake_lists)
+    set(CSE_CLEAR ${clear_app_cmake_lists})
+  endif()
+
+  set(CACHED_CSE_CLEAR ${CSE_CLEAR} CACHE STRING "Selected CSE_CLEAR")
+  message("Selected CSE_CLEAR ${CSE_CLEAR}")
+endif()
 ###########################################

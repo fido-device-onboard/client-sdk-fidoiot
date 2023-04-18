@@ -571,76 +571,62 @@ int32_t fdo_con_disconnect(fdo_con_handle handle)
 	return ret;
 }
 
-/**
- * Receive(read) protocol version, message type and length of rest body
+/*
+ * Check the REST header for given REST response buffer and offset.
  *
- * @param handle - connection handler (for ex: socket-id)
- * @param protocol_version - out FDO protocol version
- * @param message_type - out message type of incoming FDO message.
- * @param msglen - out Number of received bytes.
- * @param curl_buf: data buffer to read into msg received by curl.
- * @param curl_buf_offset: pointer to track curl_buf.
- * @retval -1 on failure, 0 on success.
+ * @param[in] curl_buf: Input buffer that contains the REST header
+ * @param[in] header_start_offset: offset in the buffer that points to the start of REST header
+ * @retval true if header is valid and complete and false otherwise.
  */
-int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
-		uint32_t *protocol_version,
-		uint32_t *message_type, uint32_t *msglen,
-		char *curl_buf, size_t *curl_buf_offset)
+bool has_header(char *buf,
+		size_t header_start_offset)
 {
-	int32_t ret = -1;
+	char tmp[REST_MAX_MSGHDR_SIZE];
+	size_t cur_offset = header_start_offset;
+	bool ret = false;
+	for (;;) {
+		if (memset_s(tmp, sizeof(tmp), 0) != 0) {
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			goto err;
+		}
+		if (!read_until_new_line(tmp, REST_MAX_MSGHDR_SIZE, buf, &cur_offset)) {
+			goto err;
+		}
+
+		// end of header
+		if ((header_start_offset < cur_offset) && (tmp[0] == get_rest_hdr_body_separator())) {
+			ret = true;
+			break;
+		}
+	}
+	err:
+	return ret;
+}
+
+/*
+ * Get the message length from the given REST response buffer.
+ *
+ * @param[in] curl_buf: Input buffer that contains the REST header
+ * @param[in/out] cur_offset: offset in the buffer that initially points to the start of REST header.
+ *                            This gets updated to point to start of message body after successful parsing
+ * @param[out] msglen:  Message length as specified in the REST header
+ * @retval bool returns true for success and false in case of invalid/incomplete content/parsing failure.
+ */
+bool get_msg_length(char *curl_buf,
+		size_t *cur_offset, uint32_t *msglen)
+{
 	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
 	char tmp[REST_MAX_MSGHDR_SIZE];
 	size_t tmplen;
 	size_t hdrlen;
-	rest_ctx_t *rest = NULL;
-	struct fdo_sock_handle *sock_hdl = handle;
-	int sockfd = sock_hdl->sockfd;
-	CURLcode res;
-	size_t nread;
-	int max_iteration = 100;
-	int itr = 0;
-	size_t nread_total = 0;
-
-	if (!protocol_version || !message_type || !msglen) {
-		goto err;
-	}
-
-	LOG(LOG_DEBUG,"Reading response.\n");
-
-	do {
-		nread = 0;
-		res = curl_easy_recv(curl, curl_buf + nread_total,
-				REST_MAX_MSGBODY_SIZE - nread_total, &nread);
-		nread_total += nread;
-
-		if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 1, MAX_TIME_OUT)) {
-			LOG(LOG_ERROR,"Error: timeout.\n");
-			goto err;
-		}
-		itr++;
-	} while ((res == CURLE_OK && (nread_total >= MAX_SOCKET_MTU && nread)) ||
-			(res == CURLE_AGAIN && itr < max_iteration));
-
-	if (res != CURLE_OK) {
-		LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
-		goto err;
-	}
-
-	if (nread_total == 0) {
-		LOG(LOG_ERROR,"No response recevied! \n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG,"Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-			(curl_off_t)nread_total);
-
+	bool ret = false;
 	for (;;) {
 		if (memset_s(tmp, sizeof(tmp), 0) != 0) {
 			LOG(LOG_ERROR, "Memset() failed!\n");
 			goto err;
 		}
 
-		if (!read_until_new_line(tmp, REST_MAX_MSGHDR_SIZE, curl_buf, curl_buf_offset)) {
+		if (!read_until_new_line(tmp, REST_MAX_MSGHDR_SIZE, curl_buf, cur_offset)) {
 			LOG(LOG_ERROR, "read_until_new_line() failed!\n");
 			goto err;
 		}
@@ -678,8 +664,88 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	/* Process REST header and get content-length of body */
 	if (!get_rest_content_length(hdr, hdrlen, msglen)) {
 		LOG(LOG_ERROR, "REST Header processing failed!!\n");
+		*msglen = 0;
 		goto err;
 	}
+	ret = true;
+	err:
+	return ret;
+}
+
+/**
+ * Receive(read) protocol version, message type and length of rest body
+ *
+ * @param handle - connection handler (for ex: socket-id)
+ * @param protocol_version - out FDO protocol version
+ * @param message_type - out message type of incoming FDO message.
+ * @param msglen - out Number of received bytes.
+ * @param curl_buf: data buffer to read into msg received by curl.
+ * @param curl_buf_offset: pointer to track curl_buf.
+ * @retval -1 on failure, 0 on success.
+ */
+int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
+		uint32_t *protocol_version,
+		uint32_t *message_type, uint32_t *msglen,
+		char *curl_buf, size_t *curl_buf_offset)
+{
+	int32_t ret = -1;
+	size_t curl_tmp_offset = *curl_buf_offset;
+	rest_ctx_t *rest = NULL;
+	struct fdo_sock_handle *sock_hdl = handle;
+	int sockfd = sock_hdl->sockfd;
+	CURLcode res;
+	size_t nread;
+	int max_iteration = 100;
+	int itr = 0;
+	size_t nread_total = 0;
+	bool headerParsed = false;
+
+	if (!protocol_version || !message_type || !msglen) {
+		goto err;
+	}
+
+	LOG(LOG_DEBUG,"Reading response.\n");
+
+	do {
+		nread = 0;
+		res = curl_easy_recv(curl, curl_buf + nread_total,
+				REST_MAX_MSGBODY_SIZE - nread_total, &nread);
+		nread_total += nread;
+		if (!headerParsed && nread_total && has_header(curl_buf, curl_tmp_offset)) {
+			// If we already received the header and not yet parsed the message length
+			if (!get_msg_length(curl_buf, &curl_tmp_offset, msglen)) {
+				LOG(LOG_ERROR, "Msg len parsing from REST Header failed!!\n");
+				goto err;
+			}
+			headerParsed = true;
+		}
+		if (headerParsed && ((curl_tmp_offset+*msglen) <= (*curl_buf_offset+nread_total))) {
+				// expected total length is equal or included in already received buffer length
+				*curl_buf_offset = curl_tmp_offset;
+				// curl_buf_offset now points to the start of message body
+				break;
+		}
+
+		if (res == CURLE_AGAIN && !wait_on_socket(sockfd, 1, MAX_TIME_OUT)) {
+			LOG(LOG_ERROR,"Error: timeout.\n");
+			goto err;
+		}
+		itr++;
+	} while ((res == CURLE_OK && nread ) ||
+			(res == CURLE_AGAIN && itr < max_iteration));
+
+	if (res != CURLE_OK) {
+		LOG(LOG_ERROR,"Error: %s\n", curl_easy_strerror(res));
+		goto err;
+	}
+
+	if (nread_total == 0) {
+		LOG(LOG_ERROR,"No response recevied! \n");
+		goto err;
+	}
+
+	LOG(LOG_DEBUG,"Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
+			(curl_off_t)nread_total);
 
 	rest = get_rest_context();
 	if (!rest) {

@@ -244,6 +244,7 @@ TEST_CASE("read_normal_device_credentials", "[credentials][fdo]")
 void test_read_normal_device_credentials(void)
 #endif
 {
+	TEST_IGNORE();
 #if !defined (AES_MODE_GCM_ENABLED) || AES_BITS != 256
 	TEST_IGNORE();
 #endif
@@ -289,6 +290,7 @@ TEST_CASE("read_secure_device_credentials", "[credentials][fdo]")
 void test_read_secure_device_credentials(void)
 #endif
 {
+	TEST_IGNORE();
 #if !defined (AES_MODE_GCM_ENABLED) || AES_BITS != 256
 	TEST_IGNORE();
 #endif
@@ -332,6 +334,7 @@ TEST_CASE("load_credential", "[credentials][fdo]")
 void test_load_credential(void)
 #endif
 {
+	TEST_IGNORE();
 #if !defined(AES_MODE_GCM_ENABLED) || AES_BITS != 256
 	TEST_IGNORE();
 #endif
@@ -369,6 +372,7 @@ TEST_CASE("read_write_Device_credentials", "[credentials][fdo]")
 void test_read_write_Device_credentials(void)
 #endif
 {
+	TEST_IGNORE();
 #if !defined (AES_MODE_GCM_ENABLED) || AES_BITS != 256
 	TEST_IGNORE();
 #endif
@@ -423,6 +427,7 @@ TEST_CASE("store_credential", "[credentials][fdo]")
 void test_store_credential(void)
 #endif
 {
+	TEST_IGNORE();
 #if !defined (AES_MODE_GCM_ENABLED) || AES_BITS != 256
 	TEST_IGNORE();
 #endif

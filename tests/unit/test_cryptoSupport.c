@@ -2614,9 +2614,10 @@ TEST_CASE("fdo_device_sign", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	// Positive test case
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(0, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -2633,9 +2634,10 @@ TEST_CASE("fdo_device_sign_invalid_message", "[crypto_support][fdo]")
 	int ret;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	/* Negative test case */
-	ret = fdo_device_sign(NULL, message_len, &signature);
+	ret = fdo_device_sign(NULL, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -2652,9 +2654,10 @@ TEST_CASE("fdo_device_sign_invalid_message_len", "[crypto_support][fdo]")
 	int ret;
 	const uint8_t *message = test_buff1;
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	/* Negative test case */
-	ret = fdo_device_sign(message, 0, &signature);
+	ret = fdo_device_sign(message, 0, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -3097,9 +3100,10 @@ TEST_CASE("get_ec_key_fail_case", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	get_ec_key_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	get_ec_key_fail_flag = false;
@@ -3119,9 +3123,10 @@ TEST_CASE("ECDSA_size_fail_case", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	ECDSA_size_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	ECDSA_size_fail_flag = false;
@@ -3141,9 +3146,10 @@ TEST_CASE("memcpy_s_fail_case", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	memcpy_s_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	memcpy_s_fail_flag = false;
 	TEST_ASSERT_EQUAL(-1, ret);
 #else

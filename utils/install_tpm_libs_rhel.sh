@@ -29,14 +29,14 @@ install_dependencies()
         doxygen \
         m4 \
         pandoc \
-        libcurl-devel \
         uriparser-devel \
         dbus-devel \
         glib2-devel \
         dbus-x11 \
-        libgcrypt-devel \
         libuuid-devel \
-        diffutils
+        diffutils \
+        libcurl-devel \
+        libgcrypt-devel
         
     dnf builddep tpm2-tss
     pip3 install pyyaml PyYAML

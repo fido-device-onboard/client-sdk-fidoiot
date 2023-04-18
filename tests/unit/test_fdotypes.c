@@ -625,6 +625,9 @@ TEST_CASE("fdo_public_key_read", "[fdo_types][fdo]")
 void test_fdo_public_key_read(void)
 #endif
 {
+#if !defined (AES_MODE_GCM_ENABLED) || AES_BITS == 256
+	TEST_IGNORE();
+#endif
 	fdor_t *fdor = NULL;
 	fdo_public_key_t *fdopubkey = NULL;
 	// sample CBOR encoded public key

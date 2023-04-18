@@ -4631,7 +4631,9 @@ bool fdo_rvto2addr_read(fdor_t *fdor, fdo_rvto2addr_t *rvto2addr) {
 	return true;
 
 end:
-	fdo_rvto2addr_free(rvto2addr);
+	if (rvto2addr->rv_to2addr_entry) {
+		fdo_free(rvto2addr->rv_to2addr_entry);
+	}
 	return false;
 }
 
