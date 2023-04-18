@@ -72,7 +72,12 @@ execute_cmd_on_failure_exit()
 parse_args "$@"
 
 curve="nist_p$ecc"
-primary_key_type="ecc$ecc:aes128cfb"
+
+if [ ${ecc} == "256" ]; then
+      primary_key_type="ecc$ecc:aes128cfb"
+else
+      primary_key_type="ecc$ecc:aes256cfb"
+fi
 
 echo "$TPM2TOOLS_TCTI in use as Resource Manager"
 
