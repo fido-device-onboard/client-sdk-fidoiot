@@ -1,4 +1,4 @@
-TPM2_TSS_VER="4.0.0"
+TPM2_TSS_VER="4.0.1"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
 TPM2_OPENSSL_VER="1.1.1"
 TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/$TPM2_OPENSSL_VER/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"

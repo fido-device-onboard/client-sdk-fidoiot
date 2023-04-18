@@ -7,7 +7,7 @@
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.7 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.8 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries with TPM* 2.0:
 
@@ -27,10 +27,10 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 
-OpenSSL* toolkit version 3.0.7.
-Curl version 7.86
+OpenSSL* toolkit version 3.0.8.
+Curl version 8.0.1
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.7
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
 
@@ -46,11 +46,11 @@ Curl version 7.86
 	```
 2. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-3.0.7.tar.gz
+	wget https://www.openssl.org/source/openssl-3.0.8.tar.gz
 	```
 3. Unpack the tarball with:
 	```
-	tar -zxf openssl-3.0.7.tar.gz && cd openssl-3.0.7
+	tar -zxf openssl-3.0.8.tar.gz && cd openssl-3.0.8
 	```
 4. Issue the command:
 	```
@@ -89,7 +89,7 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 3.0.7  1 Nov 2022
+	OpenSSL* 3.0.8  7 Feb 2023
 	```
 
 #### Steps to install curl version 7.86 configured with openssl
@@ -98,11 +98,11 @@ After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://github.com/curl/curl/releases/download/curl-7_86_0/curl-7.86.0.tar.gz
+	wget https://curl.se/download/curl-8.0.1.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-7.86.0.tar.gz && cd curl-7.86.0
+	tar -zxf curl-8.0.1.tar.gz && cd curl-8.0.1
 	```
 3. Issue the command to configure the curl with openssl:
 	```
@@ -125,14 +125,14 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 7.86.0 (x86_64-pc-linux-gnu) libcurl/7.86.0 OpenSSL/3.0.7 zlib/1.2.11
+    curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
 **Script usage command**
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.7
+	sudo ./install_openssl_curl.sh -i -v 3.0.8
 	```
 
 * Command to uninstall OpenSSL
@@ -223,17 +223,17 @@ sudo ./install_tpm_libs_rhel.sh -h
 
 Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) script is not used to setup FDO TPM* libraries. Install only tpm2-tss library to enable TPM* enabled FDO Client SDK code compilation. To enable compilation and execution of TPM* enabled FDO Client SDK code, install all libraries namely: tpm2-tss, tpm2-abrmd, tpm2-tools, and tpm2-tss-engine.
 
-- tpm2-tss-4.0.0
+- tpm2-tss-4.0.1
 
-  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 4.0.0 of the library.
+  This is the main library that creates commands per Trusted Computing Group (TCG) specification to use the TPM*. It uses release version 4.0.1 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-tss-4.0.0-download](https://github.com/tpm2-software/tpm2-tss/releases/download/4.0.0/tpm2-tss-4.0.0.tar.gz)
+    The library can be downloaded from [tpm2-tss-4.0.1-download](https://github.com/tpm2-software/tpm2-tss/releases/download/4.0.1/tpm2-tss-4.0.1.tar.gz)
 
   - Build and Installation Process
 
-    The build and installation process can be found at [tpm2-tss-4.0.0-install](https://github.com/tpm2-software/tpm2-tss/blob/4.0.0/INSTALL.md)
+    The build and installation process can be found at [tpm2-tss-4.0.1-install](https://github.com/tpm2-software/tpm2-tss/blob/4.0.1/INSTALL.md)
 
 - tpm2-abrmd-3.0.0
 
@@ -249,17 +249,17 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
     The build and installation process found at [tpm2-abrmd-3.0.0-install](https://github.com/tpm2-software/tpm2-abrmd/blob/master/INSTALL.md)
 
-- tpm2-tools-5.4
+- tpm2-tools-5.5
 
-  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.4 of the library.
+  This library provides the necessary tools to interact and perform operations using the TPM*, to the users. It uses release version 5.5 of the library.
 
   - Source Code
 
-    The library can be downloaded from [tpm2-tools-5.4-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.4/tpm2-tools-5.4.tar.gz)
+    The library can be downloaded from [tpm2-tools-5.5-download](https://github.com/tpm2-software/tpm2-tools/releases/download/5.5/tpm2-tools-5.5.tar.gz)
 
   - Build and Installation Process
 
-    The build and installation process can be found at [tpm2-tools-5.4-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
+    The build and installation process can be found at [tpm2-tools-5.5-install](https://github.com/tpm2-software/tpm2-tools/blob/4.0.X/INSTALL.md)
 
 - tpm2-openssl-1.1.1
 
@@ -275,7 +275,7 @@ Following steps should be performed if FDO TPM* [TPM-Library-Installation-Script
 
 ## 3. Compiling Intel safestringlib
 
-FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a> and follow these instructions to build:
+FDO Client SDK uses safestringlib for string and memory operations to prevent serious security vulnerabilities (For example, buffer overflows). Download safestringlib from <a href="https://github.com/intel/safestringlib">intel-safestringlib</a>, checkout to the tag `v1.2.0` and follow these instructions to build:
 From the root of the safestringlib, do the following:
  ```shell
  mkdir obj
@@ -284,7 +284,7 @@ From the root of the safestringlib, do the following:
 After this step, `libsafestring.a` library will be created.
 
 ## 4. Compiling Intel TinyCBOR
-FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.5.3` and follow these instructions to build:
+FDO Client SDK uses TinyCBOR library for Concise Binary Object Representation (CBOR) encoding and decoding. Download TinyCBOR from <a href="https://github.com/intel/tinycbor">TinyCBOR</a>, checkout to the tag `v0.6.0` and follow these instructions to build:
 From the root of the TinyCBOR (named `tinycbor`), do the following:
  ```shell
  make
@@ -414,12 +414,12 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 3.0.7 for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 3.0.8 for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
   openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.7, follow the steps given in section 1 to update the OpenSSL* version to 3.0.7.
+  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.8, follow the steps given in section 1 to update the OpenSSL* version to 3.0.8.
 
 
