@@ -19,7 +19,11 @@
 #include <stddef.h>
 
 // platform HMAC and blob size
-#define PLATFORM_HMAC_SIZE BUFF_SIZE_32_BYTES
+#if defined(DEVICE_TPM20_ENABLED) && defined(ECDSA384_DA)
+	#define PLATFORM_HMAC_SIZE BUFF_SIZE_48_BYTES
+#else
+	#define PLATFORM_HMAC_SIZE BUFF_SIZE_32_BYTES
+#endif
 #define BLOB_CONTENT_SIZE BUFF_SIZE_4_BYTES
 
 typedef enum {
