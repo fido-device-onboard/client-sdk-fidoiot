@@ -10,10 +10,20 @@
 #include <tss2/tss2_tctildr.h>
 
 #define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 128
-#define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_160 160
-#define TPM_HMAC_PUB_KEY_CONTEXT_SIZE 48
 
-#define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P256
+#if defined(ECDSA256_DA)
+	#define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P256
+	#define TPM_AES_BITS 128
+	#define FDO_TPM2_ALG_SHA TPM2_ALG_SHA256
+	#define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE 160
+	#define TPM_HMAC_PUB_KEY_CONTEXT_SIZE 48
+#else
+	#define FDO_TPM2_CURVE_ID TPM2_ECC_NIST_P384
+	#define TPM_AES_BITS 256
+	#define FDO_TPM2_ALG_SHA TPM2_ALG_SHA384
+	#define TPM_HMAC_PRIV_KEY_CONTEXT_SIZE 224
+	#define TPM_HMAC_PUB_KEY_CONTEXT_SIZE 64
+#endif
 
 #define TPM2_ZEROISE_FREE(ref)                                                 \
 	{                                                                      \
@@ -29,7 +39,7 @@ static const TPM2B_PUBLIC in_public_primary_key_template = {
     .publicArea =
 	{
 	    .type = TPM2_ALG_ECC,
-	    .nameAlg = TPM2_ALG_SHA256,
+	    .nameAlg = FDO_TPM2_ALG_SHA,
 	    .objectAttributes =
 		(TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_RESTRICTED |
 		 TPMA_OBJECT_DECRYPT | TPMA_OBJECT_FIXEDTPM |
@@ -42,7 +52,7 @@ static const TPM2B_PUBLIC in_public_primary_key_template = {
 	    .parameters.eccDetail = {.symmetric =
 					  {
 					      .algorithm = TPM2_ALG_AES,
-					      .keyBits.aes = 128,
+					      .keyBits.aes = TPM_AES_BITS,
 					      .mode.aes = TPM2_ALG_CFB,
 					  },
 				      .scheme =
@@ -66,7 +76,7 @@ static const TPM2B_PUBLIC in_publicHMACKey_template = {
     .publicArea =
 	{
 	    .type = TPM2_ALG_KEYEDHASH,
-	    .nameAlg = TPM2_ALG_SHA256,
+	    .nameAlg = FDO_TPM2_ALG_SHA,
 	    .objectAttributes =
 		(TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_DECRYPT |
 		 TPMA_OBJECT_SIGN_ENCRYPT | TPMA_OBJECT_FIXEDTPM |
