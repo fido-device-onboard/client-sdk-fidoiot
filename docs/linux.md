@@ -2,6 +2,7 @@
 
 
 
+
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
@@ -58,6 +59,7 @@ Curl version 8.0.1
 	```
 	./config --libdir=/usr/local/lib
 	```
+	
 4. Issue the command:
 	```
 	make
@@ -94,7 +96,7 @@ Issue the following command from the terminal:
 	OpenSSL* 3.0.8  7 Feb 2023
 	```
 
-#### Steps to install curl version 7.86 configured with openssl
+#### Steps to install curl version 8.0.1 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
@@ -130,6 +132,10 @@ Issue the following command from the terminal:
     curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
+> OPENSSL_ROOT=/opt/openssl 
+> CURL_ROOT=/opt/curl
+ 
 **Script usage command**
 
 * Command to install OpenSSL and Curl
@@ -142,18 +148,15 @@ Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) 
 	sudo ./install_openssl_curl.sh -u
 	```
 
-Note 1: If above command is not successful, then link the path where curl is installed to the system path
-	```
-	sudo ln -s /usr/local/bin/curl /usr/bin/curl
-	```
 
-Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 7.86 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
+
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.0.1 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
 Range of IP addresses example: no_proxy="10.60.0.0/16"
 
-Note 3: On RHEL, Curl could also be installed using yum package manager as shown below:
+Note 2: On RHEL, Curl could also be installed using yum package manager as shown below:
 	```
 	sudo yum -y install libcurl-devel
 	```
@@ -177,8 +180,10 @@ From the root of the TinyCBOR (named `tinycbor`), do the following:
 
 ## 5. Environment Variables
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
-Provide safestringlib and tinycbor paths:
+Provide OpenSSL, Curl, safestringlib and tinycbor paths:
 ```shell
+export OPENSSL3_ROOT=path/to/openssl (default provide /opt/openssl)
+export CURL_ROOT=path/to/curl (default provide /opt/curl)
 export SAFESTRING_ROOT=path/to/safestringlib
 export TINYCBOR_ROOT=path/to/tinycbor
 ```
@@ -226,12 +231,3 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
-- If the client-sdk binary is built on openssl 3.0.8 environment and then executed with openssl 3 environment, it may fail with "libssl.so.1.1 not found" error. In order to successfully execute it,  build the specific 1.1.1 version dependent libraries and make it available as well:
-```
-    wget https://www.openssl.org/source/openssl-3.0.8.tar.gz
-    tar -zxf openssl-3.0.8.tar.gz && cd openssl-3.0.8
-    ./config
-    make
-    cp libssl.so.1.1 /usr/lib/x86_64-linux-gnu/
-    cp libcrypto.so.1.1 /usr/lib/x86_64-linux-gnu/
-```

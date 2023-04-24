@@ -1,11 +1,13 @@
+export OPENSSL3_ROOT=/opt/openssl
+export CURL_ROOT=/opt/curl
 TPM2_TSS_VER="4.0.1"
-TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
+TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz --no-check-certificate"
 TPM2_ABRMD_VER="3.0.0"
-TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz"
+TPM2_ABRMD_LINK="https://github.com/tpm2-software/tpm2-abrmd/releases/download/$TPM2_ABRMD_VER/tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz --no-check-certificate"
 TPM2_TOOLS_VER="5.5"
-TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz"
+TPM2_TOOLS_LINK="https://github.com/tpm2-software/tpm2-tools/releases/download/$TPM2_TOOLS_VER/tpm2-tools-$TPM2_TOOLS_VER.tar.gz --no-check-certificate"
 TPM2_OPENSSL_VER="1.1.1"
-TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/$TPM2_OPENSSL_VER/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
+TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/$TPM2_OPENSSL_VER/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz --no-check-certificate"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -49,7 +51,7 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
+    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=$OPENSSL3_ROOT/lib64/pkgconfig/:$CURL_ROOT/lib/pkgconfig/
     make -j$(nproc)
     make install
 
@@ -70,7 +72,8 @@ install_tpm2abrmd()
     wget $TPM2_ABRMD_LINK
     tar -xvzf tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz
     cd tpm2-abrmd-$TPM2_ABRMD_VER
-
+    
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/ \
     ./configure --with-dbuspolicydir=/etc/dbus-1/system.d --with-systemdsystemunitdir=/lib/systemd/system/ --with-systemdpresetdir=/lib/systemd/system-preset/
     make -j$(nproc)
     make install
@@ -95,7 +98,10 @@ install_tpm2tools()
     tar -xvzf tpm2-tools-$TPM2_TOOLS_VER.tar.gz
     cd tpm2-tools-$TPM2_TOOLS_VER
 
-    ./configure PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
+    ./configure PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/ \
+    CFLAGS="-I$OPENSSL3_ROOT/include -I$CURL_ROOT/include" LDFLAGS="-L$OPENSSL3_ROOT/lib64 -L$CURL_ROOT/lib" \
+    CRYPTO_CFLAGS="-I$OPENSSL3_ROOT/include" CURL_CFLAGS=" -I$CURL_ROOT/include" CRYPTO_LIBS="-L$OPENSSL3_ROOT/lib64" CURL_LIBS="-L$CURL_ROOT/lib" \
+    LIBS="-lssl -lcrypto -lcurl -ldl"
     make -j$(nproc)
     make install
 }
@@ -110,10 +116,12 @@ install_tpm2openssl()
     cd tpm2-openssl-$TPM2_OPENSSL_VER
 
     ./bootstrap
-    ./configure --with-modulesdir=/usr/local/lib/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/
+    ./configure --with-modulesdir=$OPENSSL3_ROOT/lib64/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/ \
+    CFLAGS="-I$OPENSSL3_ROOT/include -I$CURL_ROOT/include" LDFLAGS="-L$OPENSSL3_ROOT/lib64 -L$CURL_ROOT/lib" \
+    CRYPTO_CFLAGS="-I$OPENSSL3_ROOT/include" CURL_CFLAGS=" -I$CURL_ROOT/include" CRYPTO_LIBS="-L$OPENSSL3_ROOT/lib64" CURL_LIBS="-L$CURL_ROOT/lib"
     make -j$(nproc)
     make install
-    libtool --finish /usr/local/lib/ossl-modules/
+    libtool --finish $OPENSSL3_ROOT/lib64/ossl-modules/
     ldconfig
 }
 

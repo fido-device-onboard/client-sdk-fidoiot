@@ -3,6 +3,7 @@
 
 
 
+
 # Linux* TPM* Implementation
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
@@ -79,7 +80,7 @@ Curl version 8.0.1
 	```
 10. Run the command to update symlinks and rebuild the library cache:
 	```
-	grep -qxF '/usr/local/lib64/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+	grep -qxF '/usr/local/lib/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
 	sudo ldconfig
 	```
 11. Assuming no errors in executing steps 4 through 10, you should have successfully installed the new version of the OpenSSL* toolkit.
@@ -92,7 +93,7 @@ Issue the following command from the terminal:
 	OpenSSL* 3.0.8  7 Feb 2023
 	```
 
-#### Steps to install curl version 7.86 configured with openssl
+#### Steps to install curl version 8.0.1 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
@@ -128,6 +129,10 @@ Issue the following command from the terminal:
     curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
+> OPENSSL_ROOT=/opt/openssl 
+> CURL_ROOT=/opt/curl
+> 
 **Script usage command**
 
 * Command to install OpenSSL and Curl
@@ -139,18 +144,14 @@ Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) 
 	```
 	sudo ./install_openssl_curl.sh -u
 	```
-Note 1: If above command is not successful, then link the path where curl is installed to the system path
-	```
-	sudo ln -s /usr/local/bin/curl /usr/bin/curl
-	```
 
-Note 2: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 7.86. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.0.1. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
 Range of IP addresses example: no_proxy="10.60.0.0/16"
 
-Note 3: On RHEL, Curl could also be installed using yum package manager as shown below:
+Note 2: On RHEL, Curl could also be installed using yum package manager as shown below:
 	```
 	sudo yum -y install libcurl-devel
 	```
@@ -158,7 +159,7 @@ Note 3: On RHEL, Curl could also be installed using yum package manager as shown
 
 ## 2. TPM* Library Installation
 
-TPM* enabled FDO Client SDK uses TPM-TSS 4.0.0, TPM2-ABRMD 3.0.0, and TPM2-TOOLS 5.4 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
+TPM* enabled FDO Client SDK uses TPM-TSS 4.0.1, TPM2-ABRMD 3.0.0, and TPM2-TOOLS 5.5 libraries for key and cryptography related operations. The TPM-TSS library is required for compiling the code while all 3 libraries are required for running the code. Create an empty directory, download and execute FDO TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) which can be used for both installation and uninstallation of TPM* libraries. Alternatively, perform steps listed in section 2.1 to setup TPM* library without using the TPM* [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh).
 
 To compile and execute TPM* enabled FDO Client SDK use one of the appropriate commands:
 
@@ -218,6 +219,9 @@ sudo ./install_tpm_libs_rhel.sh -h
 	```
 	sudo ./install_tpm_libs_rhel.sh -u
 	```
+> ***NOTE***: TPM Installation-Script will use OpenSSL and Curl from /opt/ by default. To provide different path, modify these variables in the script 
+> OPENSSL3_ROOT=/opt/openssl 
+> CURL_ROOT=/opt/curl
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM*)
 
@@ -293,8 +297,10 @@ From the root of the TinyCBOR (named `tinycbor`), do the following:
 ## 5. Environment Variables
 
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
-Provide safestringlib and tinycbor path:
+Provide OpenSSL, Curl, safestringlib and tinycbor paths:
 ```shell
+export OPENSSL3_ROOT=path/to/openssl (default provide /opt/openssl)
+export CURL_ROOT=path/to/curl (default provide /opt/curl)
 export SAFESTRING_ROOT=path/to/safestringlib
 export TINYCBOR_ROOT=path/to/tinycbor
 ```
@@ -345,9 +351,9 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   Script execution command:
 
   ```shell
-  ./tpm_make_ready_ecdsa.sh -e <ECDSA type 256 or 384> -p <FDO Client SDK data folder location>
+  sudo ./tpm_make_ready_ecdsa.sh -e <ECDSA type 256 or 384> -p <FDO Client SDK data folder location>
   ```
-
+> ***NOTE***:  On RedHat if sudo won't work, log in to su and then execute tpm_make_ready_ecdsa.sh script
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
   ./build/linux-client
@@ -360,7 +366,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
-NOTE: linux-client may require elevated privileges. Please use 'sudo' to execute.
+> ***NOTE***:  linux-client may require elevated privileges. Please use 'sudo' to execute.
 
 
 
@@ -371,26 +377,26 @@ NOTE: linux-client may require elevated privileges. Please use 'sudo' to execute
   Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
 
   ```shell
-  tpm2_getcap handles-persistent
+  sudo tpm2_getcap handles-persistent
   ```
 
 
 - Primary Key Generation from Endorsement Hierarchy
 
   ```shell
-  tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
+  sudo tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
   ```
 
 - Load the Primary Key into TPM* Persistent Memory
 
   ```shell
-  tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
+  sudo tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
   ```
 
 - Device ECDSA Key-Pair Generation
 
   ```shell
-  tpm2tss-genkey -a ecdsa -c nist_p256 data/tpm_ecdsa_priv_pub_blob.key -v -P 0x81000001
+  sudo tpm2tss-genkey -a ecdsa -c nist_p256 data/tpm_ecdsa_priv_pub_blob.key -v -P 0x81000001
   ```
 
 - Generate Device MString
@@ -410,7 +416,7 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   Assuming that the index is 0x81000001, run the following command to delete the keys.
 
   ```shell
-  tpm2_evictcontrol -C o -c 0x81000001 -V
+  sudo tpm2_evictcontrol -C o -c 0x81000001 -V
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />

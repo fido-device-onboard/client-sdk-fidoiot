@@ -1,4 +1,5 @@
-#OPENSSL_VER=""
+OPENSSL_ROOT=/opt/openssl
+CURL_ROOT=/opt/curl
 CURL_VER="8.0.1"
 CURL_LINK="https://curl.se/download/curl-8.0.1.tar.gz --no-check-certificate"
 
@@ -17,15 +18,12 @@ install()
     tar -xvzf openssl-$OPENSSL_VER.tar.gz
     cd openssl-$OPENSSL_VER
 
-    ./config --libdir=/usr/local/lib
+    ./config --prefix=$OPENSSL_ROOT --openssldir=/usr/local/ssl
     make -j$(nproc)
-    mv /usr/bin/openssl ~/tmp
     make install
     
-    ln -s /usr/local/bin/openssl /usr/bin/openssl
-    grep -qxF '/usr/local/lib/' /etc/ld.so.conf.d/libc.conf || echo /usr/local/lib/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
+    grep -qxF '$OPENSSL_ROOT/lib64/' /etc/ld.so.conf.d/libc.conf || echo $OPENSSL_ROOT/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
     ldconfig
-    openssl version
 	
     echo "Build & Install Curl version : $CURL_VER"
     cd $PARENT_DIR
@@ -33,15 +31,12 @@ install()
     tar -xvzf curl-$CURL_VER.tar.gz
     cd curl-$CURL_VER
 
-    ./configure --with-openssl=$PARENT_DIR/openssl-$OPENSSL_VER --enable-versioned-symbols
+    ./configure --prefix=$CURL_ROOT --with-openssl=$OPENSSL_ROOT --enable-versioned-symbols
     make -j$(nproc)
     make install
     
-    ldconfig
-    openssl version
-    curl --version
-	
-	
+    $OPENSSL_ROOT/bin/openssl version
+    $CURL_ROOT/bin/curl -V
 }
 
 
@@ -71,8 +66,8 @@ usage()
         ./$0 <OPTION>\n
         OPTION:
             -i - Install OpenSSL.
-	    -u - Uninstall OpenSSL. (e.g. -v 3.0.8)
-	    -v - OpenSSL Version
+	          -u - Uninstall OpenSSL. (e.g. -v 3.0.8)
+            -v - OpenSSL Version
             -h - Help."
 }
 

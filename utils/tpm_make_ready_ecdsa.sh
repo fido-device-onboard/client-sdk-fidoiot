@@ -1,5 +1,6 @@
 export TPM2TOOLS_TCTI="tabrmd"
-export OPENSSL_ENGINES=/usr/local/lib/engines-1.1/
+export OPENSSL3_ROOT=/opt/openssl
+
 TPM_KEY_FILE_INSIDE_DATA_DIR="tpm_ecdsa_priv_pub_blob.key"
 DEVICE_CSR_FILE_INSIDE_DATA_DIR="tpm_device_csr"
 PARENT_DIR=""
@@ -110,13 +111,13 @@ failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="TPM ECDSA key generation using $curve"
-cmd="openssl genpkey -provider tpm2 -algorithm EC -pkeyopt group:P-$ecc -pkeyopt parent:$TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -out $tpm_device_key_file"
+cmd="$OPENSSL3_ROOT/bin/openssl genpkey -provider tpm2 -algorithm EC -pkeyopt group:P-$ecc -pkeyopt parent:$TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -out $tpm_device_key_file"
 success_string="$task completed successfully at $tpm_device_key_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\${cmd}" "\${success_string}" "\${failure_string}" 1 1
 
 task="Device CSR generation from TPM"
-cmd="openssl req -new -provider tpm2 -provider default -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
+cmd="$OPENSSL3_ROOT/bin/openssl req -new -provider tpm2 -provider default -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
 success_string="$task completed successfully at $device_csr_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
