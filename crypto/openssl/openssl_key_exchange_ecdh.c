@@ -15,7 +15,6 @@
 #include "BN_support.h"
 #include "openssl/ec.h"
 #include "openssl/objects.h"
-#include "openssl/core_names.h"
 #include "safe_lib.h"
 #define DECLARE_BIGNUM(bn) bignum_t *bn
 
@@ -30,10 +29,9 @@
 typedef struct {
 	DECLARE_BIGNUM(_Device_random);
 	DECLARE_BIGNUM(_publicA); /* The server's A public value */
-	uint32_t group_name_nid;
-	EVP_PKEY *_key;
+	EC_KEY *_key;
 
-	DECLARE_BIGNUM(_secretb); /* Out bit secret */
+	const DECLARE_BIGNUM(_secretb); /* Out bit secret */
 	DECLARE_BIGNUM(_publicB);       /* Our B public value */
 	DECLARE_BIGNUM(_shared_secret);
 	uint8_t *_pubB;
@@ -51,6 +49,7 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data);
 int32_t crypto_hal_kex_init(void **context)
 {
 	ecdh_context_t *key_ex_data = NULL;
+	EC_KEY *key = NULL;
 
 	if (!context) {
 		LOG(LOG_ERROR, "Invalid parameters\n");
@@ -73,17 +72,23 @@ int32_t crypto_hal_kex_init(void **context)
 	key_ex_data->_Device_random = BN_new();
 
 	if (!key_ex_data->_publicB || !key_ex_data->_publicA ||
-			!key_ex_data->_shared_secret || !key_ex_data->_Device_random) {
+	    !key_ex_data->_shared_secret || !key_ex_data->_Device_random) {
 		LOG(LOG_ERROR, "BN alloc failed\n");
 		goto error;
 	}
 
-	key_ex_data->group_name_nid = KEY_CURVE;
-
+	key = EC_KEY_new_by_curve_name(KEY_CURVE);
 	/* Generate Device Random bits(384) */
 	if (bn_rand(key_ex_data->_Device_random, BN_RANDOM_SIZE)) {
 		goto error;
 	}
+
+	if (key == NULL) {
+		LOG(LOG_ERROR, "failed to get the curve parameters\n");
+		goto error;
+	}
+
+	key_ex_data->_key = key;
 
 	if (compute_publicBECDH(key_ex_data) == false) {
 		goto error;
@@ -122,14 +127,11 @@ int32_t crypto_hal_kex_close(void **context)
 	if (key_ex_data->_shared_secret) {
 		BN_clear_free(key_ex_data->_shared_secret);
 	}
-	if (key_ex_data->_secretb) {
-		BN_clear_free(key_ex_data->_secretb);
-	}
 	if (key_ex_data->_Device_random) {
 		BN_clear_free(key_ex_data->_Device_random);
 	}
 	if (key_ex_data->_key != NULL) {
-		EVP_PKEY_free(key_ex_data->_key);
+		EC_KEY_free(key_ex_data->_key);
 		key_ex_data->_key = NULL;
 	}
 	if (key_ex_data->_pubB) {
@@ -149,7 +151,10 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 {
 	BN_CTX *ctx = NULL;
 
-	EC_GROUP *group = NULL;
+	const EC_GROUP *group = NULL;
+	EC_KEY *key = NULL;
+
+	const EC_POINT *point = NULL;
 	BIGNUM *x = NULL, *y = NULL;
 	unsigned char *temp = NULL;
 	int size = 0;
@@ -175,50 +180,69 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 		goto exit;
 	}
 
-	group = EC_GROUP_new_by_curve_name(key_ex_data->group_name_nid);
-	if (group == NULL) {
-		LOG(LOG_ERROR, "Failed to get the EC group\n");
+	key = key_ex_data->_key;
+	if (!key) {
+		LOG(LOG_ERROR, "EC key  is wrong\n");
+		goto exit;
+	}
+	group = EC_KEY_get0_group(key);
+	if (!group) {
+		LOG(LOG_ERROR, "EC group get failed\n");
 		goto exit;
 	}
 
 	/* generate the public key and private key */
-	key_ex_data->_key = EVP_EC_gen(OBJ_nid2sn(key_ex_data->group_name_nid));
-	if (!key_ex_data->_key) {
+	if (EC_KEY_generate_key(key) == 0) {
 		LOG(LOG_ERROR, "EC key generation failed\n");
 		goto exit;
 	}
 
 	/* Store the private key */
-	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_PRIV_KEY, &(key_ex_data->_secretb))) {
+	key_ex_data->_secretb = EC_KEY_get0_private_key(key);
+	if (!key_ex_data->_secretb) {
 		LOG(LOG_ERROR, "EC private key get failed\n");
 		goto exit;
 	}
 
-	/* Get the public key co-ordinates in x and y*/
-	if (!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_X, &x) ||
-			!EVP_PKEY_get_bn_param(key_ex_data->_key, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
+	/* Get the public key */
+	point = EC_KEY_get0_public_key(key);
+	if (!point) {
+		LOG(LOG_ERROR, "EC public key get failed\n");
+		goto exit;
+	}
+	if (EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx) == 0) {
 		LOG(LOG_ERROR, "EC cordinate get failed\n");
 		goto exit;
 	}
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Print the co-ordinates */
+	char *hexbuf1 = BN_bn2hex(x);
 
-	LOG(LOG_DEBUG, "Bx %s : bytes %d\n",
-			BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x));
+	LOG(LOG_DEBUG, "Bx %s : bytes %d, %s\n",
+	    BN_is_negative(x) ? "Negative" : "Positive", bn_num_bytes(x),
+	    hexbuf1);
+	OPENSSL_free(hexbuf1);
 
-	LOG(LOG_DEBUG, "By %s : bytes %d\n",
-			BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y));
+	char *hexbuf2 = BN_bn2hex(y);
 
-	LOG(LOG_DEBUG, "Device Random  %s : bytes %d\n",
-			BN_is_negative(key_ex_data->_Device_random) ? "Negative"
-			: "Positive",
-			bn_num_bytes(key_ex_data->_Device_random));
+	LOG(LOG_DEBUG, "By %s : bytes %d, %s\n",
+	    BN_is_negative(y) ? "Negative" : "Positive", bn_num_bytes(y),
+	    hexbuf2);
+	OPENSSL_free(hexbuf2);
+
+	char *hexbuf3 = BN_bn2hex(key_ex_data->_Device_random);
+
+	LOG(LOG_DEBUG, "Device Random  %s : bytes %d, %s\n",
+	    BN_is_negative(key_ex_data->_Device_random) ? "Negative"
+							: "Positive",
+	    bn_num_bytes(key_ex_data->_Device_random), hexbuf3);
+	OPENSSL_free(hexbuf3);
 #endif
 
 	/* 2byte for each blen 3x2 =6 */
 	allocbytes = (bn_num_bytes(x) + bn_num_bytes(y) +
-			bn_num_bytes(key_ex_data->_Device_random) + 6);
+		      bn_num_bytes(key_ex_data->_Device_random) + 6);
 	temp = fdo_alloc(allocbytes);
 	if (!temp) {
 		LOG(LOG_ERROR, "Mem alloc failed\n");
@@ -268,20 +292,19 @@ static bool compute_publicBECDH(ecdh_context_t *key_ex_data)
 	key_ex_data->_publicB_length = allocbytes;
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	hexdump("_publicB::", key_ex_data->_publicB,
-			key_ex_data->_publicB_length);
+		key_ex_data->_publicB_length);
 	{
+		char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
 
-		LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d\n",
-				BN_is_negative(key_ex_data->_publicB) ? "Negative"
-				: "Positive",
-				bn_num_bytes(key_ex_data->_publicB));
+		LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, %s\n",
+		    BN_is_negative(key_ex_data->_publicB) ? "Negative"
+							  : "Positive",
+		    bn_num_bytes(key_ex_data->_publicB), hexbuf);
+		OPENSSL_free(hexbuf);
 	}
 #endif
 	ret = true;
 exit:
-	if (group) {
-		EC_GROUP_free(group);
-	}
 	if (temp) {
 		fdo_free(temp);
 	}
@@ -309,7 +332,7 @@ exit:
  * @return 0 if success, else -1
  */
 int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
-		uint32_t *dev_rand_length)
+				     uint32_t *dev_rand_length)
 {
 	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
@@ -327,7 +350,7 @@ int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
 	}
 
 	if (memcpy_s(dev_rand_value, *dev_rand_length, key_ex_data->_pubB,
-				*dev_rand_length) != 0) {
+		     *dev_rand_length) != 0) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
 		return -1;
 	}
@@ -343,8 +366,8 @@ int32_t crypto_hal_get_device_random(void *context, uint8_t *dev_rand_value,
  * @return 0 if success, else false.
  */
 int32_t crypto_hal_set_peer_random(void *context,
-		const uint8_t *peer_rand_value,
-		uint32_t peer_rand_length)
+				   const uint8_t *peer_rand_value,
+				   uint32_t peer_rand_length)
 {
 	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
@@ -360,9 +383,10 @@ int32_t crypto_hal_set_peer_random(void *context,
 	int size = 0;
 	BIGNUM *Ax_bn = NULL, *Ay_bn = NULL, *owner_random_bn = NULL;
 	BIGNUM *Shx_bn = NULL, *Shy_bn = NULL;
-	EC_GROUP *group = NULL;
+	const EC_GROUP *group = NULL;
 	EC_POINT *point = NULL;
 	EC_POINT *Sh_se_point = NULL;
+	EC_KEY *key = NULL;
 	int ret = -1;
 
 	Ax_bn = BN_new();
@@ -380,20 +404,25 @@ int32_t crypto_hal_set_peer_random(void *context,
 	LOG(LOG_DEBUG, "set_publicA : bytes : %u\n", peer_rand_length);
 	hexdump("Public A", peer_rand_value, peer_rand_length);
 	/* Display public - B */
+	char *hexbuf = BN_bn2hex(key_ex_data->_publicB);
 
-	LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d\n",
-			BN_is_negative(key_ex_data->_publicB) ? "Negative" : "Positive",
-			bn_num_bytes(key_ex_data->_publicB));
+	LOG(LOG_DEBUG, "key_ex_data->_publicB %s : bytes %d, 0x%s\n",
+	    BN_is_negative(key_ex_data->_publicB) ? "Negative" : "Positive",
+	    bn_num_bytes(key_ex_data->_publicB), hexbuf);
+	OPENSSL_free(hexbuf);
 #endif
 	bn_bin2bn(peer_rand_value, peer_rand_length, key_ex_data->_publicA);
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
 	/* Display Public - A */
+	char *hexbuf1 = BN_bn2hex(key_ex_data->_publicA);
+
 	LOG(LOG_DEBUG,
-			"Device Received: key_ex_data->_publicA %s : "
-			"bytes %d\n",
-			BN_is_negative(key_ex_data->_publicA) ? "Negative" : "Positive",
-			bn_num_bytes(key_ex_data->_publicA));
+	    "Device Received: key_ex_data->_publicA %s : "
+	    "bytes %d, 0x%s\n",
+	    BN_is_negative(key_ex_data->_publicA) ? "Negative" : "Positive",
+	    bn_num_bytes(key_ex_data->_publicA), hexbuf1);
+	OPENSSL_free(hexbuf1);
 #endif
 
 	temp = peer_rand_value;
@@ -414,18 +443,24 @@ int32_t crypto_hal_set_peer_random(void *context,
 	BN_bin2bn(&temp[size], size_owner_random, owner_random_bn);
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
+	char *hexbuf2 = BN_bn2hex(Ax_bn);
 
-	LOG(LOG_DEBUG, "Device Reveived: Ax %s : bytes %d\n",
-			BN_is_negative(Ax_bn) ? "Negative" : "Positive",
-			bn_num_bytes(Ax_bn));
+	LOG(LOG_DEBUG, "Device Reveived: Ax %s : bytes %d, %s\n",
+	    BN_is_negative(Ax_bn) ? "Negative" : "Positive",
+	    bn_num_bytes(Ax_bn), hexbuf2);
+	OPENSSL_free(hexbuf2);
+	char *hexbuf3 = BN_bn2hex(Ay_bn);
 
-	LOG(LOG_DEBUG, "Device Received: Ay %s : bytes %d\n",
-			BN_is_negative(Ay_bn) ? "Negative" : "Positive",
-			bn_num_bytes(Ay_bn));
+	LOG(LOG_DEBUG, "Device Received: Ay %s : bytes %d, %s\n",
+	    BN_is_negative(Ay_bn) ? "Negative" : "Positive",
+	    bn_num_bytes(Ay_bn), hexbuf3);
+	OPENSSL_free(hexbuf3);
+	char *hexbuf4 = BN_bn2hex(owner_random_bn);
 
-	LOG(LOG_DEBUG, "Device Reveived: Owner Random  %s : bytes %d\n",
-			BN_is_negative(owner_random_bn) ? "Negative" : "Positive",
-			bn_num_bytes(owner_random_bn));
+	LOG(LOG_DEBUG, "Device Reveived: Owner Random  %s : bytes %d, %s\n",
+	    BN_is_negative(owner_random_bn) ? "Negative" : "Positive",
+	    bn_num_bytes(owner_random_bn), hexbuf4);
+	OPENSSL_free(hexbuf4);
 #endif
 	ctx = BN_CTX_new();
 	if (!ctx) {
@@ -433,18 +468,14 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto error;
 	}
 
-	group = EC_GROUP_new_by_curve_name(key_ex_data->group_name_nid);
-	if (group == NULL)
-	{
-		LOG(LOG_ERROR, "Failed to get the EC group\n");
-		goto error;
-	}
+	key = key_ex_data->_key;
+	group = EC_KEY_get0_group(key);
 	point = EC_POINT_new(group);
-	if (group == NULL || point == NULL) {
+	if (group == NULL || point == NULL || key == NULL) {
 		LOG(LOG_ERROR, "Error curve parameters are NULL\n");
 		goto error;
 	}
-	EC_POINT_set_affine_coordinates(group, point, Ax_bn, Ay_bn, ctx);
+	EC_POINT_set_affine_coordinates_GFp(group, point, Ax_bn, Ay_bn, ctx);
 	shx = fdo_alloc(bn_num_bytes(Ax_bn));
 	if (!shx) {
 		goto error;
@@ -470,12 +501,12 @@ int32_t crypto_hal_set_peer_random(void *context,
 		goto error;
 	}
 	if (EC_POINT_mul(group, Sh_se_point, NULL, point, key_ex_data->_secretb,
-				ctx) == 0) {
+			 ctx) == 0) {
 		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
-	if (EC_POINT_get_affine_coordinates(group, Sh_se_point, Shx_bn,
-				Shy_bn, ctx) == 0) {
+	if (EC_POINT_get_affine_coordinates_GFp(group, Sh_se_point, Shx_bn,
+						Shy_bn, ctx) == 0) {
 		EC_POINT_free(Sh_se_point);
 		goto error;
 	}
@@ -488,7 +519,7 @@ int32_t crypto_hal_set_peer_random(void *context,
 	EC_POINT_free(Sh_se_point);
 #endif
 	shse = fdo_alloc(bn_num_bytes(key_ex_data->_Device_random) +
-			size_owner_random + bn_num_bytes(Shx_bn));
+			 size_owner_random + bn_num_bytes(Shx_bn));
 	if (!shse) {
 		LOG(LOG_ERROR, "Memcopy failed\n");
 		goto error;
@@ -518,9 +549,6 @@ int32_t crypto_hal_set_peer_random(void *context,
 
 	ret = 0;
 error:
-	if (group) {
-		EC_GROUP_free(group);
-	}
 	if (point) {
 		EC_POINT_free(point);
 	}
@@ -561,7 +589,7 @@ error:
  *  @return 0 on success or -1 on failure.
  */
 int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
-		uint32_t *secret_length)
+			      uint32_t *secret_length)
 {
 	ecdh_context_t *key_ex_data = (ecdh_context_t *)context;
 
@@ -576,7 +604,7 @@ int32_t crypto_hal_get_secret(void *context, uint8_t *secret,
 	}
 
 	if (*secret_length <
-			(uint32_t)bn_num_bytes(key_ex_data->_shared_secret)) {
+	    (uint32_t)bn_num_bytes(key_ex_data->_shared_secret)) {
 		LOG(LOG_ERROR, "Invalid buff size\n");
 		return -1;
 	}

@@ -18,7 +18,6 @@
 #include "ecdsa_privkey.h"
 #include "safe_lib.h"
 #include "fdotypes.h"
-#include "openssl/core_names.h"
 
 #define PLAIN_TEXT_SIZE BUFF_SIZE_1K_BYTES
 #define DER_PUBKEY_LEN_MAX 512
@@ -53,10 +52,10 @@ uint8_t pub_key[] = {
     0x83, 0x7d, 0x3e, 0x31, 0xee, 0x11, 0x40, 0xa9};
 
 /*** Function Declarations ***/
-EVP_PKEY *generateECDSA_key(int curve);
+EC_KEY *generateECDSA_key(int curve);
 int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
-		uint32_t *outlen, EVP_PKEY  *eckey);
-fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *eckey);
+		uint32_t *outlen, EC_KEY *eckey);
+fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey);
 void set_up(void);
 void tear_down(void);
 int32_t __wrap_crypto_hal_set_peer_random(void *context,
@@ -76,7 +75,7 @@ int __wrap_crypto_hal_sig_verify(
     uint32_t signature_length, const uint8_t *key_param1,
     uint32_t key_param1Length, const uint8_t *key_param2,
     uint32_t key_param2Length);
-// int __wrap_get_ec_key(void);
+int __wrap_get_ec_key(void);
 int __wrap_ECDSA_size(const EC_KEY *eckey);
 int __wrap_memcpy_s(void *dest, size_t dmax, const void *src, size_t smax);
 void test_crypto_support_random(void);
@@ -146,7 +145,7 @@ fdo_string_t *__wrap_fdo_string_alloc_with_str(char *data);
 errno_t __wrap_strcmp_s(const char *dest, rsize_t dmax, const char *src,
 			int *indicator);
 static uint8_t *get_randomiv(void);
-static EVP_PKEY *Private_key(void);
+static EC_KEY *Private_key(void);
 
 /*** Function Definitions ***/
 
@@ -163,24 +162,27 @@ static uint8_t *get_randomiv(void)
 }
 
 #ifdef USE_OPENSSL
-static EVP_PKEY *Private_key(void)
+static EC_KEY *Private_key(void)
 {
-	EVP_PKEY *evp_key = NULL;
-	uint32_t group_name_nid;
+	EC_KEY *eckey = NULL;
 
 #if defined(ECDSA256_DA)
-	group_name_nid = NID_X9_62_prime256v1;
+	eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 #else
-	group_name_nid = NID_secp384r1;
+	eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
 #endif
 
-	evp_key = EVP_EC_gen(OBJ_nid2sn(group_name_nid));
-	if (!evp_key) {
-		LOG(LOG_ERROR, "EC key generation failed\n");
+	if (eckey == NULL)
 		return NULL;
-	}
+	/* For cert signing, we use  the OPENSSL_EC_NAMED_CURVE flag */
+	EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
 
-	return evp_key;
+	if (eckey)
+		if (EC_KEY_generate_key(eckey) == 0) {
+			EC_KEY_free(eckey);
+			eckey = NULL;
+		}
+	return eckey;
 }
 #endif
 
@@ -224,35 +226,37 @@ static int Private_key(mbedtls_ecdsa_context *ctx_sign)
 #endif
 
 #ifdef USE_OPENSSL
-EVP_PKEY *generateECDSA_key(int curve)
+EC_KEY *generateECDSA_key(int curve)
 {
 	(void)curve;
-	EVP_PKEY *evp_key = NULL;
-	uint32_t group_name_nid;
+	EC_KEY *eckey = NULL;
 
 #if defined(ECDSA256_DA)
-	group_name_nid = NID_X9_62_prime256v1;
+	eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 #else
-	group_name_nid = NID_secp384r1;
+	eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
 #endif
-
-	evp_key = EVP_EC_gen(OBJ_nid2sn(group_name_nid));
-	if (!evp_key) {
-		LOG(LOG_ERROR, "EC key generation failed\n");
+	if (eckey == NULL)
 		return NULL;
-	}
 
-	return evp_key;
+	/* For cert signing, we use  the OPENSSL_EC_NAMED_CURVE flag */
+	EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
+
+	if (eckey)
+		if (EC_KEY_generate_key(eckey) == 0) {
+			EC_KEY_free(eckey);
+			eckey = NULL;
+		}
+	return eckey;
 }
 
 // return 0 on success; -1 for failure
 int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
-		uint32_t *outlen, EVP_PKEY *evpKey)
+		uint32_t *outlen, EC_KEY *eckey)
 {
 	(void)curve;
-	unsigned char *der_sig = NULL;
-	size_t der_sig_len = 0;
-	EVP_MD_CTX *mdctx = NULL;
+	uint8_t hash[SHA512_DIGEST_SIZE] = {0};
+	size_t hashlength = 0;
 	int result = -1;
 	ECDSA_SIG *sig = NULL;
 	unsigned char *sig_r = NULL;
@@ -260,55 +264,17 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 	unsigned char *sig_s = NULL;
 	int sig_s_len = 0;
 
-// Create the Message Digest Context
-	mdctx = EVP_MD_CTX_create();
-	if(!mdctx) {
-		LOG(LOG_ERROR, "Failed to create message digest context\n");
-		goto done;
-	}
 #if defined(ECDSA256_DA)
-	if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, evpKey)) {
-		LOG(LOG_ERROR, "EVP sign init failed \n");
+	if (SHA256(msg, mlen, hash) == NULL)
 		goto done;
-	}
-#elif defined(ECDSA384_DA)
-	if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha384(), NULL, evpKey)) {
-		LOG(LOG_ERROR, "EVP sign init failed \n");
+	hashlength = SHA256_DIGEST_SIZE;
+#else
+	if (SHA384(msg, mlen, hash) == NULL)
 		goto done;
-	}
+	hashlength = SHA384_DIGEST_SIZE;
 #endif
-	if (1 != EVP_DigestSignUpdate(mdctx, msg, mlen)) {
-		LOG(LOG_ERROR, "EVP sign update failed \n");
-		goto done;
-	}
-	//First call with NULL param to obtain the DER encoded signature length
-	if (1 != EVP_DigestSignFinal(mdctx, NULL, &der_sig_len)) {
-		LOG(LOG_ERROR, "EVP sign final for size failed \n");
-		goto done;
-	}
-	if (der_sig_len <= 0) {
-		LOG(LOG_ERROR, "EVP_DigestSignFinal returned invalid signature length.\n");
-		goto done;
-	}
 
-	der_sig = fdo_alloc(der_sig_len);
-	if (!der_sig) {
-		LOG(LOG_ERROR, "Signature alloc Failed\n");
-		goto done;
-	}
-	//second call with actual param to obtain the DEr encoded signature
-	if (1 != EVP_DigestSignFinal(mdctx, der_sig, &der_sig_len)) {
-		LOG(LOG_ERROR, "EVP sign final failed \n");
-		goto done;
-	}
-
-	// Decode DER encoded signature to convert to raw format
-	sig = ECDSA_SIG_new();
-	const unsigned char *sig_input = der_sig;
-	if (!sig || d2i_ECDSA_SIG(&sig, &sig_input, der_sig_len) == NULL) {
-		LOG(LOG_ERROR, "DER to EC_KEY struct decoding failed!\n");
-		goto done;
-	}
+	sig = ECDSA_do_sign(hash, hashlength, eckey);
 	TEST_ASSERT_NOT_NULL(sig);
 
 	// both r and s are maintained by sig, no need to free explicitly
@@ -348,22 +314,10 @@ done:
 	if (sig_s) {
 		fdo_free(sig_s);
 	}
-	if (der_sig) {
-		fdo_free(der_sig);
-		sig_input = NULL;
-	}
-	if (mdctx) {
-		EVP_MD_CTX_free(mdctx);
-		mdctx = NULL;
-	}
-	if (evpKey) {
-		EVP_PKEY_free(evpKey);
-		evpKey = NULL;
-	}
 	return result;
 }
 
-fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
+fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 {
 	(void)curve;
 	unsigned char *key_buf = NULL;
@@ -382,10 +336,9 @@ fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 #endif
 	TEST_ASSERT_NOT_NULL_MESSAGE(ecgroup, "Failed to get ECGROUP\n");
 
-	const EC_POINT *pub = EC_POINT_new(ecgroup);
+	const EC_POINT *pub = EC_KEY_get0_public_key(eckey);
 	TEST_ASSERT_NOT_NULL_MESSAGE(pub, "Failed to get ECPOINT\n");
-	/* Get the public key co-ordinates in x and y*/
-	if (EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_X, &x) && EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
+	if (EC_POINT_get_affine_coordinates_GFp(ecgroup, pub, x, y, NULL)) {
 		x_len = BN_num_bytes(x);
 		y_len = BN_num_bytes(y);
 		key_buf_len = x_len + y_len;
@@ -420,10 +373,6 @@ fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 	}
 	if (y) {
 		BN_free(y);
-	}
-	if (evpKey) {
-		EVP_PKEY_free(evpKey);
-		evpKey = NULL;
 	}
 	return pk;
 }
@@ -734,15 +683,15 @@ int __wrap_crypto_hal_sig_verify(
 }
 
 #ifdef USE_OPENSSL
-// int __real_get_ec_key(void);
-// int __wrap_get_ec_key(void)
-// {
-// 	if (get_ec_key_fail_flag) {
-// 		return 0;
-// 	} else {
-// 		return __real_get_ec_key();
-// 	}
-// }
+int __real_get_ec_key(void);
+int __wrap_get_ec_key(void)
+{
+	if (get_ec_key_fail_flag) {
+		return 0;
+	} else {
+		return __real_get_ec_key();
+	}
+}
 
 int __real_ECDSA_size(const EC_KEY *eckey);
 int __wrap_ECDSA_size(const EC_KEY *eckey)
@@ -824,7 +773,7 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 	size_t hash_length = SHA384_DIGEST_SIZE;
 #endif
 
-	EVP_PKEY *validkey = Private_key();
+	EC_KEY *validkey = Private_key();
 	TEST_ASSERT_NOT_NULL(validkey);
 	privatekey_buflen = hash_length;
 #endif
@@ -866,13 +815,8 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 #else
 
 #ifdef USE_OPENSSL
-	BIGNUM *privkey_bn = NULL;
-	if (!EVP_PKEY_get_bn_param((const EVP_PKEY *)validkey, OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
-		LOG(LOG_ERROR, "Failed to get private key bn\n");
-		ret = -1;
-	}
-
-	if (BN_bn2bin(privkey_bn, privatekey))
+	if (BN_bn2bin(EC_KEY_get0_private_key((const EC_KEY *)validkey),
+		      privatekey))
 		ret = 0;
 #endif
 #ifdef USE_MBEDTLS
@@ -893,7 +837,7 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 	BIO_free_all(outbio);
 #endif
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 #ifdef USE_MBEDTLS
 	mbedtls_ecdsa_free(&ctx_sign);
@@ -1906,7 +1850,7 @@ TEST_CASE("fdo_ov_verify", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -1979,7 +1923,7 @@ TEST_CASE("fdo_ov_verify", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2025,7 +1969,7 @@ TEST_CASE("fdo_ov_verify_invalid_message", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -2092,7 +2036,7 @@ TEST_CASE("fdo_ov_verify_invalid_message", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2136,7 +2080,7 @@ TEST_CASE("fdo_ov_verify_invalid_message_length", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -2203,7 +2147,7 @@ TEST_CASE("fdo_ov_verify_invalid_message_length", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2247,7 +2191,7 @@ TEST_CASE("fdo_ov_verify_invalid_message_signature", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -2314,7 +2258,7 @@ TEST_CASE("fdo_ov_verify_invalid_message_signature", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2358,7 +2302,7 @@ TEST_CASE("fdo_ov_verify_invalid_signature_len", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -2425,7 +2369,7 @@ TEST_CASE("fdo_ov_verify_invalid_signature_len", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2469,7 +2413,7 @@ TEST_CASE("fdo_ov_verify_invalid_pubkey", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -2535,7 +2479,7 @@ TEST_CASE("fdo_ov_verify_invalid_pubkey", "[crypto_support][fdo]")
 		fdo_public_key_free(pubkey);
 
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2577,7 +2521,7 @@ TEST_CASE("fdo_ov_verify_invalid_result", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -2646,7 +2590,7 @@ TEST_CASE("fdo_ov_verify_invalid_result", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -2670,9 +2614,10 @@ TEST_CASE("fdo_device_sign", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	// Positive test case
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(0, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -2689,9 +2634,10 @@ TEST_CASE("fdo_device_sign_invalid_message", "[crypto_support][fdo]")
 	int ret;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	/* Negative test case */
-	ret = fdo_device_sign(NULL, message_len, &signature);
+	ret = fdo_device_sign(NULL, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -2708,9 +2654,10 @@ TEST_CASE("fdo_device_sign_invalid_message_len", "[crypto_support][fdo]")
 	int ret;
 	const uint8_t *message = test_buff1;
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	/* Negative test case */
-	ret = fdo_device_sign(message, 0, &signature);
+	ret = fdo_device_sign(message, 0, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -3057,7 +3004,7 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][fdo]")
 #else
 	curve = 384;
 #endif
-	EVP_PKEY *validkey = generateECDSA_key(curve);
+	EC_KEY *validkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(validkey);
 	ret = sha_ECCsign(curve, message, message_length, message_signature,
 			  &signature_len, validkey);
@@ -3125,7 +3072,7 @@ TEST_CASE("crypto_hal_sig_verify_fail_case", "[crypto_support][fdo]")
 	if (pubkey)
 		fdo_public_key_free(pubkey);
 	if (validkey)
-		EVP_PKEY_free(validkey);
+		EC_KEY_free(validkey);
 #endif
 
 #ifdef USE_MBEDTLS
@@ -3153,9 +3100,10 @@ TEST_CASE("get_ec_key_fail_case", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	get_ec_key_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	get_ec_key_fail_flag = false;
@@ -3175,9 +3123,10 @@ TEST_CASE("ECDSA_size_fail_case", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	ECDSA_size_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	ECDSA_size_fail_flag = false;
@@ -3197,9 +3146,10 @@ TEST_CASE("memcpy_s_fail_case", "[crypto_support][fdo]")
 	const uint8_t *message = test_buff1;
 	size_t message_len = sizeof(test_buff1);
 	fdo_byte_array_t *signature = NULL;
+	fdo_byte_array_t *eat_maroe = NULL;
 
 	memcpy_s_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, &eat_maroe);
 	memcpy_s_fail_flag = false;
 	TEST_ASSERT_EQUAL(-1, ret);
 #else

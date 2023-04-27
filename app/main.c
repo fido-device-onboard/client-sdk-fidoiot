@@ -240,7 +240,7 @@ int app_main(bool is_resale)
 #endif /* SECURE_ELEMENT */
 
 #if !defined(DEVICE_CSE_ENABLED)
-	LOG(LOG_DEBUG, "CSE not enabled, Normal Blob Modules loaded!\n");
+	LOG(LOG_DEBUG, "CSE not enabaled, Normal Blob Modules loaded!\n");
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");

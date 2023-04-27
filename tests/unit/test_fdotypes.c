@@ -710,7 +710,7 @@ TEST_CASE("fdo_rendezvous_list_write", "[fdo_types][fdo]")
 void test_fdo_rendezvous_list_write(void)
 #endif
 {
-  TEST_IGNORE();
+
 	fdow_t *fdow = NULL;
 	fdo_rendezvous_t *rv = NULL;
 	fdo_rendezvous_list_t *rvlist = NULL;

@@ -13,7 +13,6 @@
 #include "fdoCrypto.h"
 #include "storage_al.h"
 #include "unity.h"
-#include "openssl/core_names.h"
 
 //#define HEXDEBUG 1
 
@@ -74,7 +73,7 @@ static void dump_pubkey(const char *title, void *ctx)
 #if defined(USE_OPENSSL)
 	uint8_t *pub_copy = buf;
 
-	EVP_PKEY *eckey = (EVP_PKEY *)ctx;
+	EC_KEY *eckey = (EC_KEY *)ctx;
 	len = i2o_ECPublicKey(eckey, NULL);
 
 	/* pub_copy is required, because i2o_ECPublicKey alters the input
@@ -113,34 +112,36 @@ static void showPK(fdo_public_key_t *pk)
 #endif
 //----------------------------------------------------
 #ifdef USE_OPENSSL
-static EVP_PKEY *generateECDSA_key(int curve)
+static EC_KEY *generateECDSA_key(int curve)
 {
-	EVP_PKEY *evp_key = NULL;
-	uint32_t group_name_nid;
+	EC_KEY *eckey = NULL;
 
 	if (curve == 256)
-		group_name_nid = NID_X9_62_prime256v1;
+		eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	else if (curve == 384)
-		group_name_nid = NID_secp384r1;
+		eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
 	else
 		return NULL;
 
-	evp_key = EVP_EC_gen(OBJ_nid2sn(group_name_nid));
-	if (!evp_key) {
-		LOG(LOG_ERROR, "EC key generation failed\n");
-		return NULL;
-	}
+	/* For cert signing, we use  the OPENSSL_EC_NAMED_CURVE flag */
+	EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
 
-	return evp_key;
+	if (eckey)
+		if (EC_KEY_generate_key(eckey) == 0) {
+			EC_KEY_free(eckey);
+			eckey = NULL;
+		}
+	return eckey;
 }
 
 // return 1 on success; 0/-1 for failure
 static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
-		       unsigned char *out, unsigned int *outlen, EVP_PKEY *evpKey)
+		       unsigned char *out, unsigned int *outlen, EC_KEY *eckey)
 {
-	unsigned char *der_sig = NULL;
-	size_t der_sig_len = 0;
-	EVP_MD_CTX *mdctx = NULL;
+	unsigned char hash[SHA512_DIGEST_SIZE] = {0};
+	size_t hashlength = 0;
+	unsigned char *signature = NULL;
+	unsigned int siglen = 0;
 	// ECDSA_sign return 1 on success, 0 on failure
 	int result = 0;
 	ECDSA_SIG *sig = NULL;
@@ -149,60 +150,29 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	unsigned char *sig_s = NULL;
 	int sig_s_len = 0;
 
-	// Create the Message Digest Context
-	mdctx = EVP_MD_CTX_create();
-	if(!mdctx) {
-		LOG(LOG_ERROR, "Failed to create message digest context\n");
-		goto done;
-	}
+	siglen = ECDSA_size(eckey);
+	signature = OPENSSL_malloc(siglen);
 
 	if (curve == 256) {
-		if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, evpKey)) {
-			LOG(LOG_ERROR, "EVP sign init failed \n");
+		if (SHA256(msg, mlen, hash) == NULL)
 			goto done;
-		}
+		hashlength = SHA256_DIGEST_SIZE;
 	} else if (curve == 384) {
-		if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha384(), NULL, evpKey)) {
-			LOG(LOG_ERROR, "EVP sign init failed \n");
+		if (SHA384(msg, mlen, hash) == NULL)
 			goto done;
-		}
+		hashlength = SHA384_DIGEST_SIZE;
+		// ECDSA_sign return 1 on success, 0 on failure
 
 	} else {
 		goto done;
 	}
 
-	if (1 != EVP_DigestSignUpdate(mdctx, msg, mlen)) {
-		LOG(LOG_ERROR, "EVP sign update failed \n");
-		goto done;
-	}
-	//First call with NULL param to obtain the DER encoded signature length
-	if (1 != EVP_DigestSignFinal(mdctx, NULL, &der_sig_len)) {
-		LOG(LOG_ERROR, "EVP sign final for size failed \n");
-		goto done;
-	}
-	if (der_sig_len <= 0) {
-		LOG(LOG_ERROR, "EVP_DigestSignFinal returned invalid signature length.\n");
-		goto done;
-	}
+#ifdef HEXDEBUG
+	hexdump("sha_sign:MESSAGE", msg, mlen);
+	hexdump("sha_sign:SHAHASH", hash, hashlength);
+#endif
 
-	der_sig = fdo_alloc(der_sig_len);
-	if (!der_sig) {
-		LOG(LOG_ERROR, "Signature alloc Failed\n");
-		goto done;
-	}
-	//second call with actual param to obtain the DEr encoded signature
-	if (1 != EVP_DigestSignFinal(mdctx, der_sig, &der_sig_len)) {
-		LOG(LOG_ERROR, "EVP sign final failed \n");
-		goto done;
-	}
-
-	// Decode DER encoded signature to convert to raw format
-	sig = ECDSA_SIG_new();
-	const unsigned char *sig_input = der_sig;
-	if (!sig || d2i_ECDSA_SIG(&sig, &sig_input, der_sig_len) == NULL) {
-		LOG(LOG_ERROR, "DER to EVP_PKEY struct decoding failed!\n");
-		goto done;
-	}
+	sig = ECDSA_do_sign(hash, hashlength, eckey);
 	TEST_ASSERT_NOT_NULL(sig);
 
 	// both r and s are maintained by sig, no need to free explicitly
@@ -235,6 +205,7 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	hexdump("sha256_sign:SIGNEDMESSAGE", out, *outlen);
 #endif
 done:
+	OPENSSL_free(signature);
 	if (sig) {
 		ECDSA_SIG_free(sig);
 	}
@@ -244,22 +215,10 @@ done:
 	if (sig_s) {
 		fdo_free(sig_s);
 	}
-	if (der_sig) {
-		fdo_free(der_sig);
-		sig_input = NULL;
-	}
-	if (mdctx) {
-		EVP_MD_CTX_free(mdctx);
-		mdctx = NULL;
-	}
-	if (evpKey) {
-		EVP_PKEY_free(evpKey);
-		evpKey = NULL;
-	}
 	return result;
 }
 
-static fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
+static fdo_public_key_t *getFDOpk(int curve, EC_KEY *eckey)
 {
 	(void)curve;
 	unsigned char *key_buf = NULL;
@@ -278,9 +237,9 @@ static fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 #endif
 	TEST_ASSERT_NOT_NULL_MESSAGE(ecgroup, "Failed to get ECGROUP\n");
 
-	const EC_POINT *pub = EC_POINT_new(ecgroup);
+	const EC_POINT *pub = EC_KEY_get0_public_key(eckey);
 	TEST_ASSERT_NOT_NULL_MESSAGE(pub, "Failed to get ECPOINT\n");
-	if (EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_X, &x) && EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
+	if (EC_POINT_get_affine_coordinates_GFp(ecgroup, pub, x, y, NULL)) {
 		x_len = BN_num_bytes(x);
 		y_len = BN_num_bytes(y);
 		key_buf_len = x_len + y_len;
@@ -318,15 +277,11 @@ static fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 	}
 
 #ifdef HEXDEBUG
-	dump_pubkey(" + Public key: ", evpKey);
+	dump_pubkey(" + Public key: ", eckey);
 	hexdump("key1", (unsigned char *)pk->key1, pub_len);
 	if (pk->key2)
 		showPK(pk);
 #endif
-if (evpKey) {
-		EVP_PKEY_free(evpKey);
-		evpKey = NULL;
-	}
 
 	return pk;
 }
@@ -489,14 +444,14 @@ static void ec_sig_verification(int curve)
 //	int curve = 256;
 #ifdef USE_OPENSSL
 	unsigned char *pubkey = key_buf;
-	EVP_PKEY *avalidkey = generateECDSA_key(curve);
+	EC_KEY *avalidkey = generateECDSA_key(curve);
 	TEST_ASSERT_NOT_NULL(avalidkey);
 
 	if (1 ==
 	    (result = sha_ECCsign(curve, testdata->bytes, testdata->byte_sz,
 				  sigtestdata, &siglen, avalidkey))) {
 		TEST_ASSERT_EQUAL(1, result);
-		key_buf_len = i2d_PUBKEY(avalidkey, &pubkey);
+		key_buf_len = i2d_EC_PUBKEY(avalidkey, &pubkey);
 		TEST_ASSERT_NOT_EQUAL_MESSAGE(0, key_buf_len,
 					      "DER encoding failed!");
 		pk = getFDOpk(curve, avalidkey);
@@ -570,7 +525,7 @@ static void ec_sig_verification(int curve)
 			fdo_public_key_t *anotherpk = NULL;
 #ifdef USE_OPENSSL
 			/* force a failure by using another/different key */
-			EVP_PKEY *anotherkey = generateECDSA_key(curve);
+			EC_KEY *anotherkey = generateECDSA_key(curve);
 			TEST_ASSERT_NOT_NULL(anotherkey);
 			anotherpk = getFDOpk(curve, anotherkey);
 #endif
@@ -603,10 +558,8 @@ static void ec_sig_verification(int curve)
 			/* clean up */
 			fdo_public_key_free(anotherpk);
 #ifdef USE_OPENSSL
-			if (anotherkey) {
-				EVP_PKEY_free(anotherkey);
-				anotherkey = NULL;
-			}
+			if (anotherkey)
+				EC_KEY_free(anotherkey);
 #endif
 #ifdef USE_MBEDTLS
 			mbedtls_ecdsa_free(&anotherkey);
@@ -616,8 +569,7 @@ static void ec_sig_verification(int curve)
 
 #ifdef USE_OPENSSL
 		if (avalidkey) {
-			EVP_PKEY_free(avalidkey);
-			avalidkey = NULL;
+			EC_KEY_free(avalidkey);
 		}
 #endif
 #ifdef USE_MBEDTLS

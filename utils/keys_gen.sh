@@ -27,8 +27,6 @@ usage()
 }
 
 # Environmental variables
-export OPENSSL3_BIN=/opt/openssl/bin
-
 CLIENTSDK_REPO=$1
 if ! [[ -d ${CLIENTSDK_REPO}/data ]]; then
   echo -e "Data folder doesn't exist.......\n\
@@ -47,9 +45,9 @@ EC384_DAT=$CLIENTSDK_DATA/ecdsa384privkey.dat
 # Extracts the hex-dump from PEM file and generates a encrypted DAT file out of it
 keys_gen()
 {
-  $OPENSSL3_BIN/openssl ecparam -name $1 -genkey -noout -out $2
+  openssl ecparam -name $1 -genkey -noout -out $2
   echo "Generated $2"
-  echo `$OPENSSL3_BIN/openssl asn1parse < $2 | grep "HEX DUMP" | cut -d ":" -f 4` | xxd -r -p > $3
+  echo `openssl asn1parse < $2 | grep "HEX DUMP" | cut -d ":" -f 4` | xxd -r -p > $3
   echo "Generated $3"
 }
 
