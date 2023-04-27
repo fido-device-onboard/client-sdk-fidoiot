@@ -3,6 +3,7 @@
 
 
 
+
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
@@ -21,7 +22,7 @@ sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpm
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 ```
 ```
-sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby gcc gcc-c++ make perl glibc-static \
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby perl glibc-static \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 ## 2. Packages Requirements when Executing Binaries:
@@ -44,7 +45,18 @@ Curl version 8.0.1
 	```
 	sudo yum remove libcurl-devel openssl-devel
 	```
+Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
+> OPENSSL_ROOT=/opt/openssl 
+> CURL_ROOT=/opt/curl
+>
+**Script usage command**
 
+* Command to install OpenSSL and Curl
+	```
+	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	```
+ 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
 
 1. Pull the tarball:
@@ -131,25 +143,6 @@ Issue the following command from the terminal:
     ```
     curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
     ```
-Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
-> CURL_ROOT=/opt/curl
- 
-**Script usage command**
-
-* Command to install OpenSSL and Curl
-	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
-	```
-
-* Command to uninstall OpenSSL
-	```
-	sudo ./install_openssl_curl.sh -u
-	```
-
-
-
 Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.0.1 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
@@ -182,8 +175,8 @@ From the root of the TinyCBOR (named `tinycbor`), do the following:
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
 Provide OpenSSL, Curl, safestringlib and tinycbor paths:
 ```shell
-export OPENSSL3_ROOT=path/to/openssl (default provide /opt/openssl)
-export CURL_ROOT=path/to/curl (default provide /opt/curl)
+export OPENSSL3_ROOT=path/to/openssl (can be /usr or /usr/local or default provide /opt/openssl)
+export CURL_ROOT=path/to/curl (can be /usr or /usr/local or default provide /opt/curl)
 export SAFESTRING_ROOT=path/to/safestringlib
 export TINYCBOR_ROOT=path/to/tinycbor
 ```
@@ -200,6 +193,9 @@ cmake .
 make
 bash utils/keys_gen.sh .
 ```
+> ***NOTE***:  [Keys_Gen](../utils/keys_gen.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
+> OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
+>
 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section. [FDO Build configurations](build_conf.md)

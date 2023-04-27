@@ -4,6 +4,7 @@
 
 
 
+
 # Linux* TPM* Implementation
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
@@ -24,7 +25,7 @@ sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpm
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 ```
 ```
-sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby gcc gcc-c++ make perl glibc-static \
+sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby perl glibc-static \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
 ```
 
@@ -32,6 +33,18 @@ OpenSSL* toolkit version 3.0.8.
 Curl version 8.0.1
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
+
+Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
+> OPENSSL_ROOT=/opt/openssl 
+> CURL_ROOT=/opt/curl
+> 
+**Script usage command**
+
+* Command to install OpenSSL and Curl
+	```
+	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	```
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
 
@@ -128,22 +141,6 @@ Issue the following command from the terminal:
     ```
     curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
     ```
-Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
-> CURL_ROOT=/opt/curl
-> 
-**Script usage command**
-
-* Command to install OpenSSL and Curl
-	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
-	```
-
-* Command to uninstall OpenSSL
-	```
-	sudo ./install_openssl_curl.sh -u
-	```
 
 Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.0.1. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
 
@@ -165,9 +162,9 @@ To compile and execute TPM* enabled FDO Client SDK use one of the appropriate co
 
 **Script usage command**
 * **On Ubuntu OS version 20.04 or 22.04 / Debian 11.4:**
-```shell
-sudo ./install_tpm_libs.sh -h
-```
+	```shell
+	sudo ./install_tpm_libs.sh -h
+	```
 
 * TPM-TSS library setup to enable TPM* enabled FDO Client SDK code compilation
 
@@ -219,9 +216,11 @@ sudo ./install_tpm_libs_rhel.sh -h
 	```
 	sudo ./install_tpm_libs_rhel.sh -u
 	```
-> ***NOTE***: TPM Installation-Script will use OpenSSL and Curl from /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL3_ROOT=/opt/openssl 
-> CURL_ROOT=/opt/curl
+> ***NOTE***: [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) will use OpenSSL and Curl from /opt/ by default. If you have installed OpenSSL and Curl other than `/opt` path, use `openssl version -a` and `which curl` commands to get the exact path of OpenSSL and Curl and modify these variables in the script 
+> OPENSSL3_INCLUDE=/opt/openssl/include (can be /usr/include or /usr/local/include)
+> CURL_INCLUDE=/opt/curl/include (can be /usr/include or /usr/local/include)
+> OPENSSL3_LIB=/opt/openssl/lib64 (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
+> CURL_LIB=/opt/curl/lib (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM*)
 
@@ -299,8 +298,8 @@ From the root of the TinyCBOR (named `tinycbor`), do the following:
 Add these environment variables to ~/.bashrc or similar (replace with actual paths).
 Provide OpenSSL, Curl, safestringlib and tinycbor paths:
 ```shell
-export OPENSSL3_ROOT=path/to/openssl (default provide /opt/openssl)
-export CURL_ROOT=path/to/curl (default provide /opt/curl)
+export OPENSSL3_ROOT=path/to/openssl (can be /usr or /usr/local or default provide /opt/openssl)
+export CURL_ROOT=path/to/curl (can be /usr or /usr/local or default provide /opt/curl)
 export SAFESTRING_ROOT=path/to/safestringlib
 export TINYCBOR_ROOT=path/to/tinycbor
 ```
@@ -353,7 +352,9 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   sudo ./tpm_make_ready_ecdsa.sh -e <ECDSA type 256 or 384> -p <FDO Client SDK data folder location>
   ```
-> ***NOTE***:  On RedHat if sudo won't work, log in to su and then execute tpm_make_ready_ecdsa.sh script
+> ***NOTE***:  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
+> OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
+> 
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
   ./build/linux-client

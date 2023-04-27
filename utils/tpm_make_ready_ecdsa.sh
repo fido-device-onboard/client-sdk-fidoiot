@@ -1,5 +1,6 @@
 export TPM2TOOLS_TCTI="tabrmd"
-export OPENSSL3_ROOT=/opt/openssl
+export OPENSSL3_BIN=/opt/openssl/bin
+export TPM_BIN=/usr/local/bin
 
 TPM_KEY_FILE_INSIDE_DATA_DIR="tpm_ecdsa_priv_pub_blob.key"
 DEVICE_CSR_FILE_INSIDE_DATA_DIR="tpm_device_csr"
@@ -93,31 +94,31 @@ echo "TPM Device CSR file location : $device_csr_file"
 rm -f $tpm_endorsement_primary_key_ctx
 
 task="Delete keys if exists from persistance memory"
-cmd="tpm2_evictcontrol -C o -c $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -V"
+cmd="$TPM_BIN/tpm2_evictcontrol -C o -c $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -V"
 success_string="$task completed successfully at $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE !!"
 failure_string="$task failed [probably ignore it]"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 0
 
 task="Primary key generation from endorsement seed"
-cmd="tpm2_createprimary -C e -g sha$ecc -G $primary_key_type -c $tpm_endorsement_primary_key_ctx -V"
+cmd="$TPM_BIN/tpm2_createprimary -C e -g sha$ecc -G $primary_key_type -c $tpm_endorsement_primary_key_ctx -V"
 success_string="$task completed successfully at $tpm_endorsement_primary_key_ctx !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="Load primary key inside persistance memory at $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE"
-cmd="tpm2_evictcontrol -C o $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -c $tpm_endorsement_primary_key_ctx -V"
+cmd="$TPM_BIN/tpm2_evictcontrol -C o $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -c $tpm_endorsement_primary_key_ctx -V"
 success_string="$task completed successfully at $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="TPM ECDSA key generation using $curve"
-cmd="$OPENSSL3_ROOT/bin/openssl genpkey -provider tpm2 -algorithm EC -pkeyopt group:P-$ecc -pkeyopt parent:$TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -out $tpm_device_key_file"
+cmd="$OPENSSL3_BIN/openssl genpkey -provider tpm2 -algorithm EC -pkeyopt group:P-$ecc -pkeyopt parent:$TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -out $tpm_device_key_file"
 success_string="$task completed successfully at $tpm_device_key_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\${cmd}" "\${success_string}" "\${failure_string}" 1 1
 
 task="Device CSR generation from TPM"
-cmd="$OPENSSL3_ROOT/bin/openssl req -new -provider tpm2 -provider default -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
+cmd="$OPENSSL3_BIN/openssl req -new -provider tpm2 -provider default -outform DER -out $device_csr_file -key $tpm_device_key_file -subj \"/CN=sdo-tpm-device\" -verbose"
 success_string="$task completed successfully at $device_csr_file !!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
