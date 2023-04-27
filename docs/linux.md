@@ -31,6 +31,18 @@ OpenSSL* toolkit version 3.0.8
 GCC version > 7.5
 Curl version 8.0.1
 
+Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
+> OPENSSL_ROOT=/opt/openssl 
+> CURL_ROOT=/opt/curl
+>
+**Script usage command**
+
+* Command to install OpenSSL and Curl
+	```
+	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	```
+
 #### Steps to remove the older OpenSSL and curl packages
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
@@ -44,17 +56,6 @@ Curl version 8.0.1
 
 	```
 	sudo yum remove libcurl-devel openssl-devel
-	```
-Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
-> CURL_ROOT=/opt/curl
->
-**Script usage command**
-
-* Command to install OpenSSL and Curl
-	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
 	```
  
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
