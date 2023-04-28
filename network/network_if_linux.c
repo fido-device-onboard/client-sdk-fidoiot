@@ -397,7 +397,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 
 		}
 #if defined(SERVER_NAME_INDICATION_SUPPORTED)
-		if (dn) {
+		if (dn && tls) {
 			enable_sni = true;
 		}
 #endif
@@ -419,7 +419,6 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 				LOG(LOG_ERROR, "Strcat() failed!\n");
 				goto err;
 			}
-			LOG(LOG_INFO, "nisha, the temp: %s\n",temp);
 			host = curl_slist_append(NULL, temp);
 			curlCode = curl_easy_setopt(curl, CURLOPT_RESOLVE, host);
 			if (curlCode != CURLE_OK) {
@@ -439,7 +438,6 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 			}
 		}
 
-		LOG(LOG_INFO, "nisha, the URL: %s\n",url);
 		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
 		if (curlCode != CURLE_OK) {
 			LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");
