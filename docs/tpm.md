@@ -354,9 +354,11 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   sudo ./tpm_make_ready_ecdsa.sh -e <ECDSA type 256 or 384> -p <FDO Client SDK data folder location>
   ```
-> ***NOTE***:  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
+> ***NOTE 1***:  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script
 > OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
 > 
+> ***NOTE 2***: Some platforms do not have the support for ECDSA 384 in TPM. [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script with option "-e 384" will fail in those platforms. Please use ECDSA 256 in that case.
+>
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
   ./build/linux-client
