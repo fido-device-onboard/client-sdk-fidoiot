@@ -336,7 +336,7 @@ Refer to the section [FDO Build configurations](build_conf.md)
 ## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
 The TPM* enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
-To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md), [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
+To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md), [FDO PRI Rendezvous](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and [FDO PRI Owner](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
 Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK.
 
