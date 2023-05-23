@@ -398,8 +398,6 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		goto end;
 	}
 
-	curl = curl_easy_init();
-
 	if (ip_list && num_ofIPs > 0) {
 		// Iterate over IP-list to connect
 		uint32_t iter = 0;
@@ -407,6 +405,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		while (iter != num_ofIPs &&
 		       sock_hdl == FDO_CON_INVALID_HANDLE) {
 
+			curl = curl_easy_init();
 			sock_hdl = fdo_con_connect((ip_list + iter), port,
 						   tls);
 			if (sock_hdl == FDO_CON_INVALID_HANDLE) {
