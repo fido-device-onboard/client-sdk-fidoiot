@@ -373,6 +373,12 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 				goto err;
 			}
 
+            // Add option to force the http version to 1.1
+			curlCode = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+			if (curlCode != CURLE_OK) {
+				goto err;
+			}
+
 			// Add option to allow recommended ciphers list
 			curlCode = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, ciphers_list);
 			if (curlCode != CURLE_OK) {
