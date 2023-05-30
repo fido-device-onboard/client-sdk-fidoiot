@@ -35,7 +35,7 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 
 OpenSSL* toolkit version 3.0.8
 GCC version > 7.5
-Curl version 8.0.1
+Curl version 8.1.2
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
 > ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
@@ -109,17 +109,17 @@ Issue the following command from the terminal:
 	OpenSSL* 3.0.8  7 Feb 2023
 	```
 
-#### Steps to install curl version 8.0.1 configured with openssl
+#### Steps to install curl version 8.1.2 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://curl.se/download/curl-8.0.1.tar.gz
+	wget https://curl.se/download/curl-8.1.2.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-8.0.1.tar.gz && cd curl-8.0.1
+	tar -zxf curl-8.1.2.tar.gz && cd curl-8.1.2
 	```
 3. Issue the command to configure the curl with openssl:
 	```
@@ -142,7 +142,7 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
+    curl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.8 zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
 > ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
@@ -161,7 +161,7 @@ Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) 
 	sudo ./install_openssl_curl.sh -u -v 3.0.8
 	```
 
-Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.0.1 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.1.2 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"

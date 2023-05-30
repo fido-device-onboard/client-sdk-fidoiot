@@ -31,7 +31,7 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 ```
 
 OpenSSL* toolkit version 3.0.8.
-Curl version 8.0.1
+Curl version 8.1.2
 
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
 
@@ -107,17 +107,17 @@ Issue the following command from the terminal:
 	OpenSSL* 3.0.8  7 Feb 2023
 	```
 
-#### Steps to install curl version 8.0.1 configured with openssl
+#### Steps to install curl version 8.1.2 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://curl.se/download/curl-8.0.1.tar.gz
+	wget https://curl.se/download/curl-8.1.2.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-8.0.1.tar.gz && cd curl-8.0.1
+	tar -zxf curl-8.1.2.tar.gz && cd curl-8.1.2
 	```
 3. Issue the command to configure the curl with openssl:
 	```
@@ -140,10 +140,10 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 8.0.1 (x86_64-pc-linux-gnu) libcurl/8.0.1 OpenSSL/3.0.8 zlib/1.2.11
+    curl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.8 zlib/1.2.11
     ```
 
-Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.0.1. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.1.2. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"

@@ -1,7 +1,7 @@
 OPENSSL_ROOT=/opt/openssl
 CURL_ROOT=/opt/curl
-CURL_VER="8.0.1"
-CURL_LINK="https://curl.se/download/curl-8.0.1.tar.gz --no-check-certificate"
+CURL_VER="8.1.2"
+CURL_LINK="https://curl.se/download/curl-8.1.2.tar.gz --no-check-certificate"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
