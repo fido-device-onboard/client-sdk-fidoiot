@@ -5,6 +5,7 @@
 
 
 
+
 # Linux* TPM* Implementation
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
@@ -26,7 +27,7 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 ```
 ```
 sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby perl glibc-static \
-  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial perl
+  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial
 ```
 
 OpenSSL* toolkit version 3.0.8.
@@ -188,8 +189,13 @@ To compile and execute TPM* enabled FDO Client SDK use one of the appropriate co
 	```
 	sudo ./install_tpm_libs.sh -u
 	```
+	> ***NOTE***: [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) will use 	 	OpenSSL and Curl from /opt/ by default. If you have installed OpenSSL and Curl other than `/opt` path, use `openssl version -a` and `which curl` commands to get the exact path of OpenSSL and Curl and modify these variables in the script OPENSSL3_INCLUDE=/opt/openssl/include (can be /usr/include or /usr/local/include)
+CURL_INCLUDE=/opt/curl/include (can be /usr/include or /usr/local/include)
+OPENSSL3_LIB=/opt/openssl/lib64 (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
+CURL_LIB=/opt/curl/lib (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
 * **On RHEL\* OS version 8.4 or 8.6:**
-> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4 or 8.6.
+> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4 or 8.6. 
+> Before executing [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh), make sure OpenSSL v3 and Curl is installed on the system (at /usr/local/ path). Use steps in section 1 to install OpenSSL and Curl on the system. 
 ```shell
 sudo ./install_tpm_libs_rhel.sh -h
 ```
@@ -216,11 +222,7 @@ sudo ./install_tpm_libs_rhel.sh -h
 	```
 	sudo ./install_tpm_libs_rhel.sh -u
 	```
-> ***NOTE***: [TPM-Library-Installation-Script](../utils/install_tpm_libs.sh) will use OpenSSL and Curl from /opt/ by default. If you have installed OpenSSL and Curl other than `/opt` path, use `openssl version -a` and `which curl` commands to get the exact path of OpenSSL and Curl and modify these variables in the script 
-> OPENSSL3_INCLUDE=/opt/openssl/include (can be /usr/include or /usr/local/include)
-> CURL_INCLUDE=/opt/curl/include (can be /usr/include or /usr/local/include)
-> OPENSSL3_LIB=/opt/openssl/lib64 (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
-> CURL_LIB=/opt/curl/lib (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
+
 
 ### 2.1 Building and Installing Libraries for Trusted Platform Module (TPM*)
 
@@ -336,7 +338,7 @@ Refer to the section [FDO Build configurations](build_conf.md)
 ## 7. Running the Application <!-- Ensuring generic updates are captured where applicable -->
 The TPM* enabled FDO Client SDK Linux device is compatible with  FDO PRI components - Manufacturer, Reseller, Rendezvous, and Owner.
 
-To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md), [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and [FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
+To test the FDO Client SDK Linux device, setup the [FDO PRI Manufacturer](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md), [FDO PRI Rendezvous](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and [FDO PRI Owner](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md).
 
 Refer the TPM* Library Setup steps given in section 2 to compile and execute TPM* enabled FDO Client SDK.
 
@@ -352,9 +354,11 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   sudo ./tpm_make_ready_ecdsa.sh -e <ECDSA type 256 or 384> -p <FDO Client SDK data folder location>
   ```
-> ***NOTE***:  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
+> ***NOTE 1***:  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script
 > OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
 > 
+> ***NOTE 2***: Some platforms do not have the support for ECDSA 384 in TPM. [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script with option "-e 384" will fail in those platforms. Please use ECDSA 256 in that case.
+>
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
   ```shell
   ./build/linux-client

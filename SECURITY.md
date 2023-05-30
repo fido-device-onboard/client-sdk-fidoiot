@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Information about different FDO release versions can be found on the [FDO Release page](https://secure-device-onboard.github.io/docs/latest/releases/).
+Information about different FDO release versions can be found on the [FDO Release page](https://fido-device-onboard.github.io/docs/latest/releases/).
 
 ## Reporting a Vulnerability
 

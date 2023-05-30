@@ -45,7 +45,7 @@ L=2 could also be used. N=13 MUST be used in this case.
 ## NUCLEO-F429ZI board: Arm Cortex* -M4/Arm Mbed* OS (mbedTLS as the cryptography library)
 1. The mbedTLS library must use the True Random Number Generator (TRNG) hardware for
    the entropy source. Refer to
-   [mbedTLS Hardware Entropy Source](#mbedtls_entropy) for more information.
+   [mbedTLS Hardware Entropy Source](#mbedtls-hardware-entropy-source) for more information.
 
 2. In the reference implementation, the device key and the keys that encrypt
    or protect the integrity of the FDO data are stored in clear text on the file system.
@@ -70,7 +70,7 @@ L=2 could also be used. N=13 MUST be used in this case.
 ## NUCLEO-F767ZI board: Arm Cortex-M7/Arm Mbed OS (mbedTLS as the cryptography library)
 1. The mbedTLS library must use the TRNG hardware for
    the entropy source. Refer to
-   [mbedTLS Hardware Entropy Source](#mbedtls_entropy) for more information.
+   [mbedTLS Hardware Entropy Source](#mbedtls-hardware-entropy-source) for more information.
 
 2. In the reference implementation, the device key and the keys that encrypt
    or protect the integrity of the FDO data are stored in clear text on the file system.
@@ -96,7 +96,7 @@ L=2 could also be used. N=13 MUST be used in this case.
 ## WaRP7 board: Arm Cortex-A7/Linux OS (mbedTLS as the cryptography library)
 1. The mbedTLS library must use the True Random Number Generator (TRNG) hardware for
    the entropy source. Refer to
-   [mbedTLS Hardware Entropy Source](#mbedtls_entropy) for more information.
+   [mbedTLS Hardware Entropy Source](#mbedtls-hardware-entropy-source) for more information.
 
 2. In the reference implementation, the device key and the keys that encrypt
    or protect the integrity of the  FDO data are stored in clear text on the file system.

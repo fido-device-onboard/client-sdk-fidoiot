@@ -4,5 +4,5 @@ Server, that is, TO0 is successful. FDO Client SDK, then connects to FDO PRI Ren
 
 If the RendezvousInfo in the Ownership Voucher contains RendezvousInstr `RVBYPASS`, then TO0 completion is not required. In such a scenario, FDO Client SDK skips TO1 protocol and connects directly to the FDO PRI Owner to execute TO2 protocol.
 
-Refer to the [FDO PRI Rendezvous](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
-[FDO PRI Owner](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md) for details on setup and configuration.
+Refer to the [FDO PRI Rendezvous](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/rv/README.md) and
+[FDO PRI Owner](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/owner/README.md) for details on setup and configuration.
