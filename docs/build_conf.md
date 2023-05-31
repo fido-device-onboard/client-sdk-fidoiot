@@ -78,6 +78,15 @@ $ ./build/linux-client -ss
 > ***WARN***: Accepting Self Signed Certificates is not recommended. If compromised, self-signed certificates can pose serious security risks.
 
 ```
+
+Option to enable SNI(Server Name Indication extension in client(device) msgs to server):
+SERVER_NAME_INDICATION=true # sni support is enabled.
+SERVER_NAME_INDICATION=false # sni support is disabled.
+```
+> ***Note***: If you have server IP configured in no_proxy environment variable, also add the 
+server name in that list for SNI enablement to work as expected.
+```
+
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
 REUSE=false           # Reuse feature disabled
