@@ -406,7 +406,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		       sock_hdl == FDO_CON_INVALID_HANDLE) {
 
 			curl = curl_easy_init();
-			sock_hdl = fdo_con_connect((ip_list + iter), port,
+			sock_hdl = fdo_con_connect((ip_list + iter), dn, port,
 						   tls);
 			if (sock_hdl == FDO_CON_INVALID_HANDLE) {
 				LOG(LOG_ERROR, "Failed to connect to "
@@ -451,6 +451,7 @@ end:
  * programmed into device by the manufacturer.
  *
  * @param ip:   IP address of the server to connect to.
+ * @param dn:   Domain name of the server
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
@@ -458,7 +459,7 @@ end:
  * @return ret
  *         true if successful. false in case of error.
  */
-bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
+bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 			     fdo_con_handle *sock_hdl, bool tls)
 {
 	bool ret = false;
@@ -512,7 +513,7 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, port, tls);
+		*sock_hdl = fdo_con_connect(ip, dn, port, tls);
 		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO, "Failed to connect to Manufacturer "
@@ -540,6 +541,7 @@ end:
  * from RV list stored in device credentials.
  *
  * @param ip:   IP address of the server to connect to.
+ * @param dn:   Domain name of the server
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
@@ -547,7 +549,7 @@ end:
  * @return ret
  *         true if successful. false in case of error.
  */
-bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
+bool connect_to_rendezvous(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 			   fdo_con_handle *sock_hdl, bool tls)
 {
 	bool ret = false;
@@ -600,7 +602,7 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, port, tls);
+		*sock_hdl = fdo_con_connect(ip, dn, port, tls);
 		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO, "Failed to connect to Rendezvous server: "
@@ -629,6 +631,7 @@ end:
  * received by Rendezvous stored in device credentials.
  *
  * @param ip:   IP address of the server to connect to.
+ * @param dn: Domain name of the server
  * @param port: Port number of the server instance to connect to.
  * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
@@ -636,7 +639,7 @@ end:
  * @return ret
  *         true if successful. false in case of error.
  */
-bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
+bool connect_to_owner(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 		      fdo_con_handle *sock_hdl, bool tls)
 {
 	bool ret = false;
@@ -691,7 +694,7 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, port, tls);
+		*sock_hdl = fdo_con_connect(ip, dn, port, tls);
 		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
 		    retries--) {
 			LOG(LOG_INFO,
@@ -727,8 +730,8 @@ int fdo_connection_restablish(fdo_prot_ctx_t *prot_ctx)
 	int retries = OWNER_CONNECT_RETRIES;
 
 	/* re-connect using server-IP */
-	while (((prot_ctx->sock_hdl = fdo_con_connect(
-		     prot_ctx->host_ip, prot_ctx->host_port, prot_ctx->tls)) ==
+	while (((prot_ctx->sock_hdl = fdo_con_connect(prot_ctx->host_ip,
+			prot_ctx->host_dns,	prot_ctx->host_port, prot_ctx->tls)) ==
 		FDO_CON_INVALID_HANDLE) &&
 	       retries--) {
 		LOG(LOG_INFO, "Failed reconnecting to server: retrying...");

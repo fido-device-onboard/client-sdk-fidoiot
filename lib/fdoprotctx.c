@@ -140,6 +140,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_DI_DONE: /* type 13 */
 		ret = connect_to_manufacturer(
 			      prot_ctx->resolved_ip ? prot_ctx->resolved_ip : prot_ctx->host_ip,
+				  prot_ctx->host_dns,
 			      prot_ctx->host_port,
 			      &prot_ctx->sock_hdl,
 			      prot_ctx->tls);
@@ -166,12 +167,12 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO1_RCV_FDO_REDIRECT: /* type 33 */
 		// try DNS's resolved IP first, if it fails, try given IP address
 		ret = connect_to_rendezvous(
-		    prot_ctx->resolved_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
-		    prot_ctx->tls);
+		    prot_ctx->resolved_ip, prot_ctx->host_dns, prot_ctx->host_port,
+			&prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
 			ret = connect_to_rendezvous(
-				prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
-				prot_ctx->tls);
+				prot_ctx->host_ip, prot_ctx->host_dns, prot_ctx->host_port, 
+				&prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
@@ -211,11 +212,11 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
 		// try DNS's resolved IP first, if it fails, try given IP address
-		ret = connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, prot_ctx->tls);
+		ret = connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_dns,
+						prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
-			ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, prot_ctx->tls);
+			ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_dns,
+						prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	default:

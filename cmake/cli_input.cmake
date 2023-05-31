@@ -16,6 +16,7 @@ set (TARGET_OS linux)
 set (HTTPPROXY true)
 set (PROXY_DISCOVERY false)
 set (SELF_SIGNED_CERTS true)
+set (SERVER_NAME_INDICATION true)
 set (OPTIMIZE 1)
 set (DA_FILE der)
 set (CRYPTO_HW false)
@@ -243,6 +244,34 @@ endif()
 
 set(CACHED_SELF_SIGNED_CERTS ${SELF_SIGNED_CERTS} CACHE STRING "Selected SELF_SIGNED_CERTS")
 message("Selected SELF_SIGNED_CERTS ${SELF_SIGNED_CERTS}")
+
+###########################################
+# FOR SERVER_NAME_INDICATION
+get_property(cached_server_name_indication_value CACHE SERVER_NAME_INDICATION PROPERTY VALUE)
+
+set(server_name_indication_cli_arg ${cached_server_name_indication_value})
+if(server_name_indication_cli_arg STREQUAL CACHED_SERVER_NAME_INDICATION)
+  unset(server_name_indication_cli_arg)
+endif()
+
+set(server_name_indication_app_cmake_lists ${SERVER_NAME_INDICATION})
+if(cached_server_name_indication_value STREQUAL SERVER_NAME_INDICATION)
+  unset(server_name_indication_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_SERVER_NAME_INDICATION)
+  if ((DEFINED server_name_indication_cli_arg) AND (NOT(CACHED_SERVER_NAME_INDICATION STREQUAL server_name_indication_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(SERVER_NAME_INDICATION ${CACHED_SERVER_NAME_INDICATION})
+elseif(DEFINED server_name_indication_cli_arg)
+  set(SERVER_NAME_INDICATION ${server_name_indication_cli_arg})
+elseif(DEFINED server_name_indication_app_cmake_lists)
+  set(SERVER_NAME_INDICATION ${server_name_indication_app_cmake_lists})
+endif()
+
+set(CACHED_SERVER_NAME_INDICATION ${SERVER_NAME_INDICATION} CACHE STRING "Selected SERVER_NAME_INDICATION")
+message("Selected SERVER_NAME_INDICATION ${SERVER_NAME_INDICATION}")
 
 ###########################################
 # FOR DA_FILE
