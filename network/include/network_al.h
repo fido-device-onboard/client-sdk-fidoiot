@@ -54,12 +54,13 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
  * Open a connection specified by IP address and port.
  *
  * @param[in] addr: IP Address to connect to.
+ * @param dn: Domain name of the server
  * @param[in] port: port number to connect to.
  * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @retval -1 on failure, connection handle on success.
  */
-fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, uint16_t port,
-			       bool tls);
+fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, const char *dn,
+					uint16_t port, bool tls);
 
 /*
  * Disconnect the connection.
@@ -171,10 +172,12 @@ int fdo_random(void);
  * fdo_curl_setup connects to the given ip_addr via curl API
  *
  * @param ip_addr[in] - pointer to IP address info
+ * @param dn: Domain name of the server
  * @param port[in] - port number to connect
  * @return connection handle on success. -ve value on failure
  */
-int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls);
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn,
+					uint16_t port, bool tls);
 
 /**
  * fdo_curl_proxy set up the proxy connection via curl API
