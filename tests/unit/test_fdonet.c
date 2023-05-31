@@ -209,21 +209,21 @@ void test_Connect_toManufacturer(void)
 
 	ip.length = 4;
 
-	ret = connect_to_manufacturer(NULL, 0, NULL, NULL);
+	ret = connect_to_manufacturer(NULL, NULL, 0, NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;
-	ret = connect_to_manufacturer(&ip, port, &sock, NULL);
+	ret = connect_to_manufacturer(&ip, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_ip_fail = false;
 
 	cache_port_fail = true;
-	ret = connect_to_manufacturer(&ip, port, &sock, NULL);
+	ret = connect_to_manufacturer(&ip, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_port_fail = false;
 
 	connect_fail = true;
-	ret = connect_to_manufacturer(NULL, port, &sock, NULL);
+	ret = connect_to_manufacturer(NULL, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 }
@@ -244,21 +244,21 @@ void test_Connect_toRendezvous(void)
 
 	ip.length = 4;
 
-	ret = connect_to_rendezvous(NULL, 0, NULL, NULL);
+	ret = connect_to_rendezvous(NULL, NULL, 0, NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;
-	ret = connect_to_rendezvous(&ip, port, &sock, NULL);
+	ret = connect_to_rendezvous(&ip, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_ip_fail = false;
 
 	cache_port_fail = true;
-	ret = connect_to_rendezvous(&ip, port, &sock, NULL);
+	ret = connect_to_rendezvous(&ip, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_port_fail = false;
 
 	connect_fail = true;
-	ret = connect_to_rendezvous(NULL, port, &sock, NULL);
+	ret = connect_to_rendezvous(NULL, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 }
@@ -279,21 +279,21 @@ void test_Connect_toOwner(void)
 
 	ip.length = 4;
 
-	ret = connect_to_owner(NULL, 0, NULL, NULL);
+	ret = connect_to_owner(NULL, NULL,  0, NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;
-	ret = connect_to_owner(&ip, port, &sock, NULL);
+	ret = connect_to_owner(&ip, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_ip_fail = false;
 
 	cache_port_fail = true;
-	ret = connect_to_owner(&ip, port, &sock, NULL);
+	ret = connect_to_owner(&ip, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_port_fail = false;
 
 	connect_fail = true;
-	ret = connect_to_owner(NULL, port, &sock, NULL);
+	ret = connect_to_owner(NULL, NULL, port, &sock, NULL);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 }
