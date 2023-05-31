@@ -301,19 +301,22 @@ err:
  * fdo_curl_setup connects to the given ip_addr via curl API
  *
  * @param ip_addr - pointer to IP address info
+ * @param dn: Domain name of the server
  * @param port - port number to connect
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @return connection handle on success. -ve value on failure
  */
-int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, bool tls)
 {
 	CURLcode res;
 	curl_socket_t sockfd;
 	CURLcode curlCode = CURLE_OK;
 	int ret = -1;
-	char temp[HTTP_MAX_URL_SIZE] = {0};
+	char temp[2*HTTP_MAX_URL_SIZE] = {0};
 	char url[HTTP_MAX_URL_SIZE] = {0};
 	char *ip_ascii = NULL;
+	struct curl_slist *host = NULL;
+	bool enable_sni = false;
 
 	if (!ip_addr) {
 		goto err;
@@ -340,17 +343,6 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 		if (!ip_bin_to_ascii(ip_addr, ip_ascii)) {
 			goto err;
 		}
-	}
-
-	if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
-				ip_ascii, port) < 0) {
-		LOG(LOG_ERROR, "Snprintf() failed!\n");
-		goto err;
-	}
-
-	if (strcat_s(url, HTTP_MAX_URL_SIZE, temp) != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
-		goto err;
 	}
 
 	if (curl) {
@@ -410,6 +402,47 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, uint16_t port, bool tls)
 			}
 
 		}
+#if defined(SERVER_NAME_INDICATION_SUPPORTED)
+		if (dn && tls) {
+			enable_sni = true;
+		}
+#endif
+		if (enable_sni) {
+			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
+								(char *)dn,port) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+			if (strcat_s(url, HTTP_MAX_URL_SIZE, temp) != 0) {
+				LOG(LOG_ERROR, "Strcat() failed!\n");
+				goto err;
+			}
+			if (strcat_s(temp, 2*HTTP_MAX_URL_SIZE, ":") != 0) {
+				LOG(LOG_ERROR, "Strcat() failed!\n");
+				goto err;
+			}
+			if (strcat_s(temp, 2*HTTP_MAX_URL_SIZE, ip_ascii) != 0) {
+				LOG(LOG_ERROR, "Strcat() failed!\n");
+				goto err;
+			}
+			host = curl_slist_append(NULL, temp);
+			curlCode = curl_easy_setopt(curl, CURLOPT_RESOLVE, host);
+			if (curlCode != CURLE_OK) {
+				LOG(LOG_ERROR, "CURL_ERROR: failure to set dns resolve config.\n");
+				goto err;
+			}
+		}
+		else {
+			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
+								ip_ascii,port) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+			if (strcat_s(url, HTTP_MAX_URL_SIZE, temp) != 0) {
+				LOG(LOG_ERROR, "Strcat() failed!\n");
+				goto err;
+			}
+		}
 
 		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
 		if (curlCode != CURLE_OK) {
@@ -448,7 +481,7 @@ err:
 	if (ip_ascii) {
 		fdo_free(ip_ascii);
 	}
-
+        curl_slist_free_all(host);
 	if (ret < 0 && curl) {
 		curl_easy_cleanup(curl);
 	}
@@ -460,13 +493,14 @@ err:
  * fdo_con_connect connects to the network socket
  *
  * @param ip_addr - pointer to IP address info
+ * @param dn: Domain name of the server
  * @param port - port number to connect
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  * @return connection handle on success. -ve value on failure
  */
 
-fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
-		bool tls)
+fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, const char *dn,
+		uint16_t port, bool tls)
 {
 	struct fdo_sock_handle *sock_hdl = FDO_CON_INVALID_HANDLE;
 
@@ -529,7 +563,7 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
 #endif
 
 #if defined(USE_OPENSSL)
-	sock_hdl->sockfd = fdo_curl_setup(ip_addr, port, tls);
+	sock_hdl->sockfd = fdo_curl_setup(ip_addr, dn, port, tls);
 	if (sock_hdl->sockfd < 0) {
 		goto end;
 	}
