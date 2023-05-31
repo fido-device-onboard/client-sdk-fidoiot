@@ -197,16 +197,16 @@ void test_fdo_con_connect(void)
 	return_socket = -1;
 	TEST_ASSERT_EQUAL_INT(
 	    FDO_CON_INVALID_HANDLE,
-	    fdo_con_connect(&fdoip, port, NULL)); /* socket() returns -1 */
+	    fdo_con_connect(&fdoip, NULL, port, NULL)); /* socket() returns -1 */
 	return_socket = 0;
 	TEST_ASSERT_EQUAL_INT(
 	    FDO_CON_INVALID_HANDLE,
-	    fdo_con_connect(&fdoip, port, NULL)); /* connect() returns -1 */
+	    fdo_con_connect(&fdoip, NULL, port, NULL)); /* connect() returns -1 */
 
 	/* Pass tests */
 	return_socket = 123;
 	uint16_t *ret_val;
-	ret_val = fdo_con_connect(&fdoip, port, NULL);
+	ret_val = fdo_con_connect(&fdoip, NULL, port, NULL);
 	TEST_ASSERT_NOT_EQUAL(FDO_CON_INVALID_HANDLE, ret_val);
 	fdo_free(ret_val);
 
