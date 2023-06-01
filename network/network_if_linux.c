@@ -312,7 +312,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 	curl_socket_t sockfd;
 	CURLcode curlCode = CURLE_OK;
 	int ret = -1;
-	char temp[2*HTTP_MAX_URL_SIZE] = {0};
+	char temp[2 * HTTP_MAX_URL_SIZE] = {0};
 	char url[HTTP_MAX_URL_SIZE] = {0};
 	char *ip_ascii = NULL;
 	struct curl_slist *host = NULL;
@@ -365,7 +365,7 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 				goto err;
 			}
 
-            // Add option to force the http version to 1.1
+			// Add option to force the http version to 1.1
 			curlCode = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 			if (curlCode != CURLE_OK) {
 				goto err;
@@ -402,14 +402,14 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 			}
 
 		}
-#if defined(SERVER_NAME_INDICATION_SUPPORTED)
+#if defined(SNI_SUPPORTED)
 		if (dn && tls) {
 			enable_sni = true;
 		}
 #endif
 		if (enable_sni) {
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
-								(char *)dn,port) < 0) {
+								(char *)dn, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
 				goto err;
 			}
@@ -417,24 +417,28 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port, boo
 				LOG(LOG_ERROR, "Strcat() failed!\n");
 				goto err;
 			}
-			if (strcat_s(temp, 2*HTTP_MAX_URL_SIZE, ":") != 0) {
+			if (strcat_s(temp, 2 * HTTP_MAX_URL_SIZE, ":") != 0) {
 				LOG(LOG_ERROR, "Strcat() failed!\n");
 				goto err;
 			}
-			if (strcat_s(temp, 2*HTTP_MAX_URL_SIZE, ip_ascii) != 0) {
+			if (strcat_s(temp, 2 * HTTP_MAX_URL_SIZE, ip_ascii) != 0) {
 				LOG(LOG_ERROR, "Strcat() failed!\n");
 				goto err;
 			}
 			host = curl_slist_append(NULL, temp);
+			if (host == NULL) {
+				LOG(LOG_ERROR, "CURL_ERROR: failed to append list.\n");
+				goto err;
+			}
 			curlCode = curl_easy_setopt(curl, CURLOPT_RESOLVE, host);
 			if (curlCode != CURLE_OK) {
 				LOG(LOG_ERROR, "CURL_ERROR: failure to set dns resolve config.\n");
 				goto err;
 			}
-		}
-		else {
+		} else {
+			(void)dn;
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
-								ip_ascii,port) < 0) {
+								ip_ascii, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
 				goto err;
 			}
@@ -481,7 +485,9 @@ err:
 	if (ip_ascii) {
 		fdo_free(ip_ascii);
 	}
-        curl_slist_free_all(host);
+	if (host) {
+		curl_slist_free_all(host);
+	}
 	if (ret < 0 && curl) {
 		curl_easy_cleanup(curl);
 	}

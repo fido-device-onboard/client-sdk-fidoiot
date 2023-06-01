@@ -252,8 +252,8 @@ if(${SELF_SIGNED_CERTS} STREQUAL true)
   client_sdk_compile_definitions(-DSELF_SIGNED_CERTS_SUPPORTED)
 endif()
 
-if(${SERVER_NAME_INDICATION} STREQUAL true)
-  client_sdk_compile_definitions(-DSERVER_NAME_INDICATION_SUPPORTED)
+if(${SNI} STREQUAL true)
+  client_sdk_compile_definitions(-DSNI_SUPPORTED)
 endif()
 
 if(${RESALE} STREQUAL true)

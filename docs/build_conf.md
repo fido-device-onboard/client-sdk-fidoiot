@@ -80,10 +80,10 @@ $ ./build/linux-client -ss
 ```
 
 Option to enable SNI(Server Name Indication extension in client(device) msgs to server):
-SERVER_NAME_INDICATION=true # sni support is enabled.
-SERVER_NAME_INDICATION=false # sni support is disabled.
+SNI=true # SNI support is enabled.
+SNI=false (default) # SNI support is disabled.
 ```
-> ***Note***: If you have server IP configured in no_proxy environment variable, also add the 
+> ***Note***: If you have server IP configured in no_proxy environment variable, also add the
 server name in that list for SNI enablement to work as expected.
 ```
 
