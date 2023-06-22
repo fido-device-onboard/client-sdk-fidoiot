@@ -101,14 +101,14 @@
 #define MAX_SERVICEINFO_SZ 64000
 // the margin considered while trying to fit Device ServiceInfo within MTU
 // which allows us to avoid sending more than the MTU at all times
-// For large numbers of ServiceInfoKeyVal to be sent, a larger number might be needed
-// However, the current implementation writes only 1 ServiceInfoKeyVal containing
-// any number of ServiceInfoKVs
+// For large numbers of ServiceInfoKeyVal to be sent, a larger number might be
+// needed However, the current implementation writes only 1 ServiceInfoKeyVal
+// containing any number of ServiceInfoKVs
 #define SERVICEINFO_MTU_FIT_MARGIN 30
 
 // minimum message buffer size to read/write protcol (DI/TO1/TO2)
-// if user-configured MAX_SERVICEINFO_SZ is more than this, that is used as the buffer length
-// else this is used as the message buffer length
+// if user-configured MAX_SERVICEINFO_SZ is more than this, that is used as the
+// buffer length else this is used as the message buffer length
 #if defined(DEVICE_CSE_ENABLED)
 #define MSG_BUFFER_SZ BUFF_SIZE_4K_BYTES
 #else
@@ -150,10 +150,11 @@ typedef struct fdo_prot_s {
 	int key_encoding;
 	fdo_rvto2addr_t *rvto2addr;
 	fdo_dev_cred_t *dev_cred;
-	fdo_public_key_t *
-	    owner_public_key; // Owner's public key
-	fdo_service_info_t *service_info; // store System ServiceInfo (devmod+unsupported module list)
-	fdo_byte_array_t *ext_service_info; // store External module ServiceInfoVal (fdo_sys, for ex.)
+	fdo_public_key_t *owner_public_key; // Owner's public key
+	fdo_service_info_t *service_info;   // store System ServiceInfo
+					  // (devmod+unsupported module list)
+	fdo_byte_array_t *ext_service_info; // store External module
+					    // ServiceInfoVal (fdo_sys, for ex.)
 	fdo_public_key_t *tls_key; // unused for now
 	int ov_entry_num;
 	fdo_ownership_voucher_t *ovoucher;
@@ -162,13 +163,15 @@ typedef struct fdo_prot_s {
 	fdo_cose_t *to1d_cose;
 	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames;
 	uint64_t max_device_message_size; // used to store maxDeviceMessageSize
-	uint64_t max_owner_message_size; // used to store maxOwnerMessageSize and not used thereafter
+	uint64_t max_owner_message_size;  // used to store maxOwnerMessageSize
+					  // and not used thereafter
 	uint64_t maxOwnerServiceInfoSz;
 	uint64_t maxDeviceServiceInfoSz;
 	bool device_serviceinfo_ismore;
 	bool owner_serviceinfo_ismore;
 	bool owner_serviceinfo_isdone;
-	size_t prot_buff_sz; // protocol buffer size, same as maxDeviceMessageSize for now
+	size_t prot_buff_sz; // protocol buffer size, same as
+			     // maxDeviceMessageSize for now
 	fdo_owner_supplied_credentials_t *osc;
 	fdo_byte_array_t *nonce_to1proof;
 	fdo_byte_array_t *nonce_to2proveov;
@@ -223,8 +226,8 @@ bool fdo_process_states(fdo_prot_t *ps);
 
 bool fdo_check_to2_round_trips(fdo_prot_t *ps);
 
-void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
-					char *emsg, size_t errmsg_sz);
+void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum, char *emsg,
+			    size_t errmsg_sz);
 void fdo_receive_error_message(fdor_t *fdor, int *ecode, int *msgnum,
 			       char *emsg, int emsg_sz);
 bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep);

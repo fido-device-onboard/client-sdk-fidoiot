@@ -26,8 +26,8 @@
  * ]
  * where,
  *	to1dBlobPayload = [
- *	[+[RVIP, RVDNS, RVPort, RVProtocol]], // one or more array of inner entries (inner array)
- *	[hashtype, hash]
+ *	[+[RVIP, RVDNS, RVPort, RVProtocol]], // one or more array of inner
+ *entries (inner array) [hashtype, hash]
  *	]
  *
  */
@@ -65,24 +65,28 @@ int32_t msg33(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// clear the FDOR buffer and push COSE payload into it, essentially reusing the FDOR object.
+	// clear the FDOR buffer and push COSE payload into it, essentially
+	// reusing the FDOR object.
 	fdo_block_reset(&ps->fdor.b);
 	ps->fdor.b.block_size = ps->to1d_cose->cose_payload->byte_sz;
 	if (0 != memcpy_s(ps->fdor.b.block, ps->fdor.b.block_size,
-		ps->to1d_cose->cose_payload->bytes, ps->to1d_cose->cose_payload->byte_sz)) {
+			  ps->to1d_cose->cose_payload->bytes,
+			  ps->to1d_cose->cose_payload->byte_sz)) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to copy Nonce4\n");
 		goto err;
 	}
 
-	// initialize the parser once the buffer contains COSE payload to be decoded.
+	// initialize the parser once the buffer contains COSE payload to be
+	// decoded.
 	if (!fdor_parser_init(&ps->fdor)) {
-		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to initialize FDOR parser\n");
+		LOG(LOG_ERROR,
+		    "TO1.RVRedirect: Failed to initialize FDOR parser\n");
 		goto err;
 	}
 
 	size_t num_payloadbasemap_items = 0;
 	if (!fdor_array_length(&ps->fdor, &num_payloadbasemap_items) ||
-		num_payloadbasemap_items != 2) {
+	    num_payloadbasemap_items != 2) {
 		LOG(LOG_ERROR, "TO1.RVRedirect: Failed to read array length\n");
 		goto err;
 	}

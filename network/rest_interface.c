@@ -202,21 +202,20 @@ bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
 	size_t temp_len = 0;
 	for (int i = 0; i < 4; i++) {
 		if (snprintf_s_i(temp + temp_len, octlet_size + 1, "%d.",
-				ip->addr[i]) < 0) {
+				 ip->addr[i]) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
 
 		temp_len = strnlen_s(temp, IP_TAG_LEN + 1);
 		if (!temp_len || temp_len == IP_TAG_LEN + 1) {
-			LOG(LOG_ERROR,
-				"temp string is not NULL terminated.\n");
+			LOG(LOG_ERROR, "temp string is not NULL terminated.\n");
 			goto err;
 		}
 	}
 
 	// Remove the last '.'
-	temp[temp_len-1] = '\0';
+	temp[temp_len - 1] = '\0';
 
 	if (strcpy_s(ip_ascii, temp_len, temp) != 0) {
 		LOG(LOG_ERROR, "Strcpy() failed!\n");
@@ -433,7 +432,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		goto err;
 	}
 
-	for (counter = 0; counter < hdrlen; counter ++) {
+	for (counter = 0; counter < hdrlen; counter++) {
 		if (!ISASCII(hdr[counter])) {
 			LOG(LOG_ERROR, "Header contains non-ASCII values\n");
 			goto err;
@@ -442,7 +441,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 	rest->msg_type = 0;
 
 	// GET HTTP reponse from header
-	if(strstr_s(hdr, hdrlen, "\n", 1, &rem)){
+	if (strstr_s(hdr, hdrlen, "\n", 1, &rem)) {
 		LOG(LOG_ERROR, "Error parsing resonse\n");
 		goto err;
 	}
@@ -466,7 +465,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		LOG(LOG_DEBUG, "REST: HTTP response line: %s\n", tmp);
 
 		// validate HTTP response
-		if(strstr_s(tmp, tmplen, " ", 1, &p1)){
+		if (strstr_s(tmp, tmplen, " ", 1, &p1)) {
 			LOG(LOG_ERROR,
 			    "fdo_rest_run: Response line parse error\n");
 			goto err;
@@ -477,7 +476,8 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		errno = 0;
 		rcode = strtol(p1, &eptr, 10);
 		if (!eptr || eptr == p1 || errno != 0) {
-			LOG(LOG_ERROR, "Invalid value read for Response Code\n");
+			LOG(LOG_ERROR,
+			    "Invalid value read for Response Code\n");
 			goto err;
 		}
 
@@ -487,7 +487,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			goto err;
 		}
 
-		if(strstr_s(p1, p1_len, " ", 1, &p2)) {
+		if (strstr_s(p1, p1_len, " ", 1, &p2)) {
 			LOG(LOG_DEBUG, "Response code %03ld\n", rcode);
 		} else {
 			*p2++ = 0;
@@ -506,7 +506,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 
 	// parse and process other header elements
 	while (1) {
-		if(strstr_s(hdr, hdrlen, "\n", 1, &rem)) {
+		if (strstr_s(hdr, hdrlen, "\n", 1, &rem)) {
 			break;
 		}
 
@@ -526,7 +526,7 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 		hdr += tmplen;
 		hdrlen -= tmplen;
 
-		if(strstr_s(tmp, tmplen, ":", 1, &p1)) {
+		if (strstr_s(tmp, tmplen, ":", 1, &p1)) {
 			LOG(LOG_ERROR, "REST: HEADER parse error\n");
 			goto err;
 		}
@@ -543,7 +543,8 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			errno = 0;
 			rest->content_length = strtol(p1, &eptr, 10);
 			if (!eptr || eptr == p1 || errno != 0) {
-				LOG(LOG_ERROR, "Invalid value read for Content-length\n");
+				LOG(LOG_ERROR,
+				    "Invalid value read for Content-length\n");
 				goto err;
 			}
 			LOG(LOG_DEBUG, "Content-length: %zu\n",
@@ -568,11 +569,13 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 					&result_strcmpcase) == 0 &&
 			   result_strcmpcase == 0) {
 			if (rest->authorization) {
-				// currently received token can be compared against previously
-				// received token.
-				// however, do nothing for now since specification doesn't mandate us to
-				// the ONLY requirement is that the Client MUST cache the received token once
-				// and transmit the same in subsequent messages.
+				// currently received token can be compared
+				// against previously received token. however,
+				// do nothing for now since specification
+				// doesn't mandate us to the ONLY requirement is
+				// that the Client MUST cache the received token
+				// once and transmit the same in subsequent
+				// messages.
 			} else {
 				rest->authorization = strdup_s(p1);
 			}
@@ -596,11 +599,12 @@ bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len)
 			errno = 0;
 			rest->msg_type = strtol(p1, &eptr, 10);
 			if (!eptr || eptr == p1 || errno != 0) {
-				LOG(LOG_ERROR, "Invalid value read for Message-Type\n");
+				LOG(LOG_ERROR,
+				    "Invalid value read for Message-Type\n");
 				goto err;
 			}
-			LOG(LOG_DEBUG, "Message-Type: %"PRIu32"\n",
-				rest->msg_type);
+			LOG(LOG_DEBUG, "Message-Type: %" PRIu32 "\n",
+			    rest->msg_type);
 		} else {
 			/* TODO: This looks like dead code, remove this
 			 */

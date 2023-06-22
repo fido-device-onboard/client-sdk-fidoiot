@@ -13,7 +13,8 @@
 // default Owner attestation
 #define FDO_OWNER_ATTEST_PK_ENC FDO_CRYPTO_PUB_KEY_ENCODING_X509
 
-// Device Attestation (DA) is used to decide the size of the key used for the following:
+// Device Attestation (DA) is used to decide the size of the key used for the
+// following:
 // 1. Key-Exchange
 // 2. Encryption/Decryption
 // 3. Hash/HMAC

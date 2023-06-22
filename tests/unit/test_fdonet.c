@@ -279,7 +279,7 @@ void test_Connect_toOwner(void)
 
 	ip.length = 4;
 
-	ret = connect_to_owner(NULL, NULL,  0, NULL, NULL);
+	ret = connect_to_owner(NULL, NULL, 0, NULL, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;

@@ -5,7 +5,8 @@
 
 /*!
  * \file
- * \brief Unit tests for ECDSA signature verification abstraction routines of FDO library.
+ * \brief Unit tests for ECDSA signature verification abstraction routines of
+ * FDO library.
  */
 
 #include "safe_lib.h"
@@ -38,7 +39,6 @@ void tear_down(void)
 {
 }
 #endif
-
 
 #if defined(HEXDEBUG)
 // Helper function to convert binary to hex
@@ -136,7 +136,8 @@ static EVP_PKEY *generateECDSA_key(int curve)
 
 // return 1 on success; 0/-1 for failure
 static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
-		       unsigned char *out, unsigned int *outlen, EVP_PKEY *evpKey)
+		       unsigned char *out, unsigned int *outlen,
+		       EVP_PKEY *evpKey)
 {
 	unsigned char *der_sig = NULL;
 	size_t der_sig_len = 0;
@@ -151,18 +152,20 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 
 	// Create the Message Digest Context
 	mdctx = EVP_MD_CTX_create();
-	if(!mdctx) {
+	if (!mdctx) {
 		LOG(LOG_ERROR, "Failed to create message digest context\n");
 		goto done;
 	}
 
 	if (curve == 256) {
-		if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, evpKey)) {
+		if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL,
+					    evpKey)) {
 			LOG(LOG_ERROR, "EVP sign init failed \n");
 			goto done;
 		}
 	} else if (curve == 384) {
-		if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha384(), NULL, evpKey)) {
+		if (1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha384(), NULL,
+					    evpKey)) {
 			LOG(LOG_ERROR, "EVP sign init failed \n");
 			goto done;
 		}
@@ -175,13 +178,14 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 		LOG(LOG_ERROR, "EVP sign update failed \n");
 		goto done;
 	}
-	//First call with NULL param to obtain the DER encoded signature length
+	// First call with NULL param to obtain the DER encoded signature length
 	if (1 != EVP_DigestSignFinal(mdctx, NULL, &der_sig_len)) {
 		LOG(LOG_ERROR, "EVP sign final for size failed \n");
 		goto done;
 	}
 	if (der_sig_len <= 0) {
-		LOG(LOG_ERROR, "EVP_DigestSignFinal returned invalid signature length.\n");
+		LOG(LOG_ERROR,
+		    "EVP_DigestSignFinal returned invalid signature length.\n");
 		goto done;
 	}
 
@@ -190,7 +194,7 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 		LOG(LOG_ERROR, "Signature alloc Failed\n");
 		goto done;
 	}
-	//second call with actual param to obtain the DEr encoded signature
+	// second call with actual param to obtain the DEr encoded signature
 	if (1 != EVP_DigestSignFinal(mdctx, der_sig, &der_sig_len)) {
 		LOG(LOG_ERROR, "EVP sign final failed \n");
 		goto done;
@@ -221,13 +225,13 @@ static int sha_ECCsign(int curve, unsigned char *msg, unsigned int mlen,
 	TEST_ASSERT_NOT_NULL(sig_s);
 	BN_bn2bin(s, sig_s);
 
-	*outlen = sig_r_len + sig_s_len;;
-	if (0 != memcpy_s(out, *outlen, (char *)sig_r,
-		     (size_t)sig_r_len)) {
+	*outlen = sig_r_len + sig_s_len;
+	;
+	if (0 != memcpy_s(out, *outlen, (char *)sig_r, (size_t)sig_r_len)) {
 		goto done;
 	}
 	if (0 != memcpy_s(out + sig_r_len, *outlen, (char *)sig_s,
-		     (size_t)sig_s_len)) {
+			  (size_t)sig_s_len)) {
 		goto done;
 	}
 	result = 1;
@@ -280,25 +284,26 @@ static fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 
 	const EC_POINT *pub = EC_POINT_new(ecgroup);
 	TEST_ASSERT_NOT_NULL_MESSAGE(pub, "Failed to get ECPOINT\n");
-	if (EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_X, &x) && EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
+	if (EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_X, &x) &&
+	    EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
 		x_len = BN_num_bytes(x);
 		y_len = BN_num_bytes(y);
 		key_buf_len = x_len + y_len;
 		key_buf = fdo_alloc(key_buf_len);
 		TEST_ASSERT_NOT_NULL(key_buf);
-        BN_bn2bin(x, key_buf);
+		BN_bn2bin(x, key_buf);
 		BN_bn2bin(y, key_buf + x_len);
 
 #if defined(ECDSA256_DA)
 		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-				  FDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
-				  key_buf);
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
+					  key_buf_len, key_buf);
 #else
 		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-				  FDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
-				  key_buf);
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
+					  key_buf_len, key_buf);
 #endif
-    }
+	}
 
 	if (!pk || !pk->key1) {
 		return NULL;
@@ -323,7 +328,7 @@ static fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 	if (pk->key2)
 		showPK(pk);
 #endif
-if (evpKey) {
+	if (evpKey) {
 		EVP_PKEY_free(evpKey);
 		evpKey = NULL;
 	}
@@ -629,29 +634,28 @@ static void ec_sig_verification(int curve)
 
 /*** Test functions. ***/
 #ifndef TARGET_OS_FREERTOS
-void test_ecdsa256sigverification(void)
+	void test_ecdsa256sigverification(void)
 #else
 TEST_CASE("ecdsa256sigverification", "[ECDSARoutines][fdo]")
 #endif
-{
-	//TO-DO: Update test case for X509-encoded public key types
-	TEST_IGNORE();
+	{
+		// TO-DO: Update test case for X509-encoded public key types
+		TEST_IGNORE();
 #ifndef ECDSA256_DA
-	TEST_IGNORE();
+		TEST_IGNORE();
 #endif
-	ec_sig_verification(256);
-}
+		ec_sig_verification(256);
+	}
 
 #ifndef TARGET_OS_FREERTOS
-void test_ecdsa384sigverification(void)
+	void test_ecdsa384sigverification(void)
 #else
 TEST_CASE("ecdsa384sigverification", "[ECDSARoutines][fdo]")
 #endif
-{
-	TEST_IGNORE();
+	{
+		TEST_IGNORE();
 #ifdef ECDSA256_DA
-	TEST_IGNORE();
+		TEST_IGNORE();
 #endif
-	ec_sig_verification(384);
-}
-
+		ec_sig_verification(384);
+	}

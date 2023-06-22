@@ -152,27 +152,29 @@ fdo_hash_t *fdo_pub_key_hash(fdo_public_key_t *pub_key)
 	// Calculate the hash of the mfg_pub_key
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
 	if (!fdow_init(fdow) ||
-		!fdo_block_alloc_with_size(&fdow->b, pub_key->key1->byte_sz + BUFF_SIZE_128_BYTES) ||
-		!fdow_encoder_init(fdow)) {
+	    !fdo_block_alloc_with_size(&fdow->b, pub_key->key1->byte_sz +
+						     BUFF_SIZE_128_BYTES) ||
+	    !fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "Failed to initialize FDOW\n");
 		return NULL;
 	}
 
-	fdo_hash_t *hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	fdo_hash_t *hash =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!hash) {
 		return NULL;
 	}
 	fdo_public_key_write(fdow, pub_key);
 	size_t encoded_pk_length = 0;
-	if (!fdow_encoded_length(fdow, &encoded_pk_length) || encoded_pk_length == 0) {
+	if (!fdow_encoded_length(fdow, &encoded_pk_length) ||
+	    encoded_pk_length == 0) {
 		LOG(LOG_ERROR, "Failed to get PubKey encoded length\n");
 		fdo_hash_free(hash);
 		return NULL;
 	}
 	fdow->b.block_size = encoded_pk_length;
 
-	if ((0 != fdo_crypto_hash(fdow->b.block,
-				  fdow->b.block_size,
+	if ((0 != fdo_crypto_hash(fdow->b.block, fdow->b.block_size,
 				  hash->hash->bytes, hash->hash->byte_sz))) {
 		fdo_hash_free(hash);
 		return NULL;
@@ -297,32 +299,33 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 	}
 
 	if (memset_s(&fdor, sizeof(fdor_t), 0) != 0) {
-		LOG(LOG_ERROR, "OVheader: Failed to intialize temporary FDOR\n");
+		LOG(LOG_ERROR,
+		    "OVheader: Failed to intialize temporary FDOR\n");
 		return NULL;
 	}
 	if (!fdor_init(&fdor) ||
-		!fdo_block_alloc_with_size(&fdor.b, ovheader->byte_sz)) {
-		LOG(LOG_ERROR,
-			"OVHeader: Failed to setup temporary FDOR\n");
+	    !fdo_block_alloc_with_size(&fdor.b, ovheader->byte_sz)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to setup temporary FDOR\n");
 		goto exit;
 	}
 
-	if (0 != memcpy_s(fdor.b.block, fdor.b.block_size,
-		ovheader->bytes, ovheader->byte_sz)) {
-		LOG(LOG_ERROR,
-			"OVHeader: Failed to copy temporary data\n");
+	if (0 != memcpy_s(fdor.b.block, fdor.b.block_size, ovheader->bytes,
+			  ovheader->byte_sz)) {
+		LOG(LOG_ERROR, "OVHeader: Failed to copy temporary data\n");
 		goto exit;
 	}
 
 	if (!fdor_parser_init(&fdor)) {
 		LOG(LOG_ERROR,
-			"OVHeader: Failed to init temporary FDOR parser\n");
+		    "OVHeader: Failed to init temporary FDOR parser\n");
 		goto exit;
 	}
 
 	// OVHeader is of size 6 always.
 	if (!fdor_array_length(&fdor, &num_ov_items) || num_ov_items != 6) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVHeader array length\n", __func__);
+		LOG(LOG_ERROR,
+		    "%s Invalid OVHeader: Invalid OVHeader array length\n",
+		    __func__);
 		goto exit;
 	}
 
@@ -331,15 +334,19 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 		goto exit;
 	}
 
-	if (!fdor_signed_int(&fdor, &ov->prot_version) || ov->prot_version != FDO_PROT_SPEC_VERSION) {
+	if (!fdor_signed_int(&fdor, &ov->prot_version) ||
+	    ov->prot_version != FDO_PROT_SPEC_VERSION) {
 		// Protocol Version
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVProtVer\n", __func__);
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVProtVer\n",
+		    __func__);
 		goto exit;
 	}
 
 	size_t ov_guid_length;
-	if (!fdor_string_length(&fdor, &ov_guid_length) || ov_guid_length != FDO_GUID_BYTES) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVGuid Length\n", __func__);
+	if (!fdor_string_length(&fdor, &ov_guid_length) ||
+	    ov_guid_length != FDO_GUID_BYTES) {
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Invalid OVGuid Length\n",
+		    __func__);
 		goto exit;
 	}
 	ov->g2 = fdo_byte_array_alloc(ov_guid_length);
@@ -348,7 +355,8 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 	}
 	ov->g2->byte_sz = ov_guid_length;
 	if (!fdor_byte_string(&fdor, ov->g2->bytes, ov->g2->byte_sz)) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVGuid\n", __func__);
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVGuid\n",
+		    __func__);
 		goto exit;
 	}
 
@@ -356,27 +364,34 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 	ov->rvlst2 = fdo_rendezvous_list_alloc();
 
 	if (!ov->rvlst2 || !fdo_rendezvous_list_read(&fdor, ov->rvlst2)) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVRvInfo\n", __func__);
+		LOG(LOG_ERROR,
+		    "%s Invalid OVHeader: Unable to decode OVRvInfo\n",
+		    __func__);
 		goto exit;
 	}
 
 	/* There must be at-least 1 valid rv entry, if not its a error-case */
 	if (ov->rvlst2->num_rv_directives == 0) {
-		LOG(LOG_ERROR,
-		    "Invalid OVHeader: All rendezvous entries are invalid for the device!\n");
+		LOG(LOG_ERROR, "Invalid OVHeader: All rendezvous entries are "
+			       "invalid for the device!\n");
 		goto exit;
 	}
 
 	// Device_info String
 	size_t dev_info_length;
 	if (!fdor_string_length(&fdor, &dev_info_length)) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVDeviceInfo length\n", __func__);
+		LOG(LOG_ERROR,
+		    "%s Invalid OVHeader: Unable to decode OVDeviceInfo "
+		    "length\n",
+		    __func__);
 		goto exit;
 	}
 	ov->dev_info = fdo_string_alloc_size(dev_info_length);
 	if (!ov->dev_info ||
-			!fdor_text_string(&fdor, ov->dev_info->bytes, dev_info_length)) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode OVDeviceInfo\n", __func__);
+	    !fdor_text_string(&fdor, ov->dev_info->bytes, dev_info_length)) {
+		LOG(LOG_ERROR,
+		    "%s Invalid OVHeader: Unable to decode OVDeviceInfo\n",
+		    __func__);
 		goto exit;
 	}
 	ov->dev_info->bytes[dev_info_length] = '\0';
@@ -388,7 +403,8 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 	ov->mfg_pub_key =
 	    fdo_public_key_read(&fdor); // Creates a Public key and fills it in
 	if (ov->mfg_pub_key == NULL) {
-		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode PubKey\n", __func__);
+		LOG(LOG_ERROR, "%s Invalid OVHeader: Unable to decode PubKey\n",
+		    __func__);
 		goto exit;
 	}
 
@@ -400,7 +416,8 @@ fdo_ownership_voucher_t *fdo_ov_hdr_read(fdo_byte_array_t *ovheader)
 	}
 
 	if (!fdo_hash_read(&fdor, ov->hdc)) {
-		LOG(LOG_ERROR, "Invalid OVHeader: Unable to decode OVDevCertChainHash\n");
+		LOG(LOG_ERROR,
+		    "Invalid OVHeader: Unable to decode OVDevCertChainHash\n");
 		goto exit;
 	}
 
@@ -421,8 +438,9 @@ exit:
 
 #if defined(DEVICE_CSE_ENABLED)
 /**
- * Given an OwnershipVoucher header (OVHeader), proceed to load and compares with
- * stored OVHeader from CSE. If verfication succeed it returns the stored HMAC.
+ * Given an OwnershipVoucher header (OVHeader), proceed to load and compares
+ * with stored OVHeader from CSE. If verfication succeed it returns the stored
+ * HMAC.
  * @param ovheader - the received CBOR-encoded OVHeader
  * @param hmac a place top store the resulting HMAC
  * @return true if hmac was successfully load and verified, false otherwise.
@@ -439,7 +457,8 @@ bool fdo_ov_hdr_cse_load_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac)
 	int result_memcmp = 0;
 	fdo_byte_array_t *ovh_data = NULL;
 
-	*hmac = fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	*hmac =
+	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!*hmac) {
 		LOG(LOG_ERROR, "Failed to alloc for OVHeaderHmac\n");
 		goto exit;
@@ -447,23 +466,24 @@ bool fdo_ov_hdr_cse_load_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac)
 
 	ovh_data = fdo_byte_array_alloc(FDO_MAX_FILE_SIZE);
 	if (!ovh_data) {
-		LOG(LOG_ERROR,"Invalid OVHeader read: Failed to allocate data for storing OVH data\n");
+		LOG(LOG_ERROR, "Invalid OVHeader read: Failed to allocate data "
+			       "for storing OVH data\n");
 		goto exit;
 	}
 
 	if (0 != cse_load_file(OVH_FILE_ID, ovh_data->bytes, &ovh_len,
-			(*hmac)->hash->bytes, (*hmac)->hash->byte_sz)) {
-		LOG(LOG_ERROR, "Invalid OVHeader read: Unable to load file form CSE\n");
+			       (*hmac)->hash->bytes, (*hmac)->hash->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "Invalid OVHeader read: Unable to load file form CSE\n");
 		goto exit;
 	}
 	ovh_data->byte_sz = ovh_len;
 
-	ret = memcmp_s(ovh_data->bytes,
-		       ovh_data->byte_sz,
-		       ovheader->bytes,
+	ret = memcmp_s(ovh_data->bytes, ovh_data->byte_sz, ovheader->bytes,
 		       ovheader->byte_sz, &result_memcmp);
 	if (ret || result_memcmp != 0) {
-		LOG(LOG_ERROR, "TO2.ProveOVHdr: Invalid OVH received over OVHeader\n");
+		LOG(LOG_ERROR,
+		    "TO2.ProveOVHdr: Invalid OVH received over OVHeader\n");
 		ret = false;
 		goto exit;
 	}
@@ -477,7 +497,6 @@ exit:
 	}
 
 	return ret;
-
 }
 #endif
 /**
@@ -486,7 +505,8 @@ exit:
  * @param hmac a place top store the resulting HMAC
  * @return true if hmac was successfully generated, false otherwise.
  */
-bool fdo_ov_hdr_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac) {
+bool fdo_ov_hdr_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac)
+{
 
 	if (!ovheader || !hmac) {
 		return false;
@@ -510,7 +530,7 @@ bool fdo_ov_hdr_hmac(fdo_byte_array_t *ovheader, fdo_hash_t **hmac) {
 	}
 	ret = true;
 
-exit :
+exit:
 	return ret;
 }
 
@@ -529,8 +549,10 @@ exit :
  * @param num_ov_items - number of items in ownership voucher header
  * @return true if hmac was successfully generated, false otherwise.
  */
-bool fdo_ovheader_write(fdow_t *fdow, int protver, fdo_byte_array_t *guid, fdo_rendezvous_list_t *rvlst,
-	fdo_string_t *dev_info, fdo_public_key_t *pubkey, fdo_hash_t *hdc) {
+bool fdo_ovheader_write(fdow_t *fdow, int protver, fdo_byte_array_t *guid,
+			fdo_rendezvous_list_t *rvlst, fdo_string_t *dev_info,
+			fdo_public_key_t *pubkey, fdo_hash_t *hdc)
+{
 
 	if (!fdow_start_array(fdow, 6)) {
 		LOG(LOG_ERROR, "OVHeader: Failed to start array\n");
@@ -557,7 +579,8 @@ bool fdo_ovheader_write(fdow_t *fdow, int protver, fdo_byte_array_t *guid, fdo_r
 		return false;
 	}
 	if (!fdo_hash_write(fdow, hdc)) {
-		LOG(LOG_ERROR, "OVHeader: Failed to write OVDevCertChainHash\n");
+		LOG(LOG_ERROR,
+		    "OVHeader: Failed to write OVDevCertChainHash\n");
 		return false;
 	}
 	if (!fdow_end_array(fdow)) {
@@ -575,36 +598,42 @@ bool fdo_ovheader_write(fdow_t *fdow, int protver, fdo_byte_array_t *guid, fdo_r
  * @param ov - pointer to the fdo_ownership_voucher_t object
  * @return true if operation is a success, false otherwise
  */
-bool fdo_ove_hash_hdr_info_save(fdo_ownership_voucher_t *ov) {
+bool fdo_ove_hash_hdr_info_save(fdo_ownership_voucher_t *ov)
+{
 
 	bool ret = false;
 	// calculate and save OVEHashHdrInfo (hash[GUID||DeviceInfo])
 	// Header Hash Info is of length OVGuid length + OVDeviceInfo length
-	uint8_t *hash_hdr_info = fdo_alloc(ov->g2->byte_sz + ov->dev_info->byte_sz);
+	uint8_t *hash_hdr_info =
+	    fdo_alloc(ov->g2->byte_sz + ov->dev_info->byte_sz);
 	if (!hash_hdr_info) {
-		LOG(LOG_ERROR, "OVEHashHdrInfo: Failed to alloc for OVEHashHdrInfo\n");
+		LOG(LOG_ERROR,
+		    "OVEHashHdrInfo: Failed to alloc for OVEHashHdrInfo\n");
 		goto exit;
 	}
-	if (0 != memcpy_s(hash_hdr_info, ov->g2->byte_sz,
-		ov->g2->bytes, ov->g2->byte_sz)) {
+	if (0 != memcpy_s(hash_hdr_info, ov->g2->byte_sz, ov->g2->bytes,
+			  ov->g2->byte_sz)) {
 		LOG(LOG_ERROR, "OVEHashHdrInfo: Failed to copy GUID\n");
 		goto exit;
 	}
-	if (0 != memcpy_s(hash_hdr_info + ov->g2->byte_sz, ov->dev_info->byte_sz,
-		ov->dev_info->bytes, ov->dev_info->byte_sz)) {
+	if (0 != memcpy_s(hash_hdr_info + ov->g2->byte_sz,
+			  ov->dev_info->byte_sz, ov->dev_info->bytes,
+			  ov->dev_info->byte_sz)) {
 		LOG(LOG_ERROR, "OVEHashHdrInfo: Failed to copy DeviceInfo\n");
 		goto exit;
 	}
 
-	ov->ov_entries->hc_hash = fdo_hash_alloc(
-	    FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
-	if (!ov->ov_entries->hc_hash){
-		LOG(LOG_ERROR, "OVEHashHdrInfo: Failed to alloc OVEHashHdrInfo in storage\n");
+	ov->ov_entries->hc_hash =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	if (!ov->ov_entries->hc_hash) {
+		LOG(LOG_ERROR, "OVEHashHdrInfo: Failed to alloc OVEHashHdrInfo "
+			       "in storage\n");
 		goto exit;
 	}
-	if (0 != fdo_crypto_hash(hash_hdr_info, ov->g2->byte_sz + ov->dev_info->byte_sz,
-		ov->ov_entries->hc_hash->hash->bytes,
-		ov->ov_entries->hc_hash->hash->byte_sz)) {
+	if (0 != fdo_crypto_hash(hash_hdr_info,
+				 ov->g2->byte_sz + ov->dev_info->byte_sz,
+				 ov->ov_entries->hc_hash->hash->bytes,
+				 ov->ov_entries->hc_hash->hash->byte_sz)) {
 		LOG(LOG_ERROR, "OVEHashHdrInfo: Failed to generate hash\n");
 		goto exit;
 	}
@@ -627,7 +656,8 @@ exit:
  * @return true if operation is a success, false otherwise
  */
 bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
-	fdo_hash_t *hmac) {
+				  fdo_hash_t *hmac)
+{
 
 	bool ret = false;
 	fdo_byte_array_t *enc_ovheader = NULL;
@@ -640,19 +670,22 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 	fdo_block_reset(&fdow->b);
 	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
+		LOG(LOG_ERROR,
+		    "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto exit;
 	}
 
 	// write OVHeader
 	if (!fdo_ovheader_write(fdow, ov->prot_version, ov->g2, ov->rvlst2,
-		ov->dev_info, ov->mfg_pub_key, ov->hdc)) {
+				ov->dev_info, ov->mfg_pub_key, ov->hdc)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to write OVHeader\n");
 		goto exit;
 	}
-	enc_ovheader = fdo_byte_array_alloc_with_byte_array(fdow->b.block, fdow->b.block_size);
+	enc_ovheader = fdo_byte_array_alloc_with_byte_array(fdow->b.block,
+							    fdow->b.block_size);
 	if (!enc_ovheader) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to copy encoded OVHeader\n");
+		LOG(LOG_ERROR,
+		    "OVEHashPrevEntry: Failed to copy encoded OVHeader\n");
 		goto exit;
 	}
 
@@ -660,7 +693,8 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 	fdo_block_reset(&fdow->b);
 	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
+		LOG(LOG_ERROR,
+		    "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto exit;
 	}
 
@@ -673,38 +707,44 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to get HMac length\n");
 		goto exit;
 	}
-	enc_hmac = fdo_byte_array_alloc_with_byte_array(fdow->b.block, fdow->b.block_size);
+	enc_hmac = fdo_byte_array_alloc_with_byte_array(fdow->b.block,
+							fdow->b.block_size);
 	if (!enc_hmac) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to copy encoded HMac\n");
+		LOG(LOG_ERROR,
+		    "OVEHashPrevEntry: Failed to copy encoded HMac\n");
 		goto exit;
 	}
 	// calculate and save OVEHashPrevEntry (hash[OVHeader||HMac])
 	// Prev Entry Hash is of length OVHeader length + HMac length
 	hash_prev_entry = fdo_alloc(enc_ovheader->byte_sz + enc_hmac->byte_sz);
 	if (!hash_prev_entry) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to alloc for OVEHashPrevEntry\n");
+		LOG(LOG_ERROR,
+		    "OVEHashPrevEntry: Failed to alloc for OVEHashPrevEntry\n");
 		goto exit;
 	}
 	if (0 != memcpy_s(hash_prev_entry, enc_ovheader->byte_sz,
-		enc_ovheader->bytes, enc_ovheader->byte_sz)) {
+			  enc_ovheader->bytes, enc_ovheader->byte_sz)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to copy OVHeader\n");
 		goto exit;
 	}
-	if (0 != memcpy_s(hash_prev_entry + enc_ovheader->byte_sz, enc_hmac->byte_sz,
-		enc_hmac->bytes, enc_hmac->byte_sz)) {
+	if (0 != memcpy_s(hash_prev_entry + enc_ovheader->byte_sz,
+			  enc_hmac->byte_sz, enc_hmac->bytes,
+			  enc_hmac->byte_sz)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to copy HMac\n");
 		goto exit;
 	}
 
-	ov->ov_entries->hp_hash = fdo_hash_alloc(
-	    FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	ov->ov_entries->hp_hash =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!ov->ov_entries->hp_hash) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to alloc for OVEHashPrevEntry in storage\n");
+		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to alloc for "
+			       "OVEHashPrevEntry in storage\n");
 		goto exit;
 	}
-	if (0 != fdo_crypto_hash(hash_prev_entry, enc_ovheader->byte_sz + enc_hmac->byte_sz,
-		ov->ov_entries->hp_hash->hash->bytes,
-		ov->ov_entries->hp_hash->hash->byte_sz)) {
+	if (0 != fdo_crypto_hash(hash_prev_entry,
+				 enc_ovheader->byte_sz + enc_hmac->byte_sz,
+				 ov->ov_entries->hp_hash->hash->bytes,
+				 ov->ov_entries->hp_hash->hash->byte_sz)) {
 		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to generate hash\n");
 		goto exit;
 	}
@@ -714,7 +754,8 @@ bool fdo_ove_hash_prev_entry_save(fdow_t *fdow, fdo_ownership_voucher_t *ov,
 	fdo_block_reset(&fdow->b);
 	fdow->b.block_size = fdow_buff_default_sz;
 	if (!fdow_encoder_init(fdow)) {
-		LOG(LOG_ERROR, "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
+		LOG(LOG_ERROR,
+		    "OVEHashPrevEntry: Failed to initialize FDOW encoder\n");
 		goto exit;
 	}
 exit:
@@ -734,15 +775,16 @@ exit:
 }
 
 /**
- * Take the the values of old OVHeader contents and newly supplied replacement credentials
- * and create a new HMAC.
+ * Take the the values of old OVHeader contents and newly supplied replacement
+ * credentials and create a new HMAC.
  * @param dev_cred - pointer to the Device_credential to source
  * @param new_pub_key - the public key to use in the signature
  * @param hdc - device cert-chain hash
  * @return pointer to a new fdo_hash_t object containing the HMAC
  */
 fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
-			fdo_owner_supplied_credentials_t *osc, fdo_hash_t *hdc)
+				fdo_owner_supplied_credentials_t *osc,
+				fdo_hash_t *hdc)
 {
 
 	bool ret = false;
@@ -750,23 +792,24 @@ fdo_hash_t *fdo_new_ov_hdr_sign(fdo_dev_cred_t *dev_cred,
 	// fdow_t to generate CBOR encoded OVHeader. Used to generate HMAC.
 	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
 	if (!fdow_init(fdow) ||
-		!fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_8K_BYTES) ||
-		!fdow_encoder_init(fdow)) {
+	    !fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_8K_BYTES) ||
+	    !fdow_encoder_init(fdow)) {
 		LOG(LOG_ERROR, "Failed to initialize FDOW\n");
 		goto exit;
 	}
 
-	if (!fdo_ovheader_write(fdow, dev_cred->owner_blk->pv, osc->guid, osc->rvlst,
-		dev_cred->mfg_blk->d, osc->pubkey, hdc)) {
+	if (!fdo_ovheader_write(fdow, dev_cred->owner_blk->pv, osc->guid,
+				osc->rvlst, dev_cred->mfg_blk->d, osc->pubkey,
+				hdc)) {
 		goto exit;
 	}
 
 	fdo_hash_t *hmac =
 	    fdo_hash_alloc(FDO_CRYPTO_HMAC_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 
-	if (hmac &&
-	    (0 != fdo_device_ov_hmac(fdow->b.block, fdow->b.block_size,
-				     hmac->hash->bytes, hmac->hash->byte_sz, true))) {
+	if (hmac && (0 != fdo_device_ov_hmac(fdow->b.block, fdow->b.block_size,
+					     hmac->hash->bytes,
+					     hmac->hash->byte_sz, true))) {
 		fdo_hash_free(hmac);
 		goto exit;
 	}

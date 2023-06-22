@@ -46,9 +46,11 @@ int32_t msg31(fdo_prot_t *ps)
 	}
 
 	ps->nonce_to1proof = fdo_byte_array_alloc(FDO_NONCE_BYTES);
-	if (!ps->nonce_to1proof || !fdor_byte_string(&ps->fdor,
-		ps->nonce_to1proof->bytes, ps->nonce_to1proof->byte_sz)) {
-		LOG(LOG_ERROR, "TO1.HelloRVAck: Failed to read NonceTO1Proof\n");
+	if (!ps->nonce_to1proof ||
+	    !fdor_byte_string(&ps->fdor, ps->nonce_to1proof->bytes,
+			      ps->nonce_to1proof->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "TO1.HelloRVAck: Failed to read NonceTO1Proof\n");
 		goto err;
 	}
 

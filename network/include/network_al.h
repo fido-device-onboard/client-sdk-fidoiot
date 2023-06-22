@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #define IPV4_ADDR_LEN 4
-#define MAX_TIME_OUT  60000L
+#define MAX_TIME_OUT 60000L
 
 #ifndef TARGET_OS_MBEDOS
 typedef void *fdo_con_handle;
@@ -60,7 +60,7 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
  * @retval -1 on failure, connection handle on success.
  */
 fdo_con_handle fdo_con_connect(fdo_ip_address_t *addr, const char *dn,
-					uint16_t port, bool tls);
+			       uint16_t port, bool tls);
 
 /*
  * Disconnect the connection.
@@ -75,23 +75,24 @@ int32_t fdo_con_disconnect(fdo_con_handle handle);
  * Check the REST header for given REST response buffer and offset.
  *
  * @param[in] curl_buf: Input buffer that contains the REST header
- * @param[in] header_start_offset: offset in the buffer that points to the start of REST header
+ * @param[in] header_start_offset: offset in the buffer that points to the start
+ * of REST header
  * @retval true if header is valid and complete and false otherwise.
  */
-bool has_header(char *buf,
-		size_t header_start_offset);
+bool has_header(char *buf, size_t header_start_offset);
 
 /*
  * Get the message length from the given REST response buffer.
  *
  * @param[in] curl_buf: Input buffer that contains the REST header
- * @param[in/out] cur_offset: offset in the buffer that initially points to the start of REST header.
- *                            This gets updated to point to start of message body after successful parsing
+ * @param[in/out] cur_offset: offset in the buffer that initially points to the
+ * start of REST header. This gets updated to point to start of message body
+ * after successful parsing
  * @param[out] msglen:  Message length as specified in the REST header
- * @retval bool returns true for success and false in case of invalid/incomplete content/parsing failure.
+ * @retval bool returns true for success and false in case of invalid/incomplete
+ * content/parsing failure.
  */
-bool get_msg_length(char *curl_buf,
-		size_t *cur_offset, uint32_t *msglen);
+bool get_msg_length(char *curl_buf, size_t *cur_offset, uint32_t *msglen);
 
 /*
  * Receive(read) length of incoming fdo packet.
@@ -122,7 +123,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_recv_msg_body(uint8_t *buf, size_t length, char *curl_buf,
-				  size_t curl_buf_offset);
+			      size_t curl_buf_offset);
 
 /*
  * Send(write) data.
@@ -176,8 +177,8 @@ int fdo_random(void);
  * @param port[in] - port number to connect
  * @return connection handle on success. -ve value on failure
  */
-int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn,
-					uint16_t port, bool tls);
+int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port,
+		   bool tls);
 
 /**
  * fdo_curl_proxy set up the proxy connection via curl API

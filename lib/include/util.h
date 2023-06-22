@@ -58,7 +58,8 @@ typedef enum log_level {
 	{                                                                      \
 		if (level <= LOG_LEVEL) {                                      \
 			if (level == LOG_ERROR) {                              \
-				printf("ERROR:[%s():%d] ", __func__, __LINE__);\
+				printf("ERROR:[%s():%d] ", __func__,           \
+				       __LINE__);                              \
 			}                                                      \
 			if (level == LOG_DEBUG) {                              \
 				if (print_timestamp() != 0)                    \
@@ -69,7 +70,7 @@ typedef enum log_level {
 	}
 #endif
 
-//Removed(commented) the below MBEDOS part to enable compilation with ubuntu 22
+// Removed(commented) the below MBEDOS part to enable compilation with ubuntu 22
 //#ifndef TARGET_OS_MBEDOS
 //#define ATTRIBUTE_FALLTHROUGH __attribute__((fallthrough))
 //#else
@@ -130,7 +131,8 @@ void hexdump(const char *message, const void *buffer, size_t size);
 /* Print a non null-terminated buffer. */
 void print_buffer(int log_level, const uint8_t *buffer, size_t length);
 
-/// Read a buffer from content of a file. The buffer returned is non NULL-terminated.
+/// Read a buffer from content of a file. The buffer returned is non
+/// NULL-terminated.
 /*!
   \param[in] filename
   The file path.
