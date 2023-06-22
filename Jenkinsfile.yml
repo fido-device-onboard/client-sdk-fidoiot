@@ -57,7 +57,7 @@ node('ccode'){
         export CURL_ROOT=/opt/curl
         echo $CURL_ROOT
         cd $WORKSPACE/client-sdk
-        $WORKSPACE/client-sdk/build.sh -s
+        $WORKSPACE/client-sdk/build.sh
         mkdir client-sdk-binaries
         cd client-sdk-binaries
         cp -r ../x86_ecdsa256_gcm_bin .
