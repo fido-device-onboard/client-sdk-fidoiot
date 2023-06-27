@@ -64,8 +64,9 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 			goto err;
 		}
 		prot_ctx->host_ip->length = host_ip->length;
-		if (0 != memcpy_s(prot_ctx->host_ip->addr, sizeof(host_ip->addr),
-			host_ip->addr, sizeof(host_ip->addr))) {
+		if (0 != memcpy_s(prot_ctx->host_ip->addr,
+				  sizeof(host_ip->addr), host_ip->addr,
+				  sizeof(host_ip->addr))) {
 			LOG(LOG_ERROR, "Failed to copy host IP\n");
 			goto err;
 		}
@@ -127,8 +128,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port,
-					prot_ctx->tls,
+					prot_ctx->host_port, prot_ctx->tls,
 					is_mfg_proxy_defined())) {
 				ret = false;
 				break;
@@ -139,11 +139,10 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_DI_DONE: /* type 13 */
 		ret = connect_to_manufacturer(
-			      prot_ctx->resolved_ip ? prot_ctx->resolved_ip : prot_ctx->host_ip,
-				  prot_ctx->host_dns,
-			      prot_ctx->host_port,
-			      &prot_ctx->sock_hdl,
-			      prot_ctx->tls);
+		    prot_ctx->resolved_ip ? prot_ctx->resolved_ip
+					  : prot_ctx->host_ip,
+		    prot_ctx->host_dns, prot_ctx->host_port,
+		    &prot_ctx->sock_hdl, prot_ctx->tls);
 		break;
 	case FDO_STATE_T01_SND_HELLO_FDO: /* type 30 */
 		ATTRIBUTE_FALLTHROUGH;
@@ -154,8 +153,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port,
-					prot_ctx->tls,
+					prot_ctx->host_port, prot_ctx->tls,
 					is_rv_proxy_defined())) {
 				ret = false;
 				fdo_free(prot_ctx->resolved_ip);
@@ -165,14 +163,15 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO1_SND_PROVE_TO_FDO: /* type 32 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO1_RCV_FDO_REDIRECT: /* type 33 */
-		// try DNS's resolved IP first, if it fails, try given IP address
+		// try DNS's resolved IP first, if it fails, try given IP
+		// address
 		ret = connect_to_rendezvous(
-		    prot_ctx->resolved_ip, prot_ctx->host_dns, prot_ctx->host_port,
-			&prot_ctx->sock_hdl, prot_ctx->tls);
+		    prot_ctx->resolved_ip, prot_ctx->host_dns,
+		    prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
 			ret = connect_to_rendezvous(
-				prot_ctx->host_ip, prot_ctx->host_dns, prot_ctx->host_port, 
-				&prot_ctx->sock_hdl, prot_ctx->tls);
+			    prot_ctx->host_ip, NULL, prot_ctx->host_port,
+			    &prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
@@ -184,8 +183,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port,
-					prot_ctx->tls,
+					prot_ctx->host_port, prot_ctx->tls,
 					is_owner_proxy_defined())) {
 				ret = false;
 				fdo_free(prot_ctx->resolved_ip);
@@ -211,12 +209,15 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO2_SND_DONE: /* type 70 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
-		// try DNS's resolved IP first, if it fails, try given IP address
-		ret = connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_dns,
-						prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
+		// try DNS's resolved IP first, if it fails, try given IP
+		// address
+		ret = connect_to_owner(prot_ctx->resolved_ip,
+				       prot_ctx->host_dns, prot_ctx->host_port,
+				       &prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
-			ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_dns,
-						prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
+			ret = connect_to_owner(
+			    prot_ctx->host_ip, NULL, prot_ctx->host_port,
+			    &prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	default:
@@ -275,7 +276,6 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		/* ========================================================== */
 		/*  Transmit outbound packet */
 
-
 		/*  Protocol sets State as FDO_STATE_DONE at the end of the*/
 		/*  protocol(DI/T01/TO2) */
 		/*  Hence, when state = FDO_STATE_DONE, we have nothing more*/
@@ -292,13 +292,16 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		// update the final encoded length in the FDOW block after every successfull write.
+		// update the final encoded length in the FDOW block after every
+		// successfull write.
 		if (!fdow_encoded_length(fdow, &fdow->b.block_size)) {
-			LOG(LOG_ERROR, "Failed to get encoded length in FDOW\n");
+			LOG(LOG_ERROR,
+			    "Failed to get encoded length in FDOW\n");
 			ret = -1;
 			break;
 		}
-		LOG(LOG_DEBUG, "%s Tx Request Body length: %zu\n", __func__, fdow->b.block_size);
+		LOG(LOG_DEBUG, "%s Tx Request Body length: %zu\n", __func__,
+		    fdow->b.block_size);
 		LOG(LOG_DEBUG, "%s Tx Request Body:\n", __func__);
 		fdo_log_block(&fdow->b);
 
@@ -343,7 +346,8 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		// clear the block contents in preparation for the next FDOW write operation
+		// clear the block contents in preparation for the next FDOW
+		// write operation
 		fdo_block_reset(&fdow->b);
 		fdow->b.block_size = prot_ctx->protdata->prot_buff_sz;
 
@@ -356,20 +360,21 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		size_t curl_buf_offset = 0;
 
 		if (memset_s(curl_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
-				LOG(LOG_ERROR, "Memset() failed!\n");
-				return false;
-			}
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			return false;
+		}
 
-		ret = fdo_con_recv_msg_header(prot_ctx->sock_hdl, &protver,
-					      (uint32_t *)&fdor->msg_type,
-					      &msglen, curl_buf, &curl_buf_offset);
+		ret = fdo_con_recv_msg_header(
+		    prot_ctx->sock_hdl, &protver, (uint32_t *)&fdor->msg_type,
+		    &msglen, curl_buf, &curl_buf_offset);
 		if (ret == -1) {
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
 			break;
 		}
 
-		// clear the block contents in preparation for the next FDOR read operation
+		// clear the block contents in preparation for the next FDOR
+		// read operation
 		fdo_block_reset(&fdor->b);
 		// set the received msg length in the block
 		fdor->b.block_size = msglen;
@@ -378,8 +383,9 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			retries = CONNECTION_RETRY;
 			n = 0;
 			do {
-				n = fdo_con_recv_msg_body(&fdor->b.block[0], msglen,
-				    curl_buf, curl_buf_offset);
+				n = fdo_con_recv_msg_body(&fdor->b.block[0],
+							  msglen, curl_buf,
+							  curl_buf_offset);
 				if (n < 0) {
 					if (fdo_con_disconnect(
 						prot_ctx->sock_hdl)) {
@@ -417,7 +423,8 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		}
 
 		if (msglen > prot_ctx->protdata->prot_buff_sz) {
-			LOG(LOG_ERROR, "Response body size is more than allocated memory\n");
+			LOG(LOG_ERROR, "Response body size is more than "
+				       "allocated memory\n");
 			ret = -1;
 			break;
 		}
@@ -433,15 +440,15 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			ret = -1;
 			break;
 		}
-		 /* ERROR case ? */
+		/* ERROR case ? */
 		if (fdor->msg_type == FDO_TYPE_ERROR) {
 			ret = -1;
 			break;
 		}
 
 		/*
-		 * Now that we have the received buffer, initialize the parser for next FDOR read
-		 * operation and set the have_block flag.
+		 * Now that we have the received buffer, initialize the parser
+		 * for next FDOR read operation and set the have_block flag.
 		 */
 		if (!fdor_parser_init(fdor)) {
 			LOG(LOG_ERROR, "Failed to initilize FDOR parser\n");
