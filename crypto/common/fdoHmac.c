@@ -65,8 +65,8 @@ err:
 }
 
 /**
- * This function sets the Ownership Voucher replacement hmac key in the structure.
- * Which will later be used to generate the replacement hmac.
+ * This function sets the Ownership Voucher replacement hmac key in the
+ * structure. Which will later be used to generate the replacement hmac.
  * @param OVkey In Pointer to the Ownership Voucher replacement hmac key.
  * @param OVKey_len In Size of the Ownership Voucher replacement hmac key
  * @return 0 on success and -1 on failure.
@@ -150,15 +150,16 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 	fdo_byte_array_t **keyset = NULL;
 	if (is_replacement_hmac) {
 #if defined(DEVICE_TPM20_ENABLED)
-	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-				TPM_HMAC_REPLACEMENT_PUB_KEY, TPM_HMAC_REPLACEMENT_PRIV_KEY);
+		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
+					TPM_HMAC_REPLACEMENT_PUB_KEY,
+					TPM_HMAC_REPLACEMENT_PRIV_KEY);
 #else
 		keyset = getreplacementOVKey();
 #endif
 	} else {
 #if defined(DEVICE_TPM20_ENABLED)
-	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-				TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
+		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
+					TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
 #else
 		keyset = getOVKey();
 #endif
@@ -205,7 +206,7 @@ int32_t fdo_crypto_hash(const uint8_t *message, size_t message_length,
 	}
 
 	if (0 != crypto_hal_hash(FDO_CRYPTO_HASH_TYPE_USED, message,
-				  message_length, hash, hash_length)) {
+				 message_length, hash, hash_length)) {
 
 		return -1;
 	}
@@ -258,7 +259,8 @@ err:
 }
 
 /**
- * fdo_generate_ov_replacement_hmac_key function generates the new/replacement OV HMAC key
+ * fdo_generate_ov_replacement_hmac_key function generates the new/replacement
+ * OV HMAC key
  *
  * @return
  *        return 0 on success, -1 on failure.
@@ -268,9 +270,8 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 !=
-	    fdo_tpm_generate_hmac_key(TPM_HMAC_REPLACEMENT_PUB_KEY,
-			TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_REPLACEMENT_PUB_KEY,
+					   TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
 		LOG(LOG_ERROR, "Failed to generate device replacement HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -288,7 +289,8 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 		goto err;
 	}
 
-	/* Generate replacement HMAC key for calcuating it over Ownership header */
+	/* Generate replacement HMAC key for calcuating it over Ownership header
+	 */
 	fdo_crypto_random_bytes(secret->bytes, FDO_HMAC_KEY_LENGTH);
 	if (0 != set_ov_replacement_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		goto err;
@@ -303,8 +305,8 @@ err:
 
 /**
  * Commit the OV replacment key by replacing the original HMAC key
- * with the replacement HMAC key. This operation is final and the original HMAC key
- * is lost completely.
+ * with the replacement HMAC key. This operation is final and the original HMAC
+ * key is lost completely.
  *
  * @return
  *        return 0 on success, -1 on failure.

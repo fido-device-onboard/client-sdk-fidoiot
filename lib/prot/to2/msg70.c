@@ -39,15 +39,16 @@ int32_t msg70(fdo_prot_t *ps)
 	LOG(LOG_DEBUG, "TO2.Done started\n");
 
 	LOG(LOG_DEBUG, "(Old) GUID before TO2: %s\n",
-		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
+	    fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf,
+			       sizeof(guid_buf)));
 
 	/*
 	 * TODO: Writing credentials to TEE!
-	 * This GUID came as TO2SetupDevicePayload.Guid - "the new transaction GUID"
-	 * which will overwrite GUID in initial credential data.
-	 * A new transaction will start fresh, taking the latest
-	 * credential (among them this, new GUID). That's why
-	 * simple memorizing GUID in RAM is not needed.
+	 * This GUID came as TO2SetupDevicePayload.Guid - "the new transaction
+	 * GUID" which will overwrite GUID in initial credential data. A new
+	 * transaction will start fresh, taking the latest credential (among
+	 * them this, new GUID). That's why simple memorizing GUID in RAM is not
+	 * needed.
 	 */
 	fdo_byte_array_free(ps->dev_cred->owner_blk->guid);
 	ps->dev_cred->owner_blk->guid = ps->osc->guid;
@@ -67,9 +68,11 @@ int32_t msg70(fdo_prot_t *ps)
 		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
 		// create new Owner's public key hash
 		fdo_hash_free(ps->dev_cred->owner_blk->pkh);
-		ps->dev_cred->owner_blk->pkh = fdo_pub_key_hash(ps->dev_cred->owner_blk->pk);
+		ps->dev_cred->owner_blk->pkh =
+		    fdo_pub_key_hash(ps->dev_cred->owner_blk->pk);
 		if (!ps->dev_cred->owner_blk->pkh) {
-			LOG(LOG_ERROR, "TO2.Done: Hash creation of TO2.SetupDevice.Owner2Key failed\n");
+			LOG(LOG_ERROR, "TO2.Done: Hash creation of "
+				       "TO2.SetupDevice.Owner2Key failed\n");
 			goto err;
 		}
 	}
@@ -80,35 +83,43 @@ int32_t msg70(fdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "(New) GUID after TO2: %s\n",
-		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
+	    fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf,
+			       sizeof(guid_buf)));
 
 	/* Rotate Data Protection Key */
 	if (0 != fdo_generate_storage_hmac_key()) {
-		LOG(LOG_ERROR, "TO2.Done: Failed to rotate data protection key.\n");
+		LOG(LOG_ERROR,
+		    "TO2.Done: Failed to rotate data protection key.\n");
 	}
-	LOG(LOG_DEBUG, "TO2.Done: Data protection key rotated successfully!!\n");
+	LOG(LOG_DEBUG,
+	    "TO2.Done: Data protection key rotated successfully!!\n");
 
 	if (!ps->reuse_enabled) {
-		/* Commit the replacement hmac key only if reuse was not triggered*/
+		/* Commit the replacement hmac key only if reuse was not
+		 * triggered*/
 		if (fdo_commit_ov_replacement_hmac_key() != 0) {
-			LOG(LOG_ERROR, "TO2.Done: Failed to store new device hmac key.\n");
+			LOG(LOG_ERROR,
+			    "TO2.Done: Failed to store new device hmac key.\n");
 			goto err;
 		}
 		LOG(LOG_DEBUG, "TO2.Done: Updated device's new hmac key\n");
 	} else {
-		LOG(LOG_DEBUG, "TO2.Done: Device hmac key is unchanged as reuse was triggered.\n");
+		LOG(LOG_DEBUG, "TO2.Done: Device hmac key is unchanged as "
+			       "reuse was triggered.\n");
 	}
 
 	/* Write new device credentials and state*/
 	if (!store_device_status(&ps->dev_cred->ST)) {
-		LOG(LOG_ERROR, "TO2.Done: Failed to store updated device status\n");
+		LOG(LOG_ERROR,
+		    "TO2.Done: Failed to store updated device status\n");
 		goto err;
 	}
 #if defined(DEVICE_CSE_ENABLED)
 	FDO_STATUS fdo_status;
 
 	if (TEE_SUCCESS != fdo_heci_commit_file(&fdo_cse_handle, OVH_FILE_ID,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+						&fdo_status) ||
+	    FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "TO2.Done: FDO OVH COMMIT failed!!\n");
 		goto err;
 	}
@@ -134,13 +145,13 @@ int32_t msg70(fdo_prot_t *ps)
 		return false;
 	}
 
-	if(!ps->nonce_to2provedv) {
+	if (!ps->nonce_to2provedv) {
 		LOG(LOG_ERROR, "TO2.Done: NonceTO2ProveDv not found\n");
 		return false;
 	}
 
 	if (!fdow_byte_string(&ps->fdow, ps->nonce_to2provedv->bytes,
-		ps->nonce_to2provedv->byte_sz)) {
+			      ps->nonce_to2provedv->byte_sz)) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to write NonceTO2ProveDv\n");
 		return false;
 	}
@@ -151,7 +162,8 @@ int32_t msg70(fdo_prot_t *ps)
 	}
 
 	if (!fdo_encrypted_packet_windup(&ps->fdow, FDO_TO2_DONE)) {
-		LOG(LOG_ERROR, "TO2.Done: Failed to create Encrypted Message\n");
+		LOG(LOG_ERROR,
+		    "TO2.Done: Failed to create Encrypted Message\n");
 		goto err;
 	}
 

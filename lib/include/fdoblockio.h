@@ -10,7 +10,8 @@
 #include <stdint.h>
 #include "cbor.h"
 
-static inline int INT2HEX(int i) {
+static inline int INT2HEX(int i)
+{
 	return (i <= 9 ? '0' + i : 'a' - 10 + i);
 }
 
@@ -22,7 +23,8 @@ typedef struct {
 
 // Helper struct that encodes values into CBOR using TinyCBOR's CborEncoder.
 // the self-typed next pointer is used to go inside a container and encode.
-// the self-typed previous pointer is used to come out of a container once encoding is done.
+// the self-typed previous pointer is used to come out of a container once
+// encoding is done.
 typedef struct _FDOW_CBOR_ENCODER {
 	CborEncoder cbor_encoder;
 	struct _FDOW_CBOR_ENCODER *next;
@@ -31,18 +33,19 @@ typedef struct _FDOW_CBOR_ENCODER {
 
 // Helper struct that decodes CBOR data using TinyCBOR's CborValue.
 // the self-typed next pointer is used to go inside a container and decode.
-// the self-typed previous pointer is used to come out of a container once decoding is done.
+// the self-typed previous pointer is used to come out of a container once
+// decoding is done.
 typedef struct _FDOR_CBOR_DECODER {
 	CborValue cbor_value;
 	struct _FDOR_CBOR_DECODER *next;
 	struct _FDOR_CBOR_DECODER *previous;
 } fdor_cbor_decoder_t;
 
-// FDO Reader (FDOR) struct that handles the CBOR decode operation using the _FDOR_CBOR_DECODER struct
-// and TinyCBOR's CborParser, finally placing the CBOR-decoded data and its size into
-// fdo_block_t struct.
-// have_block signifies if there's more data to be decoded while the msg_type signifies
-// FDO type (Type 1x/3x/6x/255)
+// FDO Reader (FDOR) struct that handles the CBOR decode operation using the
+// _FDOR_CBOR_DECODER struct and TinyCBOR's CborParser, finally placing the
+// CBOR-decoded data and its size into fdo_block_t struct. have_block signifies
+// if there's more data to be decoded while the msg_type signifies FDO type
+// (Type 1x/3x/6x/255)
 typedef struct _FDOR_s {
 	fdo_block_t b;
 	int msg_type;
@@ -53,9 +56,9 @@ typedef struct _FDOR_s {
 
 typedef int (*FDOReceive_fcn_ptr_t)(fdor_t *, int);
 
-// FDO Writer (FDOW) struct that handles the CBOR encode operation using the _FDOR_CBOR_ENCODER struct,
-// It CBOR-encodes the data present in fdo_block_t struct.
-// msg_type signifies FDO type (Type 1x/3x/6x/255)
+// FDO Writer (FDOW) struct that handles the CBOR encode operation using the
+// _FDOR_CBOR_ENCODER struct, It CBOR-encodes the data present in fdo_block_t
+// struct. msg_type signifies FDO type (Type 1x/3x/6x/255)
 typedef struct _FDOW_s {
 	fdo_block_t b;
 	int msg_type;
@@ -76,8 +79,8 @@ int fdow_next_block(fdow_t *fdow, int type);
 bool fdow_encoder_init(fdow_t *fdow_cbor);
 bool fdow_start_array(fdow_t *fdow_cbor, size_t array_items);
 bool fdow_start_map(fdow_t *fdow_cbor, size_t map_items);
-bool fdow_byte_string(fdow_t *fdow_cbor, uint8_t *bytes , size_t byte_sz);
-bool fdow_text_string(fdow_t *fdow_cbor, char *bytes , size_t byte_sz);
+bool fdow_byte_string(fdow_t *fdow_cbor, uint8_t *bytes, size_t byte_sz);
+bool fdow_text_string(fdow_t *fdow_cbor, char *bytes, size_t byte_sz);
 bool fdow_signed_int(fdow_t *fdow_cbor, int value);
 bool fdow_unsigned_int(fdow_t *fdow_cbor, uint64_t value);
 bool fdow_boolean(fdow_t *fdow_cbor, bool value);

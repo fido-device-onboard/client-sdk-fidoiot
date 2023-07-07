@@ -195,13 +195,13 @@ void test_fdo_con_connect(void)
 
 	/* False tests */
 	return_socket = -1;
-	TEST_ASSERT_EQUAL_INT(
-	    FDO_CON_INVALID_HANDLE,
-	    fdo_con_connect(&fdoip, NULL, port, NULL)); /* socket() returns -1 */
+	TEST_ASSERT_EQUAL_INT(FDO_CON_INVALID_HANDLE,
+			      fdo_con_connect(&fdoip, NULL, port,
+					      NULL)); /* socket() returns -1 */
 	return_socket = 0;
-	TEST_ASSERT_EQUAL_INT(
-	    FDO_CON_INVALID_HANDLE,
-	    fdo_con_connect(&fdoip, NULL, port, NULL)); /* connect() returns -1 */
+	TEST_ASSERT_EQUAL_INT(FDO_CON_INVALID_HANDLE,
+			      fdo_con_connect(&fdoip, NULL, port,
+					      NULL)); /* connect() returns -1 */
 
 	/* Pass tests */
 	return_socket = 123;
@@ -247,7 +247,6 @@ void test_fdo_con_send_message(void)
 	uint8_t buf[42];
 	ssize_t nbytes = 42;
 	curl = curl_easy_init();
-
 
 	// setup rest protocol
 	TEST_ASSERT_EQUAL_INT(0, fdo_con_setup(NULL, NULL, 0));

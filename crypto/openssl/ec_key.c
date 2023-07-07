@@ -97,33 +97,37 @@ EVP_PKEY *get_evp_key(void)
 		goto err;
 	}
 
-    evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+	evp_ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
 	if (!evp_ctx) {
 		LOG(LOG_ERROR, "Failed to create evp ctx context \n");
 		goto err;
 	}
 
-	const char* group_name = OBJ_nid2sn(curve);
-	OSSL_PARAM params[] = { OSSL_PARAM_BN(OSSL_PKEY_PARAM_PRIV_KEY, privkey, privkey_size),
-							OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)group_name, strlen(group_name)),
-								  OSSL_PARAM_END 
-								  };
-    if (EVP_PKEY_fromdata_init(evp_ctx) <=0) {
+	const char *group_name = OBJ_nid2sn(curve);
+	OSSL_PARAM params[] = {
+	    OSSL_PARAM_BN(OSSL_PKEY_PARAM_PRIV_KEY, privkey, privkey_size),
+	    OSSL_PARAM_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME,
+				   (char *)group_name, strlen(group_name)),
+	    OSSL_PARAM_END};
+	if (EVP_PKEY_fromdata_init(evp_ctx) <= 0) {
 		LOG(LOG_ERROR, "Failed to init the ec key from data object\n");
 		goto err;
-    	}
+	}
 
-		if ( EVP_PKEY_fromdata(evp_ctx,&evp_key_ec,EVP_PKEY_KEYPAIR, params) <=0) {
-		LOG(LOG_ERROR, "Failed to create the ec key from data\n");// %s", (char *)params2);
+	if (EVP_PKEY_fromdata(evp_ctx, &evp_key_ec, EVP_PKEY_KEYPAIR, params) <=
+	    0) {
+		LOG(LOG_ERROR,
+		    "Failed to create the ec key from data\n"); // %s", (char
+								// *)params2);
 		goto err;
-    	}
-        ret = 1; // success
+	}
+	ret = 1; // success
 
 err:
 	if (evp_ctx) {
 		EVP_PKEY_CTX_free(evp_ctx);
 		evp_ctx = NULL;
-		}
+	}
 	if (privkey) {
 		if (memset_s(privkey, privkey_size, 0) != 0) {
 			LOG(LOG_ERROR, "Memset Failed\n");

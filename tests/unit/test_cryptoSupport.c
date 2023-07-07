@@ -55,7 +55,7 @@ uint8_t pub_key[] = {
 /*** Function Declarations ***/
 EVP_PKEY *generateECDSA_key(int curve);
 int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
-		uint32_t *outlen, EVP_PKEY  *eckey);
+		uint32_t *outlen, EVP_PKEY *eckey);
 fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *eckey);
 void set_up(void);
 void tear_down(void);
@@ -260,9 +260,9 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 	unsigned char *sig_s = NULL;
 	int sig_s_len = 0;
 
-// Create the Message Digest Context
+	// Create the Message Digest Context
 	mdctx = EVP_MD_CTX_create();
-	if(!mdctx) {
+	if (!mdctx) {
 		LOG(LOG_ERROR, "Failed to create message digest context\n");
 		goto done;
 	}
@@ -281,13 +281,14 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 		LOG(LOG_ERROR, "EVP sign update failed \n");
 		goto done;
 	}
-	//First call with NULL param to obtain the DER encoded signature length
+	// First call with NULL param to obtain the DER encoded signature length
 	if (1 != EVP_DigestSignFinal(mdctx, NULL, &der_sig_len)) {
 		LOG(LOG_ERROR, "EVP sign final for size failed \n");
 		goto done;
 	}
 	if (der_sig_len <= 0) {
-		LOG(LOG_ERROR, "EVP_DigestSignFinal returned invalid signature length.\n");
+		LOG(LOG_ERROR,
+		    "EVP_DigestSignFinal returned invalid signature length.\n");
 		goto done;
 	}
 
@@ -296,7 +297,7 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 		LOG(LOG_ERROR, "Signature alloc Failed\n");
 		goto done;
 	}
-	//second call with actual param to obtain the DEr encoded signature
+	// second call with actual param to obtain the DEr encoded signature
 	if (1 != EVP_DigestSignFinal(mdctx, der_sig, &der_sig_len)) {
 		LOG(LOG_ERROR, "EVP sign final failed \n");
 		goto done;
@@ -327,13 +328,13 @@ int sha_ECCsign(int curve, uint8_t *msg, uint32_t mlen, uint8_t *out,
 	TEST_ASSERT_NOT_NULL(sig_s);
 	BN_bn2bin(s, sig_s);
 
-	*outlen = sig_r_len + sig_s_len;;
-	if (0 != memcpy_s(out, *outlen, (char *)sig_r,
-		     (size_t)sig_r_len)) {
+	*outlen = sig_r_len + sig_s_len;
+	;
+	if (0 != memcpy_s(out, *outlen, (char *)sig_r, (size_t)sig_r_len)) {
 		goto done;
 	}
 	if (0 != memcpy_s(out + sig_r_len, *outlen, (char *)sig_s,
-		     (size_t)sig_s_len)) {
+			  (size_t)sig_s_len)) {
 		goto done;
 	}
 	result = 1;
@@ -370,7 +371,7 @@ fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 	int key_buf_len = 0;
 	EC_GROUP *ecgroup = NULL;
 	BIGNUM *x = BN_new();
-    BIGNUM *y = BN_new();
+	BIGNUM *y = BN_new();
 	int x_len = 0;
 	int y_len = 0;
 	fdo_public_key_t *pk = NULL;
@@ -385,7 +386,8 @@ fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 	const EC_POINT *pub = EC_POINT_new(ecgroup);
 	TEST_ASSERT_NOT_NULL_MESSAGE(pub, "Failed to get ECPOINT\n");
 	/* Get the public key co-ordinates in x and y*/
-	if (EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_X, &x) && EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
+	if (EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_X, &x) &&
+	    EVP_PKEY_get_bn_param(evpKey, OSSL_PKEY_PARAM_EC_PUB_Y, &y)) {
 		x_len = BN_num_bytes(x);
 		y_len = BN_num_bytes(y);
 		key_buf_len = x_len + y_len;
@@ -396,14 +398,14 @@ fdo_public_key_t *getFDOpk(int curve, EVP_PKEY *evpKey)
 
 #if defined(ECDSA256_DA)
 		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp256,
-				  FDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
-				  key_buf);
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
+					  key_buf_len, key_buf);
 #else
 		pk = fdo_public_key_alloc(FDO_CRYPTO_PUB_KEY_ALGO_ECDSAp384,
-				  FDO_CRYPTO_PUB_KEY_ENCODING_X509, key_buf_len,
-				  key_buf);
+					  FDO_CRYPTO_PUB_KEY_ENCODING_X509,
+					  key_buf_len, key_buf);
 #endif
-    }
+	}
 
 	if (!pk || !pk->key1) {
 		return NULL;
@@ -867,7 +869,8 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 
 #ifdef USE_OPENSSL
 	BIGNUM *privkey_bn = NULL;
-	if (!EVP_PKEY_get_bn_param((const EVP_PKEY *)validkey, OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
+	if (!EVP_PKEY_get_bn_param((const EVP_PKEY *)validkey,
+				   OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
 		LOG(LOG_ERROR, "Failed to get private key bn\n");
 		ret = -1;
 	}
@@ -960,6 +963,9 @@ TEST_CASE("crypto_support_fdo_msg_encrypt_valid", "[crypto_support][fdo]")
 			      iv1, tag, AES_TAG_LEN, aad, 16);
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
+	ret = fdo_kex_close();
+	TEST_ASSERT_EQUAL_INT(0, ret);
+
 	if (cipher) {
 		fdo_free(cipher);
 	}
@@ -1002,7 +1008,7 @@ TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_clear_text",
 	TEST_ASSERT_NOT_NULL(aad);
 
 	ret = fdo_msg_encrypt(NULL, clear_length, cipher, &cipher_length, iv1,
-		tag, AES_TAG_LEN, aad, 16);
+			      tag, AES_TAG_LEN, aad, 16);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
 	if (cipher) {
@@ -1046,8 +1052,8 @@ TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_clear_text_length",
 	aad = fdo_alloc(16);
 	TEST_ASSERT_NOT_NULL(aad);
 
-	ret = fdo_msg_encrypt(test_buff1, 0, cipher, &cipher_length, iv1,
-		tag, AES_TAG_LEN, aad, 16);
+	ret = fdo_msg_encrypt(test_buff1, 0, cipher, &cipher_length, iv1, tag,
+			      AES_TAG_LEN, aad, 16);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
 	if (cipher) {
@@ -1091,8 +1097,8 @@ TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_cipher_text_length",
 	aad = fdo_alloc(16);
 	TEST_ASSERT_NOT_NULL(aad);
 
-	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, NULL, iv1,
-		tag, AES_TAG_LEN, aad, 16);
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, NULL, iv1, tag,
+			      AES_TAG_LEN, aad, 16);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
 	if (cipher) {
@@ -1135,8 +1141,8 @@ TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_iv", "[crypto_support][fdo]")
 	aad = fdo_alloc(16);
 	TEST_ASSERT_NOT_NULL(aad);
 
-	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length, iv1,
-		tag, AES_TAG_LEN, aad, 16);
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
+			      iv1, tag, AES_TAG_LEN, aad, 16);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
 	if (cipher) {
@@ -1173,8 +1179,8 @@ TEST_CASE("crypto_support_fdo_msg_encrypt_invalid_tag", "[crypto_support][fdo]")
 	aad = fdo_alloc(16);
 	TEST_ASSERT_NOT_NULL(aad);
 
-	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length, iv1,
-		tag, AES_TAG_LEN, aad, 16);
+	ret = fdo_msg_encrypt(test_buff1, clear_length, cipher, &cipher_length,
+			      iv1, tag, AES_TAG_LEN, aad, 16);
 	TEST_ASSERT_EQUAL_INT(-1, ret);
 
 	if (cipher) {
@@ -1709,6 +1715,7 @@ TEST_CASE("crypto_support_fdo_kex_init_fdo_string_alloc_with_str_fail",
 	ret = fdo_kex_init();
 	fdo_string_alloc_with_str_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
+	fdo_kex_close();
 }
 
 #ifndef TARGET_OS_FREERTOS
@@ -1723,6 +1730,7 @@ TEST_CASE("crypto_support_fdo_kex_init_fdo_byte_array_alloc_fail",
 	ret = fdo_kex_init();
 	fdo_byte_array_alloc_fail_case = false;
 	TEST_ASSERT_EQUAL_INT(-1, ret);
+	fdo_kex_close();
 }
 
 #ifndef TARGET_OS_FREERTOS
@@ -1885,7 +1893,7 @@ void test_fdo_ov_verify(void)
 TEST_CASE("fdo_ov_verify", "[crypto_support][fdo]")
 #endif
 {
-	//TO-DO: Update test case for X509-encoded public key types.
+	// TO-DO: Update test case for X509-encoded public key types.
 	TEST_IGNORE();
 	int ret;
 	uint8_t test_buff[] = {1, 2, 3, 4, 5};

@@ -37,7 +37,8 @@
 
  */
 int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
-			fdo_byte_array_t **signature, fdo_byte_array_t **eat_maroe)
+			fdo_byte_array_t **signature,
+			fdo_byte_array_t **eat_maroe)
 {
 	int ret = -1;
 
@@ -57,8 +58,10 @@ int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
 		goto end;
 	}
 
-	if (0 != crypto_hal_ecdsa_sign_cse(message, message_length, (*signature)->bytes,
-			(*signature)->byte_sz, (*eat_maroe)->bytes, &(*eat_maroe)->byte_sz)) {
+	if (0 != crypto_hal_ecdsa_sign_cse(
+		     message, message_length, (*signature)->bytes,
+		     (*signature)->byte_sz, (*eat_maroe)->bytes,
+		     &(*eat_maroe)->byte_sz)) {
 		LOG(LOG_ERROR, "ECDSA signing failed!\n");
 		fdo_byte_array_free(*signature);
 		fdo_byte_array_free(*eat_maroe);
@@ -76,8 +79,9 @@ int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
 		goto end;
 	}
 
-	if (0 != crypto_hal_ecdsa_sign(message, message_length, (*signature)->bytes,
-				&(*signature)->byte_sz)) {
+	if (0 != crypto_hal_ecdsa_sign(message, message_length,
+				       (*signature)->bytes,
+				       &(*signature)->byte_sz)) {
 		LOG(LOG_ERROR, "ECDSA signing failed!\n");
 		fdo_byte_array_free(*signature);
 		*signature = NULL;

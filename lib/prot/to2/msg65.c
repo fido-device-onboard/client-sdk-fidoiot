@@ -17,7 +17,7 @@
  * msg65() - TO2.SetupDevice
  * So, the owner has verified that it is talking to right device and
  * is receiving the next Owner's credentials.
- * 
+ *
  * TO2.SetupDevice = CoseSignature
  * TO2SetupDevicePayload = [
  *   RendezvousInfo, ;; RendezvousInfo replacement
@@ -57,7 +57,8 @@ int32_t msg65(fdo_prot_t *ps)
 	/* If the packet is encrypted, decrypt it */
 	pkt = fdo_encrypted_packet_read(&ps->fdor);
 	if (pkt == NULL) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to parse encrypted packet\n");
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to parse encrypted packet\n");
 		goto err;
 	}
 
@@ -66,8 +67,8 @@ int32_t msg65(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// Allocate for cose object now. Allocate for its members when needed later.
-	// Free immediately once its of no use.
+	// Allocate for cose object now. Allocate for its members when needed
+	// later. Free immediately once its of no use.
 	cose = fdo_alloc(sizeof(fdo_cose_t));
 	if (!cose) {
 		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc COSE\n");
@@ -79,18 +80,23 @@ int32_t msg65(fdo_prot_t *ps)
 		goto err;
 	}
 
-	// clear the FDOR buffer and push COSE payload into it, essentially reusing the FDOR object.
+	// clear the FDOR buffer and push COSE payload into it, essentially
+	// reusing the FDOR object.
 	fdo_block_reset(&ps->fdor.b);
 	ps->fdor.b.block_size = cose->cose_payload->byte_sz;
 	if (0 != memcpy_s(ps->fdor.b.block, ps->fdor.b.block_size,
-		cose->cose_payload->bytes, cose->cose_payload->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to copy COSE payload\n");
+			  cose->cose_payload->bytes,
+			  cose->cose_payload->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to copy COSE payload\n");
 		goto err;
 	}
 
-	// initialize the parser once the buffer contains COSE payload to be decoded.
+	// initialize the parser once the buffer contains COSE payload to be
+	// decoded.
 	if (!fdor_parser_init(&ps->fdor)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to initilize FDOR parser\n");
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to initilize FDOR parser\n");
 		goto err;
 	}
 
@@ -101,67 +107,78 @@ int32_t msg65(fdo_prot_t *ps)
 	/* Create the destination of this final data */
 	ps->osc = fdo_owner_supplied_credentials_alloc();
 	if (ps->osc == NULL) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for new set of credentials\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for new set "
+			       "of credentials\n");
 		goto err;
 	}
 
-	// update the replacement RendezvousInfo 
+	// update the replacement RendezvousInfo
 	ps->osc->rvlst = fdo_rendezvous_list_alloc();
 	if (!ps->osc->rvlst) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for replacement RendezvousInfo\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for "
+			       "replacement RendezvousInfo\n");
 		goto err;
 	}
 
 	if (!fdo_rendezvous_list_read(&ps->fdor, ps->osc->rvlst)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement RendezvousInfo\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement "
+			       "RendezvousInfo\n");
 		goto err;
 	}
 
 	// update the replacement Guid
 	size_t guid_length = 0;
 	if (!fdor_string_length(&ps->fdor, &guid_length) ||
-		guid_length != FDO_GUID_BYTES) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement GUID length\n");
+	    guid_length != FDO_GUID_BYTES) {
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement "
+			       "GUID length\n");
 		goto err;
 	}
 	ps->osc->guid = fdo_byte_array_alloc(guid_length);
 	if (!ps->osc->guid) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc for replacement GUID\n");
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to alloc for replacement GUID\n");
 		goto err;
 	}
-	if (!fdor_byte_string(&ps->fdor, ps->osc->guid->bytes, ps->osc->guid->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement GUID\n");
+	if (!fdor_byte_string(&ps->fdor, ps->osc->guid->bytes,
+			      ps->osc->guid->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to read replacement GUID\n");
 		goto err;
 	}
 
 	size_t nonce7_length = 0;
 	if (!fdor_string_length(&ps->fdor, &nonce7_length) ||
-		nonce7_length != FDO_NONCE_BYTES) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read NonceTO2SetupDv length\n");
+	    nonce7_length != FDO_NONCE_BYTES) {
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to read NonceTO2SetupDv length\n");
 		goto err;
 	}
 
 	ps->nonce_to2setupdv_rcv = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->nonce_to2setupdv_rcv) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to alloc NonceTO2SetupDv\n");
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to alloc NonceTO2SetupDv\n");
 		goto err;
 	}
-	if (!fdor_byte_string(&ps->fdor, ps->nonce_to2setupdv_rcv->bytes, FDO_NONCE_BYTES)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read NonceTO2SetupDv\n");
+	if (!fdor_byte_string(&ps->fdor, ps->nonce_to2setupdv_rcv->bytes,
+			      FDO_NONCE_BYTES)) {
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to read NonceTO2SetupDv\n");
 		goto err;
 	}
 
 	if (!fdo_nonce_equal(ps->nonce_to2setupdv_rcv, ps->nonce_to2setupdv)) {
-		LOG(LOG_ERROR,
-			"TO2.SetupDevice: Received NonceTO2SetupDv does not match with existing NonceTO2SetupDv\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Received NonceTO2SetupDv does "
+			       "not match with existing NonceTO2SetupDv\n");
 		goto err;
 	}
 
 	// update the replacement Owner key (Owner2Key)
 	ps->osc->pubkey = fdo_public_key_read(&ps->fdor);
 	if (!ps->osc->pubkey) {
-		LOG(LOG_ERROR,
-			"TO2.SetupDevice: Failed to read replacement Owner key (Owner2Key)\n");
+		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to read replacement "
+			       "Owner key (Owner2Key)\n");
 		goto err;
 	}
 
@@ -170,20 +187,23 @@ int32_t msg65(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload, NULL,
-		&cose_sig_structure) || !cose_sig_structure) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to write COSE Sig_structure\n");
+	if (!fdo_cose_write_sigstructure(cose->cose_ph, cose->cose_payload,
+					 NULL, &cose_sig_structure) ||
+	    !cose_sig_structure) {
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to write COSE Sig_structure\n");
 		goto err;
 	}
 
 	// verify the received COSE signature
-	if (!fdo_signature_verification(cose_sig_structure,
-					cose->cose_signature,
-					ps->osc->pubkey)) {
-		LOG(LOG_ERROR, "TO2.SetupDevice: Failed to verify OVEntry signature\n");
+	if (!fdo_signature_verification(
+		cose_sig_structure, cose->cose_signature, ps->osc->pubkey)) {
+		LOG(LOG_ERROR,
+		    "TO2.SetupDevice: Failed to verify OVEntry signature\n");
 		goto err;
 	}
-	LOG(LOG_DEBUG, "TO2.SetupDevice: OVEntry Signature verification successful\n");
+	LOG(LOG_DEBUG,
+	    "TO2.SetupDevice: OVEntry Signature verification successful\n");
 
 	ps->state = FDO_STATE_TO2_SND_NEXT_DEVICE_SERVICE_INFO;
 	LOG(LOG_DEBUG, "TO2.SetupDevice completed successfully\n");

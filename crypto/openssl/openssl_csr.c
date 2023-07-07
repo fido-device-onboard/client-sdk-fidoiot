@@ -31,7 +31,7 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 	size_t group_name_size;
 	char group_name[64];
 	size_t pub_key_size;
-	fdo_byte_array_t* octet_pub_key = NULL;
+	fdo_byte_array_t *octet_pub_key = NULL;
 
 	EC_GROUP *ec_grp = NULL;
 	BIO *csr_mem_bio = NULL;
@@ -61,23 +61,24 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 	 * b. Generate a new point
 	 * c. Create the public key
 	 */
-	EVP_PKEY_get_utf8_string_param(evp_key, OSSL_PKEY_PARAM_GROUP_NAME, NULL, 0, &group_name_size);
+	EVP_PKEY_get_utf8_string_param(evp_key, OSSL_PKEY_PARAM_GROUP_NAME,
+				       NULL, 0, &group_name_size);
 	if (group_name_size >= sizeof(group_name)) {
-		LOG(LOG_ERROR, "Unexpected long group name : %zu for EC key\n",group_name_size);
+		LOG(LOG_ERROR, "Unexpected long group name : %zu for EC key\n",
+		    group_name_size);
 		ret = -1;
 		goto err;
 	}
-	if (!EVP_PKEY_get_utf8_string_param(evp_key, OSSL_PKEY_PARAM_GROUP_NAME, group_name, sizeof(group_name),
-												&group_name_size))
-	{
+	if (!EVP_PKEY_get_utf8_string_param(evp_key, OSSL_PKEY_PARAM_GROUP_NAME,
+					    group_name, sizeof(group_name),
+					    &group_name_size)) {
 		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
 		ret = -1;
 		goto err;
 	}
-	int group_nid = OBJ_sn2nid(group_name);	
+	int group_nid = OBJ_sn2nid(group_name);
 	ec_grp = EC_GROUP_new_by_curve_name(group_nid);
-	if (ec_grp == NULL)
-	{
+	if (ec_grp == NULL) {
 		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
 		ret = -1;
 		goto err;
@@ -90,7 +91,8 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		goto err;
 	}
 
-	if (!EVP_PKEY_get_bn_param(evp_key, OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
+	if (!EVP_PKEY_get_bn_param(evp_key, OSSL_PKEY_PARAM_PRIV_KEY,
+				   &privkey_bn)) {
 		LOG(LOG_ERROR, "Failed to get private key bn\n");
 		ret = -1;
 		goto err;
@@ -103,7 +105,8 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		goto err;
 	}
 
-	pub_key_size = EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, NULL, 0, NULL);
+	pub_key_size = EC_POINT_point2oct(
+	    ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, NULL, 0, NULL);
 	if (!pub_key_size) {
 		LOG(LOG_ERROR, "Failed to get public key size\n");
 		ret = -1;
@@ -116,15 +119,17 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		ret = -1;
 		goto err;
 	}
-	if (!EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, octet_pub_key->bytes,
-		                       octet_pub_key->byte_sz, NULL)) {
+	if (!EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED,
+				octet_pub_key->bytes, octet_pub_key->byte_sz,
+				NULL)) {
 		LOG(LOG_ERROR, "Failed to process public key\n");
 		ret = -1;
 		goto err;
 	}
-    // Set the evp_key instance with public key
-	if (!EVP_PKEY_set_octet_string_param(evp_key, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY, octet_pub_key->bytes,
-		                                     octet_pub_key->byte_sz)) {
+	// Set the evp_key instance with public key
+	if (!EVP_PKEY_set_octet_string_param(
+		evp_key, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY,
+		octet_pub_key->bytes, octet_pub_key->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to set the public key\n");
 		ret = -1;
 		goto err;
@@ -230,13 +235,13 @@ err:
 	}
 	if (ec_grp) {
 		EC_GROUP_free(ec_grp);
-		}
+	}
 	if (octet_pub_key) {
 		fdo_byte_array_free(octet_pub_key);
-		}
+	}
 	if (privkey_bn) {
 		BN_clear_free(privkey_bn);
-		}
+	}
 	if (x509_req) {
 		X509_REQ_free(x509_req);
 	}

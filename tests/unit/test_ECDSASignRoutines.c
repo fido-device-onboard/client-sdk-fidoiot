@@ -5,7 +5,8 @@
 
 /*!
  * \file
- * \brief Unit tests for ECDSA signature generation abstraction routines of FDO library.
+ * \brief Unit tests for ECDSA signature generation abstraction routines of FDO
+ * library.
  */
 
 #include "safe_lib.h"
@@ -201,7 +202,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	unsigned char *sig_r = NULL;
 	unsigned char *sig_s = NULL;
 	uint32_t der_sig_len = 0;
-	uint8_t * der_sig = NULL;
+	uint8_t *der_sig = NULL;
 	size_t hash_length = 0;
 
 #if defined(ECDSA256_DA)
@@ -260,7 +261,8 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 
 #ifdef USE_OPENSSL
 	BIGNUM *privkey_bn = NULL;
-	if (!EVP_PKEY_get_bn_param((const EVP_PKEY *)avalidkey, OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
+	if (!EVP_PKEY_get_bn_param((const EVP_PKEY *)avalidkey,
+				   OSSL_PKEY_PARAM_PRIV_KEY, &privkey_bn)) {
 		LOG(LOG_ERROR, "Failed to get private key bn\n");
 		result = -1;
 	}
@@ -292,37 +294,40 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	TEST_ASSERT_EQUAL(0, result);
 
 #ifdef USE_OPENSSL
-	if(!(mdctx = EVP_MD_CTX_create())) {
+	if (!(mdctx = EVP_MD_CTX_create())) {
 		LOG(LOG_ERROR, "Msg Digest init failed \n");
 		result = -1;
 	}
 #if defined(ECDSA256_DA)
-	if(1 != EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, avalidkey)){
+	if (1 !=
+	    EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, avalidkey)) {
 		LOG(LOG_ERROR, "EVP verify init failed \n");
 		result = -1;
 	}
 #elif defined(ECDSA384_DA)
-	if(1 != EVP_DigestVerifyInit(mdctx, NULL, EVP_sha384(), NULL, avalidkey)){
+	if (1 !=
+	    EVP_DigestVerifyInit(mdctx, NULL, EVP_sha384(), NULL, avalidkey)) {
 		LOG(LOG_ERROR, "EVP verify init failed \n");
 		result = -1;
 	}
 #endif
 
-	if(1 != EVP_DigestVerifyUpdate(mdctx, testdata->bytes, testdata->byte_sz)) {
+	if (1 !=
+	    EVP_DigestVerifyUpdate(mdctx, testdata->bytes, testdata->byte_sz)) {
 		LOG(LOG_ERROR, "EVP verify update failed \n");
 		result = -1;
 	}
 	TEST_ASSERT_EQUAL(0, result);
 
-	sig_r = fdo_alloc(siglen/2);
+	sig_r = fdo_alloc(siglen / 2);
 	TEST_ASSERT_NOT_NULL(sig_r);
-	memcpy_s(sig_r, siglen/2, sigtestdata, siglen/2);
-	sig_s = fdo_alloc(siglen/2);
+	memcpy_s(sig_r, siglen / 2, sigtestdata, siglen / 2);
+	sig_s = fdo_alloc(siglen / 2);
 	TEST_ASSERT_NOT_NULL(sig_s);
-	memcpy_s(sig_s, siglen/2, sigtestdata + siglen/2, siglen/2);
-	r = BN_bin2bn((const unsigned char*) sig_r, siglen/2, NULL);
+	memcpy_s(sig_s, siglen / 2, sigtestdata + siglen / 2, siglen / 2);
+	r = BN_bin2bn((const unsigned char *)sig_r, siglen / 2, NULL);
 	TEST_ASSERT_NOT_NULL(r);
-	s = BN_bin2bn((const unsigned char*) sig_s, siglen/2, NULL);
+	s = BN_bin2bn((const unsigned char *)sig_s, siglen / 2, NULL);
 	TEST_ASSERT_NOT_NULL(s);
 
 	sig = ECDSA_SIG_new();
@@ -348,7 +353,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	}
 
 	// verify the signature.
-	if(1 != EVP_DigestVerifyFinal(mdctx, der_sig, der_sig_len)) {
+	if (1 != EVP_DigestVerifyFinal(mdctx, der_sig, der_sig_len)) {
 		LOG(LOG_ERROR, "ECDSA Sig verification failed\n");
 		result = -1;
 	}
@@ -357,11 +362,11 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 
 	// Negative test case
 	sigtestdata[4] = 'a';
-	memcpy_s(sig_r, siglen/2, sigtestdata, siglen/2);
+	memcpy_s(sig_r, siglen / 2, sigtestdata, siglen / 2);
 	ECDSA_SIG_free(sig);
-	r = BN_bin2bn((const unsigned char*) sig_r, siglen/2, NULL);
+	r = BN_bin2bn((const unsigned char *)sig_r, siglen / 2, NULL);
 	TEST_ASSERT_NOT_NULL(r);
-	s = BN_bin2bn((const unsigned char*) sig_s, siglen/2, NULL);
+	s = BN_bin2bn((const unsigned char *)sig_s, siglen / 2, NULL);
 	TEST_ASSERT_NOT_NULL(s);
 	sig = ECDSA_SIG_new();
 	TEST_ASSERT_NOT_NULL(sig);
@@ -386,7 +391,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	}
 
 	// verify the signature.
-	if(1 != EVP_DigestVerifyFinal(mdctx, der_sig, der_sig_len)) {
+	if (1 != EVP_DigestVerifyFinal(mdctx, der_sig, der_sig_len)) {
 		LOG(LOG_ERROR, "ECDSA Sig verification failed\n");
 		result = -1;
 	}
