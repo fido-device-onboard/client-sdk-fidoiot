@@ -696,65 +696,69 @@ int32_t fdo_tpm_commit_replacement_hmac_key(void)
 	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
 
-	if (!file_exists(TPM_HMAC_PRIV_KEY) ||
-		!file_exists(TPM_HMAC_PUB_KEY) ||
-		!file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY) ||
-		!file_exists(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
+	if (!file_exists(TPM_HMAC_PRIV_KEY) || !file_exists(TPM_HMAC_PUB_KEY) ||
+	    !file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY) ||
+	    !file_exists(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
 		LOG(LOG_ERROR, "One or more HMAC objects are missing.\n");
 		goto err;
 	}
 
-	// read TPM_HMAC_REPLACEMENT_PRIV_KEY contents and write it into TPM_HMAC_PRIV_KEY
+	// read TPM_HMAC_REPLACEMENT_PRIV_KEY contents and write it into
+	// TPM_HMAC_PRIV_KEY
 	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PRIV_KEY);
 
 	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
 	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
-		LOG(LOG_ERROR, "TPM HMAC Replacement Private Key file size incorrect.\n");
+		LOG(LOG_ERROR,
+		    "TPM HMAC Replacement Private Key file size incorrect.\n");
 		goto err;
 	}
 
-	LOG(LOG_DEBUG,
-	    "TPM HMAC Replacement Private Key file size retreived successfully.\n");
+	LOG(LOG_DEBUG, "TPM HMAC Replacement Private Key file size retreived "
+		       "successfully.\n");
 
-	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PRIV_KEY, bufferTPMHMACPriv_key,
-					file_size);
+	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PRIV_KEY,
+					bufferTPMHMACPriv_key, file_size);
 
 	if (ret_val != 0) {
-		LOG(LOG_ERROR,
-		    "Failed to load TPM HMAC Replacement Private Key into buffer.\n");
+		LOG(LOG_ERROR, "Failed to load TPM HMAC Replacement Private "
+			       "Key into buffer.\n");
 		goto err;
 	}
 
 	if ((int32_t)file_size !=
 	    fdo_blob_write(TPM_HMAC_PRIV_KEY, FDO_SDK_RAW_DATA,
-			bufferTPMHMACPriv_key, file_size)) {
-		LOG(LOG_ERROR, "Failed to save the private HMAC key context.\n");
+			   bufferTPMHMACPriv_key, file_size)) {
+		LOG(LOG_ERROR,
+		    "Failed to save the private HMAC key context.\n");
 		goto err;
 	}
 
-	// now, read TPM_HMAC_REPLACEMENT_PUB_KEY contents and write it into TPM_HMAC_PUB_KEY
+	// now, read TPM_HMAC_REPLACEMENT_PUB_KEY contents and write it into
+	// TPM_HMAC_PUB_KEY
 	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PUB_KEY);
 
 	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
-		LOG(LOG_ERROR, "TPM HMAC Replacement Public Key file size incorrect.\n");
+		LOG(LOG_ERROR,
+		    "TPM HMAC Replacement Public Key file size incorrect.\n");
 		goto err;
 	}
 
-	LOG(LOG_DEBUG,
-	    "TPM HMAC Replacement Public Key file size retreived successfully.\n");
+	LOG(LOG_DEBUG, "TPM HMAC Replacement Public Key file size retreived "
+		       "successfully.\n");
 
-	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PUB_KEY, bufferTPMHMACPub_key,
-					file_size);
+	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PUB_KEY,
+					bufferTPMHMACPub_key, file_size);
 
 	if (ret_val != 0) {
-		LOG(LOG_ERROR,
-		    "Failed to load TPM HMAC Replacement Public key into buffer.\n");
+		LOG(LOG_ERROR, "Failed to load TPM HMAC Replacement Public key "
+			       "into buffer.\n");
 		goto err;
 	}
 
 	if ((int32_t)file_size !=
 	    fdo_blob_write(TPM_HMAC_PUB_KEY, FDO_SDK_RAW_DATA,
-			bufferTPMHMACPub_key, file_size)) {
+			   bufferTPMHMACPub_key, file_size)) {
 		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
 		goto err;
 	}
@@ -767,7 +771,8 @@ err:
  * Clear the Replacement TPM HMAC key objects, if they exist.
  *
  */
-void fdo_tpm_clear_replacement_hmac_key(void) {
+void fdo_tpm_clear_replacement_hmac_key(void)
+{
 	// remove the files if they exist, else return
 	if (file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
 		if (0 != remove(TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
@@ -795,7 +800,7 @@ int32_t is_valid_tpm_data_protection_key_present(void)
 		 get_file_size(TPM_HMAC_DATA_PUB_KEY)) &&
 		file_exists(TPM_HMAC_DATA_PRIV_KEY) &&
 		(TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 ==
-		 get_file_size(TPM_HMAC_DATA_PRIV_KEY) ||
-		TPM_HMAC_PRIV_KEY_CONTEXT_SIZE ==
-		 get_file_size(TPM_HMAC_DATA_PRIV_KEY)));
+		     get_file_size(TPM_HMAC_DATA_PRIV_KEY) ||
+		 TPM_HMAC_PRIV_KEY_CONTEXT_SIZE ==
+		     get_file_size(TPM_HMAC_DATA_PRIV_KEY)));
 }

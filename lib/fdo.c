@@ -86,7 +86,8 @@ static bool _STATE_Shutdown_Error(void);
 static fdo_sdk_status app_initialize(void);
 static void app_close(void);
 bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
-	fdo_ip_address_t **mfg_ip, char *mfg_dns, size_t mfg_dns_sz, int *mfg_port);
+				fdo_ip_address_t **mfg_ip, char *mfg_dns,
+				size_t mfg_dns_sz, int *mfg_port);
 
 #define ERROR()                                                                \
 	{                                                                      \
@@ -137,13 +138,17 @@ fdo_sdk_status fdo_sdk_run(void)
 			ret = FDO_ERROR;
 			++error_count;
 			if (error_count == ERROR_RETRY_COUNT) {
-				LOG(LOG_INFO, "*********Retry(s) done*********\n");
+				LOG(LOG_INFO,
+				    "*********Retry(s) done*********\n");
 				g_fdo_data->state_fn = &_STATE_Shutdown_Error;
 			} else if (error_count > ERROR_RETRY_COUNT) {
-				// reach here when all retries have been completed
+				// reach here when all retries have been
+				// completed
 				goto end;
 			} else {
-				LOG(LOG_INFO, "*********Retry count : %u*********\n", error_count);
+				LOG(LOG_INFO,
+				    "*********Retry count : %u*********\n",
+				    error_count);
 			}
 		}
 	}
@@ -289,7 +294,8 @@ static void fdo_protTO2Exit(app_data_t *app_data)
 	}
 
 	if (ps->serviceinfo_invalid_modnames) {
-		fdo_serviceinfo_invalid_modname_free(ps->serviceinfo_invalid_modnames);
+		fdo_serviceinfo_invalid_modname_free(
+		    ps->serviceinfo_invalid_modnames);
 		fdo_free(ps->serviceinfo_invalid_modnames);
 	}
 
@@ -389,29 +395,35 @@ static fdo_sdk_status app_initialize(void)
 	// ServiceInfo size that will be supported for both Owner and Device
 	// ServiceInfo.
 	//
-	// Default to MIN_SERVICEINFO_SZ if the file is non-existent, or if the file
-	// content is not a valid number between MIN_SERVICEINFO_SZ and
+	// Default to MIN_SERVICEINFO_SZ if the file is non-existent, or if the
+	// file content is not a valid number between MIN_SERVICEINFO_SZ and
 	// MAX_SERVICEINFO_SZ
-	fsize = fdo_blob_size((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA);
+	fsize =
+	    fdo_blob_size((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA);
 	if (fsize == 0) {
 		g_fdo_data->prot.maxDeviceServiceInfoSz = MIN_SERVICEINFO_SZ;
 		g_fdo_data->prot.maxOwnerServiceInfoSz = MIN_SERVICEINFO_SZ;
-		g_fdo_data->prot.prot_buff_sz = MSG_BUFFER_SZ + MSG_METADATA_SIZE;
+		g_fdo_data->prot.prot_buff_sz =
+		    MSG_BUFFER_SZ + MSG_METADATA_SIZE;
 	} else {
 		buffer = fdo_alloc(fsize + 1);
 		if (!buffer) {
 			LOG(LOG_ERROR, "malloc failed\n");
 		} else {
-			if (fdo_blob_read((char *)MAX_SERVICEINFO_SZ_FILE, FDO_SDK_RAW_DATA,
-					(uint8_t *)buffer, fsize) == -1) {
-				LOG(LOG_ERROR, "Failed to read Manufacture DN\n");
+			if (fdo_blob_read((char *)MAX_SERVICEINFO_SZ_FILE,
+					  FDO_SDK_RAW_DATA, (uint8_t *)buffer,
+					  fsize) == -1) {
+				LOG(LOG_ERROR,
+				    "Failed to read Manufacture DN\n");
 			}
 			// set to 0 explicitly
 			errno = 0;
 			buffer_as_long = strtol(buffer, &eptr, 10);
 			if (!eptr || eptr == buffer || errno != 0) {
-				LOG(LOG_INFO, "Invalid maximum ServiceInfo size, "
-					"defaulting to %d\n", MIN_SERVICEINFO_SZ);
+				LOG(LOG_INFO,
+				    "Invalid maximum ServiceInfo size, "
+				    "defaulting to %d\n",
+				    MIN_SERVICEINFO_SZ);
 				max_serviceinfo_sz = MIN_SERVICEINFO_SZ;
 			}
 
@@ -423,53 +435,62 @@ static fdo_sdk_status app_initialize(void)
 				max_serviceinfo_sz = buffer_as_long;
 			}
 			if (max_serviceinfo_sz > MSG_BUFFER_SZ) {
-				g_fdo_data->prot.prot_buff_sz = max_serviceinfo_sz + MSG_METADATA_SIZE;
+				g_fdo_data->prot.prot_buff_sz =
+				    max_serviceinfo_sz + MSG_METADATA_SIZE;
 			} else {
-				g_fdo_data->prot.prot_buff_sz = MSG_BUFFER_SZ + MSG_METADATA_SIZE;
+				g_fdo_data->prot.prot_buff_sz =
+				    MSG_BUFFER_SZ + MSG_METADATA_SIZE;
 			}
-			g_fdo_data->prot.maxDeviceServiceInfoSz = max_serviceinfo_sz;
-			g_fdo_data->prot.maxOwnerServiceInfoSz = max_serviceinfo_sz;
+			g_fdo_data->prot.maxDeviceServiceInfoSz =
+			    max_serviceinfo_sz;
+			g_fdo_data->prot.maxOwnerServiceInfoSz =
+			    max_serviceinfo_sz;
 		}
 	}
 	// maxDeviceMessageSize that is to be sent during msg/60
-	g_fdo_data->prot.max_device_message_size = g_fdo_data->prot.prot_buff_sz;
+	g_fdo_data->prot.max_device_message_size =
+	    g_fdo_data->prot.prot_buff_sz;
 	if (buffer != NULL) {
 		fdo_free(buffer);
 	}
 
-	LOG(LOG_INFO, "Maximum supported DeviceServiceInfo size: %"PRIu64" bytes\n",
-		g_fdo_data->prot.maxDeviceServiceInfoSz);
-	LOG(LOG_INFO, "Maximum supported OwnerServiceInfo size: %"PRIu64" bytes\n",
-		g_fdo_data->prot.maxOwnerServiceInfoSz);
+	LOG(LOG_INFO,
+	    "Maximum supported DeviceServiceInfo size: %" PRIu64 " bytes\n",
+	    g_fdo_data->prot.maxDeviceServiceInfoSz);
+	LOG(LOG_INFO,
+	    "Maximum supported OwnerServiceInfo size: %" PRIu64 " bytes\n",
+	    g_fdo_data->prot.maxOwnerServiceInfoSz);
 
 	/*
-	* Initialize and allocate memory for the FDOW/FDOR blocks before starting the spec's
-	* protocol execution. Reuse the allocated memory by emptying the contents.
-	*/
+	 * Initialize and allocate memory for the FDOW/FDOR blocks before
+	 * starting the spec's protocol execution. Reuse the allocated memory by
+	 * emptying the contents.
+	 */
 	if (!fdow_init(&g_fdo_data->prot.fdow) ||
-		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdow.b,
-			g_fdo_data->prot.prot_buff_sz)) {
+	    !fdo_block_alloc_with_size(&g_fdo_data->prot.fdow.b,
+				       g_fdo_data->prot.prot_buff_sz)) {
 		LOG(LOG_ERROR, "fdow_init() failed!\n");
 		return FDO_ERROR;
 	}
 	if (!fdor_init(&g_fdo_data->prot.fdor) ||
-		!fdo_block_alloc_with_size(&g_fdo_data->prot.fdor.b,
-			g_fdo_data->prot.prot_buff_sz)) {
+	    !fdo_block_alloc_with_size(&g_fdo_data->prot.fdor.b,
+				       g_fdo_data->prot.prot_buff_sz)) {
 		LOG(LOG_ERROR, "fdor_init() failed!\n");
 		return FDO_ERROR;
 	}
 
 	if ((g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READY1) ||
-			(g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READYN)) {
-	#if defined(DEVICE_CSE_ENABLED)
+	    (g_fdo_data->devcred->ST == FDO_DEVICE_STATE_READYN)) {
+#if defined(DEVICE_CSE_ENABLED)
 		if (!read_cse_device_credentials(g_fdo_data->devcred)) {
-			LOG(LOG_ERROR, "Could not parse the Device Credentials form CSE\n");
+			LOG(LOG_ERROR, "Could not parse the Device Credentials "
+				       "form CSE\n");
 			return -1;
 		}
 		ret = 0;
-	#else
+#else
 		ret = load_device_secret();
-	#endif
+#endif
 		if (ret == -1) {
 			LOG(LOG_ERROR, "Load HMAC Secret failed\n");
 			return FDO_ERROR;
@@ -592,7 +613,8 @@ void fdo_sdk_service_info_register_module(fdo_sdk_service_info_module *module)
 /**
  * Create 'devmod' module and initialize it with the key-value pairs.
  */
-static bool add_module_devmod(void) {
+static bool add_module_devmod(void)
+{
 	// Build up default 'devmod' ServiceInfo list
 	g_fdo_data->service_info = fdo_service_info_alloc();
 
@@ -601,88 +623,90 @@ static bool add_module_devmod(void) {
 		return false;
 	}
 
-	if (!fdo_service_info_add_kv_bool(g_fdo_data->service_info, "devmod:active",
-				    true)) {
+	if (!fdo_service_info_add_kv_bool(g_fdo_data->service_info,
+					  "devmod:active", true)) {
 		LOG(LOG_ERROR, "Failed to add devmod:active\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:os",
-				    OS_NAME)) {
+					 OS_NAME)) {
 		LOG(LOG_ERROR, "Failed to add devmod:os\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:arch",
-				    ARCH)) {
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info,
+					 "devmod:arch", ARCH)) {
 		LOG(LOG_ERROR, "Failed to add devmod:arch\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:version",
-				    OS_VERSION)) {
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info,
+					 "devmod:version", OS_VERSION)) {
 		LOG(LOG_ERROR, "Failed to add devmod:version\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:device",
-				    (char *)get_device_model())) {
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info,
+					 "devmod:device",
+					 (char *)get_device_model())) {
 		LOG(LOG_ERROR, "Failed to add devmod:device\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sn",
-				    (char *)get_device_serial_number())) {
+					 (char *)get_device_serial_number())) {
 		LOG(LOG_ERROR, "Failed to add devmod:sn\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:pathsep",
-				    PATH_SEPARATOR)) {
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info,
+					 "devmod:pathsep", PATH_SEPARATOR)) {
 		LOG(LOG_ERROR, "Failed to add devmod:pathsep\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:sep",
-				    SEPARATOR)) {
+					 SEPARATOR)) {
 		LOG(LOG_ERROR, "Failed to add devmod:sep\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:nl",
-				    NEWLINE)) {
+					 NEWLINE)) {
 		LOG(LOG_ERROR, "Failed to add devmod:nl\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:tmp",
-				    "")) {
+					 "")) {
 		LOG(LOG_ERROR, "Failed to add devmod:tmp\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:dir",
-				    "")) {
+					 "")) {
 		LOG(LOG_ERROR, "Failed to add devmod:dir\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:progenv",
-				    PROGENV)) {
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info,
+					 "devmod:progenv", PROGENV)) {
 		LOG(LOG_ERROR, "Failed to add devmod:progenv\n");
 		return false;
 	}
 	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:bin",
-				    BIN_TYPE)) {
+					 BIN_TYPE)) {
 		LOG(LOG_ERROR, "Failed to add devmod:bin\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:mudurl",
-				    "")) {
+	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info,
+					 "devmod:mudurl", "")) {
 		LOG(LOG_ERROR, "Failed to add devmod:mudurl\n");
 		return false;
 	}
 
-	// should ideally contain supported ServiceInfo module list and its count.
-	// for now, set this to 1, since we've only 1 module 'fdo_sys'
-	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo module
-	// support is added.
-	if (!fdo_service_info_add_kv_int(g_fdo_data->service_info, "devmod:nummodules",
-					1)) {
+	// should ideally contain supported ServiceInfo module list and its
+	// count. for now, set this to 1, since we've only 1 module 'fdo_sys'
+	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo
+	// module support is added.
+	if (!fdo_service_info_add_kv_int(g_fdo_data->service_info,
+					 "devmod:nummodules", 1)) {
 		LOG(LOG_ERROR, "Failed to add devmod:nummodules\n");
 		return false;
 	}
-	if (!fdo_service_info_add_kv_str(g_fdo_data->service_info, "devmod:modules",
-				    g_fdo_data->module_list->module.module_name)) {
+	if (!fdo_service_info_add_kv_str(
+		g_fdo_data->service_info, "devmod:modules",
+		g_fdo_data->module_list->module.module_name)) {
 		LOG(LOG_ERROR, "Failed to add devmod:modules\n");
 		return false;
 	}
@@ -729,16 +753,18 @@ void fdo_sdk_deinit(void)
 	(void)fdo_crypto_close();
 
 #if defined(DEVICE_CSE_ENABLED)
-	#if defined(CSE_SHUTDOWN)
-		FDO_STATUS fdo_status;
-		if (TEE_SUCCESS != fdo_heci_close_interface(&fdo_cse_handle, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
-			if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
-				LOG(LOG_ERROR, "CSE Interface is already Closed!!\n");
-			} else {
-				LOG(LOG_ERROR, "HECI GET CLOSE INTERFACE failed!!\n");
-			}
+#if defined(CSE_SHUTDOWN)
+	FDO_STATUS fdo_status;
+	if (TEE_SUCCESS !=
+		fdo_heci_close_interface(&fdo_cse_handle, &fdo_status) ||
+	    FDO_STATUS_SUCCESS != fdo_status) {
+		if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
+			LOG(LOG_ERROR, "CSE Interface is already Closed!!\n");
+		} else {
+			LOG(LOG_ERROR, "HECI GET CLOSE INTERFACE failed!!\n");
 		}
-	#endif
+	}
+#endif
 	heci_deinit(&fdo_cse_handle);
 #endif
 	app_close();
@@ -806,9 +832,12 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 	uint16_t minor_v = 0;
 	FDO_STATUS fdo_status;
 
-	if (TEE_SUCCESS != fdo_heci_get_version(&fdo_cse_handle, &major_v, &minor_v, &fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+	if (TEE_SUCCESS != fdo_heci_get_version(&fdo_cse_handle, &major_v,
+						&minor_v, &fdo_status) ||
+	    FDO_STATUS_SUCCESS != fdo_status) {
 		if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
-			LOG(LOG_ERROR, "CSE Interface is Closed!! Reboot required.\n");
+			LOG(LOG_ERROR,
+			    "CSE Interface is Closed!! Reboot required.\n");
 		} else {
 			LOG(LOG_ERROR, "HECI GET VERSION failed!!\n");
 		}
@@ -816,7 +845,7 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 	}
 
 	LOG(LOG_INFO, "FDO CSE major_version (%u)\n", major_v);
-    LOG(LOG_INFO, "FDO CSE minor_version (%u)\n", minor_v);
+	LOG(LOG_INFO, "FDO CSE minor_version (%u)\n", minor_v);
 #endif
 
 	/* Load credentials */
@@ -845,7 +874,7 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 	    (module_information == NULL) ||
 	    (module_information->service_info_callback == NULL)) {
 		return FDO_ERROR;
-	    }
+	}
 
 	/* register service-info modules */
 	for (uint32_t i = 0; i < num_modules; i++) {
@@ -862,16 +891,18 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 }
 
 /**
- * Parse the manufacturer network address in the given buffer, and extract and save
- * the TLS/IP/DNS/Port values.
+ * Parse the manufacturer network address in the given buffer, and extract and
+ * save the TLS/IP/DNS/Port values.
  *
  * @param buffer Buffer containing the network address
  * @param buffer_sz Size of the above buffer
- * @param tls Output flag describing whether HTTP (false) or HTTPS (true) is used
+ * @param tls Output flag describing whether HTTP (false) or HTTPS (true) is
+ * used
  * @param mfg_ip
  * Output structure to store IP. Memory allocation is done in this method.
- * If IP address is found while parsing, this allocated structure is returned that must
- * be freed by the caller after use. Otherwise, a NULL object is returned.
+ * If IP address is found while parsing, this allocated structure is returned
+ * that must be freed by the caller after use. Otherwise, a NULL object is
+ * returned.
  * @param mfg_dns Output pre-allocated buffer to store DNS
  * @param mfg_dns_sz Size of the DNS buffer (minimum 100)
  * @param mfg_port Output variable to store port
@@ -879,8 +910,9 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
  * Return true if parse was successful, false otherwise.
  */
 bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
-	fdo_ip_address_t **mfg_ip, char *mfg_dns, size_t mfg_dns_sz,
-	int *mfg_port) {
+				fdo_ip_address_t **mfg_ip, char *mfg_dns,
+				size_t mfg_dns_sz, int *mfg_port)
+{
 
 	char transport_prot[6] = {0};
 	char port[6] = {0};
@@ -894,7 +926,7 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	const char transport_https[6] = "https";
 
 	if (!buffer || buffer_sz == 0 || !tls || !mfg_ip || !mfg_dns ||
-	mfg_dns_sz == 0 || !mfg_port) {
+	    mfg_dns_sz == 0 || !mfg_port) {
 		LOG(LOG_ERROR, "Invalid params\n");
 		return false;
 	}
@@ -902,10 +934,12 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	// the expected format is '{http/https}://{IP/DNS}:port'
 
 	// parse transport protocol until ':'
-	while (buffer[index] != ':' && index < sizeof(transport_prot) - 1 && index < buffer_sz) {
+	while (buffer[index] != ':' && index < sizeof(transport_prot) - 1 &&
+	       index < buffer_sz) {
 		if (!isalpha(buffer[index])) {
-			LOG(LOG_ERROR, "Invalid Transport protocol or missing separator"
-				" in Manufacturer address\n");
+			LOG(LOG_ERROR,
+			    "Invalid Transport protocol or missing separator"
+			    " in Manufacturer address\n");
 			goto end;
 		} else {
 			transport_prot[index] = buffer[index];
@@ -914,8 +948,10 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	}
 
 	// parse separator "://"
-	if (buffer[index] != ':' || buffer[index + 1] != '/' || buffer[index + 2] != '/') {
-		LOG(LOG_ERROR, "Invalid/missing DNS/IP separator in Manufacturer address\n");
+	if (buffer[index] != ':' || buffer[index + 1] != '/' ||
+	    buffer[index + 2] != '/') {
+		LOG(LOG_ERROR, "Invalid/missing DNS/IP separator in "
+			       "Manufacturer address\n");
 		goto end;
 	} else {
 		index += 3;
@@ -926,9 +962,12 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		LOG(LOG_ERROR, "memset failed\n");
 		goto end;
 	}
-	while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) && index < buffer_sz) {
-		if (!isalnum(buffer[index]) && buffer[index] != '-' && buffer[index] != '.') {
-			LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in Manufacturer address\n");
+	while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) &&
+	       index < buffer_sz) {
+		if (!isalnum(buffer[index]) && buffer[index] != '-' &&
+		    buffer[index] != '.') {
+			LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in "
+				       "Manufacturer address\n");
 			goto end;
 		} else {
 			mfg_dns[dns_index] = buffer[index];
@@ -947,14 +986,16 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 
 	// parse separator ':'
 	if (buffer[index] != ':') {
-		LOG(LOG_ERROR, "Missing port separator in Manufacturer address\n");
+		LOG(LOG_ERROR,
+		    "Missing port separator in Manufacturer address\n");
 		goto end;
 	} else {
 		index += 1;
 	}
 
 	// parse port for atmost 5 characters
-	while (port_index < sizeof(port) -1 && index < buffer_sz && isdigit(buffer[index])) {
+	while (port_index < sizeof(port) - 1 && index < buffer_sz &&
+	       isdigit(buffer[index])) {
 		port[port_index] = buffer[index];
 		index++;
 		port_index++;
@@ -970,8 +1011,9 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		index++;
 	}
 	// check for new-line or EOF or null-character
-	if (index < buffer_sz && (buffer[index] == EOF || buffer[index] == '\n' ||
-		buffer[index] == '\0')) {
+	if (index < buffer_sz &&
+	    (buffer[index] == EOF || buffer[index] == '\n' ||
+	     buffer[index] == '\0')) {
 		index++;
 	}
 
@@ -983,21 +1025,25 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	// validate transport protocol. check for 'http' first, then 'https'
 	*tls = false;
 	if (memcmp_s(transport_prot, sizeof(transport_prot), transport_http,
-			sizeof(transport_http), &result) != 0) {
+		     sizeof(transport_http), &result) != 0) {
 		LOG(LOG_ERROR, "Failed to compare transport protocol\n");
 		goto end;
 	}
 	if (0 != result) {
-		if (memcmp_s(transport_prot, sizeof(transport_prot), transport_https,
-			sizeof(transport_https), &result) != 0) {
-			LOG(LOG_ERROR, "Failed to compare transport protocol\n");
+		if (memcmp_s(transport_prot, sizeof(transport_prot),
+			     transport_https, sizeof(transport_https),
+			     &result) != 0) {
+			LOG(LOG_ERROR,
+			    "Failed to compare transport protocol\n");
 			goto end;
 		}
 		if (0 == result) {
 			*tls = true;
-			LOG(LOG_DEBUG, "Manufacturer Transport protocol: HTTPS\n");
+			LOG(LOG_DEBUG,
+			    "Manufacturer Transport protocol: HTTPS\n");
 		} else {
-			LOG(LOG_ERROR, "Invalid Manufacturer Transport protocol specified.\n");
+			LOG(LOG_ERROR, "Invalid Manufacturer Transport "
+				       "protocol specified.\n");
 			goto end;
 		}
 	} else {
@@ -1006,8 +1052,9 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 
 	// validate IP/DNS, check for IP first, if it fails, treat it as DNS
 	// allocate IP structure here
-	// if a valid IP is found, return the IP structure conatining IP, that must be freed by caller
-	// if a valid IP is not found, free the IP structure immediately and return NULL IP structure
+	// if a valid IP is found, return the IP structure conatining IP, that
+	// must be freed by caller if a valid IP is not found, free the IP
+	// structure immediately and return NULL IP structure
 	*mfg_ip = fdo_ipaddress_alloc();
 	if (!*mfg_ip) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
@@ -1038,7 +1085,7 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		LOG(LOG_ERROR, "Manufacturer port is not a number.\n");
 		goto end;
 	} else if (!((*mfg_port >= FDO_PORT_MIN_VALUE) &&
-	      (*mfg_port <= FDO_PORT_MAX_VALUE))) {
+		     (*mfg_port <= FDO_PORT_MAX_VALUE))) {
 		LOG(LOG_ERROR,
 		    "Manufacturer port value should be between "
 		    "[%d-%d].\n",
@@ -1098,20 +1145,21 @@ fdo_sdk_status fdo_sdk_resale(void)
 	if (g_fdo_data->devcred->ST == FDO_DEVICE_STATE_IDLE) {
 		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_READYN;
 
-	#if defined(DEVICE_CSE_ENABLED)
+#if defined(DEVICE_CSE_ENABLED)
 		if (!store_device_status(&g_fdo_data->devcred->ST)) {
-		LOG(LOG_ERROR, "Failed to store updated device status\n");
+			LOG(LOG_ERROR,
+			    "Failed to store updated device status\n");
 			return FDO_ERROR;
 		}
 		ret = 0;
-	#else
+#else
 		if (load_device_secret()) {
 			LOG(LOG_ERROR, "Reading {Mfg|Secret} blob failied!\n");
 			return FDO_ERROR;
 		}
 
 		ret = store_credential(g_fdo_data->devcred);
-	#endif
+#endif
 		if (!ret) {
 			LOG(LOG_INFO, "Set Resale complete\n");
 			r = FDO_SUCCESS;
@@ -1225,8 +1273,10 @@ static bool _STATE_DI(void)
 		buffer[fsize] = '\0';
 
 		if (!parse_manufacturer_address(buffer, fsize, &tls, &mfg_ip,
-			mfg_dns, sizeof(mfg_dns), &mfg_port)) {
-			LOG(LOG_ERROR, "Failed to parse Manufacturer Network address.\n");
+						mfg_dns, sizeof(mfg_dns),
+						&mfg_port)) {
+			LOG(LOG_ERROR,
+			    "Failed to parse Manufacturer Network address.\n");
 			goto end;
 		}
 	} else {
@@ -1236,8 +1286,9 @@ static bool _STATE_DI(void)
 
 	g_fdo_data->delaysec = default_delay;
 
-	prot_ctx = fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
-				      mfg_ip, mfg_ip ? NULL : mfg_dns, mfg_port, tls);
+	prot_ctx =
+	    fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot, mfg_ip,
+			       mfg_ip ? NULL : mfg_dns, mfg_port, tls);
 	if (prot_ctx == NULL) {
 		ERROR();
 		goto end;
@@ -1247,7 +1298,8 @@ static bool _STATE_DI(void)
 		LOG(LOG_ERROR, "DI failed.\n");
 		if (g_fdo_data->error_recovery) {
 			g_fdo_data->state_fn = &_STATE_DI;
-			LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
+			LOG(LOG_INFO, "\nDelaying for %" PRIu64 " seconds\n\n",
+			    g_fdo_data->delaysec);
 			fdo_sleep(g_fdo_data->delaysec);
 			LOG(LOG_INFO, "Retrying.....\n");
 			goto end;
@@ -1290,8 +1342,9 @@ end:
  * initializse state variables and runs the TO1 protocol.
  *
  * @return ret
- *         true if TO1 completes successfully, or if RVBypass was encountered in RendezvousInfo
- *         false if all RendezvousDirectives have been tried and TO1 resulted in failure.
+ *         true if TO1 completes successfully, or if RVBypass was encountered in
+ * RendezvousInfo false if all RendezvousDirectives have been tried and TO1
+ * resulted in failure.
  */
 static bool _STATE_TO1(void)
 {
@@ -1325,19 +1378,21 @@ static bool _STATE_TO1(void)
 
 	// Try TO1 for all available RVDirectives.
 	// Only checking for RVIP/RVDNS/RVPort/RVBypass/RVOwnerOnly flags.
-	// Depending on the requirement, check for more flags should be added here.
-	// If we encounter RVBYPASS, skip directly to TO2.
-	// TO-DO: Integrate TO2 flow into this and fix it to start from the
-	// next directive always in case of failure (ex: RVBypass)
+	// Depending on the requirement, check for more flags should be added
+	// here. If we encounter RVBYPASS, skip directly to TO2. TO-DO:
+	// Integrate TO2 flow into this and fix it to start from the next
+	// directive always in case of failure (ex: RVBypass)
 	int port = 0;
 	fdo_ip_address_t *ip = NULL;
 	fdo_string_t *dns = NULL;
 
 	if (g_fdo_data->current_rvdirective == NULL) {
-		// keep track of current directive in use with the help of stored RendezvousInfo from DI.
-		// it is NULL at 2 points: during 1st TO1 run, and,
-		// when all RVDirectives have been used and we're re-trying
-		g_fdo_data->current_rvdirective = g_fdo_data->devcred->owner_blk->rvlst->rv_directives;
+		// keep track of current directive in use with the help of
+		// stored RendezvousInfo from DI. it is NULL at 2 points: during
+		// 1st TO1 run, and, when all RVDirectives have been used and
+		// we're re-trying
+		g_fdo_data->current_rvdirective =
+		    g_fdo_data->devcred->owner_blk->rvlst->rv_directives;
 	}
 
 	// delay if we came back from RVBypass or re-try RVInfo with some value,
@@ -1345,7 +1400,8 @@ static bool _STATE_TO1(void)
 	fdo_sleep(g_fdo_data->delaysec);
 
 	while (!ret && g_fdo_data->current_rvdirective) {
-		fdo_rendezvous_t *rv = g_fdo_data->current_rvdirective->rv_entries;
+		fdo_rendezvous_t *rv =
+		    g_fdo_data->current_rvdirective->rv_entries;
 		// reset for next use.
 		port = 0;
 		ip = NULL;
@@ -1361,7 +1417,8 @@ static bool _STATE_TO1(void)
 				rvbypass = true;
 				break;
 			} else if (rv->owner_only && *rv->owner_only) {
-				LOG(LOG_DEBUG, "Found RVOwnerOnly. Skipping the directive...\n");
+				LOG(LOG_DEBUG, "Found RVOwnerOnly. Skipping "
+					       "the directive...\n");
 				skip_rv = true;
 				break;
 			} else if (rv->ip) {
@@ -1373,53 +1430,63 @@ static bool _STATE_TO1(void)
 			} else if (rv->pr) {
 				if (*rv->pr == RVPROTHTTP) {
 					tls = false;
-				} else if (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS) {
+				} else if (*rv->pr == RVPROTHTTPS ||
+					   *rv->pr == RVPROTTLS) {
 					// nothing to do. TLS is already set
 				} else {
-					LOG(LOG_ERROR, "Unsupported/Invalid value found for RVProtocolValue. "
-						"Skipping the directive...\n");
+					LOG(LOG_ERROR,
+					    "Unsupported/Invalid value found "
+					    "for RVProtocolValue. "
+					    "Skipping the directive...\n");
 					skip_rv = true;
 					break;
 				}
 			} else if (rv->delaysec) {
 				g_fdo_data->delaysec = *rv->delaysec;
-				LOG(LOG_INFO, "DelaySec set, Delay: %"PRIu64"s\n", g_fdo_data->delaysec);
+				LOG(LOG_INFO,
+				    "DelaySec set, Delay: %" PRIu64 "s\n",
+				    g_fdo_data->delaysec);
 			}
-			// ignore the other RendezvousInstr as they are not used for making requests
+			// ignore the other RendezvousInstr as they are not used
+			// for making requests
 			rv = rv->next;
 		}
 
 		if (rvbypass) {
 			ret = true;
-			LOG(LOG_DEBUG, "Found RVBYPASS in the RendezvousDirective. Skipping TO1...\n");
+			LOG(LOG_DEBUG,
+			    "Found RVBYPASS in the RendezvousDirective. "
+			    "Skipping TO1...\n");
 			g_fdo_data->state_fn = &_STATE_TO2;
 			goto end;
 		}
 
-		// Found the  needed entries of the current directive. Prepare to move to next.
-		g_fdo_data->current_rvdirective = g_fdo_data->current_rvdirective->next;
+		// Found the  needed entries of the current directive. Prepare
+		// to move to next.
+		g_fdo_data->current_rvdirective =
+		    g_fdo_data->current_rvdirective->next;
 
 		if (0 == port) {
 			if (tls) {
 				port = 443;
-				}
-			else  {
+			} else {
 				port = 80;
-				}
-			LOG(LOG_INFO, "Assigned default port: %d \n", port);
 			}
+			LOG(LOG_INFO, "Assigned default port: %d \n", port);
+		}
 
 		if (skip_rv || (!ip && !dns)) {
 			// If all of the IP/DNS values are missing, or
-			// if RVOwnerOnly is present in the current directive, or
-			// if unsupported/invalid RVProtocolValue was found
-			// skip the current directive and check for the same in the next directives.
+			// if RVOwnerOnly is present in the current directive,
+			// or if unsupported/invalid RVProtocolValue was found
+			// skip the current directive and check for the same in
+			// the next directives.
 			continue;
 		}
 
 		prot_ctx =
-	    	fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot, ip,
-		       dns ? dns->bytes : NULL, port, tls);
+		    fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
+				       ip, dns ? dns->bytes : NULL, port, tls);
 		if (prot_ctx == NULL) {
 			ERROR();
 			goto end;
@@ -1433,35 +1500,46 @@ static bool _STATE_TO1(void)
 			fdo_prot_ctx_free(prot_ctx);
 			fdo_free(prot_ctx);
 
-			// check if there is another RV location to try. if yes, try it
-			// the delay interval is conditional
+			// check if there is another RV location to try. if yes,
+			// try it the delay interval is conditional
 			if (g_fdo_data->current_rvdirective) {
-				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+				if (g_fdo_data->delaysec == 0 ||
+				    g_fdo_data->delaysec > max_delay) {
 					g_fdo_data->delaysec = default_delay;
 				}
-				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
+				LOG(LOG_INFO,
+				    "\nDelaying for %" PRIu64 " seconds\n\n",
+				    g_fdo_data->delaysec);
 				fdo_sleep(g_fdo_data->delaysec);
 				continue;
 			}
 
-			// there are no more RV locations left, so check if retry is enabled.
-			// if yes, proceed with retrying all the RV locations
-			// if not, return immediately since there is nothing else left to do.
+			// there are no more RV locations left, so check if
+			// retry is enabled. if yes, proceed with retrying all
+			// the RV locations if not, return immediately since
+			// there is nothing else left to do.
 			if (g_fdo_data->error_recovery) {
-				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
-					g_fdo_data->delaysec = default_delay_rvinfo_retries;
+				if (g_fdo_data->delaysec == 0 ||
+				    g_fdo_data->delaysec > max_delay) {
+					g_fdo_data->delaysec =
+					    default_delay_rvinfo_retries;
 				}
-				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
+				LOG(LOG_INFO,
+				    "\nDelaying for %" PRIu64 " seconds\n\n",
+				    g_fdo_data->delaysec);
 				g_fdo_data->state_fn = &_STATE_TO1;
 				LOG(LOG_INFO, "Retrying.....\n");
 				return ret;
 			} else {
-				LOG(LOG_INFO, "Retry is disabled. Aborting.....\n");
+				LOG(LOG_INFO,
+				    "Retry is disabled. Aborting.....\n");
 				return ret;
 			}
 		} else {
-			LOG(LOG_DEBUG, "\n------------------------------------ TO1 Successful "
-		       "--------------------------------------\n");
+			LOG(LOG_DEBUG,
+			    "\n------------------------------------ TO1 "
+			    "Successful "
+			    "--------------------------------------\n");
 			ret = true;
 			g_fdo_data->state_fn = &_STATE_TO2;
 			goto end;
@@ -1482,9 +1560,9 @@ end:
  * initializse state variables and runs the TO2 protocol.
  *
  * @return ret
- *         true if TO2 completes successfully, or if there are more RendezvousDirectives that
- *         need to be processed,
- *         false if all RendezvousDirectives have been tried and TO2 resulted in failure.
+ *         true if TO2 completes successfully, or if there are more
+ * RendezvousDirectives that need to be processed, false if all
+ * RendezvousDirectives have been tried and TO2 resulted in failure.
  */
 static bool _STATE_TO2(void)
 {
@@ -1526,7 +1604,8 @@ static bool _STATE_TO2(void)
 			LOG(LOG_ERROR, "RVTO2Addr list is empty!\n");
 			return FDO_ERROR;
 		}
-		g_fdo_data->current_rvto2addrentry = rvto2addr->rv_to2addr_entry;
+		g_fdo_data->current_rvto2addrentry =
+		    rvto2addr->rv_to2addr_entry;
 	}
 
 	int port = 0;
@@ -1537,19 +1616,21 @@ static bool _STATE_TO2(void)
 
 	// if thers is RVBYPASS enabled, we set 'rvbypass' flag to false
 	// otherwise, there'll be RVTO2AddrEntry(s), and we iterate through it.
-	// Only one of the conditions will satisfy, which is ensured by resetting of the 'rvbypass' flag,
-	// and, eventual Nulling of the 'g_fdo_data->current_rvto2addrentry'
-	// because we keep on moving to next.
-	// Run the TO2 protocol regardless.
+	// Only one of the conditions will satisfy, which is ensured by
+	// resetting of the 'rvbypass' flag, and, eventual Nulling of the
+	// 'g_fdo_data->current_rvto2addrentry' because we keep on moving to
+	// next. Run the TO2 protocol regardless.
 	if (rvbypass || g_fdo_data->current_rvto2addrentry) {
 
 		tls = true;
 		skip_rv = false;
 		g_fdo_data->delaysec = 0;
-		// if rvbypass is set by TO1, then pick the Owner's address from RendezvousInfo.
-		// otherwise, pick the address from RVTO2AddrEntry.
+		// if rvbypass is set by TO1, then pick the Owner's address from
+		// RendezvousInfo. otherwise, pick the address from
+		// RVTO2AddrEntry.
 		if (rvbypass) {
-			fdo_rendezvous_t *rv = g_fdo_data->current_rvdirective->rv_entries;
+			fdo_rendezvous_t *rv =
+			    g_fdo_data->current_rvdirective->rv_entries;
 			while (rv) {
 				if (rv->ip) {
 					ip = rv->ip;
@@ -1560,32 +1641,43 @@ static bool _STATE_TO2(void)
 				} else if (rv->pr) {
 					if (*rv->pr == RVPROTHTTP) {
 						tls = false;
-					} else if (*rv->pr == RVPROTHTTPS || *rv->pr == RVPROTTLS) {
-						// nothing to do. TLS is already set
+					} else if (*rv->pr == RVPROTHTTPS ||
+						   *rv->pr == RVPROTTLS) {
+						// nothing to do. TLS is already
+						// set
 					} else {
-						LOG(LOG_ERROR, "Unsupported/Invalid value found for RVProtocolValue. "
-							"Skipping the directive...\n");
+						LOG(LOG_ERROR,
+						    "Unsupported/Invalid value "
+						    "found for "
+						    "RVProtocolValue. "
+						    "Skipping the "
+						    "directive...\n");
 						skip_rv = true;
 						break;
 					}
 				} else if (rv->delaysec) {
 					g_fdo_data->delaysec = *rv->delaysec;
-					LOG(LOG_INFO, "DelaySec set, Delay: %"PRIu64"s\n", g_fdo_data->delaysec);
+					LOG(LOG_INFO,
+					    "DelaySec set, Delay: %" PRIu64
+					    "s\n",
+					    g_fdo_data->delaysec);
 				}
-				// no need to check for RVBYPASS here again, since we used it
-				// to get here in the first place
-				// ignore the other RendezvousInstr as they are not used for making requests
+				// no need to check for RVBYPASS here again,
+				// since we used it to get here in the first
+				// place ignore the other RendezvousInstr as
+				// they are not used for making requests
 				rv = rv->next;
 			}
 
 			// Found the  needed entries of the current directive.
 			// Prepare to move to next in case of failure
-			g_fdo_data->current_rvdirective = g_fdo_data->current_rvdirective->next;
+			g_fdo_data->current_rvdirective =
+			    g_fdo_data->current_rvdirective->next;
 
 			// clear to1d, if present.
-			// if this is null at 'TO2.ProveOVHdr, Type 61',then to1d COSE Signature
-			// verification is avoided.
-			// Else, COSE Signature verification is done.
+			// if this is null at 'TO2.ProveOVHdr, Type 61',then
+			// to1d COSE Signature verification is avoided. Else,
+			// COSE Signature verification is done.
 			if (g_fdo_data->prot.to1d_cose != NULL) {
 				fdo_cose_free(g_fdo_data->prot.to1d_cose);
 			}
@@ -1593,122 +1685,151 @@ static bool _STATE_TO2(void)
 		} else {
 
 			ip = fdo_ipaddress_alloc();
-			if (g_fdo_data->current_rvto2addrentry->rvip && !fdo_convert_to_ipaddress(g_fdo_data->current_rvto2addrentry->rvip, ip)) {
-				LOG(LOG_ERROR, "Failed to convert IP from RVTO2Addr into IPAddress!\n");
+			if (g_fdo_data->current_rvto2addrentry->rvip &&
+			    !fdo_convert_to_ipaddress(
+				g_fdo_data->current_rvto2addrentry->rvip, ip)) {
+				LOG(LOG_ERROR, "Failed to convert IP from "
+					       "RVTO2Addr into IPAddress!\n");
 			}
 			dns = g_fdo_data->current_rvto2addrentry->rvdns;
 			port = g_fdo_data->current_rvto2addrentry->rvport;
-			if (g_fdo_data->current_rvto2addrentry->rvprotocol == PROTHTTP) {
+			if (g_fdo_data->current_rvto2addrentry->rvprotocol ==
+			    PROTHTTP) {
 				tls = false;
-			} else if (g_fdo_data->current_rvto2addrentry->rvprotocol == PROTHTTPS ||
-				g_fdo_data->current_rvto2addrentry->rvprotocol == PROTTLS) {
+			} else if (g_fdo_data->current_rvto2addrentry
+					   ->rvprotocol == PROTHTTPS ||
+				   g_fdo_data->current_rvto2addrentry
+					   ->rvprotocol == PROTTLS) {
 				// nothing to do. TLS is already set
 			} else {
-				LOG(LOG_ERROR, "Unsupported/Invalid value found for RVProtocol. "
-					"Skipping the RVTO2AddrEntry...\n");
+				LOG(LOG_ERROR,
+				    "Unsupported/Invalid value found for "
+				    "RVProtocol. "
+				    "Skipping the RVTO2AddrEntry...\n");
 				skip_rv = true;
 			}
 			// prepare for next iteration beforehand
-			g_fdo_data->current_rvto2addrentry = g_fdo_data->current_rvto2addrentry->next;
-
+			g_fdo_data->current_rvto2addrentry =
+			    g_fdo_data->current_rvto2addrentry->next;
 		}
 		if (0 == port) {
 			if (tls) {
 				port = 443;
-				}
-			else  {
+			} else {
 				port = 80;
-				}
-			LOG(LOG_INFO, "Assigned default port: %d \n", port);
 			}
+			LOG(LOG_INFO, "Assigned default port: %d \n", port);
+		}
 
 		if (skip_rv || (!ip && !dns)) {
 			// If all of the IP/DNS values are missing, or
-			// if RVOwnerOnly is present in the current directive, or
-			// if unsupported/invalid RVProtocolValue/RVProtocol was found
-			// for rvbypass, goto TO1
-			// else, skip the directive
+			// if RVOwnerOnly is present in the current directive,
+			// or if unsupported/invalid RVProtocolValue/RVProtocol
+			// was found for rvbypass, goto TO1 else, skip the
+			// directive
 			if (!rvbypass) {
-				// free only when rvbypass is false, since the allocation was done then.
-				// Note: This may be unreachable.
+				// free only when rvbypass is false, since the
+				// allocation was done then. Note: This may be
+				// unreachable.
 				if (ip) {
 					fdo_free(ip);
 				}
 				ip = NULL;
 			} else {
-				// set the global rvbypass flag to false so that we don't continue the loop
-				// because of rvbypass
+				// set the global rvbypass flag to false so that
+				// we don't continue the loop because of
+				// rvbypass
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
-				// return true so that TO1 is processed with the remaining directives
+				// return true so that TO1 is processed with the
+				// remaining directives
 				ret = true;
 				return ret;
 			}
 			g_fdo_data->state_fn = &_STATE_TO2;
-			// return true so that TO2 is processed with the remaining directives
+			// return true so that TO2 is processed with the
+			// remaining directives
 			ret = true;
 			return ret;
 		}
 
-		prot_ctx = fdo_prot_ctx_alloc(
-			fdo_process_states, &g_fdo_data->prot, ip, dns ? dns->bytes : NULL, port, tls);
+		prot_ctx =
+		    fdo_prot_ctx_alloc(fdo_process_states, &g_fdo_data->prot,
+				       ip, dns ? dns->bytes : NULL, port, tls);
 		if (prot_ctx == NULL) {
 			ERROR();
 			return FDO_ABORT;
 		}
 
-		if (fdo_prot_ctx_run(prot_ctx) != 0 || g_fdo_data->prot.success == false) {
+		if (fdo_prot_ctx_run(prot_ctx) != 0 ||
+		    g_fdo_data->prot.success == false) {
 			LOG(LOG_ERROR, "TO2 failed.\n");
 			/* Execute Sv_info type=FAILURE */
 			if (!fdo_mod_exec_sv_infotype(
 				g_fdo_data->prot.sv_info_mod_list_head,
 				FDO_SI_FAILURE)) {
-				LOG(LOG_ERROR, "Sv_info: One or more module's FAILURE "
-						"CB failed\n");
+				LOG(LOG_ERROR,
+				    "Sv_info: One or more module's FAILURE "
+				    "CB failed\n");
 			}
 			fdo_protTO2Exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
 			fdo_free(prot_ctx);
 
-			// Repeat some of the same operations as the failure case above
-			// when processing RendezvousInfo/RVTO2Addr and they need to be skipped
+			// Repeat some of the same operations as the failure
+			// case above when processing RendezvousInfo/RVTO2Addr
+			// and they need to be skipped
 			if (!rvbypass) {
 				if (ip) {
 					fdo_free(ip);
 				}
 				ip = NULL;
-				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", default_delay);
+				LOG(LOG_INFO,
+				    "\nDelaying for %" PRIu64 " seconds\n\n",
+				    default_delay);
 				fdo_sleep(default_delay);
-				// if there is another Owner location present, try it
-				// the execution reaches here only if rvbypass was never set
+				// if there is another Owner location present,
+				// try it the execution reaches here only if
+				// rvbypass was never set
 				if (g_fdo_data->current_rvto2addrentry) {
-					LOG(LOG_ERROR, "Retrying TO2 using the next RVTO2AddrEntry\n");
+					LOG(LOG_ERROR, "Retrying TO2 using the "
+						       "next RVTO2AddrEntry\n");
 					g_fdo_data->state_fn = &_STATE_TO2;
-					// return true so that TO2 is processed with the remaining directives
+					// return true so that TO2 is processed
+					// with the remaining directives
 					ret = true;
 					return ret;
 				}
 				// there's no more owner locations left to try,
-				// so start retrying with TO1, if retry is enabled.
+				// so start retrying with TO1, if retry is
+				// enabled.
 				if (g_fdo_data->error_recovery) {
 					g_fdo_data->state_fn = &_STATE_TO1;
-					LOG(LOG_ERROR, "All RVTO2AddreEntry(s) exhausted. "
-						"Retrying TO1 using the next RendezvousDirective\n");
+					LOG(LOG_ERROR,
+					    "All RVTO2AddreEntry(s) exhausted. "
+					    "Retrying TO1 using the next "
+					    "RendezvousDirective\n");
 				}
 			} else {
 				rvbypass = false;
 				g_fdo_data->state_fn = &_STATE_TO1;
-				if (g_fdo_data->delaysec == 0 || g_fdo_data->delaysec > max_delay) {
+				if (g_fdo_data->delaysec == 0 ||
+				    g_fdo_data->delaysec > max_delay) {
 					if (!g_fdo_data->current_rvdirective) {
-						g_fdo_data->delaysec = default_delay_rvinfo_retries;
+						g_fdo_data->delaysec =
+						    default_delay_rvinfo_retries;
 					} else {
-						g_fdo_data->delaysec = default_delay;
+						g_fdo_data->delaysec =
+						    default_delay;
 					}
 				}
-				LOG(LOG_INFO, "\nDelaying for %"PRIu64" seconds\n\n", g_fdo_data->delaysec);
+				LOG(LOG_INFO,
+				    "\nDelaying for %" PRIu64 " seconds\n\n",
+				    g_fdo_data->delaysec);
 			}
-			// if this is last directive (NULL), return false to mark end of 1 retry
-			// else if there are more directives left, return true for trying those
+			// if this is last directive (NULL), return false to
+			// mark end of 1 retry else if there are more directives
+			// left, return true for trying those
 			if (!g_fdo_data->current_rvdirective) {
 				ret = false;
 			} else {
@@ -1725,19 +1846,21 @@ static bool _STATE_TO2(void)
 		fdo_free(prot_ctx);
 
 		if (!rvbypass) {
-			// free only when rvbypass is false, since the allocation was done then.
+			// free only when rvbypass is false, since the
+			// allocation was done then.
 			if (ip) {
 				fdo_free(ip);
 			}
 			ip = NULL;
 		} else {
-			// set the global rvbypass flag to false so that we don't continue the loop
-			// because of rvbypass
+			// set the global rvbypass flag to false so that we
+			// don't continue the loop because of rvbypass
 			rvbypass = false;
 		}
 
-		LOG(LOG_DEBUG, "\n------------------------------------ TO2 Successful "
-				"--------------------------------------\n\n");
+		LOG(LOG_DEBUG,
+		    "\n------------------------------------ TO2 Successful "
+		    "--------------------------------------\n\n");
 		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 		LOG(LOG_INFO, "@FIDO Device Onboard Complete@\n");
 		LOG(LOG_INFO, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");

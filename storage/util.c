@@ -215,7 +215,7 @@ void *fdo_alloc(size_t size)
 
 	if (size == 0 || size > R_MAX_SIZE) {
 		LOG(LOG_ERROR, "Failed, size should be between 1 and %d\n",
-			R_MAX_SIZE);
+		    R_MAX_SIZE);
 		goto end;
 	}
 
@@ -238,7 +238,8 @@ end:
 /**
  * Internal API to create string duplicate
  */
-char *strdup_s(const char *str) {
+char *strdup_s(const char *str)
+{
 
 	if (NULL == str) {
 		return NULL;

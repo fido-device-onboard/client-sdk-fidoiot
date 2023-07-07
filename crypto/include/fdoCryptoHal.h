@@ -55,8 +55,8 @@ int32_t crypto_close(void);
  * be allocated already.
  */
 int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
-			 size_t buffer_length, uint8_t *output,
-			 size_t output_length);
+			size_t buffer_length, uint8_t *output,
+			size_t output_length);
 
 /* Calculate hmac of "buffer" using "key", and place the result in "output".
  * "output" must be allocated already.
@@ -69,9 +69,8 @@ int32_t crypto_hal_hmac(uint8_t hmac_type, const uint8_t *buffer,
 /* Calculate hmac of "buffer", and place the result in "output".
  * "output" must be allocated already.
  */
-int32_t crypto_hal_hmac_cse(uint8_t *buffer,size_t buffer_length,
-			uint8_t *output, size_t output_length);
-
+int32_t crypto_hal_hmac_cse(uint8_t *buffer, size_t buffer_length,
+			    uint8_t *output, size_t output_length);
 
 /* crypto_hal_sig_verify
  * Verify an RSA PKCS v1.5 Signature using provided public key
@@ -105,12 +104,14 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 
 /* Sign and generate ECDSA signature for a given message */
 int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
-		       unsigned char *signature, size_t *signature_len);
+			      unsigned char *signature, size_t *signature_len);
 
-/* Sign and generate ECDSA signature for a given message using CSE internal API*/
+/* Sign and generate ECDSA signature for a given message using CSE internal
+ * API*/
 int32_t crypto_hal_ecdsa_sign_cse(const uint8_t *data, size_t data_len,
-		uint8_t *message_signature, size_t message_sig_len, uint8_t *eat_maroe,
-		size_t *maroe_length);
+				  uint8_t *message_signature,
+				  size_t message_sig_len, uint8_t *eat_maroe,
+				  size_t *maroe_length);
 
 /* Encrypt "clear_text" using "key" and put the result in "cypher_text".
  * "cipher_txt" must point to a buffer large enough to store the
@@ -121,9 +122,9 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t clear_text_length, uint8_t *cypher_text,
 			       uint32_t *cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length,
-			       uint8_t *tag, size_t tag_length,
-			       const uint8_t *aad, size_t aad_length);
+			       uint32_t key_length, uint8_t *tag,
+			       size_t tag_length, const uint8_t *aad,
+			       size_t aad_length);
 
 /* Decrypt "cypher_text" using "key" and put the result in "clear_text".
  * and "clear_text" must point to a buffer large enough to store the
@@ -134,9 +135,9 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       const uint8_t *cypher_text,
 			       uint32_t cypher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length,
-			       uint8_t *tag, size_t tag_length,
-			       const uint8_t *aad, size_t aad_length);
+			       uint32_t key_length, uint8_t *tag,
+			       size_t tag_length, const uint8_t *aad,
+			       size_t aad_length);
 
 /*
  * Helper API designed to convert the raw signature into DER format required by
@@ -147,7 +148,8 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
  * format.
  */
 int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
-		   uint8_t *message_signature, size_t *signature_length);
+			      uint8_t *message_signature,
+			      size_t *signature_length);
 
 /*
  * This internal API is used to convert public key and signature which is in
@@ -162,9 +164,10 @@ int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
  * raw_key_length: input, the buffer size of the raw_key
  */
 int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
-		   const unsigned char *pub_key, size_t key_length,
-		   const uint8_t *message_signature, size_t signature_length,
-		   size_t raw_key_length, size_t raw_sig_length);
+			      const unsigned char *pub_key, size_t key_length,
+			      const uint8_t *message_signature,
+			      size_t signature_length, size_t raw_key_length,
+			      size_t raw_sig_length);
 
 int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr);
 

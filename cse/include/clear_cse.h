@@ -11,8 +11,8 @@
 
 TEESTATUS heci_init(TEEHANDLE *cl);
 void heci_deinit(TEEHANDLE *cl);
-TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
-                *fdo_status);
+TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id,
+			      FDO_STATUS *fdo_status);
 int main(void);
 
 #endif /* __FDO_CLEAR_CSE_H__ */

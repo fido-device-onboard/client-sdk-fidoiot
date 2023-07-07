@@ -40,7 +40,7 @@ int32_t msg30(fdo_prot_t *ps)
 
 	/* Write GUID received during DI */
 	if (!fdow_byte_string(&ps->fdow, ps->dev_cred->owner_blk->guid->bytes,
-		ps->dev_cred->owner_blk->guid->byte_sz)) {
+			      ps->dev_cred->owner_blk->guid->byte_sz)) {
 		LOG(LOG_ERROR, "TO1.HelloRV: Failed to write Guid\n");
 		return false;
 	}

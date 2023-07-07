@@ -126,7 +126,8 @@ fdo_ip_address_t *fdo_ipaddress_alloc(void);
 bool fdo_null_ipaddress(fdo_ip_address_t *fdoip);
 void fdo_init_ipv4_address(fdo_ip_address_t *fdoip, uint8_t *ipv4);
 bool fdo_read_ipaddress(fdor_t *fdor, fdo_ip_address_t *fdoip);
-bool fdo_convert_to_ipaddress(fdo_byte_array_t * ip_bytes, fdo_ip_address_t *fdoip);
+bool fdo_convert_to_ipaddress(fdo_byte_array_t *ip_bytes,
+			      fdo_ip_address_t *fdoip);
 char *fdo_ipaddress_to_string(fdo_ip_address_t *fdoip, char *buf, int buf_sz);
 
 typedef struct {
@@ -208,13 +209,13 @@ fdo_public_key_t *fdo_public_key_clone(fdo_public_key_t *pk);
 #define AES_GCM_TAG_LEN 16
 #define AES_TAG_LEN AES_GCM_TAG_LEN
 #else
-// The IV/Nonce length 'N' for CCM mode is dependent on the maximum message length 'L' value
-// and should be equal to 15-L (in octets).
-// Refer to [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information on
-// trade-offs between 'L' and 'N' value.
-// The current implementation uses L=8, and hence the IV/Nonce length N = 15-8 = 7 octets
-// As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
-// L=2 could also be used. N=13 MUST be used in this case.
+// The IV/Nonce length 'N' for CCM mode is dependent on the maximum message
+// length 'L' value and should be equal to 15-L (in octets). Refer to
+// [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information
+// on trade-offs between 'L' and 'N' value. The current implementation uses L=8,
+// and hence the IV/Nonce length N = 15-8 = 7 octets As per FDO and COSE
+// [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications, L=2
+// could also be used. N=13 MUST be used in this case.
 #define AES_CCM_IV_LEN 7
 #define AES_IV_LEN AES_CCM_IV_LEN
 #define AES_CCM_TAG_LEN 16
@@ -226,8 +227,8 @@ typedef struct {
 	fdo_byte_array_t *ct_string;
 	fdo_byte_array_t *em_body; // Ciphertext of Encrypted Message Body
 	uint8_t tag[AES_TAG_LEN];
-	fdo_hash_t *hmac;	  // HMAC of ct body
-	uint8_t iv[AES_IV_LEN];	// iv of gcm/ccm.
+	fdo_hash_t *hmac;	// HMAC of ct body
+	uint8_t iv[AES_IV_LEN]; // iv of gcm/ccm.
 	uint32_t offset;
 	int aes_plain_type;
 } fdo_encrypted_packet_t;
@@ -242,9 +243,11 @@ bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt);
 bool fdo_encrypted_packet_windup(fdow_t *fdow, int type);
 bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,
-	fdow_t *fdow, size_t fdow_buff_default_sz);
+				       fdow_t *fdow,
+				       size_t fdow_buff_default_sz);
 bool fdo_prep_composed_encrypted_message(fdo_encrypted_packet_t *pkt,
-	fdow_t *fdow, size_t fdow_buff_default_sz);
+					 fdow_t *fdow,
+					 size_t fdow_buff_default_sz);
 
 typedef struct {
 	int aes_plain_type;
@@ -261,16 +264,16 @@ typedef struct {
 } fdo_cose_encrypt0_t;
 
 void fdo_cose_encrypt0_free(fdo_cose_encrypt0_t *cose_encrypt0);
-fdo_cose_encrypt0_t* fdo_cose_encrypt0_alloc(void);
-bool fdo_cose_encrypt0_read_protected_header(fdor_t *fdor,
-	fdo_cose_encrypt0_protected_header_t *protected_header);
-bool fdo_cose_encrypt0_read_unprotected_header(fdor_t *fdor,
-	fdo_cose_encrypt0_unprotected_header_t *unprotected_header);
+fdo_cose_encrypt0_t *fdo_cose_encrypt0_alloc(void);
+bool fdo_cose_encrypt0_read_protected_header(
+    fdor_t *fdor, fdo_cose_encrypt0_protected_header_t *protected_header);
+bool fdo_cose_encrypt0_read_unprotected_header(
+    fdor_t *fdor, fdo_cose_encrypt0_unprotected_header_t *unprotected_header);
 bool fdo_cose_encrypt0_read(fdor_t *fdor, fdo_cose_encrypt0_t *cose_encrypt0);
-bool fdo_cose_encrypt0_write_protected_header(fdow_t *fdow,
-	fdo_cose_encrypt0_protected_header_t *protected_header);
-bool fdo_cose_encrypt0_write_unprotected_header(fdow_t *fdow,
-	fdo_cose_encrypt0_unprotected_header_t *unprotected_header);
+bool fdo_cose_encrypt0_write_protected_header(
+    fdow_t *fdow, fdo_cose_encrypt0_protected_header_t *protected_header);
+bool fdo_cose_encrypt0_write_unprotected_header(
+    fdow_t *fdow, fdo_cose_encrypt0_unprotected_header_t *unprotected_header);
 bool fdo_cose_encrypt0_write(fdow_t *fdow, fdo_cose_encrypt0_t *cose_encrypt0);
 
 typedef struct {
@@ -290,23 +293,28 @@ typedef struct {
 } fdo_eat_t;
 
 // methods to handle Entity Attestation Token (EAT).
-fdo_eat_t* fdo_eat_alloc(void);
+fdo_eat_t *fdo_eat_alloc(void);
 void fdo_eat_free(fdo_eat_t *eat);
-bool fdo_eat_write_protected_header(fdow_t *fdow, fdo_eat_protected_header_t *eat_ph);
-bool fdo_eat_write_unprotected_header(fdow_t *fdow, fdo_eat_unprotected_header_t *eat_uph);
+bool fdo_eat_write_protected_header(fdow_t *fdow,
+				    fdo_eat_protected_header_t *eat_ph);
+bool fdo_eat_write_unprotected_header(fdow_t *fdow,
+				      fdo_eat_unprotected_header_t *eat_uph);
 bool fdo_eat_write(fdow_t *fdow, fdo_eat_t *eat);
 bool fdo_eat_write_sigstructure(fdo_eat_protected_header_t *eat_ph,
-	fdo_byte_array_t *eat_payload, fdo_byte_array_t *external_aad,
-	fdo_byte_array_t **sig_structure);
+				fdo_byte_array_t *eat_payload,
+				fdo_byte_array_t *external_aad,
+				fdo_byte_array_t **sig_structure);
 
 typedef struct {
 	fdo_byte_array_t *eatpayloads;
 	fdo_nonce_t eatnonce;
 	fdo_ueid_t eatueid;
-	// EATOtherClaims: Unused in  implementation. Should be added depending on the requirement.
+	// EATOtherClaims: Unused in  implementation. Should be added depending
+	// on the requirement.
 } fdo_eat_payload_base_map_t;
 
-bool fdo_eat_write_payloadbasemap(fdow_t *fdow, fdo_eat_payload_base_map_t *eat_payload);
+bool fdo_eat_write_payloadbasemap(fdow_t *fdow,
+				  fdo_eat_payload_base_map_t *eat_payload);
 
 typedef struct {
 	int ph_sig_alg;
@@ -325,15 +333,19 @@ typedef struct {
 } fdo_cose_t;
 
 void fdo_cose_free(fdo_cose_t *cose);
-bool fdo_cose_read_protected_header(fdor_t *fdor, fdo_cose_protected_header_t *cose_ph);
-bool fdo_cose_read_unprotected_header(fdor_t *fdor, fdo_cose_unprotected_header_t *cose_uph);
+bool fdo_cose_read_protected_header(fdor_t *fdor,
+				    fdo_cose_protected_header_t *cose_ph);
+bool fdo_cose_read_unprotected_header(fdor_t *fdor,
+				      fdo_cose_unprotected_header_t *cose_uph);
 bool fdo_cose_read(fdor_t *fdor, fdo_cose_t *cose, bool empty_uph);
-bool fdo_cose_write_protected_header(fdow_t *fdow, fdo_cose_protected_header_t *cose_ph);
+bool fdo_cose_write_protected_header(fdow_t *fdow,
+				     fdo_cose_protected_header_t *cose_ph);
 bool fdo_cose_write_unprotected_header(fdow_t *fdow);
 bool fdo_cose_write(fdow_t *fdow, fdo_cose_t *cose);
 bool fdo_cose_write_sigstructure(fdo_cose_protected_header_t *cose_ph,
-	fdo_byte_array_t *cose_payload, fdo_byte_array_t *external_aad,
-	fdo_byte_array_t **sig_structure);
+				 fdo_byte_array_t *cose_payload,
+				 fdo_byte_array_t *external_aad,
+				 fdo_byte_array_t **sig_structure);
 
 /*
  * This is a lookup on all possible TransportProtocol values (Section 3.3.12)
@@ -360,7 +372,8 @@ typedef struct {
 
 void fdo_rvto2addr_entry_free(fdo_rvto2addr_entry_t *rvto2addr_entry);
 void fdo_rvto2addr_free(fdo_rvto2addr_t *rvto2addr);
-bool fdo_rvto2addr_entry_read(fdor_t *fdor, fdo_rvto2addr_entry_t *rvto2addr_entry);
+bool fdo_rvto2addr_entry_read(fdor_t *fdor,
+			      fdo_rvto2addr_entry_t *rvto2addr_entry);
 bool fdo_rvto2addr_read(fdor_t *fdor, fdo_rvto2addr_t *rvto2addr);
 
 typedef struct fdo_key_value_s {
@@ -449,13 +462,15 @@ typedef struct fdo_rendezvous_list_s {
 } fdo_rendezvous_list_t;
 
 int fdo_rendezvous_directive_add(fdo_rendezvous_list_t *list,
-	fdo_rendezvous_directive_t *directive);
-fdo_rendezvous_directive_t *fdo_rendezvous_directive_get(
-	fdo_rendezvous_list_t *list, int num);
+				 fdo_rendezvous_directive_t *directive);
+fdo_rendezvous_directive_t *
+fdo_rendezvous_directive_get(fdo_rendezvous_list_t *list, int num);
 fdo_rendezvous_list_t *fdo_rendezvous_list_alloc(void);
 void fdo_rendezvous_list_free(fdo_rendezvous_list_t *list);
-int fdo_rendezvous_list_add(fdo_rendezvous_directive_t *list, fdo_rendezvous_t *rv);
-fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *list, int num);
+int fdo_rendezvous_list_add(fdo_rendezvous_directive_t *list,
+			    fdo_rendezvous_t *rv);
+fdo_rendezvous_t *fdo_rendezvous_list_get(fdo_rendezvous_directive_t *list,
+					  int num);
 int fdo_rendezvous_list_read(fdor_t *fdor, fdo_rendezvous_list_t *list);
 bool fdo_rendezvous_list_write(fdow_t *fdow, fdo_rendezvous_list_t *list);
 
@@ -483,7 +498,7 @@ bool fdo_service_info_add_kv_str(fdo_service_info_t *si, const char *key,
 bool fdo_service_info_add_kv_bin(fdo_service_info_t *si, const char *key,
 				 const fdo_byte_array_t *val);
 bool fdo_service_info_add_kv_bool(fdo_service_info_t *si, const char *key,
-				 bool val);
+				  bool val);
 bool fdo_service_info_add_kv_int(fdo_service_info_t *si, const char *key,
 				 int val);
 bool fdo_service_info_add_kv(fdo_service_info_t *si, fdo_key_value_t *kv);
@@ -516,16 +531,18 @@ void fdo_sdk_service_info_deregister_module(void);
 void print_service_info_module_list(void);
 
 bool fdo_serviceinfo_write(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
-bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num, size_t mtu);
+bool fdo_serviceinfo_kv_write(fdow_t *fdow, fdo_service_info_t *si, size_t num,
+			      size_t mtu);
 bool fdo_serviceinfo_modules_list_write(fdow_t *fdow);
-bool fdo_serviceinfo_external_mod_is_more(fdow_t *fdow,
-	fdo_sdk_service_info_module_list_t *module_list, size_t mtu, bool *is_more);
-fdo_sdk_service_info_module* fdo_serviceinfo_get_external_mod_to_write(fdow_t *fdow,
-	fdo_sdk_service_info_module_list_t *module_list,
-	size_t mtu);
-bool fdo_serviceinfo_external_mod_write(fdow_t *fdow, fdo_byte_array_t *ext_serviceinfo,
-	fdo_sdk_service_info_module *module,
-	size_t mtu);
+bool fdo_serviceinfo_external_mod_is_more(
+    fdow_t *fdow, fdo_sdk_service_info_module_list_t *module_list, size_t mtu,
+    bool *is_more);
+fdo_sdk_service_info_module *fdo_serviceinfo_get_external_mod_to_write(
+    fdow_t *fdow, fdo_sdk_service_info_module_list_t *module_list, size_t mtu);
+bool fdo_serviceinfo_external_mod_write(fdow_t *fdow,
+					fdo_byte_array_t *ext_serviceinfo,
+					fdo_sdk_service_info_module *module,
+					size_t mtu);
 bool fdo_serviceinfo_fit_mtu(fdow_t *fdow, fdo_service_info_t *si, size_t mtu);
 
 bool fdo_mod_exec_sv_infotype(fdo_sdk_service_info_module_list_t *module_list,
@@ -534,23 +551,28 @@ bool fdo_mod_exec_sv_infotype(fdo_sdk_service_info_module_list_t *module_list,
 void fdo_sv_info_clear_module_psi_osi_index(
     fdo_sdk_service_info_module_list_t *module_list);
 
-bool fdo_serviceinfo_read(fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
-	int *cb_return_val, fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
+bool fdo_serviceinfo_read(
+    fdor_t *fdor, fdo_sdk_service_info_module_list_t *module_list,
+    int *cb_return_val,
+    fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
 bool fdo_supply_serviceinfoval(char *module_name, char *module_message,
-	fdo_byte_array_t *module_val,
-	fdo_sdk_service_info_module_list_t *module_list, int *cb_return_val);
-bool fdo_serviceinfo_invalid_modname_add(char *module_name,
-	fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
+			       fdo_byte_array_t *module_val,
+			       fdo_sdk_service_info_module_list_t *module_list,
+			       int *cb_return_val);
+bool fdo_serviceinfo_invalid_modname_add(
+    char *module_name,
+    fdo_sv_invalid_modnames_t **serviceinfo_invalid_modnames);
 void fdo_serviceinfo_invalid_modname_free(
-	fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames);
-bool fdo_serviceinfo_deactivate_modules(fdo_sdk_service_info_module_list_t *module_list);
+    fdo_sv_invalid_modnames_t *serviceinfo_invalid_modnames);
+bool fdo_serviceinfo_deactivate_modules(
+    fdo_sdk_service_info_module_list_t *module_list);
 
 bool fdo_compare_hashes(fdo_hash_t *hash1, fdo_hash_t *hash2);
 bool fdo_compare_byte_arrays(fdo_byte_array_t *ba1, fdo_byte_array_t *ba2);
 bool fdo_compare_rv_lists(fdo_rendezvous_list_t *rv_list1,
 			  fdo_rendezvous_list_t *rv_list2);
 bool fdo_rendezvous_instr_compare(fdo_rendezvous_t *entry1,
-	fdo_rendezvous_t *entry2);
+				  fdo_rendezvous_t *entry2);
 
 void fdo_log_block(fdo_block_t *fdob);
 

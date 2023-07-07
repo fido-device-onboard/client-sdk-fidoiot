@@ -73,14 +73,15 @@ static int read_fill_modelserial(void)
 	if ((fsize > 0) && (fsize <= MAX_DEV_SERIAL_SZ)) {
 
 		if (fdo_blob_read((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA,
-					(uint8_t *)device_serial, fsize) <= 0) {
+				  (uint8_t *)device_serial, fsize) <= 0) {
 
 			LOG(LOG_ERROR, "Failed to get serial no\n");
 			goto err;
 		}
 	} else {
 		if (fsize > MAX_DEV_SERIAL_SZ) {
-			LOG(LOG_INFO, "Serialno exceeds 255 characters. Defaulting it to 'abcdef'\n");
+			LOG(LOG_INFO, "Serialno exceeds 255 characters. "
+				      "Defaulting it to 'abcdef'\n");
 		} else {
 			LOG(LOG_INFO, "No serialno file present!\n");
 		}
@@ -88,7 +89,7 @@ static int read_fill_modelserial(void)
 		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
 		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
 			LOG(LOG_ERROR, "Default serial number string isn't "
-					"NULL terminated\n");
+				       "NULL terminated\n");
 			goto err;
 		}
 
@@ -103,13 +104,14 @@ static int read_fill_modelserial(void)
 	fsize = fdo_blob_size((const char *)MODEL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_MODEL_NO_SZ)) {
 		if (fdo_blob_read((const char *)MODEL_FILE, FDO_SDK_RAW_DATA,
-					(uint8_t *)model_number, fsize) <= 0) {
+				  (uint8_t *)model_number, fsize) <= 0) {
 			LOG(LOG_ERROR, "Failed to get serial no\n");
 			goto err;
 		}
 	} else {
 		if (fsize > MAX_MODEL_NO_SZ) {
-			LOG(LOG_INFO, "Model number exceeds 32 characters. Defaulting it to '12345'\n");
+			LOG(LOG_INFO, "Model number exceeds 32 characters. "
+				      "Defaulting it to '12345'\n");
 		} else {
 			LOG(LOG_INFO, "No model number file present!\n");
 		}
@@ -117,7 +119,7 @@ static int read_fill_modelserial(void)
 		def_model_sz = strnlen_s(DEF_MODEL_NO, MAX_MODEL_NO_SZ);
 		if (!def_model_sz || def_model_sz == MAX_MODEL_NO_SZ) {
 			LOG(LOG_ERROR, "Default model number string isn't "
-					"NULL terminated\n");
+				       "NULL terminated\n");
 			goto err;
 		}
 
@@ -195,12 +197,11 @@ int ps_get_m_string(fdo_prot_t *ps)
 	csr = fdo_byte_array_alloc(m_string_sz);
 	if (!csr) {
 		LOG(LOG_ERROR,
-				"Failed to allocate memory for device mstring.\n");
+		    "Failed to allocate memory for device mstring.\n");
 		goto err;
 	}
 
-	ret = read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes,
-			csr->byte_sz);
+	ret = read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes, csr->byte_sz);
 	if (0 != ret) {
 		LOG(LOG_ERROR, "Failed to read %s file!\n", TPM_DEVICE_CSR);
 		goto err;
@@ -216,37 +217,45 @@ int ps_get_m_string(fdo_prot_t *ps)
 	// Read OnDie ECDSA cert chain from CSE
 	cse_cert = fdo_byte_array_alloc(FDO_MAX_CERT_CHAIN_SIZE);
 	if (!cse_cert) {
-		LOG(LOG_ERROR,"DeviceMfgInfo: Failed to allocate data for storing cert data\n");
+		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to allocate data for "
+			       "storing cert data\n");
 		goto err;
 	}
 
 	ret = cse_get_cert_chain(&cse_cert);
 	if (0 != ret) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Unable to get Cert chain from CSE\n");
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Unable to get Cert chain from CSE\n");
 		goto err;
 	}
 
 	// Get the Sig structure
-	ret = cse_get_cose_sig_structure(&cose_sig_structure, (uint8_t *)device_serial, device_serial_len);
+	ret = cse_get_cose_sig_structure(
+	    &cose_sig_structure, (uint8_t *)device_serial, device_serial_len);
 	if (0 != ret) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Unable to get Cose Sig structure\n");
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Unable to get Cose Sig structure\n");
 		goto err;
 	}
 
 	// Read test signature and MAROE prefix fromm CSE
 	cse_maroeprefix = fdo_byte_array_alloc(FDO_MAX_MAROE_PREFIX_SIZE);
 	if (!cse_maroeprefix) {
-		LOG(LOG_ERROR,"DeviceMfgInfo: Failed to allocate data for storing CSE maroeprefix\n");
+		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to allocate data for "
+			       "storing CSE maroeprefix\n");
 		goto err;
 	}
 
 	cse_signature = fdo_byte_array_alloc(FDO_SIGNATURE_LENGTH);
 	if (!cse_signature) {
-		LOG(LOG_ERROR,"DeviceMfgInfo: Failed to allocate data for storing cse sig data\n");
+		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to allocate data for "
+			       "storing cse sig data\n");
 		goto err;
 	}
 
-	ret = cse_get_test_sig(&cse_signature, &cse_maroeprefix, cose_sig_structure, (uint8_t *)device_serial, device_serial_len);
+	ret = cse_get_test_sig(&cse_signature, &cse_maroeprefix,
+			       cose_sig_structure, (uint8_t *)device_serial,
+			       device_serial_len);
 	if (0 != ret) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Unable to get test Signature\n");
 		goto err;
@@ -261,9 +270,10 @@ int ps_get_m_string(fdo_prot_t *ps)
 	// use this temporary FDOW to write DeviceMfgInfo array
 	// 4K bytes is probably sufficient, extend if required
 	if (!fdow_init(&temp_fdow) ||
-			!fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_4K_BYTES) ||
-			!fdow_encoder_init(&temp_fdow)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: FDOW Initialization/Allocation failed!\n");
+	    !fdo_block_alloc_with_size(&temp_fdow.b, BUFF_SIZE_4K_BYTES) ||
+	    !fdow_encoder_init(&temp_fdow)) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: FDOW Initialization/Allocation failed!\n");
 		goto err;
 	}
 	if (!fdow_start_array(&temp_fdow, DEVICE_MFG_STRING_ARRAY_SZ)) {
@@ -278,11 +288,13 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write keyEnc\n");
 		goto err;
 	}
-	if (!fdow_text_string(&temp_fdow, (char *) device_serial, device_serial_len)) {
+	if (!fdow_text_string(&temp_fdow, (char *)device_serial,
+			      device_serial_len)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write serialNumber\n");
 		goto err;
 	}
-	if (!fdow_text_string(&temp_fdow, (char *) model_number, model_number_len)) {
+	if (!fdow_text_string(&temp_fdow, (char *)model_number,
+			      model_number_len)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write deviceInfo\n");
 		goto err;
 	}
@@ -295,19 +307,22 @@ int ps_get_m_string(fdo_prot_t *ps)
 	}
 
 	if (!fdow_byte_string(&temp_fdow, cse_cert->bytes, cse_cert->byte_sz)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSE cert data\n");
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to write CSE cert data\n");
 		goto err;
 	}
 
 	if (!fdow_byte_string(&temp_fdow, cse_signature->bytes,
-				cse_signature->byte_sz)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSE signature\n");
+			      cse_signature->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to write CSE signature\n");
 		goto err;
 	}
 
 	if (!fdow_byte_string(&temp_fdow, cse_maroeprefix->bytes,
-				cse_maroeprefix->byte_sz)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSE maroeprefix\n");
+			      cse_maroeprefix->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to write CSE maroeprefix\n");
 		goto err;
 	}
 	ret = 0;
@@ -322,13 +337,17 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (!fdow_encoded_length(&temp_fdow, &enc_device_mfginfo) || enc_device_mfginfo == 0) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to find encoded length\n");
+	if (!fdow_encoded_length(&temp_fdow, &enc_device_mfginfo) ||
+	    enc_device_mfginfo == 0) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to find encoded length\n");
 		goto err;
 	}
 	// now write the CBOR-encoded DeviceMfgInfo as bstr
-	if (!fdow_byte_string(&ps->fdow, temp_fdow.b.block, enc_device_mfginfo)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write DeviceMfgInfo as bstr\n");
+	if (!fdow_byte_string(&ps->fdow, temp_fdow.b.block,
+			      enc_device_mfginfo)) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to write DeviceMfgInfo as bstr\n");
 		goto err;
 	}
 	LOG(LOG_DEBUG, "Generated DeviceMfgInfo successfully\n");

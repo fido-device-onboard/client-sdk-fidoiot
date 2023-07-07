@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-#define MEI_FDO UUID_LE(0x125405E0, 0xFCA9, 0x4110, 0x8F, 0x88, 0xB4, 0xDB,\
-		0xCD, 0xCB, 0x87, 0x6F)
+#define MEI_FDO                                                                \
+	UUID_LE(0x125405E0, 0xFCA9, 0x4110, 0x8F, 0x88, 0xB4, 0xDB, 0xCD,      \
+		0xCB, 0x87, 0x6F)
 
 /**
  * Initialize HECI
@@ -54,22 +54,23 @@ void heci_deinit(TEEHANDLE *cl)
  * @param fdo_status - status of the HECI call
  * @return status for API function
  */
-TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
-		*fdo_status)
+TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id,
+			      FDO_STATUS *fdo_status)
 {
 	fdo_heci_clear_file_request FDORequest;
-	fdo_heci_clear_file_response* FDOResponseMessage;
+	fdo_heci_clear_file_response *FDOResponseMessage;
 	TEESTATUS status = -1;
 
 	FDORequest.header.command = FDO_HECI_CLEAR_FILE;
 	FDORequest.header.app_id = FDO_APP_ID;
-	FDORequest.header.length = sizeof(FDORequest) - sizeof(FDORequest.header);
+	FDORequest.header.length =
+	    sizeof(FDORequest) - sizeof(FDORequest.header);
 	FDORequest.file_id = file_id;
 	const size_t sz = sizeof(FDORequest);
 	unsigned char *buf = NULL;
 	size_t rsz, wsz = 0;
 
-	rsz = cl->maxMsgLen; //sets maxMsgLen
+	rsz = cl->maxMsgLen; // sets maxMsgLen
 	buf = (unsigned char *)calloc(rsz, sizeof(unsigned char));
 	if (buf == NULL) {
 		printf("calloc(%u) failed\n", (unsigned)rsz);
@@ -78,8 +79,8 @@ TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
 
 	status = TeeWrite(cl, &FDORequest, sz, &wsz, 0);
 	if (status != TEE_SUCCESS) {
-		printf("TeeWrite failed (%u) [attempted %u cmd bytes]\n", status,
-				(unsigned)sizeof(FDORequest));
+		printf("TeeWrite failed (%u) [attempted %u cmd bytes]\n",
+		       status, (unsigned)sizeof(FDORequest));
 		goto out;
 	}
 
@@ -91,7 +92,7 @@ TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
 	size_t NumOfBytesRead = 0;
 	memset(buf, 0, rsz);
 
-	FDOResponseMessage = (fdo_heci_clear_file_response*)(buf);
+	FDOResponseMessage = (fdo_heci_clear_file_response *)(buf);
 
 	status = TeeRead(cl, buf, rsz, &NumOfBytesRead, 0);
 	if (status != TEE_SUCCESS) {
@@ -107,7 +108,8 @@ out:
 	return status;
 }
 
-int main(void) {
+int main(void)
+{
 	TEEHANDLE cl;
 	FDO_STATUS fdo_status;
 
@@ -117,7 +119,7 @@ int main(void) {
 	}
 
 	if (TEE_SUCCESS != fdo_heci_clear_file(&cl, DS_FILE_ID, &fdo_status) ||
-			FDO_STATUS_SUCCESS != fdo_status) {
+	    FDO_STATUS_SUCCESS != fdo_status) {
 		if (FDO_STATUS_API_INTERFACE_IS_CLOSED == fdo_status) {
 			printf("CSE Interface is Closed!! Reboot required.\n");
 			goto end;
@@ -127,7 +129,7 @@ int main(void) {
 	}
 
 	if (TEE_SUCCESS != fdo_heci_clear_file(&cl, OVH_FILE_ID, &fdo_status) ||
-			FDO_STATUS_SUCCESS != fdo_status) {
+	    FDO_STATUS_SUCCESS != fdo_status) {
 		printf("HECI CLEAR OVH failed!!\n");
 		goto end;
 	}

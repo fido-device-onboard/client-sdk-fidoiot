@@ -29,8 +29,8 @@
  * @return 0 if success, else -1.
  */
 int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
-		unsigned char *message_signature,
-		size_t *signature_length)
+			      unsigned char *message_signature,
+			      size_t *signature_length)
 {
 	int32_t ret = -1;
 	EVP_PKEY *pkey = NULL;
@@ -53,12 +53,13 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 	// Load OpenSSL TPM provider
 	if ((prov = OSSL_PROVIDER_load(NULL, "tpm2")) == NULL) {
-		LOG(LOG_ERROR,"Failed to load tpm provider!\n");
+		LOG(LOG_ERROR, "Failed to load tpm provider!\n");
 		goto error;
 	}
 
 	// Read the key
-	if ((ctx = OSSL_STORE_open(TPM_ECDSA_DEVICE_KEY, NULL, NULL, NULL, NULL)) == NULL) {
+	if ((ctx = OSSL_STORE_open(TPM_ECDSA_DEVICE_KEY, NULL, NULL, NULL,
+				   NULL)) == NULL) {
 		LOG(LOG_ERROR, "Error during OSSL_STORE_open\n");
 		goto error;
 	}
@@ -77,11 +78,11 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 		goto error;
 	}
 
-	LOG(LOG_DEBUG,"Private key successfully loaded in TPM format.\n");
+	LOG(LOG_DEBUG, "Private key successfully loaded in TPM format.\n");
 
 	// Set EVP properties to use TPM provider
 	if (EVP_set_default_properties(NULL, "provider=tpm2") == 0) {
-		LOG(LOG_ERROR,"failed to load tpm provider!\n");
+		LOG(LOG_ERROR, "failed to load tpm provider!\n");
 		goto error;
 	}
 
@@ -107,14 +108,15 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 		LOG(LOG_ERROR, "EVP sign update failed \n");
 		goto error;
 	}
-	//First call with NULL param to obtain the DER encoded signature length
+	// First call with NULL param to obtain the DER encoded signature length
 	if (1 != EVP_DigestSignFinal(mdctx, NULL, &der_sig_len)) {
 		LOG(LOG_ERROR, "EVP sign final for size failed \n");
 		goto error;
 	}
 
 	if (der_sig_len <= 0) {
-		LOG(LOG_ERROR, "EVP_DigestSignFinal returned invalid signature length.\n");
+		LOG(LOG_ERROR,
+		    "EVP_DigestSignFinal returned invalid signature length.\n");
 		goto error;
 	}
 
@@ -123,15 +125,15 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 		LOG(LOG_ERROR, "Signature alloc Failed\n");
 		goto error;
 	}
-	//second call with actual param to obtain the DEr encoded signature
+	// second call with actual param to obtain the DEr encoded signature
 	if (1 != EVP_DigestSignFinal(mdctx, der_sig, &der_sig_len)) {
 		LOG(LOG_ERROR, "EVP sign final failed \n");
 		goto error;
 	}
 
-	//Set EVP properties back to default.
+	// Set EVP properties back to default.
 	if (EVP_set_default_properties(NULL, "provider=default") == 0) {
-		LOG(LOG_DEBUG,"failed to load tpm provider!\n");
+		LOG(LOG_DEBUG, "failed to load tpm provider!\n");
 		goto error;
 	}
 
@@ -183,12 +185,12 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 	*signature_length = sig_r_len + sig_s_len;
 	if (memcpy_s(message_signature, *signature_length, (char *)sig_r,
-				(size_t)sig_r_len) != 0) {
+		     (size_t)sig_r_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto error;
 	}
-	if (memcpy_s(message_signature + sig_r_len, *signature_length, (char *)sig_s,
-				(size_t)sig_s_len) != 0) {
+	if (memcpy_s(message_signature + sig_r_len, *signature_length,
+		     (char *)sig_s, (size_t)sig_s_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");
 		goto error;
 	}

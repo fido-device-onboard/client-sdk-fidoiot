@@ -154,7 +154,7 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 		    len);
 
 		if (crypto_hal_random_bytes(key,
-					     PLATFORM_AES_KEY_DEFAULT_LEN)) {
+					    PLATFORM_AES_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform AES Key failed!\n");
 			goto end;
@@ -226,7 +226,7 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 		    len);
 
 		if (crypto_hal_random_bytes(key,
-					     PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
+					    PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform HMAC Key failed!\n");
 			goto end;

@@ -26,7 +26,7 @@
  * @return 0 if true, else -1.
  */
 int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
-		       unsigned char *signature, size_t *signature_len)
+			      unsigned char *signature, size_t *signature_len)
 {
 	unsigned char hash[SHA256_DIGEST_SIZE] = {0};
 	uint8_t raw_signature[BUFF_SIZE_64_BYTES];
@@ -55,8 +55,8 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *message, size_t message_len,
 	/* The signature returned by the SE is in R and S format which needs
 	 * to get converted to DER format for transmission.
 	 */
-	ret = crypto_hal_der_encode(raw_signature, BUFF_SIZE_64_BYTES, signature,
-			 signature_len);
+	ret = crypto_hal_der_encode(raw_signature, BUFF_SIZE_64_BYTES,
+				    signature, signature_len);
 
 err:
 	if (-1 == ret) {
