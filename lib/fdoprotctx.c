@@ -170,9 +170,8 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		    prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
 			ret = connect_to_rendezvous(
-			    prot_ctx->host_ip, prot_ctx->host_dns,
-			    prot_ctx->host_port, &prot_ctx->sock_hdl,
-			    prot_ctx->tls);
+			    prot_ctx->host_ip, NULL, prot_ctx->host_port,
+			    &prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
@@ -217,9 +216,8 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 				       &prot_ctx->sock_hdl, prot_ctx->tls);
 		if (!ret) {
 			ret = connect_to_owner(
-			    prot_ctx->host_ip, prot_ctx->host_dns,
-			    prot_ctx->host_port, &prot_ctx->sock_hdl,
-			    prot_ctx->tls);
+			    prot_ctx->host_ip, NULL, prot_ctx->host_port,
+			    &prot_ctx->sock_hdl, prot_ctx->tls);
 		}
 		break;
 	default:
