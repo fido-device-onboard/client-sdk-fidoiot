@@ -365,8 +365,8 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		bool proxy)
 {
 	bool ret = false;
+	int connect_ok = -1;
 	uint32_t num_ofIPs = 0;
-	fdo_con_handle sock_hdl = FDO_CON_INVALID_HANDLE;
 	fdo_ip_address_t *ip_list = NULL;
 	rest_ctx_t *rest = NULL;
 
@@ -404,22 +404,22 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		// Iterate over IP-list to connect
 		uint32_t iter = 0;
 
-		while (iter != num_ofIPs &&
-		       sock_hdl == FDO_CON_INVALID_HANDLE) {
+		while (iter != num_ofIPs && connect_ok == -1) {
 
 			curl = curl_easy_init();
-			sock_hdl =
+			connect_ok =
 			    fdo_con_connect((ip_list + iter), dn, port, tls);
-			if (sock_hdl == FDO_CON_INVALID_HANDLE) {
+			if (connect_ok == -1) {
 				LOG(LOG_ERROR, "Failed to connect to "
 					       "server: retrying...\n");
 			}
 			iter++;
 		}
 
-		if (FDO_CON_INVALID_HANDLE != sock_hdl) {
-			if (fdo_con_disconnect(sock_hdl)) {
-				LOG(LOG_ERROR, "Error during socket close()\n");
+		if (connect_ok != -1) {
+			if (fdo_con_disconnect()) {
+				LOG(LOG_ERROR,
+				    "Error during connection close()\n");
 				goto end;
 			}
 			if (!cache_host_dns(dn)) {
@@ -455,27 +455,22 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param dn:   Domain name of the server
  * @param port: Port number of the server instance to connect to.
- * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn,
-			     uint16_t port, fdo_con_handle *sock_hdl, bool tls)
+			     uint16_t port, bool tls)
 {
 	bool ret = false;
 	int retries = MANUFACTURER_CONNECT_RETRIES;
+	int connect_ok = -1;
 	curl = curl_easy_init();
 
 	LOG(LOG_DEBUG, "Connecting to manufacturer Server\n");
 
 	if (!ip) {
-		goto end;
-	}
-
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
@@ -514,8 +509,8 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, dn, port, tls);
-		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) && retries--) {
+		connect_ok = fdo_con_connect(ip, dn, port, tls);
+		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO, "Failed to connect to Manufacturer "
 				      "server: retrying...\n");
 			fdo_sleep(RETRY_DELAY);
@@ -526,7 +521,7 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn,
 		goto end;
 	}
 
-	if (FDO_CON_INVALID_HANDLE == *sock_hdl) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR,
 		    "Failed to connect to Manufacturer server: Giving up...\n");
 		goto end;
@@ -543,27 +538,22 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param dn:   Domain name of the server
  * @param port: Port number of the server instance to connect to.
- * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool connect_to_rendezvous(fdo_ip_address_t *ip, const char *dn, uint16_t port,
-			   fdo_con_handle *sock_hdl, bool tls)
+			   bool tls)
 {
 	bool ret = false;
+	int connect_ok = -1;
 	int retries = RENDEZVOUS_CONNECT_RETRIES;
 	curl = curl_easy_init();
 
 	LOG(LOG_DEBUG, "Connecting to Rendezvous server\n");
 
 	if (!ip) {
-		goto end;
-	}
-
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
@@ -602,8 +592,8 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, dn, port, tls);
-		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) && retries--) {
+		connect_ok = fdo_con_connect(ip, dn, port, tls);
+		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO, "Failed to connect to Rendezvous server: "
 				      "retrying...\n");
 			fdo_sleep(RETRY_DELAY);
@@ -614,7 +604,7 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 		goto end;
 	}
 
-	if (FDO_CON_INVALID_HANDLE == *sock_hdl) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR,
 		    "Failed to connect to rendezvous: Giving up...\n");
 		goto end;
@@ -632,27 +622,22 @@ end:
  * @param ip:   IP address of the server to connect to.
  * @param dn: Domain name of the server
  * @param port: Port number of the server instance to connect to.
- * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
 bool connect_to_owner(fdo_ip_address_t *ip, const char *dn, uint16_t port,
-		      fdo_con_handle *sock_hdl, bool tls)
+		      bool tls)
 {
 	bool ret = false;
+	int connect_ok = -1;
 	int retries = OWNER_CONNECT_RETRIES;
 	curl = curl_easy_init();
 
 	LOG(LOG_DEBUG, "Connecting to owner server\n");
 
 	if (!ip) {
-		goto end;
-	}
-
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
@@ -692,8 +677,8 @@ bool connect_to_owner(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 	if (ip && ip->length > 0) {
 		LOG(LOG_DEBUG, "using IP\n");
 
-		*sock_hdl = fdo_con_connect(ip, dn, port, tls);
-		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) && retries--) {
+		connect_ok = fdo_con_connect(ip, dn, port, tls);
+		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO,
 			    "Failed to connect to Owner server: retrying...\n");
 			fdo_sleep(RETRY_DELAY);
@@ -703,7 +688,7 @@ bool connect_to_owner(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 		goto end;
 	}
 
-	if (FDO_CON_INVALID_HANDLE == *sock_hdl) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR, "Failed to connect to Owner: Giving up...\n");
 		goto end;
 	}
@@ -724,18 +709,20 @@ end:
  */
 int fdo_connection_restablish(fdo_prot_ctx_t *prot_ctx)
 {
+	int connect_ok = -1;
 	int retries = OWNER_CONNECT_RETRIES;
+	curl = curl_easy_init();
 
 	/* re-connect using server-IP */
-	while (((prot_ctx->sock_hdl = fdo_con_connect(
+	while (((connect_ok = fdo_con_connect(
 		     prot_ctx->host_ip, prot_ctx->host_dns, prot_ctx->host_port,
-		     prot_ctx->tls)) == FDO_CON_INVALID_HANDLE) &&
+		     prot_ctx->tls)) == -1) &&
 	       retries--) {
 		LOG(LOG_INFO, "Failed reconnecting to server: retrying...");
 		fdo_sleep(RETRY_DELAY);
 	}
 
-	if (prot_ctx->sock_hdl == FDO_CON_INVALID_HANDLE) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR, "Failed reconnecting to server: Giving up...");
 		return -1;
 	} else {
