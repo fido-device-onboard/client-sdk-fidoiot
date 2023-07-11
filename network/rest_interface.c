@@ -231,20 +231,20 @@ err:
  * REST header (POST URL) construction based on current REST context.
  *
  * @param rest_ctx - current REST context.
- * @param g_URL - post URL output.
+ * @param hdr - REST header output.
  * @param post_url_len - post URL max length.
  * @retval true if header onstruction was successful, false otherwise.
  */
-bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
+bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
 			   size_t post_url_len)
 {
 	char *ip_ascii = NULL;
 	char temp[HTTP_MAX_URL_SIZE] = {0};
+	char g_URL[HTTP_MAX_URL_SIZE] = {0};
 	char temp1[256] = {0};
-	char msgequals[] = "";
 	bool ret = false;
 
-	if (!rest_ctx || !g_URL || !post_url_len) {
+	if (!rest_ctx || !post_url_len) {
 		LOG(LOG_ERROR, "Invalid input!\n");
 		goto err;
 	}
@@ -261,12 +261,12 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 	}
 
 	if (rest_ctx->tls) {
-		if (strcpy_s(g_URL, post_url_len, "POST https://") != 0) {
+		if (strcpy_s(g_URL, post_url_len, "https://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	} else {
-		if (strcpy_s(g_URL, post_url_len, "POST http://") != 0) {
+		if (strcpy_s(g_URL, post_url_len, "http://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
@@ -318,10 +318,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, post_url_len, " HTTP/1.1\r\n") != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
-		goto err;
-	}
+	*msg_header = curl_slist_append(*msg_header, g_URL);
 
 	if (memset_s(temp, sizeof(temp), 0) != 0) {
 		ret = false;
@@ -330,64 +327,49 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, char *g_URL,
 
 	if (rest_ctx->host_dns) {
 		/* DNS */
-		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d\r\n",
+		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d",
 				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
 	} else if (rest_ctx->host_ip && ip_ascii) {
 		/* IP */
-		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d\r\n",
-				  ip_ascii, rest_ctx->portno) < 0) {
+		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d", ip_ascii,
+				  rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
 	}
 
-	if (strcat_s(g_URL, post_url_len, temp) != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
-		goto err;
-	}
+	*msg_header = curl_slist_append(*msg_header, temp);
+	*msg_header =
+	    curl_slist_append(*msg_header, "Content-type:application/cbor");
 
-	if (snprintf_s_i(temp1, sizeof(temp1),
-			 "Content-type:application/cbor\r\n"
-			 "Content-length:%u\r\n_connection: keep-alive\r\n",
+	if (snprintf_s_i(temp1, sizeof(temp1), "Content-length:%u",
 			 rest_ctx->content_length) < 0) {
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
 		goto err;
 	}
+	*msg_header = curl_slist_append(*msg_header, temp1);
+	*msg_header = curl_slist_append(*msg_header, "_connection: keep-alive");
 
-	if (strcat_s(g_URL, post_url_len, temp1) != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
+	if (memset_s(temp, sizeof(temp), 0) != 0) {
+		ret = false;
 		goto err;
 	}
 
 	if (rest_ctx->authorization) {
-		if (strcat_s(g_URL, post_url_len, "Authorization:") != 0) {
+		if (strcat_s(temp, post_url_len, "Authorization:") != 0) {
 			LOG(LOG_ERROR, "Strcpy() failed!\n");
 			goto err;
 		}
 
-		if (strcat_s(g_URL, post_url_len, rest_ctx->authorization) !=
+		if (strcat_s(temp, post_url_len, rest_ctx->authorization) !=
 		    0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
-
-		if (strcat_s(g_URL, post_url_len, "\r\n") != 0) {
-			LOG(LOG_ERROR, "Strcat() failed!\n");
-			goto err;
-		}
-	}
-
-	if (strcat_s(g_URL, post_url_len, "\r\n") != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
-		goto err;
-	}
-
-	if (strcat_s(g_URL, post_url_len, msgequals) != 0) {
-		LOG(LOG_ERROR, "Strcat() failed!\n");
-		goto err;
+		*msg_header = curl_slist_append(*msg_header, temp);
 	}
 
 	ret = true;

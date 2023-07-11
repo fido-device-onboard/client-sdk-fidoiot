@@ -21,7 +21,6 @@ typedef struct {
 
 // FDO protocol context
 typedef struct fdo_prot_ctx_s {
-	fdo_con_handle sock_hdl;
 	bool tls;
 	int msg_type;
 	fdo_prot_t *protdata;

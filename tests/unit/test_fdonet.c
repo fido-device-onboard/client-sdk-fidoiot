@@ -24,8 +24,8 @@ bool __wrap_cache_host_ip(fdo_ip_address_t *ip);
 bool __wrap_cache_host_port(uint16_t port);
 int32_t __wrap_fdo_con_dns_lookup(char *dns, fdo_ip_address_t **ip_list,
 				  uint32_t *ip_list_size);
-fdo_con_handle __wrap_fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
-				      void **ssl);
+int32_t __wrap_fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
+			       void **ssl);
 fdo_byte_array_t *__wrap_fdo_byte_array_alloc(int byte_sz);
 bool __wrap_fdor_init(fdor_t *fdor, FDOReceive_fcn_ptr_t rcv, void *rcv_data);
 void test_setup_http_proxy(void);
@@ -98,13 +98,13 @@ int32_t __wrap_fdo_con_dns_lookup(char *dns, fdo_ip_address_t **ip_list,
 }
 
 static bool connect_fail = false;
-fdo_con_handle __real_fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
-				      void **ssl);
-fdo_con_handle __wrap_fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
-				      void **ssl)
+int32_t __real_fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
+			       void **ssl);
+int32_t __wrap_fdo_con_connect(fdo_ip_address_t *ip_addr, uint16_t port,
+			       void **ssl)
 {
 	if (connect_fail)
-		return FDO_CON_INVALID_HANDLE;
+		return -1;
 	else
 		return __real_fdo_con_connect(ip_addr, port, ssl);
 }
@@ -205,25 +205,23 @@ void test_Connect_toManufacturer(void)
 
 	uint16_t port = 8039;
 	bool ret = false;
-	fdo_con_handle sock = FDO_CON_INVALID_HANDLE;
-
 	ip.length = 4;
 
-	ret = connect_to_manufacturer(NULL, NULL, 0, NULL, NULL);
+	ret = connect_to_manufacturer(NULL, NULL, 0, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;
-	ret = connect_to_manufacturer(&ip, NULL, port, &sock, NULL);
+	ret = connect_to_manufacturer(&ip, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_ip_fail = false;
 
 	cache_port_fail = true;
-	ret = connect_to_manufacturer(&ip, NULL, port, &sock, NULL);
+	ret = connect_to_manufacturer(&ip, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_port_fail = false;
 
 	connect_fail = true;
-	ret = connect_to_manufacturer(NULL, NULL, port, &sock, NULL);
+	ret = connect_to_manufacturer(NULL, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 }
@@ -240,25 +238,23 @@ void test_Connect_toRendezvous(void)
 
 	uint16_t port = 8041;
 	bool ret = false;
-	fdo_con_handle sock = FDO_CON_INVALID_HANDLE;
-
 	ip.length = 4;
 
-	ret = connect_to_rendezvous(NULL, NULL, 0, NULL, NULL);
+	ret = connect_to_rendezvous(NULL, NULL, 0, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;
-	ret = connect_to_rendezvous(&ip, NULL, port, &sock, NULL);
+	ret = connect_to_rendezvous(&ip, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_ip_fail = false;
 
 	cache_port_fail = true;
-	ret = connect_to_rendezvous(&ip, NULL, port, &sock, NULL);
+	ret = connect_to_rendezvous(&ip, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_port_fail = false;
 
 	connect_fail = true;
-	ret = connect_to_rendezvous(NULL, NULL, port, &sock, NULL);
+	ret = connect_to_rendezvous(NULL, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 }
@@ -275,25 +271,23 @@ void test_Connect_toOwner(void)
 
 	uint16_t port = 8042;
 	bool ret = false;
-	fdo_con_handle sock = FDO_CON_INVALID_HANDLE;
-
 	ip.length = 4;
 
-	ret = connect_to_owner(NULL, NULL, 0, NULL, NULL);
+	ret = connect_to_owner(NULL, NULL, 0, NULL);
 	TEST_ASSERT_FALSE(ret);
 
 	cache_ip_fail = true;
-	ret = connect_to_owner(&ip, NULL, port, &sock, NULL);
+	ret = connect_to_owner(&ip, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_ip_fail = false;
 
 	cache_port_fail = true;
-	ret = connect_to_owner(&ip, NULL, port, &sock, NULL);
+	ret = connect_to_owner(&ip, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	cache_port_fail = false;
 
 	connect_fail = true;
-	ret = connect_to_owner(NULL, NULL, port, &sock, NULL);
+	ret = connect_to_owner(NULL, NULL, port, NULL);
 	TEST_ASSERT_FALSE(ret);
 	connect_fail = false;
 }
