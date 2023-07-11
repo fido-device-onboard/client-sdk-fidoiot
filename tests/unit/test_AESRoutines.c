@@ -131,7 +131,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 	int result_memcmp = 0;
 
 	uint8_t aad[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
-			     0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+			   0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 
 #if defined(ECDSA384_DA)
 	uint8_t key_1[32] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -161,21 +161,19 @@ TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 	TEST_ASSERT_NOT_NULL(tag);
 
 	// check for any NULL parameter
-	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, NULL,
-				     &cipher_length, FDO_AES_BLOCK_SIZE, iv1,
-				     key1, key1Length, tag, AES_TAG_LEN,
-					 aad, sizeof(aad));
+	ret = crypto_hal_aes_encrypt(
+	    clear_txt, clear_txt_size, NULL, &cipher_length, FDO_AES_BLOCK_SIZE,
+	    iv1, key1, key1Length, tag, AES_TAG_LEN, aad, sizeof(aad));
 	TEST_ASSERT_LESS_OR_EQUAL_INT32_MESSAGE(-1, ret,
-				      "Invalid return value");
+						"Invalid return value");
 
 	// check for encrypted data length less than clear data length
 	cipher_length = 0;
-	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, NULL,
-				     &cipher_length, FDO_AES_BLOCK_SIZE, iv1,
-				     key1, key1Length, tag, AES_TAG_LEN,
-					 aad, sizeof(aad));
+	ret = crypto_hal_aes_encrypt(
+	    clear_txt, clear_txt_size, NULL, &cipher_length, FDO_AES_BLOCK_SIZE,
+	    iv1, key1, key1Length, tag, AES_TAG_LEN, aad, sizeof(aad));
 	TEST_ASSERT_LESS_OR_EQUAL_INT32_MESSAGE(-1, ret,
-				      "Invalid return value");
+						"Invalid return value");
 
 	cipher_length = clear_txt_size;
 	cipher_text = fdo_alloc(cipher_length);
@@ -184,27 +182,27 @@ TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 	// encrypt
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cipher_text,
 				     &cipher_length, FDO_AES_BLOCK_SIZE, iv1,
-				     key1, key1Length, tag, AES_TAG_LEN,
-					 aad, sizeof(aad));
+				     key1, key1Length, tag, AES_TAG_LEN, aad,
+				     sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 
 	// check for any NULL parameter
 	ret = crypto_hal_aes_decrypt(NULL, &decrypted_length, cipher_text,
 				     cipher_length, FDO_AES_BLOCK_SIZE, iv1,
-				     key1, key1Length, tag, AES_TAG_LEN,
-					 aad, sizeof(aad));
+				     key1, key1Length, tag, AES_TAG_LEN, aad,
+				     sizeof(aad));
 
 	TEST_ASSERT_LESS_OR_EQUAL_INT32_MESSAGE(-1, ret,
-				      "Invalid return value");
+						"Invalid return value");
 
 	// check for clear data length less than encrypted data length
 	ret = crypto_hal_aes_decrypt(NULL, &decrypted_length, cipher_text,
 				     cipher_length, FDO_AES_BLOCK_SIZE, iv1,
-				     key1, key1Length, tag, AES_TAG_LEN,
-					 aad, sizeof(aad));
+				     key1, key1Length, tag, AES_TAG_LEN, aad,
+				     sizeof(aad));
 
 	TEST_ASSERT_LESS_OR_EQUAL_INT32_MESSAGE(-1, ret,
-				      "Invalid return value");
+						"Invalid return value");
 
 	decrypted_length = cipher_length;
 	decrypted_txt = fdo_alloc(decrypted_length);
@@ -229,7 +227,6 @@ TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 				     tag, AES_TAG_LEN, aad, sizeof(aad));
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
-
 	// encrypt->decrypt->change iv->decrypt again
 	memset_s(iv1, AES_IV_LEN, 1);
 	memset_s(tag, AES_TAG_LEN, 0);
@@ -237,15 +234,15 @@ TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 
 	ret = crypto_hal_aes_encrypt(clear_txt, clear_txt_size, cipher_text,
 				     &cipher_length, FDO_AES_BLOCK_SIZE, iv1,
-				     key1, key1Length, tag, AES_TAG_LEN,
-					 aad, sizeof(aad));
+				     key1, key1Length, tag, AES_TAG_LEN, aad,
+				     sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 
 	decrypted_length = cipher_length;
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypted_length,
 				     cipher_text, cipher_length,
 				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length,
-					 tag, AES_TAG_LEN, aad, sizeof(aad));
+				     tag, AES_TAG_LEN, aad, sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = memcmp_s(clear_txt, clear_txt_size, decrypted_txt,
@@ -258,7 +255,7 @@ TEST_CASE("aes_encrypt", "[AESRoutines][fdo]")
 	ret = crypto_hal_aes_decrypt(decrypted_txt, &decrypted_length,
 				     cipher_text, cipher_length,
 				     FDO_AES_BLOCK_SIZE, iv1, key1, key1Length,
-					 tag, AES_TAG_LEN, aad, sizeof(aad));
+				     tag, AES_TAG_LEN, aad, sizeof(aad));
 	TEST_ASSERT_NOT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	ret = random_close();

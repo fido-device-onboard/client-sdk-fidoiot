@@ -111,7 +111,8 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 
-	module_info = fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
+	module_info =
+	    fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
 
 	if (!module_info) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
@@ -277,11 +278,11 @@ int app_main(bool is_resale)
 #endif
 
 #if defined TARGET_OS_LINUX
-	if  (argc > 1 && *argv[1] == '1') {
+	if (argc > 1 && *argv[1] == '1') {
 		do_resale = true;
 	}
 #else
-	if  (is_resale == true) {
+	if (is_resale == true) {
 		do_resale = true;
 	}
 #endif
@@ -290,9 +291,9 @@ int app_main(bool is_resale)
 	int res = -1;
 
 	res = (int)strcmp_s((char *)argv[1], DATA_CONTENT_SIZE, "-ss",
-						&strcmp_ss);
+			    &strcmp_ss);
 
-	if  (argc > 1 && (!res && !strcmp_ss)) {
+	if (argc > 1 && (!res && !strcmp_ss)) {
 		useSelfSignedCerts = true;
 	}
 #endif

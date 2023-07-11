@@ -49,12 +49,14 @@ int32_t msg60(fdo_prot_t *ps)
 
 	/* Fill in the maxDeviceMessageSize */
 	if (!fdow_unsigned_int(&ps->fdow, ps->max_device_message_size)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write maxDeviceMessageSize\n");
+		LOG(LOG_ERROR,
+		    "TO2.HelloDevice: Failed to write maxDeviceMessageSize\n");
 		return false;
 	}
 
 	if (ps->max_device_message_size > MAX_NEGO_MSG_SIZE) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: maxDeviceMessageSize can not be greater than 65535\n");
+		LOG(LOG_ERROR, "TO2.HelloDevice: maxDeviceMessageSize can not "
+			       "be greater than 65535\n");
 		goto err;
 	}
 
@@ -67,24 +69,29 @@ int32_t msg60(fdo_prot_t *ps)
 	/* Fill in the Nonce */
 	ps->nonce_to2proveov = fdo_byte_array_alloc(FDO_NONCE_BYTES);
 	if (!ps->nonce_to2proveov) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to allocate memory for NonceTO2ProveOV\n");
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to allocate memory for "
+			       "NonceTO2ProveOV\n");
 		goto err;
 	}
 	fdo_nonce_init_rand(ps->nonce_to2proveov);
-	if (!fdow_byte_string(&ps->fdow, ps->nonce_to2proveov->bytes, ps->nonce_to2proveov->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write NonceTO2ProveOV\n");
+	if (!fdow_byte_string(&ps->fdow, ps->nonce_to2proveov->bytes,
+			      ps->nonce_to2proveov->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "TO2.HelloDevice: Failed to write NonceTO2ProveOV\n");
 		return false;
 	}
 
 	/* Fill in the key exchange */
 	if (!fdow_text_string(&ps->fdow, kx->bytes, kx->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write kexSuiteName\n");
+		LOG(LOG_ERROR,
+		    "TO2.HelloDevice: Failed to write kexSuiteName\n");
 		return false;
 	}
 
 	/* Fill in the ciphersuite info */
 	if (!fdow_signed_int(&ps->fdow, cs)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to write cipherSuiteName\n");
+		LOG(LOG_ERROR,
+		    "TO2.HelloDevice: Failed to write cipherSuiteName\n");
 		return false;
 	}
 
@@ -100,14 +107,16 @@ int32_t msg60(fdo_prot_t *ps)
 	}
 
 	if (!fdow_encoded_length(&ps->fdow, &ps->fdow.b.block_size)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to get encoded length for helloDeviceHash\n");
+		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to get encoded length "
+			       "for helloDeviceHash\n");
 		return false;
 	}
 
 	if (0 != fdo_crypto_hash(ps->fdow.b.block, ps->fdow.b.block_size,
-				    ps->hello_device_hash->hash->bytes,
-				    ps->hello_device_hash->hash->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.HelloDevice: Failed to generate helloDeviceHash\n");
+				 ps->hello_device_hash->hash->bytes,
+				 ps->hello_device_hash->hash->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "TO2.HelloDevice: Failed to generate helloDeviceHash\n");
 		return false;
 	}
 	/* Mark to move to next message */

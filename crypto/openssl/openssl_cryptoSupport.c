@@ -26,7 +26,7 @@
 static bool g_random_initialised;
 #endif /* SECURE_ELEMENT */
 
-ENGINE * engine;
+ENGINE *engine;
 
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks)
@@ -245,8 +245,8 @@ int32_t crypto_close(void)
  */
 
 int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
-			 size_t buffer_length, uint8_t *output,
-			 size_t output_length)
+			size_t buffer_length, uint8_t *output,
+			size_t output_length)
 {
 	int hash_type = FDO_CRYPTO_HASH_TYPE_USED;
 

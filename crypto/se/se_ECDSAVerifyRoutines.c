@@ -49,8 +49,8 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	uint8_t raw_sig[BUFF_SIZE_64_BYTES];
 	int ret = 0;
 
-	(void) key_param2;
-	(void) key_param2Length;
+	(void)key_param2;
+	(void)key_param2Length;
 
 	/* Check validity of key type. */
 	if (key_encoding != FDO_CRYPTO_PUB_KEY_ENCODING_X509 ||
@@ -78,9 +78,10 @@ int32_t crypto_hal_sig_verify(uint8_t key_encoding, int key_algorithm,
 	 * required API calls from openssl/mbedtls for the decoding operation
 	 * and then pass the raw key and signature to the SE for verification.
 	 */
-	if (0 != crypto_hal_der_decode(raw_key, raw_sig, pub_key, key_param1Length,
-			    message_signature, signature_length,
-			    BUFF_SIZE_64_BYTES, BUFF_SIZE_64_BYTES)) {
+	if (0 != crypto_hal_der_decode(raw_key, raw_sig, pub_key,
+				       key_param1Length, message_signature,
+				       signature_length, BUFF_SIZE_64_BYTES,
+				       BUFF_SIZE_64_BYTES)) {
 		LOG(LOG_ERROR, "Failed to decode from DER to raw format\n");
 		ret = -1;
 		goto err;

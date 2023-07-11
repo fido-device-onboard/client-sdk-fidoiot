@@ -38,13 +38,13 @@ int32_t fdo_msg_encrypt_get_cipher_len(uint32_t clear_length,
 				       uint32_t *cipher_length);
 int32_t fdo_msg_encrypt(const uint8_t *clear_text, uint32_t clear_text_length,
 			uint8_t *cipher, uint32_t *cipher_length, uint8_t *iv,
-			uint8_t *tag, size_t tag_length,
-			const uint8_t *aad, size_t aad_length);
+			uint8_t *tag, size_t tag_length, const uint8_t *aad,
+			size_t aad_length);
 int32_t fdo_msg_decrypt_get_pt_len(uint32_t cipher_length,
 				   uint32_t *clear_text_length);
 int32_t fdo_msg_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
-			const uint8_t *cipher, uint32_t cipher_length, uint8_t *iv,
-			uint8_t *tag, size_t tag_length,
+			const uint8_t *cipher, uint32_t cipher_length,
+			uint8_t *iv, uint8_t *tag, size_t tag_length,
 			const uint8_t *aad, size_t aad_length);
 int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 			   size_t hmac_len, bool is_replacement_hmac);
@@ -56,7 +56,8 @@ int32_t fdo_to2_chained_hmac(uint8_t *to2Msg, size_t to2Msg_len, uint8_t *hmac,
 int set_currentIV(uint8_t *iv);
 
 int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
-			fdo_byte_array_t **signature, fdo_byte_array_t **eat_maroe);
+			fdo_byte_array_t **signature,
+			fdo_byte_array_t **eat_maroe);
 
 fdo_dev_key_ctx_t *getfdo_dev_key_ctx(void);
 fdo_kex_ctx_t *getfdo_key_ctx(void);

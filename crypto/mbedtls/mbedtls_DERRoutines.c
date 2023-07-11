@@ -25,7 +25,8 @@
  * format.
  */
 int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
-		   uint8_t *message_signature, size_t *signature_length)
+			      uint8_t *message_signature,
+			      size_t *signature_length)
 {
 	int ret;
 	mbedtls_mpi r, s;
@@ -80,9 +81,8 @@ int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
 	}
 	len += ret;
 
-	ret = mbedtls_asn1_write_tag(&p, buf,
-				     MBEDTLS_ASN1_CONSTRUCTED |
-				     MBEDTLS_ASN1_SEQUENCE);
+	ret = mbedtls_asn1_write_tag(
+	    &p, buf, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
 	if (0 > ret) {
 		LOG(LOG_ERROR,
 		    "Unable to convert the raw signature into DER format");
@@ -118,9 +118,10 @@ err:
  * raw_key_length: input, the buffer size of the raw_key
  */
 int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
-		   const unsigned char *pub_key, size_t key_length,
-		   const uint8_t *message_signature, size_t signature_length,
-		   size_t raw_key_length, size_t raw_sig_length)
+			      const unsigned char *pub_key, size_t key_length,
+			      const uint8_t *message_signature,
+			      size_t signature_length, size_t raw_key_length,
+			      size_t raw_sig_length)
 {
 	int ret;
 	mbedtls_pk_context pk_ctx = {0};
@@ -141,8 +142,7 @@ int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
 
 	mbedtls_pk_init(&pk_ctx);
 
-	ret = mbedtls_pk_parse_public_key(&pk_ctx, pub_key,
-					  (size_t)key_length);
+	ret = mbedtls_pk_parse_public_key(&pk_ctx, pub_key, (size_t)key_length);
 	if (ret != 0) {
 
 		LOG(LOG_ERROR, "Parsing EC public-key failed!\n");

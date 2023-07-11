@@ -9,16 +9,18 @@
  * Supported modes are:
  * - AES-GCM-128 (Key = 128 bits)
  * - AES-GCM-256 (Key = 256 bits)
- * - AES-CCM-64-128-128 (L=64 (8 octets,2^64 bytes message length), Tag = 128 bits, Key = 128 bits)
- * - AES-CCM-64-128-256 (L=64 (8 octets,2^64 bytes message length), Tag = 128 bits, Key = 256 bits)
+ * - AES-CCM-64-128-128 (L=64 (8 octets,2^64 bytes message length), Tag = 128
+ * bits, Key = 128 bits)
+ * - AES-CCM-64-128-256 (L=64 (8 octets,2^64 bytes message length), Tag = 128
+ * bits, Key = 256 bits)
  *
- * \NOTE: The IV/Nonce length 'N' for CCM mode is dependent on the maximum message length 'L' value
- * and should be equal to 15-L (in octets).
- * Refer to [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information on
- * trade-offs between 'L' and 'N' value.
- * The current implementation uses L=8, and hence the IV/Nonce length N = 15-8 = 7 octets
- * As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
- * L=2 could also be used. N=13 MUST be used in this case.
+ * \NOTE: The IV/Nonce length 'N' for CCM mode is dependent on the maximum
+ * message length 'L' value and should be equal to 15-L (in octets). Refer to
+ * [RFC3610](https://datatracker.ietf.org/doc/html/rfc3610) for more information
+ * on trade-offs between 'L' and 'N' value. The current implementation uses L=8,
+ * and hence the IV/Nonce length N = 15-8 = 7 octets As per FDO and COSE
+ * [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications, L=2
+ * could also be used. N=13 MUST be used in this case.
  */
 
 #include "fdoCryptoHal.h"
@@ -29,7 +31,7 @@
 #include <openssl/err.h>
 #include "safe_lib.h"
 
-// Specify Openssl constants depending on the AES MODES (GCM/CCM) 
+// Specify Openssl constants depending on the AES MODES (GCM/CCM)
 #ifdef AES_MODE_GCM_ENABLED
 // GCM mode enabled
 
@@ -38,7 +40,7 @@
 #define CIPHER_TYPE EVP_aes_256_gcm()
 #define KEY_LENGTH_LOCAL 32
 #else
- //128 bit keys
+// 128 bit keys
 #define CIPHER_TYPE EVP_aes_128_gcm()
 #define KEY_LENGTH_LOCAL 16
 #endif
@@ -55,16 +57,17 @@
 
 #ifdef AES_256_BIT
 #define CIPHER_TYPE EVP_aes_256_ccm()
-#define KEY_LENGTH_LOCAL 32 //256 bits
+#define KEY_LENGTH_LOCAL 32 // 256 bits
 #else
 #define CIPHER_TYPE EVP_aes_128_ccm()
-#define KEY_LENGTH_LOCAL 16 //128 bit
+#define KEY_LENGTH_LOCAL 16 // 128 bit
 #endif
 
 #define TAG_LENGTH AES_CCM_TAG_LEN
 #define IV_LENGTH AES_CCM_IV_LEN
-// 'L' value of 8 octets. A change to this value MUST be matched with a corresponding change
-// of IV_LENGTH, 'N' to '15-L'. For example, for L_VALUE_BYTES(L)=2, IV_LENGTH(N)=13
+// 'L' value of 8 octets. A change to this value MUST be matched with a
+// corresponding change of IV_LENGTH, 'N' to '15-L'. For example, for
+// L_VALUE_BYTES(L)=2, IV_LENGTH(N)=13
 #define L_VALUE_BYTES 8
 
 #define SET_IV EVP_CTRL_CCM_SET_IVLEN
@@ -97,7 +100,8 @@
  * @param tag_length
  *        Fixed tag length in BYTES (output).
  * @param aad
- *        Additional Authenticated Data(AAD) in Byte_array format used in encryption.
+ *        Additional Authenticated Data(AAD) in Byte_array format used in
+ * encryption.
  * @param aad_length
  *        Additional Authenticated Data(AAD) size in BYTES.
  * @return ret
@@ -109,9 +113,9 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t clear_text_length, uint8_t *cipher_text,
 			       uint32_t *cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length,
-			       uint8_t *tag, size_t tag_length,
-			       const uint8_t *aad, size_t aad_length)
+			       uint32_t key_length, uint8_t *tag,
+			       size_t tag_length, const uint8_t *aad,
+			       size_t aad_length)
 {
 	int ret = -1;
 	EVP_CIPHER_CTX *ctx = NULL;
@@ -123,8 +127,8 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	 */
 	if (!clear_text || !clear_text_length || !cipher_length ||
 	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
-	    KEY_LENGTH_LOCAL != key_length ||
-	    !tag || tag_length != TAG_LENGTH) {
+	    KEY_LENGTH_LOCAL != key_length || !tag ||
+	    tag_length != TAG_LENGTH) {
 		LOG(LOG_ERROR, "Invalid parameters received\n");
 		goto end;
 	}
@@ -143,7 +147,8 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 
 	// Initialise the AES GCM encryption operation
 	if (!EVP_EncryptInit_ex(ctx, CIPHER_TYPE, NULL, NULL, NULL)) {
-		LOG(LOG_ERROR, "Error during Initializing AES encrypt operation!\n");
+		LOG(LOG_ERROR,
+		    "Error during Initializing AES encrypt operation!\n");
 		goto end;
 	}
 
@@ -160,7 +165,8 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 		goto end;
 	}
 
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, L_VALUE_BYTES, NULL)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, L_VALUE_BYTES,
+				 NULL)) {
 		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
 		goto end;
 	}
@@ -176,8 +182,10 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	if (aad && aad_length > 0) {
 #ifdef AES_MODE_CCM_ENABLED
 		// Specify Plain data length (only required in case of CCM)
-		if (!EVP_EncryptUpdate(ctx, NULL, &len, NULL, clear_text_length)){
-			LOG(LOG_ERROR, "Plain data length initialization failed!\n");
+		if (!EVP_EncryptUpdate(ctx, NULL, &len, NULL,
+				       clear_text_length)) {
+			LOG(LOG_ERROR,
+			    "Plain data length initialization failed!\n");
 			goto end;
 		}
 #endif
@@ -190,7 +198,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	// Provide the message to be encrypted, and obtain the encrypted output.
 	// EVP_EncryptUpdate can be called multiple times if necessary
 	if (!EVP_EncryptUpdate(ctx, cipher_text, &len, clear_text,
-				   clear_text_length)) {
+			       clear_text_length)) {
 		LOG(LOG_ERROR, "EVP_EncryptUpdate() failed!\n");
 		goto end;
 	}
@@ -242,7 +250,8 @@ end:
  * @param tag_length
  *        Fixed tag length in BYTES.
  * @param aad
- *        Additional Authenticated Data(AAD) in Byte_array format used in decryption.
+ *        Additional Authenticated Data(AAD) in Byte_array format used in
+ * decryption.
  * @param aad_length
  *        Additional Authenticated Data(AAD) size in BYTES.
  * @return ret
@@ -254,9 +263,9 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       const uint8_t *cipher_text,
 			       uint32_t cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length,
-			       uint8_t *tag, size_t tag_length,
-			       const uint8_t *aad, size_t aad_length)
+			       uint32_t key_length, uint8_t *tag,
+			       size_t tag_length, const uint8_t *aad,
+			       size_t aad_length)
 {
 	int ret = -1;
 	EVP_CIPHER_CTX *ctx = NULL;
@@ -265,8 +274,8 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 	// Check all the incoming parameters
 	if (!clear_text_length || !cipher_text || cipher_length <= 0 ||
 	    FDO_AES_BLOCK_SIZE != block_size || !iv || !key ||
-	    KEY_LENGTH_LOCAL != key_length ||
-	    !tag || tag_length != AES_TAG_LEN) {
+	    KEY_LENGTH_LOCAL != key_length || !tag ||
+	    tag_length != AES_TAG_LEN) {
 		LOG(LOG_ERROR, "Invalid paramters received\n");
 		goto end;
 	}
@@ -285,7 +294,8 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 
 	// Initialise the AES decryption operation
 	if (!EVP_DecryptInit_ex(ctx, CIPHER_TYPE, NULL, NULL, NULL)) {
-		LOG(LOG_ERROR, "Error during Initializing EVP AES decrypt operation!\n");
+		LOG(LOG_ERROR,
+		    "Error during Initializing EVP AES decrypt operation!\n");
 		goto end;
 	}
 
@@ -295,23 +305,23 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 		goto end;
 	}
 
-	// NOTE: As per Openssl's documentation, Tag is specified for CCM before EVP_DecryptUpdate,
-	// while the same is specified for GCM after EVP_DecryptUpdate.
-	// As a result, the tag for GCM is specified later.
+	// NOTE: As per Openssl's documentation, Tag is specified for CCM before
+	// EVP_DecryptUpdate, while the same is specified for GCM after
+	// EVP_DecryptUpdate. As a result, the tag for GCM is specified later.
 	// L value is set for CCM separately here.
 #ifdef AES_MODE_CCM_ENABLED
 	// Set tag
-	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length,
-				 tag)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length, tag)) {
 		LOG(LOG_ERROR, "Error during setting AES IV length!\n");
 		goto end;
 	}
 
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, L_VALUE_BYTES, NULL)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, L_VALUE_BYTES,
+				 NULL)) {
 		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
 		goto end;
 	}
- #endif
+#endif
 
 	// Initialise key and IV
 	if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) {
@@ -324,7 +334,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 
 #ifdef AES_MODE_CCM_ENABLED
 		// Set ciphertext length (only required for CCM)
-    	if (!EVP_DecryptUpdate(ctx, NULL, &len, NULL, cipher_length)) {
+		if (!EVP_DecryptUpdate(ctx, NULL, &len, NULL, cipher_length)) {
 			LOG(LOG_ERROR, "Cipher length set failed!\n");
 			goto end;
 		}
@@ -338,7 +348,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 #ifdef AES_MODE_CCM_ENABLED
 	// Decrypt the message. Can only be called once.
 	ret = EVP_DecryptUpdate(ctx, clear_text, &len, cipher_text,
-			       cipher_length);
+				cipher_length);
 	if (ret > 0) {
 		// Success: decrypted and authentication passed
 		*clear_text_length = len;
@@ -359,8 +369,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 	*clear_text_length = len;
 
 	// Set tag
-	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length,
-				 tag)) {
+	if (!EVP_CIPHER_CTX_ctrl(ctx, SET_TAG, tag_length, tag)) {
 		LOG(LOG_ERROR, "Error during setting AES tag length!\n");
 		goto end;
 	}

@@ -20,7 +20,6 @@
 #include "safe_lib.h"
 #include "mbedtls_random.h"
 
-
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks)
 {
@@ -190,8 +189,8 @@ int32_t crypto_close(void)
  *        return 0 on success. -ve value on failure.
  */
 int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
-			 size_t buffer_length, uint8_t *output,
-			 size_t output_length)
+			size_t buffer_length, uint8_t *output,
+			size_t output_length)
 {
 	mbedtls_md_type_t mbedhash_type = MBEDTLS_MD_NONE;
 	uint8_t hash_type = FDO_CRYPTO_HASH_TYPE_USED;

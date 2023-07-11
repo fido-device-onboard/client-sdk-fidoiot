@@ -86,8 +86,8 @@ int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
 		return -1;
 
 	} else if (32 < num_bytes) {
-		 /* TODO loop over the rand number generation for bigger chunks.
-		  */
+		/* TODO loop over the rand number generation for bigger chunks.
+		 */
 		return -1;
 
 	} else if (ATCA_SUCCESS != atcab_random(local_buffer)) {
@@ -116,8 +116,8 @@ int32_t crypto_hal_random_bytes(uint8_t *random_buffer, size_t num_bytes)
  *        return 0 on success. -ve value on failure.
  */
 int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
-			 size_t buffer_length, uint8_t *output,
-			 size_t output_length)
+			size_t buffer_length, uint8_t *output,
+			size_t output_length)
 {
 	if (NULL == output || 0 == output_length || NULL == buffer ||
 	    0 == buffer_length) {
