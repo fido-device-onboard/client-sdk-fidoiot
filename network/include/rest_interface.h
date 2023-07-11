@@ -45,6 +45,11 @@ typedef struct Rest_ctx_s {
 	bool is_dns;
 } rest_ctx_t;
 
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
 extern CURL *curl;
 
 bool cache_host_dns(const char *dns);
@@ -53,7 +58,8 @@ bool cache_host_port(uint16_t port);
 bool cache_tls_connection(void);
 bool init_rest_context(void);
 rest_ctx_t *get_rest_context(void);
-bool construct_rest_header(rest_ctx_t *rest, char *header, size_t header_len);
+bool construct_rest_header(rest_ctx_t *rest, struct curl_slist **msg_header,
+			   size_t header_len);
 char get_rest_hdr_body_separator(void);
 bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len);
 void exit_rest_context(void);

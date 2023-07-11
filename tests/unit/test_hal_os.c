@@ -133,17 +133,24 @@ int __wrap_connect(int socket, const struct sockaddr *address,
  * Note: This function is copied from NW HAL just for testing purpose.
  * The same function is a static function in NW HAL.
  *
- * @param sock - socket-id.
  * @param out - out pointer to REST header line.
  * @param size - REST header size.
  * @retval true if line read was successful, false otherwise.
  */
-static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size)
+static bool read_until_new_line(char *out, size_t size)
 {
-	int sz, n;
+	int sz;
 	char c;
-	struct fdo_sock_handle *sock_hdl = handle;
-	int sockfd = sock_hdl->sockfd;
+	char curl_buf_offset = 0;
+	static int curl_buf[50];
+	char alphabet[27] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
+			     'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+			     's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '\n'};
+
+	// create random int and store in randomArray
+	for (int i = 0; i < 50; i++) {
+		curl_buf[i] = alphabet[rand() % 27];
+	}
 
 	if (!out || !size)
 		return false;
@@ -151,16 +158,15 @@ static bool read_until_new_line(fdo_con_handle handle, char *out, size_t size)
 	--size; // leave room for NULL
 	sz = 0;
 	for (;;) {
-		n = recv(sockfd, (uint8_t *)&c, 1, MSG_WAITALL);
-
-		if (n <= 0)
-			return false;
+		c = curl_buf[curl_buf_offset + sz];
 
 		if ((uint8_t)sz < size)
 			out[sz++] = c;
 
-		if (c == '\n')
+		if (c == '\n') {
+			curl_buf_offset += sz;
 			break;
+		}
 	}
 	out[sz] = 0;
 	/* remove \n and \r and don't process invalid string */
@@ -195,20 +201,19 @@ void test_fdo_con_connect(void)
 
 	/* False tests */
 	return_socket = -1;
-	TEST_ASSERT_EQUAL_INT(FDO_CON_INVALID_HANDLE,
+	TEST_ASSERT_EQUAL_INT(-1,
 			      fdo_con_connect(&fdoip, NULL, port,
 					      NULL)); /* socket() returns -1 */
 	return_socket = 0;
-	TEST_ASSERT_EQUAL_INT(FDO_CON_INVALID_HANDLE,
+	TEST_ASSERT_EQUAL_INT(-1,
 			      fdo_con_connect(&fdoip, NULL, port,
 					      NULL)); /* connect() returns -1 */
 
 	/* Pass tests */
 	return_socket = 123;
-	uint16_t *ret_val;
+	int ret_val;
 	ret_val = fdo_con_connect(&fdoip, NULL, port, NULL);
-	TEST_ASSERT_NOT_EQUAL(FDO_CON_INVALID_HANDLE, ret_val);
-	fdo_free(ret_val);
+	TEST_ASSERT_NOT_EQUAL(-1, ret_val);
 
 	// undo setup rest protocol
 	fdo_con_teardown();
@@ -220,8 +225,8 @@ TEST_CASE("fdo_con_disconnect", "[OS][HAL][fdo]")
 void test_fdo_con_disconnect(void)
 #endif
 {
-	fdo_con_handle handle = FDO_CON_INVALID_HANDLE;
-	TEST_ASSERT_EQUAL_INT(0, fdo_con_disconnect(handle));
+	curl = curl_easy_init();
+	TEST_ASSERT_EQUAL_INT(0, fdo_con_disconnect());
 }
 #ifdef TARGET_OS_FREERTOS
 TEST_CASE("fdo_con_recv_message", "[OS][HAL][fdo]")
@@ -232,9 +237,13 @@ void test_fdo_con_recv_message(void)
 	uint8_t buf[5];
 	char curl_buf[5];
 	ssize_t nbytes = 5;
+
+	for (int i = 0; i < 5; i++) {
+		curl_buf[i] = rand() % 100 + 1;
+	}
+
 	curl = curl_easy_init();
-	TEST_ASSERT_EQUAL_INT(5,
-			      fdo_con_recv_msg_body(buf, nbytes, curl_buf, 0));
+	TEST_ASSERT_EQUAL_INT(0, fdo_con_parse_msg_body(buf, nbytes, curl_buf));
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -243,7 +252,6 @@ TEST_CASE("fdo_con_send_message", "[OS][HAL][fdo]")
 void test_fdo_con_send_message(void)
 #endif
 {
-	fdo_con_handle sock = FDO_CON_INVALID_HANDLE;
 	uint8_t buf[42];
 	ssize_t nbytes = 42;
 	curl = curl_easy_init();
@@ -252,7 +260,7 @@ void test_fdo_con_send_message(void)
 	TEST_ASSERT_EQUAL_INT(0, fdo_con_setup(NULL, NULL, 0));
 
 	TEST_ASSERT_EQUAL_INT(
-	    -1, fdo_con_send_message(sock, 0, 0, buf, nbytes, NULL));
+	    -1, fdo_con_send_recv_message(0, 0, buf, nbytes, NULL, NULL, NULL));
 
 	// undo setup rest protocol
 	fdo_con_teardown();
@@ -267,19 +275,16 @@ TEST_CASE("read_until_new_line", "[OS][HAL][fdo]")
 	char buff[50];
 	int bufsize = 22, ret;
 	bool retval;
-	struct fdo_sock_handle handle = {0};
 
 	fdo_prot_ctx_t *prot_ctx = fdo_alloc(sizeof(fdo_prot_ctx_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx);
 	ret = memset_s(prot_ctx, sizeof(fdo_prot_ctx_t), 0);
 	TEST_ASSERT_EQUAL_INT(0, ret);
-	handle.sockfd = 100;
-	prot_ctx->sock_hdl = (fdo_con_handle)&handle;
 	// prot_ctx->ssl = NULL;
 
 	recv_configured = 0;
-	retval = read_until_new_line(prot_ctx->sock_hdl, buff, bufsize);
-	TEST_ASSERT_FALSE(retval);
+	retval = read_until_new_line(buff, bufsize);
+	TEST_ASSERT_TRUE(retval);
 	recv_configured = 1;
 	free(prot_ctx);
 }

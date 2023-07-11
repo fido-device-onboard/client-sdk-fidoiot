@@ -28,43 +28,40 @@
 #include "snprintf_s.h"
 #include "rest_interface.h"
 
-/**
- * Auxiliary function that waits on the socket while receiving data from
- * connected socket.
- *
- * @param sockfd - socket struct for read.
- * @param for_recv -  bit for receive (1 or 0)
- * @param timeout_ms - timeout in milliseconds.
- * @retval returns the number of signalled sockets or -1.
- */
-static int wait_on_socket(curl_socket_t sockfd, int for_recv, long timeout_ms)
+// Function used by libcurl to allocate memory to data received from the HTTP
+// response
+static void init_string(struct MemoryStruct *s)
 {
-	struct timeval tv;
-	fd_set infd, outfd, errfd;
-	int res;
+	s->size = 0;
+	s->memory = malloc(s->size + 1);
+	if (s->memory == NULL) {
+		LOG(LOG_ERROR, "malloc() failed\n");
+		exit(EXIT_FAILURE);
+	}
+	s->memory[0] = '\0';
+}
 
-	tv.tv_sec = timeout_ms / 1000;
-	tv.tv_usec = (timeout_ms % 1000) * 1000;
+// Callback for libcurl. data written to this buffer.
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb,
+				  void *userp)
+{
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
-	FD_ZERO(&infd);
-	FD_ZERO(&outfd);
-	FD_ZERO(&errfd);
-
-	FD_SET(sockfd, &errfd); /* always check for error */
-
-	if (for_recv) {
-		FD_SET(sockfd, &infd);
-	} else {
-		FD_SET(sockfd, &outfd);
+	char *ptr = (char *)realloc(mem->memory, mem->size + realsize + 1);
+	if (ptr == NULL) {
+		LOG(LOG_ERROR, "error: not enough memory\n");
+		return 0;
 	}
 
-	/* select() returns the number of signalled sockets or -1 */
-	res = select((int)sockfd + 1, &infd, &outfd, &errfd, &tv);
-	return res;
+	mem->memory = ptr;
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+
+	return realsize;
 }
-struct fdo_sock_handle {
-	int sockfd;
-};
+
 /**
  * Read from curl buffer until new-line is encountered.
  *
@@ -96,7 +93,7 @@ static bool read_until_new_line(char *out, size_t size, char *curl_buf,
 			// error out even if no new-line is encountered
 			// if the sz grows larger than size
 			LOG(LOG_ERROR,
-			    "Exceeded expected size while reading socket\n");
+			    "Exceeded expected size while reading buffer\n");
 			return false;
 		}
 
@@ -304,19 +301,18 @@ err:
 }
 
 /**
- * fdo_curl_setup connects to the given ip_addr via curl API
+ * fdo_curl_connect connects to the given ip_addr via curl API
  *
  * @param ip_addr - pointer to IP address info
  * @param dn: Domain name of the server
  * @param port - port number to connect
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
- * @return connection handle on success. -ve value on failure
+ * @return 0 on success. -1 on failure
  */
-int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port,
-		   bool tls)
+int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
+			 uint16_t port, bool tls)
 {
 	CURLcode res;
-	curl_socket_t sockfd;
 	CURLcode curlCode = CURLE_OK;
 	int ret = -1;
 	char temp[2 * HTTP_MAX_URL_SIZE] = {0};
@@ -376,13 +372,6 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port,
 			// v1.2
 			curlCode = curl_easy_setopt(curl, CURLOPT_SSLVERSION,
 						    CURL_SSLVERSION_TLSv1_2);
-			if (curlCode != CURLE_OK) {
-				goto err;
-			}
-
-			// Add option to force the http version to 1.1
-			curlCode = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,
-						    CURL_HTTP_VERSION_1_1);
 			if (curlCode != CURLE_OK) {
 				goto err;
 			}
@@ -484,33 +473,26 @@ int fdo_curl_setup(fdo_ip_address_t *ip_addr, const char *dn, uint16_t port,
 			goto err;
 		}
 
-		/* Do not do the transfer - only connect to host */
 		curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
 		if (curlCode != CURLE_OK) {
 			LOG(LOG_ERROR,
 			    "CURL_ERROR: Could not able connect to host.\n");
 			goto err;
 		}
-		res = curl_easy_perform(curl);
 
+		res = curl_easy_perform(curl);
 		if (res != CURLE_OK) {
 			LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
 			goto err;
 		}
 
-		/* Extract the socket from the curl handle - we will need it for
-		   waiting. */
-		res = curl_easy_getinfo(curl, CURLINFO_ACTIVESOCKET, &sockfd);
-
-		if (res != CURLE_OK) {
-			LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
-			goto err;
+		if (res == CURLE_OK) {
+			LOG(LOG_DEBUG, "Connect OK\n");
+			ret = 0;
 		}
 	} else {
 		goto err;
 	}
-
-	ret = (int)sockfd;
 
 err:
 	if (ip_ascii) {
@@ -527,7 +509,7 @@ err:
 }
 
 /**
- * fdo_con_connect connects to the network socket
+ * fdo_con_connect connects to the network
  *
  * @param ip_addr - pointer to IP address info
  * @param dn: Domain name of the server
@@ -536,19 +518,12 @@ err:
  * @return connection handle on success. -ve value on failure
  */
 
-fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, const char *dn,
-			       uint16_t port, bool tls)
+int32_t fdo_con_connect(fdo_ip_address_t *ip_addr, const char *dn,
+			uint16_t port, bool tls)
 {
-	struct fdo_sock_handle *sock_hdl = FDO_CON_INVALID_HANDLE;
+	int connect_ok = -1;
 
 	if (!ip_addr) {
-		goto end;
-	}
-
-	/* Allocate memory for sock handle */
-	sock_hdl = (struct fdo_sock_handle *)fdo_alloc(sizeof(*sock_hdl));
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Out of memory for sock handle\n");
 		goto end;
 	}
 
@@ -600,50 +575,31 @@ fdo_con_handle fdo_con_connect(fdo_ip_address_t *ip_addr, const char *dn,
 #endif
 
 #if defined(USE_OPENSSL)
-	sock_hdl->sockfd = fdo_curl_setup(ip_addr, dn, port, tls);
-	if (sock_hdl->sockfd < 0) {
+	connect_ok = fdo_curl_connect(ip_addr, dn, port, tls);
+	if (connect_ok < 0) {
 		goto end;
 	}
-
 #endif
-
-	return sock_hdl;
-
 end:
-	if (sock_hdl) {
-		fdo_free(sock_hdl);
-	}
-	return FDO_CON_INVALID_HANDLE;
+	return connect_ok;
 }
 
 /**
  * Disconnect the connection for a given connection handle.
  *
- * @param handle - connection handler (for ex: socket-id)
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_disconnect(fdo_con_handle handle)
+int32_t fdo_con_disconnect(void)
 {
-	int sockfd = 0, ret = -1;
-	struct fdo_sock_handle *sock_hdl = handle;
-
-	if (!sock_hdl) {
-		return 0;
-	}
-
-	sockfd = sock_hdl->sockfd;
-
+	int ret = -1;
 #ifdef USE_MBEDTLS
 	return 0;
 #endif
 	// close() returns 0 on success
 
-	if (sock_hdl) {
-		if (sockfd && curl) {
-			curl_easy_cleanup(curl);
-			ret = 0;
-		}
-		fdo_free(sock_hdl);
+	if (curl) {
+		curl_easy_cleanup(curl);
+		ret = 0;
 	}
 	return ret;
 }
@@ -756,86 +712,76 @@ err:
 /**
  * Receive(read) protocol version, message type and length of rest body
  *
- * @param handle - connection handler (for ex: socket-id)
  * @param protocol_version - out FDO protocol version
  * @param message_type - out message type of incoming FDO message.
  * @param msglen - out Number of received bytes.
- * @param curl_buf: data buffer to read into msg received by curl.
- * @param curl_buf_offset: pointer to track curl_buf.
+ * @param hdr_buf: header data buffer to parse msg received by curl.
  * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
-				uint32_t *protocol_version,
-				uint32_t *message_type, uint32_t *msglen,
-				char *curl_buf, size_t *curl_buf_offset)
+int32_t fdo_con_parse_msg_header(uint32_t *protocol_version,
+				 uint32_t *message_type, uint32_t *msglen,
+				 char *hdr_buf)
 {
 	int32_t ret = -1;
-	size_t curl_tmp_offset = *curl_buf_offset;
+	size_t hdr_offset = 0;
 	rest_ctx_t *rest = NULL;
-	struct fdo_sock_handle *sock_hdl = handle;
-	int sockfd = sock_hdl->sockfd;
-	CURLcode res;
-	size_t nread;
-	int max_iteration = 100;
-	int itr = 0;
-	size_t nread_total = 0;
-	bool headerParsed = false;
+	char hdr[REST_MAX_MSGHDR_SIZE] = {0};
+	char tmp[REST_MAX_MSGHDR_SIZE];
+	size_t tmplen;
+	size_t hdrlen;
 
-	if (!protocol_version || !message_type || !msglen) {
+	if (!protocol_version || !message_type || !msglen || !hdr_buf) {
 		goto err;
 	}
 
-	LOG(LOG_DEBUG, "Reading response.\n");
+	LOG(LOG_DEBUG, "Parsing received Header.\n");
 
-	do {
-		nread = 0;
-		res =
-		    curl_easy_recv(curl, curl_buf + nread_total,
-				   REST_MAX_MSGBODY_SIZE - nread_total, &nread);
-		nread_total += nread;
-		if (!headerParsed && nread_total &&
-		    has_header(curl_buf, curl_tmp_offset)) {
-			// If we already received the header and not yet parsed
-			// the message length
-			if (!get_msg_length(curl_buf, &curl_tmp_offset,
-					    msglen)) {
-				LOG(LOG_ERROR, "Msg len parsing from REST "
-					       "Header failed!!\n");
-				goto err;
-			}
-			headerParsed = true;
+	for (;;) {
+		if (memset_s(tmp, sizeof(tmp), 0) != 0) {
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			goto err;
 		}
-		if (headerParsed && ((curl_tmp_offset + *msglen) <=
-				     (*curl_buf_offset + nread_total))) {
-			// expected total length is equal or included in already
-			// received buffer length
-			*curl_buf_offset = curl_tmp_offset;
-			// curl_buf_offset now points to the start of message
-			// body
+
+		if (!read_until_new_line(tmp, REST_MAX_MSGHDR_SIZE, hdr_buf,
+					 &hdr_offset)) {
+			LOG(LOG_ERROR, "read_until_new_line() failed!\n");
+			goto err;
+		}
+
+		if (tmp[0] == get_rest_hdr_body_separator()) {
 			break;
 		}
 
-		if (res == CURLE_AGAIN &&
-		    !wait_on_socket(sockfd, 1, MAX_TIME_OUT)) {
-			LOG(LOG_ERROR, "Error: timeout.\n");
+		tmplen = strnlen_s(tmp, REST_MAX_MSGHDR_SIZE);
+		if (!tmplen || tmplen == REST_MAX_MSGHDR_SIZE) {
+			LOG(LOG_ERROR, "Strlen() failed!\n")
 			goto err;
 		}
-		itr++;
-	} while ((res == CURLE_OK && nread) ||
-		 (res == CURLE_AGAIN && itr < max_iteration));
 
-	if (res != CURLE_OK) {
-		LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
+		// accumulate header content
+		if (strncat_s(hdr, REST_MAX_MSGHDR_SIZE, tmp, tmplen) != 0) {
+			LOG(LOG_ERROR, "Strcat() failed!\n");
+			goto err;
+		}
+
+		// append new line for convenient parsing in REST
+		if (strcat_s(hdr, REST_MAX_MSGHDR_SIZE, "\n") != 0) {
+			LOG(LOG_ERROR, "Strcat() failed!\n");
+			goto err;
+		}
+	}
+
+	hdrlen = strnlen_s(hdr, REST_MAX_MSGHDR_SIZE);
+	if (!hdrlen || hdrlen == REST_MAX_MSGHDR_SIZE) {
+		LOG(LOG_ERROR, "hdr is not NULL terminated.\n");
 		goto err;
 	}
 
-	if (nread_total == 0) {
-		LOG(LOG_ERROR, "No response recevied! \n");
+	/* Process REST header and get content-length of body */
+	if (!get_rest_content_length(hdr, hdrlen, msglen)) {
+		LOG(LOG_ERROR, "REST Header processing failed!!\n");
 		goto err;
 	}
-
-	LOG(LOG_DEBUG, "Received %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-	    (curl_off_t)nread_total);
 
 	rest = get_rest_context();
 	if (!rest) {
@@ -858,60 +804,57 @@ err:
  *
  * @param buf - data buffer to read into.
  * @param length - Number of received bytes.
- * @param curl_buf: data buffer to read into msg received by curl.
- * @param curl_buf_offset: pointer to track curl_buf.
- * @retval -1 on failure, number of bytes read on success.
+ * @param body_buf: body data buffer to parse msg received by curl.
+ * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_recv_msg_body(uint8_t *buf, size_t length, char *curl_buf,
-			      size_t curl_buf_offset)
+int32_t fdo_con_parse_msg_body(uint8_t *buf, size_t length, char *body_buf)
 {
 	int32_t ret = -1;
 
-	if (!buf || !length) {
+	if (!buf || !length || !body_buf) {
 		goto err;
 	}
 
-	if (memcpy_s(buf, length, curl_buf + curl_buf_offset, length)) {
+	if (memcpy_s(buf, length, body_buf, length)) {
 		LOG(LOG_ERROR, "Failed to copy msg data in byte array\n");
 		goto err;
 	}
 
-	ret = length;
+	ret = 0;
 err:
 	return ret;
 }
 
 /**
- * Send(write) data.
+ * Send and Receive data.
  *
- * @param handle - connection handler (for ex: socket-id)
  * @param protocol_version - FDO protocol version
  * @param message_type - message type of outgoing FDO message.
  * @param buf - data buffer to write from.
  * @param length - Number of sent bytes.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
- * @retval -1 on failure, number of bytes written.
+ * @retval -1 on failure, 0 on success.
  */
-int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
-			     uint32_t message_type, const uint8_t *buf,
-			     size_t length, bool tls)
+int32_t fdo_con_send_recv_message(uint32_t protocol_version,
+				  uint32_t message_type, const uint8_t *buf,
+				  size_t length, bool tls, char *header_buf,
+				  char *body_buf)
 {
 	int ret = -1;
-	int n;
 	rest_ctx_t *rest = NULL;
-	char rest_hdr[REST_MAX_MSGHDR_SIZE] = {0};
-	size_t header_len = 0;
-	int sockfd = 0;
-	struct fdo_sock_handle *sock_hdl = handle;
+	struct curl_slist *msg_header = NULL;
+	CURLcode curlCode;
+	struct MemoryStruct temp_header_buf;
+	struct MemoryStruct temp_body_buf;
 
-	if (!buf || !length || !sock_hdl) {
+	if (!buf || !length) {
 		goto err;
 	}
 
-	sockfd = sock_hdl->sockfd;
+	init_string(&temp_header_buf);
+	init_string(&temp_body_buf);
 
 	rest = get_rest_context();
-
 	if (!rest) {
 		LOG(LOG_ERROR, "REST context is NULL!\n");
 		goto err;
@@ -925,140 +868,136 @@ int32_t fdo_con_send_message(fdo_con_handle handle, uint32_t protocol_version,
 		rest->tls = true;
 	}
 
-	if (!construct_rest_header(rest, rest_hdr, REST_MAX_MSGHDR_SIZE)) {
+	if (!construct_rest_header(rest, &msg_header, REST_MAX_MSGHDR_SIZE)) {
 		LOG(LOG_ERROR, "Error during constrcution of REST hdr!\n");
 		goto err;
 	}
 
-	header_len = strnlen_s(rest_hdr, REST_MAX_MSGHDR_SIZE);
-
-	if (!header_len || header_len == REST_MAX_MSGHDR_SIZE) {
-		LOG(LOG_ERROR, "Strlen() failed!\n");
+	curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 0L);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not disable connect only.\n");
 		goto err;
 	}
 
-	/* Send REST header */
-	CURLcode res;
-	size_t nsent_total = 0;
-	LOG(LOG_DEBUG, "Sending REST header.\n");
-
-	do {
-		size_t nsent;
-		int max_iteration = 100;
-		int itr = 0;
-		do {
-			nsent = 0;
-			res = curl_easy_send(curl, rest_hdr + nsent_total,
-					     header_len - nsent_total, &nsent);
-			nsent_total += nsent;
-
-			if (res == CURLE_AGAIN &&
-			    !wait_on_socket(sockfd, 0, MAX_TIME_OUT)) {
-				LOG(LOG_ERROR, "Error: timeout.\n");
-				goto hdrerr;
-			}
-			itr++;
-		} while (res == CURLE_AGAIN && itr < max_iteration);
-
-		if (res != CURLE_OK) {
-			LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
-			goto hdrerr;
-		}
-
-		LOG(LOG_DEBUG, "Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-		    (curl_off_t)nsent);
-
-	} while (nsent_total < header_len);
-	n = nsent_total;
-
-	if (n <= 0) {
-		LOG(LOG_ERROR,
-		    "Curl send Failed, ret=%d, "
-		    "errno=%d, %d\n",
-		    n, errno, __LINE__);
-
-		if (fdo_con_disconnect(handle)) {
-			LOG(LOG_ERROR, "Error during socket close()\n");
-			goto hdrerr;
-		}
-		goto hdrerr;
-
-	} else if ((size_t)n < header_len) {
-		LOG(LOG_ERROR, "Rest Header write returns %d/%zu bytes\n", n,
-		    header_len);
-		goto hdrerr;
-
-	} else {
-		LOG(LOG_DEBUG, "Rest Header write returns %d/%zu bytes\n\n", n,
-		    header_len);
+	curlCode = curl_easy_setopt(curl, CURLOPT_URL, msg_header->data);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");
+		goto err;
 	}
 
-	LOG(LOG_DEBUG, "REST:header(%zu):%s\n", header_len, rest_hdr);
-
-	/* Send REST body */
-	nsent_total = 0;
-	LOG(LOG_DEBUG, "Sending REST body.\n");
-
-	do {
-		size_t nsent;
-		int max_iteration = 100;
-		int itr = 0;
-		do {
-			nsent = 0;
-			res = curl_easy_send(curl, buf + nsent_total,
-					     length - nsent_total, &nsent);
-			nsent_total += nsent;
-
-			if (res == CURLE_AGAIN &&
-			    !wait_on_socket(sockfd, 0, MAX_TIME_OUT)) {
-				LOG(LOG_ERROR, "Error: timeout.\n");
-				goto bodyerr;
-			}
-			itr++;
-		} while (res == CURLE_AGAIN && itr < max_iteration);
-
-		if (res != CURLE_OK) {
-			LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
-			goto bodyerr;
-		}
-
-		LOG(LOG_DEBUG, "Sent %" CURL_FORMAT_CURL_OFF_T " bytes.\n",
-		    (curl_off_t)nsent);
-
-	} while (nsent_total < length);
-
-	n = nsent_total;
-
-	if (n <= 0) {
-		LOG(LOG_ERROR,
-		    "Curl send Failed, ret=%d, "
-		    "errno=%d, %d\n",
-		    n, errno, __LINE__);
-
-		if (fdo_con_disconnect(handle)) {
-			LOG(LOG_ERROR, "Error during socket close()\n");
-			goto bodyerr;
-		}
-		goto bodyerr;
-
-	} else if ((size_t)n < length) {
-		LOG(LOG_ERROR, "Rest Body write returns %d/%zu bytes\n", n,
-		    length);
-		goto bodyerr;
-
-	} else {
-		LOG(LOG_DEBUG, "Rest Body write returns %d/%zu bytes\n\n", n,
-		    length);
+	curlCode = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, msg_header);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass header.\n");
+		goto err;
 	}
 
-	return n;
+	curlCode = curl_easy_setopt(curl, CURLOPT_POST, 1L);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not set POST.\n");
+		goto err;
+	}
 
-hdrerr:
-	LOG(LOG_ERROR, "REST Header write not successful!\n");
-	goto err;
-bodyerr:
-	LOG(LOG_ERROR, "REST Body write not successful!\n");
+	curlCode = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, length);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not set POST length.\n");
+		goto err;
+	}
+
+	curlCode = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR,
+		    "CURL_ERROR: Could not able to pass POST data.\n");
+		goto err;
+	}
+
+	curlCode = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not set follow location.\n");
+		goto err;
+	}
+
+	curlCode =
+	    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, WriteMemoryCallback);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass header "
+			       "WriteMemoryCallback.\n");
+		goto err;
+	}
+
+	LOG(LOG_DEBUG, "\nSending REST header.\n\n");
+	LOG(LOG_DEBUG, "REST:header\n");
+
+	while (msg_header != NULL) {
+		LOG(LOG_DEBUG, "%s\n", msg_header->data);
+		msg_header = msg_header->next;
+	}
+	LOG(LOG_DEBUG, "\n");
+
+	curlCode = curl_easy_setopt(curl, CURLOPT_HEADERDATA,
+				    (void *)&temp_header_buf);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR,
+		    "CURL_ERROR: Could not able to pass header buffer.\n");
+		goto err;
+	}
+
+	curlCode =
+	    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass "
+			       "WriteMemoryCallback.\n");
+		goto err;
+	}
+
+	curlCode =
+	    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&temp_body_buf);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR,
+		    "CURL_ERROR: Could not able to pass body buffer.\n");
+		goto err;
+	}
+
+	curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to suppress connect "
+			       "headers.\n");
+		goto err;
+	}
+
+	curlCode = curl_easy_perform(curl);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(curlCode));
+		goto err;
+	}
+
+	if (memcpy_s(header_buf, temp_header_buf.size, temp_header_buf.memory,
+		     temp_header_buf.size)) {
+		LOG(LOG_ERROR, "Failed to copy msg data in byte array\n");
+		goto err;
+	}
+
+	if (memcpy_s(body_buf, temp_body_buf.size, temp_body_buf.memory,
+		     temp_body_buf.size)) {
+		LOG(LOG_ERROR, "Failed to copy msg data in byte array\n");
+		goto err;
+	}
+
+	ret = 0;
 err:
+	if (temp_header_buf.memory) {
+		free(temp_header_buf.memory);
+		temp_header_buf.size = 0;
+	}
+
+	if (temp_body_buf.memory) {
+		free(temp_body_buf.memory);
+		temp_body_buf.size = 0;
+	}
+
+	if (msg_header) {
+		curl_slist_free_all(msg_header);
+	}
+
 	return ret;
 }
 

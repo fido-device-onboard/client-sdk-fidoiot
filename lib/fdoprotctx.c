@@ -141,8 +141,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		ret = connect_to_manufacturer(
 		    prot_ctx->resolved_ip ? prot_ctx->resolved_ip
 					  : prot_ctx->host_ip,
-		    prot_ctx->host_dns, prot_ctx->host_port,
-		    &prot_ctx->sock_hdl, prot_ctx->tls);
+		    prot_ctx->host_dns, prot_ctx->host_port, prot_ctx->tls);
 		break;
 	case FDO_STATE_T01_SND_HELLO_FDO: /* type 30 */
 		ATTRIBUTE_FALLTHROUGH;
@@ -165,13 +164,13 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO1_RCV_FDO_REDIRECT: /* type 33 */
 		// try DNS's resolved IP first, if it fails, try given IP
 		// address
-		ret = connect_to_rendezvous(
-		    prot_ctx->resolved_ip, prot_ctx->host_dns,
-		    prot_ctx->host_port, &prot_ctx->sock_hdl, prot_ctx->tls);
+		ret = connect_to_rendezvous(prot_ctx->resolved_ip,
+					    prot_ctx->host_dns,
+					    prot_ctx->host_port, prot_ctx->tls);
 		if (!ret) {
-			ret = connect_to_rendezvous(
-			    prot_ctx->host_ip, NULL, prot_ctx->host_port,
-			    &prot_ctx->sock_hdl, prot_ctx->tls);
+			ret = connect_to_rendezvous(prot_ctx->host_ip, NULL,
+						    prot_ctx->host_port,
+						    prot_ctx->tls);
 		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
@@ -211,13 +210,13 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
 		// try DNS's resolved IP first, if it fails, try given IP
 		// address
-		ret = connect_to_owner(prot_ctx->resolved_ip,
-				       prot_ctx->host_dns, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, prot_ctx->tls);
+		ret =
+		    connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_dns,
+				     prot_ctx->host_port, prot_ctx->tls);
 		if (!ret) {
-			ret = connect_to_owner(
-			    prot_ctx->host_ip, NULL, prot_ctx->host_port,
-			    &prot_ctx->sock_hdl, prot_ctx->tls);
+			ret = connect_to_owner(prot_ctx->host_ip, NULL,
+					       prot_ctx->host_port,
+					       prot_ctx->tls);
 		}
 		break;
 	default:
@@ -317,16 +316,30 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		fdow->b.block[size] = 0;
 		retries = CONNECTION_RETRY;
-		do {
-			n = fdo_con_send_message(
-			    prot_ctx->sock_hdl, FDO_PROT_SPEC_VERSION,
-			    fdow->msg_type, &fdow->b.block[0], size,
-			    prot_ctx->tls);
+		char hdr_buf[REST_MAX_MSGHDR_SIZE];
+		char body_buf[REST_MAX_MSGBODY_SIZE];
 
-			if (n <= 0) {
-				if (fdo_con_disconnect(prot_ctx->sock_hdl)) {
-					LOG(LOG_ERROR,
-					    "Error during socket close()\n");
+		if (memset_s(hdr_buf, REST_MAX_MSGHDR_SIZE, 0) != 0) {
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			return false;
+		}
+
+		if (memset_s(body_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			return false;
+		}
+
+		n = -1;
+		do {
+			n = fdo_con_send_recv_message(
+			    FDO_PROT_SPEC_VERSION, fdow->msg_type,
+			    &fdow->b.block[0], size, prot_ctx->tls, hdr_buf,
+			    body_buf);
+
+			if (n < 0) {
+				if (fdo_con_disconnect()) {
+					LOG(LOG_ERROR, "Error during "
+						       "connection close()\n");
 					ret = -1;
 					break;
 				}
@@ -356,17 +369,9 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
-		char curl_buf[REST_MAX_MSGBODY_SIZE];
-		size_t curl_buf_offset = 0;
 
-		if (memset_s(curl_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
-			LOG(LOG_ERROR, "Memset() failed!\n");
-			return false;
-		}
-
-		ret = fdo_con_recv_msg_header(
-		    prot_ctx->sock_hdl, &protver, (uint32_t *)&fdor->msg_type,
-		    &msglen, curl_buf, &curl_buf_offset);
+		ret = fdo_con_parse_msg_header(
+		    &protver, (uint32_t *)&fdor->msg_type, &msglen, hdr_buf);
 		if (ret == -1) {
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
@@ -381,16 +386,14 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		if (msglen > 0 && msglen <= prot_ctx->protdata->prot_buff_sz) {
 			retries = CONNECTION_RETRY;
-			n = 0;
+			n = -1;
 			do {
-				n = fdo_con_recv_msg_body(&fdor->b.block[0],
-							  msglen, curl_buf,
-							  curl_buf_offset);
+				n = fdo_con_parse_msg_body(&fdor->b.block[0],
+							   msglen, body_buf);
 				if (n < 0) {
-					if (fdo_con_disconnect(
-						prot_ctx->sock_hdl)) {
+					if (fdo_con_disconnect()) {
 						LOG(LOG_ERROR, "Error during "
-							       "socket "
+							       "network "
 							       "close()\n");
 						ret = -1;
 						break;
@@ -407,8 +410,8 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 				}
 			} while (n < 0 && retries--);
 
-			if (n <= 0) {
-				LOG(LOG_ERROR, "Socket read not successful "
+			if (n < 0) {
+				LOG(LOG_ERROR, "Buffer read not successful "
 					       "after retries!\n");
 				fdo_block_reset(&fdor->b);
 				ret = -1;
@@ -416,8 +419,8 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			}
 		}
 
-		if (fdo_con_disconnect(prot_ctx->sock_hdl)) {
-			LOG(LOG_ERROR, "Error during socket close()\n");
+		if (fdo_con_disconnect()) {
+			LOG(LOG_ERROR, "Error during connection close()\n");
 			ret = -1;
 			break;
 		}
