@@ -843,6 +843,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	int ret = -1;
 	rest_ctx_t *rest = NULL;
 	struct curl_slist *msg_header = NULL;
+	struct curl_slist *temp_msg_header = NULL;
 	CURLcode curlCode;
 	struct MemoryStruct temp_header_buf;
 	struct MemoryStruct temp_body_buf;
@@ -868,7 +869,8 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		rest->tls = true;
 	}
 
-	if (!construct_rest_header(rest, &msg_header, REST_MAX_MSGHDR_SIZE)) {
+	if (!construct_rest_header(rest, &msg_header, REST_MAX_MSGHDR_SIZE) ||
+	    msg_header == NULL) {
 		LOG(LOG_ERROR, "Error during constrcution of REST hdr!\n");
 		goto err;
 	}
@@ -927,9 +929,10 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	LOG(LOG_DEBUG, "\nSending REST header.\n\n");
 	LOG(LOG_DEBUG, "REST:header\n");
 
-	while (msg_header != NULL) {
-		LOG(LOG_DEBUG, "%s\n", msg_header->data);
-		msg_header = msg_header->next;
+	temp_msg_header = msg_header;
+	while (temp_msg_header != NULL) {
+		LOG(LOG_DEBUG, "%s\n", temp_msg_header->data);
+		temp_msg_header = temp_msg_header->next;
 	}
 	LOG(LOG_DEBUG, "\n");
 

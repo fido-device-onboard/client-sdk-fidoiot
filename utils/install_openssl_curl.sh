@@ -31,7 +31,7 @@ install()
     tar -xvzf curl-$CURL_VER.tar.gz
     cd curl-$CURL_VER
 
-    ./configure --prefix=$CURL_ROOT --with-openssl=$OPENSSL_ROOT --enable-versioned-symbols
+    ./configure --prefix=$CURL_ROOT --with-openssl=$OPENSSL_ROOT --with-nghttp2 --enable-versioned-symbols
     make -j$(nproc)
     make install
     
