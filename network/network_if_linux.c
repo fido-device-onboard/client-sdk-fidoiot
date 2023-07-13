@@ -848,12 +848,12 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	struct MemoryStruct temp_header_buf;
 	struct MemoryStruct temp_body_buf;
 
+	init_string(&temp_header_buf);
+	init_string(&temp_body_buf);
+
 	if (!buf || !length) {
 		goto err;
 	}
-
-	init_string(&temp_header_buf);
-	init_string(&temp_body_buf);
 
 	rest = get_rest_context();
 	if (!rest) {
@@ -869,8 +869,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		rest->tls = true;
 	}
 
-	if (!construct_rest_header(rest, &msg_header, REST_MAX_MSGHDR_SIZE) ||
-	    msg_header == NULL) {
+	if (!construct_rest_header(rest, &msg_header) || msg_header == NULL) {
 		LOG(LOG_ERROR, "Error during constrcution of REST hdr!\n");
 		goto err;
 	}
@@ -960,7 +959,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
-	curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
+	curlCode = curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR, "CURL_ERROR: Could not able to suppress connect "
 			       "headers.\n");

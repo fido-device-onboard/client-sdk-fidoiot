@@ -172,7 +172,11 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 	/**
 	 * Blob format: DeviceCredential.DCHmacSecret as bstr.
 	 */
-	fdow_byte_string(fdow, (*ovkey)->bytes, (*ovkey)->byte_sz);
+	if (!fdow_byte_string(fdow, (*ovkey)->bytes, (*ovkey)->byte_sz)) {
+		ret = false;
+		goto end;
+	}
+
 	size_t encoded_secret_length = 0;
 	if (!fdow_encoded_length(fdow, &encoded_secret_length) ||
 	    encoded_secret_length == 0) {
