@@ -235,16 +235,15 @@ err:
  * @param post_url_len - post URL max length.
  * @retval true if header onstruction was successful, false otherwise.
  */
-bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
-			   size_t post_url_len)
+bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header)
 {
 	char *ip_ascii = NULL;
-	char temp[HTTP_MAX_URL_SIZE] = {0};
+	char temp[REST_MAX_MSGHDR_SIZE] = {0};
 	char g_URL[HTTP_MAX_URL_SIZE] = {0};
-	char temp1[256] = {0};
+	char temp1[REST_MAX_MSGHDR_SIZE] = {0};
 	bool ret = false;
 
-	if (!rest_ctx || !post_url_len) {
+	if (!rest_ctx) {
 		LOG(LOG_ERROR, "Invalid input!\n");
 		goto err;
 	}
@@ -261,12 +260,12 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
 	}
 
 	if (rest_ctx->tls) {
-		if (strcpy_s(g_URL, post_url_len, "https://") != 0) {
+		if (strcpy_s(g_URL, HTTP_MAX_URL_SIZE, "https://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
 	} else {
-		if (strcpy_s(g_URL, post_url_len, "http://") != 0) {
+		if (strcpy_s(g_URL, HTTP_MAX_URL_SIZE, "http://") != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}
@@ -274,14 +273,14 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
 
 	if (rest_ctx->host_dns) {
 		/* DNS */
-		if (snprintf_s_si(temp, sizeof(temp), "%s:%d",
+		if (snprintf_s_si(temp, REST_MAX_MSGHDR_SIZE, "%s:%d",
 				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
 	} else if (rest_ctx->host_ip && ip_ascii) {
 		/* IP */
-		if (snprintf_s_si(temp, sizeof(temp), "%s:%d", ip_ascii,
+		if (snprintf_s_si(temp, REST_MAX_MSGHDR_SIZE, "%s:%d", ip_ascii,
 				  rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
@@ -291,51 +290,51 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
 		goto err;
 	}
 
-	if (strcat_s(g_URL, post_url_len, temp) != 0) {
+	if (strcat_s(g_URL, HTTP_MAX_URL_SIZE, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
-	if (snprintf_s_i(temp, sizeof(temp), "/fdo/%d", rest_ctx->prot_ver) <
-	    0) {
+	if (snprintf_s_i(temp, REST_MAX_MSGHDR_SIZE, "/fdo/%d",
+			 rest_ctx->prot_ver) < 0) {
 		LOG(LOG_ERROR, "Snprintf failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(g_URL, post_url_len, temp) != 0) {
+	if (strcat_s(g_URL, HTTP_MAX_URL_SIZE, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
-	if (snprintf_s_i(temp, sizeof(temp), "/msg/%d", rest_ctx->msg_type) <
-	    0) {
+	if (snprintf_s_i(temp, REST_MAX_MSGHDR_SIZE, "/msg/%d",
+			 rest_ctx->msg_type) < 0) {
 		LOG(LOG_ERROR, "Snprintf failed!\n");
 		goto err;
 	}
 
-	if (strcat_s(g_URL, post_url_len, temp) != 0) {
+	if (strcat_s(g_URL, HTTP_MAX_URL_SIZE, temp) != 0) {
 		LOG(LOG_ERROR, "Strcat() failed!\n");
 		goto err;
 	}
 
 	*msg_header = curl_slist_append(*msg_header, g_URL);
 
-	if (memset_s(temp, sizeof(temp), 0) != 0) {
+	if (memset_s(temp, REST_MAX_MSGHDR_SIZE, 0) != 0) {
 		ret = false;
 		goto err;
 	}
 
 	if (rest_ctx->host_dns) {
 		/* DNS */
-		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d",
+		if (snprintf_s_si(temp, REST_MAX_MSGHDR_SIZE, "HOST:%s:%d",
 				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
 	} else if (rest_ctx->host_ip && ip_ascii) {
 		/* IP */
-		if (snprintf_s_si(temp, sizeof(temp), "HOST:%s:%d", ip_ascii,
-				  rest_ctx->portno) < 0) {
+		if (snprintf_s_si(temp, REST_MAX_MSGHDR_SIZE, "HOST:%s:%d",
+				  ip_ascii, rest_ctx->portno) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
@@ -345,7 +344,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
 	*msg_header =
 	    curl_slist_append(*msg_header, "Content-type:application/cbor");
 
-	if (snprintf_s_i(temp1, sizeof(temp1), "Content-length:%u",
+	if (snprintf_s_i(temp1, REST_MAX_MSGHDR_SIZE, "Content-length:%u",
 			 rest_ctx->content_length) < 0) {
 		LOG(LOG_ERROR, "Snprintf() failed!\n");
 		goto err;
@@ -353,19 +352,20 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header,
 	*msg_header = curl_slist_append(*msg_header, temp1);
 	*msg_header = curl_slist_append(*msg_header, "_connection: keep-alive");
 
-	if (memset_s(temp, sizeof(temp), 0) != 0) {
+	if (memset_s(temp, REST_MAX_MSGHDR_SIZE, 0) != 0) {
 		ret = false;
 		goto err;
 	}
 
 	if (rest_ctx->authorization) {
-		if (strcat_s(temp, post_url_len, "Authorization:") != 0) {
+		if (strcat_s(temp, REST_MAX_MSGHDR_SIZE, "Authorization:") !=
+		    0) {
 			LOG(LOG_ERROR, "Strcpy() failed!\n");
 			goto err;
 		}
 
-		if (strcat_s(temp, post_url_len, rest_ctx->authorization) !=
-		    0) {
+		if (strcat_s(temp, REST_MAX_MSGHDR_SIZE,
+			     rest_ctx->authorization) != 0) {
 			LOG(LOG_ERROR, "Strcat() failed!\n");
 			goto err;
 		}

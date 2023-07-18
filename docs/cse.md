@@ -18,8 +18,8 @@ The linux kernel should have the support to enable the Intel<sup>&reg;</sup> CSE
 ## 1. Packages Requirements when Building Binaries:
 * For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
 ```shell
-sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby build-essential \
-  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake libssl-dev mercurial
+sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby \
+  libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake libssl-dev mercurial nghttp2 libnghttp2-dev
 ```
 
 * For RHEL* OS version 8.4 or 8.6:
@@ -29,7 +29,7 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 ```
 ```
 sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby perl glibc-static \
-  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial perl
+  glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial perl nghttp2 libnghttp2-devel
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
@@ -121,9 +121,9 @@ After installing openssl, proceed with the installation of curl.
 	```
 	tar -zxf curl-8.1.2.tar.gz && cd curl-8.1.2
 	```
-3. Issue the command to configure the curl with openssl:
+3. Issue the command to configure the curl with openssl and nghttp2:
 	```
-	./configure --with-openssl="OpenSSL Path" --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols
 	```
 4. Issue the command to build curl:
 	```
