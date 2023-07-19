@@ -337,6 +337,7 @@ int FDO_SI_START_FUNCTION(int result)
 		LOG(LOG_DEBUG, "Module fdo_sys - FDOW "
 			       "Initialization/Allocation failed!\n");
 		result = FDO_SI_CONTENT_ERROR;
+		return result;
 	}
 
 	fdor = ModuleAlloc(sizeof(fdor_t));
@@ -378,6 +379,7 @@ int FDO_SI_HAS_MORE_DSI_FUNCTION(int result, bool *has_more)
 	// false once first write is done.
 	if (!has_more) {
 		result = FDO_SI_CONTENT_ERROR;
+		return result;
 	}
 
 	*has_more = hasmore;
@@ -388,6 +390,7 @@ int FDO_SI_HAS_MORE_DSI_FUNCTION(int result, bool *has_more)
 	result = FDO_SI_SUCCESS;
 	return result;
 }
+
 int FDO_SI_IS_MORE_DSI_FUNCTION(int result, bool *is_more)
 {
 	// calculate whether there is ServiceInfo to send in the NEXT
@@ -411,6 +414,7 @@ int FDO_SI_GET_DSI_COUNT_FUNCTION(int result, uint16_t *num_module_messages)
 	// 0 once first write is done.
 	if (!num_module_messages) {
 		result = FDO_SI_CONTENT_ERROR;
+		return result;
 	}
 	*num_module_messages = 1;
 	result = FDO_SI_SUCCESS;
