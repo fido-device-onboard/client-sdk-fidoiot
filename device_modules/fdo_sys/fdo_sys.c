@@ -404,6 +404,7 @@ int FDO_SI_IS_MORE_DSI_FUNCTION(int result, bool *is_more)
 	// for simplicity, setting this to 'false' always,
 	// since managing 'ismore' by looking-ahead can be error-prone
 	*is_more = ismore;
+	result = FDO_SI_SUCCESS;
 	return result;
 }
 
