@@ -21,7 +21,7 @@ class fdo_con_handle : public TCPSocket
 };
 #else
 #include "mbedtls/ssl.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 typedef void *fdo_con_handle;
 #define FDO_CON_INVALID_HANDLE NULL
 #endif

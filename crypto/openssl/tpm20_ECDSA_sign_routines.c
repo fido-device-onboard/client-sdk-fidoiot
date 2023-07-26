@@ -17,7 +17,7 @@
 #include <openssl/store.h>
 #include "safe_lib.h"
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 
 /**
  * Sign a message using provided ECDSA Private Keys.

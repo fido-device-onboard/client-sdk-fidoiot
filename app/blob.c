@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #if defined(USE_OPENSSL)
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -35,7 +35,7 @@
 #include "blob.h"
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #endif
 
 #if !defined(DEVICE_TPM20_ENABLED)

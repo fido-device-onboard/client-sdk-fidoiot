@@ -12,7 +12,7 @@
 #include "fdotypes.h"
 #include "safe_lib.h"
 #include "util.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 
 /**
  * msg63() - TO2.OVNextEntry

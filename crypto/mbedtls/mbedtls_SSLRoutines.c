@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "mbedtls/net_sockets.h"

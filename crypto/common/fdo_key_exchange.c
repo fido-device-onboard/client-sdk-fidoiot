@@ -5,13 +5,13 @@
 
 #include <math.h>
 #include "fdokeyexchange.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "stdlib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 
 /* Static functions */
 static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
@@ -27,7 +27,7 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
 int32_t fdo_kex_init(void)
 {
 	int32_t ret = -1;
-	fdo_kex_ctx_t *kex_ctx = getfdo_key_ctx();
+	fdo_kex_ctx_t *kex_ctx = get_fdo_key_ctx();
 	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
 	size_t cs = COSE_ENC_TYPE;
 
@@ -83,7 +83,7 @@ err:
  */
 int32_t fdo_kex_close(void)
 {
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
 	/* Free "KEX" string (Key Exchange) */
 	if (kex_ctx->kx) {
@@ -133,7 +133,7 @@ int32_t fdo_kex_close(void)
 static int32_t set_encrypt_key(fdo_public_key_t *encrypt_key)
 {
 #ifdef KEX_ASYM_ENABLED
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 
 	return set_encrypt_key_asym(kex_ctx->context, encrypt_key);
 #endif
@@ -152,7 +152,7 @@ static int32_t set_encrypt_key(fdo_public_key_t *encrypt_key)
 int32_t fdo_get_kex_paramB(fdo_byte_array_t **xB)
 {
 	int32_t ret = -1;
-	fdo_kex_ctx_t *kex_ctx = getfdo_key_ctx();
+	fdo_kex_ctx_t *kex_ctx = get_fdo_key_ctx();
 	uint32_t bufsize = 0;
 	fdo_byte_array_t *tmp_xB = NULL;
 
@@ -227,7 +227,7 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len,
 			      const int index, const int keymat_bit_length)
 {
 	int ret = -1;
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 	size_t ofs = 0;
 	uint8_t idx0_val;
 	size_t kdf_label_len = 0;
@@ -292,8 +292,8 @@ static fdo_byte_array_t *get_secret(void)
 	fdo_byte_array_t *b = NULL;
 	uint8_t *shared_secret_buffer = NULL;
 	uint32_t secret_size = 0;
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
-	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(getfdo_key_ctx());
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
+	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(get_fdo_key_ctx());
 
 	if (crypto_hal_get_secret(key_ex_data->context, NULL, &secret_size) !=
 	    0) {
@@ -351,7 +351,7 @@ err:
 static int32_t kex_kdf(void)
 {
 	int ret = -1;
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 	fdo_byte_array_t *shse = get_secret();
 	fdo_aes_keyset_t *keyset = get_keyset();
 	// input data to the KDF
@@ -511,7 +511,7 @@ int32_t fdo_set_kex_paramA(fdo_byte_array_t *xA, fdo_public_key_t *encrypt_key)
 
 {
 	int32_t ret = true;
-	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(getfdo_key_ctx());
+	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(get_fdo_key_ctx());
 
 	if (!xA) {
 		return -1;

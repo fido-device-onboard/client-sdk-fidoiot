@@ -23,7 +23,7 @@
  * could also be used. N=13 MUST be used in this case.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include <openssl/conf.h>

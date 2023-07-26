@@ -7,8 +7,8 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 
-#include "fdoCrypto.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto.h"
+#include "fdo_crypto_hal.h"
 #include "safe_lib.h"
 #include "util.h"
 #include "mbedtls_random.h"

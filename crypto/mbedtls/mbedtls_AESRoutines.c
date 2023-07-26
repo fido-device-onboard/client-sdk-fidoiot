@@ -15,7 +15,7 @@
 #include "mbedtls/cipher_internal.h"
 
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "BN_support.h"
 #include "safe_lib.h"

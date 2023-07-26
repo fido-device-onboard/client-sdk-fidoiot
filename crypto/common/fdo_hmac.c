@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 #include "fdoprot.h"
 #include "storage_al.h"
 #include "platform_utils.h"
@@ -30,7 +30,7 @@
 int32_t set_ov_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 {
 	int ret = -1;
-	fdo_byte_array_t **ovkeyctx = getOVKey();
+	fdo_byte_array_t **ovkeyctx = get_OV_key();
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
@@ -74,7 +74,7 @@ err:
 int32_t set_ov_replacement_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 {
 	int ret = -1;
-	fdo_byte_array_t **ovkeyctx = getreplacementOVKey();
+	fdo_byte_array_t **ovkeyctx = get_replacement_OV_key();
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
@@ -154,14 +154,14 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 					TPM_HMAC_REPLACEMENT_PUB_KEY,
 					TPM_HMAC_REPLACEMENT_PRIV_KEY);
 #else
-		keyset = getreplacementOVKey();
+		keyset = get_replacement_OV_key();
 #endif
 	} else {
 #if defined(DEVICE_TPM20_ENABLED)
 		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
 					TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
 #else
-		keyset = getOVKey();
+		keyset = get_OV_key();
 #endif
 	}
 	if (!keyset || !*keyset) {
@@ -324,7 +324,7 @@ int32_t fdo_commit_ov_replacement_hmac_key(void)
 
 	ret = 0;
 #else
-	fdo_byte_array_t **secret = getreplacementOVKey();
+	fdo_byte_array_t **secret = get_replacement_OV_key();
 
 	if (!secret || !(*secret) || !(*secret)->bytes) {
 		LOG(LOG_ERROR, "Failed to read OV replacement HMAC key\n");

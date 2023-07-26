@@ -16,15 +16,15 @@ The Nonce length 'N' is thus fixed at 7 octets (i.e 15-8).
 As per FDO and COSE [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) specifications,
 L=2 could also be used. N=13 MUST be used in this case.
    Affected file(s):
-   - `crypto/openssl/openssl_AESRoutines.c`
+   - `crypto/openssl/openssl_AES_routines.c`
    - `lib/fdotypes.h`
 
 ## Linux* OS (OpenSSL* toolkit as the cryptography library)
 1. The random number needs to be seeded with an entropy source.
    Affected file(s):
-   - `crypto/openssl/openssl_cryptoSupport.c`
+   - `crypto/openssl/openssl_crypto_support.c`
    - `crypto/mbedtls/mbedtls_cryptoSupport.c` (Not supported)
-   - `crypto/se/se_cryptoSupport.c` (Not supported)
+   - `crypto/se/se_crypto_support.c` (Not supported)
 
 2. In the reference implementation, the device key and the keys that encrypt
    or protect the integrity of the FIDO Device Onboard (FDO) data are stored in clear text on the file system.
@@ -136,7 +136,7 @@ L=2 could also be used. N=13 MUST be used in this case.
 ## mbedTLS Hardware Entropy Source
 To enable the TRNG hardware as the entropy source, the
 `MBEDTLS_ENTROPY_HARDWARE_ALT` macro must be uncommented in
-`include/mbedtls/config.h` in the mbedTLS source code. The 
+`include/mbedtls/config.h` in the mbedTLS source code. The
 ` mbedtls_hardware_poll()` function, with prototype declared in
 `entropy_poll.h`, must be implemented to collect entropy from the
 hardware source.

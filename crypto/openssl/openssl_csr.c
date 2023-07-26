@@ -17,7 +17,7 @@
 #include "safe_lib.h"
 #include "ec_key.h"
 #include "fdocred.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 
 /**
  * crypto_hal_get_device_csr() - get the device CSR

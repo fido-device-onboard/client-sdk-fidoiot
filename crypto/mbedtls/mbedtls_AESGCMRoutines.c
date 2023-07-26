@@ -9,7 +9,7 @@
  * mbedtls library.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "platform_utils.h"
 #include "crypto_utils.h"

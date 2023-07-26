@@ -10,7 +10,7 @@
 
 #include "util.h"
 #include "fdoprot.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 
 /**
  * msg32() - TO1.ProveToRV, Type 32

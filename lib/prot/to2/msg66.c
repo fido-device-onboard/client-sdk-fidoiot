@@ -11,7 +11,7 @@
 #include "fdoprot.h"
 #include "fdokeyexchange.h"
 #include "util.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 
 /**
  * msg66() - TO2.DeviceServiceInfoReady

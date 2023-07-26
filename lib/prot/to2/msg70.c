@@ -8,7 +8,7 @@
  * \brief This file implements msg70 of TO2 state machine.
  */
 
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "load_credentials.h"
 #include "fdoprot.h"
 #include "util.h"

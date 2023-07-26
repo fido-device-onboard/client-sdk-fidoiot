@@ -15,7 +15,7 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/sha256.h"
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "mbedtls_random.h"

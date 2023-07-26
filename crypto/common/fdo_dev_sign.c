@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "stdlib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 #if defined(DEVICE_CSE_ENABLED)
 #include "cse_utils.h"
 #endif
