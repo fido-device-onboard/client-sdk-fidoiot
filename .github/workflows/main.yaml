@@ -1,0 +1,33 @@
+name: client-sdk-build
+on: [workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: scm checkout
+        uses: actions/checkout@v3
+      - name: Build docker image
+        run: docker build -t client-sdk -f '.github/Dockerfile' .
+      - name: run Docker container
+        run: docker run -v $PWD:/build_dir/fdoout/client-sdk/ client-sdk:latest 
+      - name: tar client-sdk binaries
+        run: |
+          mkdir client-sdk-binaries && cd client-sdk-binaries
+          cp -r ../x86_ecdsa* ../tpm_ecdsa* ../cse_ecdsa* .
+          mkdir utils
+          cp ../utils/tpm_make_ready_ecdsa.sh ../utils/install_tpm_libs*.sh ../utils/keys_gen.sh utils/
+          cd .. && tar -cvzf client-sdk-binaries.tar.gz client-sdk-binaries
+      - name: archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: client-sdk-binaries.tar.gz
+          path: client-sdk-binaries.tar.gz
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: demo.tar.gz
+          repo: bprashan/pri-fidoiot
+          workflow: build.yaml
+          path: test-fidoiot/binaries/pri-fidoiot/
+          search_artifacts: true
