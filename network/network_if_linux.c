@@ -980,6 +980,14 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
+#ifdef DEBUG_LOGS
+	curlCode = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not enable curl logs.\n");
+		goto err;
+	}
+#endif
+
 	curlCode = curl_easy_perform(curl);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(curlCode));
