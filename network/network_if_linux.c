@@ -880,6 +880,20 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
+#if defined(MTLS)
+	curlCode = curl_easy_setopt(curl, CURLOPT_SSLCERT, (char *)SSL_CERT);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client certificate.\n");
+		goto err;
+	}
+
+	curlCode = curl_easy_setopt(curl, CURLOPT_SSLKEY, (char *)SSL_KEY);
+	if (curlCode != CURLE_OK) {
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client key.\n");
+		goto err;
+	}
+#endif
+
 	curlCode = curl_easy_setopt(curl, CURLOPT_URL, msg_header->data);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");

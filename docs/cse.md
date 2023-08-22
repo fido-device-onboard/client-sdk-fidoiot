@@ -219,6 +219,12 @@ make pristine
 cmake -DDA=cse_ecdsa384 .
 make -j$(nproc)
 ```
+> ***NOTE***:  To run with mTLS connection, 
+> 1. Compile the code with `-DMTLS=true` flag.
+> 2. If signing with external CA, copy CA cert and CA key to `data` folder.
+> 3. Execute `bash utlils/user_csr_req.sh .`
+> This will generate client CSR and private key.
+> 
 Refer to the section [FDO Build configurations](build_conf.md) for more build options.
 
 <a name="run_linux_fdo"></a>
