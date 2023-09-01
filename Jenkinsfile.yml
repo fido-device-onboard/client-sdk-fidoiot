@@ -20,6 +20,7 @@ node('ccode'){
       sh '''
         cd $WORKSPACE/safestringlib
         echo 'Building safestring'
+        git checkout v1.2.0
         mkdir obj
         make
       '''
@@ -29,7 +30,7 @@ node('ccode'){
       sh '''
         cd $WORKSPACE/tinycbor
         echo 'Building TinyCBOR'
-        git checkout v0.5.3
+        git checkout v0.6.0
         make
       '''
     }
@@ -38,6 +39,7 @@ node('ccode'){
       sh '''
         cd $WORKSPACE/metee
         echo 'Building METEE'
+        git checkout 3.2.3
         cmake .
         make -j$(nproc)
         sudo make install
