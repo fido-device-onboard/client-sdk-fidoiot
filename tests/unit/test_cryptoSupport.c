@@ -19,6 +19,13 @@
 #include "safe_lib.h"
 #include "fdotypes.h"
 #include "openssl/core_names.h"
+#include <openssl/evp.h>
+#include <openssl/param_build.h>
+#include <openssl/ec.h>
+#include <openssl/ssl.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
+#include <openssl/encoder.h>
 
 #define PLAIN_TEXT_SIZE BUFF_SIZE_1K_BYTES
 #define DER_PUBKEY_LEN_MAX 512
@@ -146,7 +153,7 @@ fdo_string_t *__wrap_fdo_string_alloc_with_str(char *data);
 errno_t __wrap_strcmp_s(const char *dest, rsize_t dmax, const char *src,
 			int *indicator);
 static uint8_t *get_randomiv(void);
-static EVP_PKEY *Private_key(void);
+// static EVP_PKEY *Private_key(void);
 
 /*** Function Definitions ***/
 
@@ -817,6 +824,7 @@ void test_crypto_support_Private_key(void)
 TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 #endif
 {
+	// TEST_IGNORE();
 	int ret = -1;
 	int privatekey_buflen = 0;
 #ifdef USE_OPENSSL
@@ -830,6 +838,7 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 	TEST_ASSERT_NOT_NULL(validkey);
 	privatekey_buflen = hash_length;
 #endif
+
 #ifdef USE_MBEDTLS
 	mbedtls_ecdsa_context ctx_sign = {0};
 	ret = Private_key(&ctx_sign);
@@ -842,21 +851,72 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 
 // store private key for later use in pem /bin format
 #if defined(ECDSA_PEM)
-	BIO *outbio = BIO_new(BIO_s_mem());
+	BIO *outbio = BIO_new(BIO_s_mem()); // Basic I/O abstraction
 	TEST_ASSERT_NOT_NULL(outbio);
-	EVP_PKEY *privkey = EVP_PKEY_new();
+	EVP_PKEY *privkey = EVP_PKEY_new(); // Creating new EVP_PKEY context
 	TEST_ASSERT_NOT_NULL(privkey);
 
-	//      if (!EVP_PKEY_assign_EC_KEY(privkey,avalidkey))
-	if (!EVP_PKEY_set1_EC_KEY(privkey, validkey))
-		printf(" assigning ECC key to EVP_PKEY fail.\n");
-	const EC_GROUP *group = EC_KEY_get0_group(validkey);
+	BIGNUM *priv;
+	OSSL_PARAM_BLD *param_bld;
+	OSSL_PARAM *params = NULL;
+	EVP_PKEY_CTX *ctx; // Creating new EVP_PKEY context
 
-	PEM_write_bio_ECPKParameters(outbio, group);
-	if (!PEM_write_bio_ECPrivateKey(outbio, validkey, NULL, NULL, 0, 0,
-					NULL))
-		BIO_printf(outbio,
-			   "Error writing private key data in PEM format");
+	priv = BN_bin2bn(privatekey, privatekey_buflen, NULL);
+	param_bld = OSSL_PARAM_BLD_new();
+
+	if (priv != NULL && param_bld != NULL &&
+	    OSSL_PARAM_BLD_push_utf8_string(param_bld, "group", "prime256v1",
+					    0) &&
+	    OSSL_PARAM_BLD_push_BN(param_bld, "priv", priv) &&
+	    OSSL_PARAM_BLD_push_octet_string(param_bld, "pub", NULL, 0)) {
+		params = OSSL_PARAM_BLD_to_param(param_bld);
+	}
+
+	ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+
+	// if (!EVP_PKEY_assign_EC_KEY(privkey, avalidkey))
+	// 	if (!EVP_PKEY_set1_EC_KEY(privkey, validkey))
+	// 		printf(" assigning ECC key to EVP_PKEY fail.\n");
+
+	if (ctx == NULL || params == NULL || EVP_PKEY_fromdata_init(ctx) <= 0 ||
+	    EVP_PKEY_fromdata(ctx, &privkey, EVP_PKEY_KEYPAIR, params) <= 0) {
+		exit(1);
+	}
+
+	size_t group_name_size;
+	char group_name[64];
+
+	EVP_PKEY_get_utf8_string_param(privkey, OSSL_PKEY_PARAM_GROUP_NAME,
+				       NULL, 0, &group_name_size);
+	if (group_name_size >= sizeof(group_name)) {
+		LOG(LOG_ERROR, "Unexpected long group name : %zu for EC key\n",
+		    group_name_size);
+		exit(1);
+	}
+
+	if (!EVP_PKEY_get_utf8_string_param(privkey, OSSL_PKEY_PARAM_GROUP_NAME,
+					    group_name, sizeof(group_name),
+					    &group_name_size)) {
+		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
+		exit(1);
+	}
+
+	int group_nid = OBJ_sn2nid(group_name);
+	const EC_GROUP *group = EC_GROUP_new_by_curve_name(group_nid);
+
+	if (group == NULL) {
+		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
+		exit(1);
+	}
+
+	// PEM_write_bio_ECPKParameters(outbio, group);
+	if (!PEM_write_bio_Parameters(outbio, privkey)) {
+		BIO_printf(outbio, "Error writing parameters in PEM format");
+	}
+
+	if(PEM_write_bio_PrivateKey(outbio, privkey, NULL, NULL, 0, 0, NULL) == 0) {
+		BIO_printf(outbio, "Error writing private key data in PEM format");
+	}
 
 	BUF_MEM *bptr = NULL;
 	BIO_get_mem_ptr(outbio, &bptr);
@@ -893,7 +953,11 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 #ifdef USE_OPENSSL
 #if defined(ECDSA_PEM)
 	EVP_PKEY_free(privkey);
+	EVP_PKEY_CTX_free(ctx);
 	BIO_free_all(outbio);
+	OSSL_PARAM_free(params);
+	OSSL_PARAM_BLD_free(param_bld);
+	BN_free(priv);
 #endif
 	if (validkey)
 		EVP_PKEY_free(validkey);
@@ -2680,7 +2744,7 @@ TEST_CASE("fdo_device_sign", "[crypto_support][fdo]")
 	fdo_byte_array_t *signature = NULL;
 
 	// Positive test case
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, NULL);
 	TEST_ASSERT_EQUAL(0, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -2699,7 +2763,7 @@ TEST_CASE("fdo_device_sign_invalid_message", "[crypto_support][fdo]")
 	fdo_byte_array_t *signature = NULL;
 
 	/* Negative test case */
-	ret = fdo_device_sign(NULL, message_len, &signature);
+	ret = fdo_device_sign(NULL, message_len, &signature, NULL);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -2718,7 +2782,7 @@ TEST_CASE("fdo_device_sign_invalid_message_len", "[crypto_support][fdo]")
 	fdo_byte_array_t *signature = NULL;
 
 	/* Negative test case */
-	ret = fdo_device_sign(message, 0, &signature);
+	ret = fdo_device_sign(message, 0, &signature, NULL);
 	TEST_ASSERT_EQUAL(-1, ret);
 	if (signature) {
 		fdo_byte_array_free(signature);
@@ -3163,7 +3227,7 @@ TEST_CASE("get_ec_key_fail_case", "[crypto_support][fdo]")
 	fdo_byte_array_t *signature = NULL;
 
 	get_ec_key_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, NULL);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	get_ec_key_fail_flag = false;
@@ -3185,7 +3249,7 @@ TEST_CASE("ECDSA_size_fail_case", "[crypto_support][fdo]")
 	fdo_byte_array_t *signature = NULL;
 
 	ECDSA_size_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, NULL);
 	TEST_ASSERT_EQUAL(-1, ret);
 
 	ECDSA_size_fail_flag = false;
@@ -3207,7 +3271,7 @@ TEST_CASE("memcpy_s_fail_case", "[crypto_support][fdo]")
 	fdo_byte_array_t *signature = NULL;
 
 	memcpy_s_fail_flag = true;
-	ret = fdo_device_sign(message, message_len, &signature);
+	ret = fdo_device_sign(message, message_len, &signature, NULL);
 	memcpy_s_fail_flag = false;
 	TEST_ASSERT_EQUAL(-1, ret);
 #else
