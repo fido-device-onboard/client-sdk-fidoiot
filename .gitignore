@@ -136,10 +136,7 @@ ipch/
 outdir/
 *-client
 
-# Hard-coded credentials and EPID data ( Ignore from all subdirectories )
-**/*.mp.h
-**/*.bin
-**/*.blob
-Makefile
-**/*.dat
-utils/tpm2-openssl-1.1.1/
+# Hard-coded credentials and EPID data
+*.dat.h
+*.bin.h
+*.mp.h

@@ -293,14 +293,6 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
 		exit(1);
 	}
-	//  const EC_GROUP *group = EC_KEY_get0_group(avalidkey);
-
-	//  PEM_write_bio_ECPKParameters(outbio, group);
-	//  if (!PEM_write_bio_ECPrivateKey(outbio, avalidkey, NULL, NULL, 0,
-	//  0,
-	// 				 NULL))
-	//      BIO_printf(outbio, "Error writing private key data in PEM
-	//      format");
 
 	if (!PEM_write_bio_Parameters(outbio, privkey)) {
 		BIO_printf(outbio, "Error writing parameters in PEM format");
