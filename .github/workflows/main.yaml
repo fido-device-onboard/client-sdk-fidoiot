@@ -33,8 +33,8 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           name: demo.tar.gz
-          repo: bprashan/pri-fidoiot
-          workflow: build.yaml
+          repo: fido-device-onboard/pri-fidoiot
+          workflow: main.yaml
           path: test-fidoiot/binaries/pri-fidoiot/
           search_artifacts: true
       - name: Add host to /etc/hosts
