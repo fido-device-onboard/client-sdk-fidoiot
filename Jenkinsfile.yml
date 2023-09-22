@@ -11,7 +11,7 @@ node('ccode'){
       dir('client-sdk'){
         checkout scm
       }
-      sh 'git clone "${REPO_Safestring}"'
+      sh 'git clone -b v1.2.0 "${REPO_Safestring}"'
       sh 'git clone "${REPO_TinyCBOR}"'
       sh 'git clone "${REPO_METEE}"'
       }
