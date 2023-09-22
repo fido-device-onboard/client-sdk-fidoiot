@@ -21,7 +21,7 @@ static bool is_valid_filename(const char *fname)
 	bool ret = false;
 	int strcmp_result = -1;
 	uint8_t i = 0;
-	static const char *const whitelisted[] = {"sh", "py"};
+	static const char *const whitelisted[] = {"sh", "py", "tar", "gz"};
 	char *substring = NULL, *t1 = NULL;
 	char filenme_woextension[FILE_NAME_LEN] = {0};
 	size_t fname_len = 0;
@@ -73,6 +73,7 @@ static bool is_valid_filename(const char *fname)
 	}
 	ret = false;
 	t1 = filenme_woextension;
+	strcmp_result = -1;
 
 	// check for only alphanumeric no special char except underscore '_' and
 	// hyphen '-'
@@ -82,7 +83,12 @@ static bool is_valid_filename(const char *fname)
 		    (*t1 == '-')) {
 			t1++;
 		} else {
-			goto end;
+			strcmp_s(substring, ext_len, "gz", &strcmp_result);
+			if (*t1 == '.' && !strcmp_result) {
+				t1++;
+			} else {
+				goto end;
+			}
 		}
 	}
 

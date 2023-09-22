@@ -838,8 +838,8 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 			return result;
 		}
 
-		// 2nd argument is the filename
-		if (exec_array_index == 1) {
+		// last argument is the filename
+		if (exec_array_index == ((int)exec_array_length - 1)) {
 			if (memset_s(filename, sizeof(filename), 0) != 0) {
 				LOG(LOG_DEBUG, "Module fdo_sys - Failed "
 					       "to clear filename for"
