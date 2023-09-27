@@ -153,7 +153,6 @@ fdo_string_t *__wrap_fdo_string_alloc_with_str(char *data);
 errno_t __wrap_strcmp_s(const char *dest, rsize_t dmax, const char *src,
 			int *indicator);
 static uint8_t *get_randomiv(void);
-// static EVP_PKEY *Private_key(void);
 
 /*** Function Definitions ***/
 
@@ -851,15 +850,15 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 
 // store private key for later use in pem /bin format
 #if defined(ECDSA_PEM)
-	BIO *outbio = BIO_new(BIO_s_mem()); // Basic I/O abstraction
+	BIO *outbio = BIO_new(BIO_s_mem());
 	TEST_ASSERT_NOT_NULL(outbio);
-	EVP_PKEY *privkey = EVP_PKEY_new(); // Creating new EVP_PKEY context
+	EVP_PKEY *privkey = EVP_PKEY_new();
 	TEST_ASSERT_NOT_NULL(privkey);
 
 	BIGNUM *priv;
 	OSSL_PARAM_BLD *param_bld;
 	OSSL_PARAM *params = NULL;
-	EVP_PKEY_CTX *ctx; // Creating new EVP_PKEY context
+	EVP_PKEY_CTX *ctx;
 
 	priv = BN_bin2bn(privatekey, privatekey_buflen, NULL);
 	param_bld = OSSL_PARAM_BLD_new();
@@ -873,10 +872,6 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 	}
 
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
-
-	// if (!EVP_PKEY_assign_EC_KEY(privkey, avalidkey))
-	// 	if (!EVP_PKEY_set1_EC_KEY(privkey, validkey))
-	// 		printf(" assigning ECC key to EVP_PKEY fail.\n");
 
 	if (ctx == NULL || params == NULL || EVP_PKEY_fromdata_init(ctx) <= 0 ||
 	    EVP_PKEY_fromdata(ctx, &privkey, EVP_PKEY_KEYPAIR, params) <= 0) {
@@ -909,7 +904,6 @@ TEST_CASE("crypto_support_Private_key", "[crypto_support][fdo]")
 		exit(1);
 	}
 
-	// PEM_write_bio_ECPKParameters(outbio, group);
 	if (!PEM_write_bio_Parameters(outbio, privkey)) {
 		BIO_printf(outbio, "Error writing parameters in PEM format");
 	}
