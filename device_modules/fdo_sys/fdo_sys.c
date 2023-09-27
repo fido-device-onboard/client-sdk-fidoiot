@@ -47,61 +47,45 @@ static bool write_status_cb(char *module_message);
 static bool write_data(char *module_message, uint8_t *bin_data, size_t bin_len);
 static bool write_eot(char *module_message, int status);
 
-/**
- * Prototype definitions for functions that are implemented in the module
- *
- * FDO_SI_START_FUNCTION
- * FDO_SI_FAILURE_FUNCTION
- * FDO_SI_HAS_MORE_DSI_FUNCTION
- * FDO_SI_IS_MORE_DSI_FUNCTION
- * FDO_SI_GET_DSI_COUNT_FUNCTION
- * FDO_SI_GET_DSI_FUNCTION
- * FDO_SI_SET_OSI_FUNCTION
- * 	FDO_SI_SET_OSI_STRCMP
- * 	FDO_SI_SET_OSI_WRITE
- * 	FDO_SI_SET_OSI_EXEC
- * 	FDO_SI_SET_OSI_STATUSCB
- * 	FDO_SI_SET_OSI_FETCH
- * FDO_END_FUNCTION
- */
 
-static int FDO_SI_START_FUNCTION(int result);
-static int FDO_SI_FAILURE_FUNCTION(int result);
-static int FDO_SI_HAS_MORE_DSI_FUNCTION(int result, bool *has_more);
-static int FDO_SI_IS_MORE_DSI_FUNCTION(int result, bool *is_more);
-static int FDO_SI_GET_DSI_COUNT_FUNCTION(int result,
+// Prototype definitions for functions that are implemented in the module
+static int fdo_si_start(int result);
+static int fdo_si_failure(int result);
+static int fdo_si_has_more_dsi(int result, bool *has_more);
+static int fdo_si_is_more_dsi(int result, bool *is_more);
+static int fdo_si_get_dsi_count(int result,
 					 uint16_t *num_module_messages);
-static int FDO_SI_GET_DSI_FUNCTION(int result, size_t mtu, char *module_message,
+static int fdo_si_get_dsi(int result, size_t mtu, char *module_message,
 				   uint8_t *module_val, size_t *module_val_sz,
 				   size_t file_remaining, size_t bin_len,
 				   uint8_t *bin_data,
 				   size_t temp_module_val_sz);
 
-static int FDO_SI_SET_OSI_FUNCTION(int result, char *module_message,
+static int fdo_si_set_osi(int result, char *module_message,
 				   uint8_t *module_val, size_t *module_val_sz,
 				   int *strcmp_filedesc, int *strcmp_write,
 				   int *strcmp_exec, int *strcmp_execcb,
 				   int *strcmp_statuscb, int *strcmp_fetch,
 				   uint8_t *bin_data, char **exec_instr);
 
-static int FDO_SI_SET_OSI_STRCMP(int result, size_t *bin_len, uint8_t *bin_data,
+static int fdo_si_set_osi_strcmp(int result, size_t *bin_len, uint8_t *bin_data,
 				 char **exec_instr);
-static int FDO_SI_SET_OSI_WRITE(int result, size_t *bin_len, uint8_t *bin_data,
+static int fdo_si_set_osi_write(int result, size_t *bin_len, uint8_t *bin_data,
 				char **exec_instr);
 
-static int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
+static int fdo_si_set_osi_exec(int result, uint8_t *bin_data, char **exec_instr,
 			       int exec_array_index,
 			       size_t *exec_instructions_sz, int *strcmp_exec,
 			       int *strcmp_execcb);
 
-static int FDO_SI_SET_OSI_STATUSCB(int result, size_t *status_cb_array_length,
+static int fdo_si_set_osi_status_cb(int result, size_t *status_cb_array_length,
 				   size_t *bin_len, uint8_t *bin_data,
 				   char **exec_instr);
 
-static int FDO_SI_SET_OSI_FETCH(int result, size_t *bin_len, uint8_t *bin_data,
+static int fdo_si_set_osi_fetch(int result, size_t *bin_len, uint8_t *bin_data,
 				char **exec_instr);
 
-static int FDO_END_FUNCTION(int result, uint8_t *bin_data, char **exec_instr);
+static int fdo_end(int result, uint8_t *bin_data, char **exec_instr);
 
 int fdo_sys(fdo_sdk_si_type type, char *module_message, uint8_t *module_val,
 	    size_t *module_val_sz, uint16_t *num_module_messages,
@@ -125,56 +109,56 @@ int fdo_sys(fdo_sdk_si_type type, char *module_message, uint8_t *module_val,
 
 	switch (type) {
 	case FDO_SI_START:
-		result = FDO_SI_START_FUNCTION(result);
+		result = fdo_si_start(result);
 		goto end;
 	case FDO_SI_END:
 	case FDO_SI_FAILURE:
-		result = FDO_SI_FAILURE_FUNCTION(result);
+		result = fdo_si_failure(result);
 		goto end;
 	case FDO_SI_HAS_MORE_DSI:
-		result = FDO_SI_HAS_MORE_DSI_FUNCTION(result, has_more);
+		result = fdo_si_has_more_dsi(result, has_more);
 		goto end;
 	case FDO_SI_IS_MORE_DSI:
-		result = FDO_SI_IS_MORE_DSI_FUNCTION(result, is_more);
+		result = fdo_si_is_more_dsi(result, is_more);
 		goto end;
 	case FDO_SI_GET_DSI_COUNT:
 		result =
-		    FDO_SI_GET_DSI_COUNT_FUNCTION(result, num_module_messages);
+		    fdo_si_get_dsi_count(result, num_module_messages);
 		goto end;
 	case FDO_SI_GET_DSI:
-		result = FDO_SI_GET_DSI_FUNCTION(
+		result = fdo_si_get_dsi(
 		    result, mtu, module_message, module_val, module_val_sz,
 		    file_remaining, bin_len, bin_data, temp_module_val_sz);
 		goto end;
 	case FDO_SI_SET_OSI:
 
-		result = FDO_SI_SET_OSI_FUNCTION(
+		result = fdo_si_set_osi(
 		    result, module_message, module_val, module_val_sz,
 		    &strcmp_filedesc, &strcmp_write, &strcmp_exec,
 		    &strcmp_execcb, &strcmp_statuscb, &strcmp_fetch, bin_data,
 		    exec_instr);
 
 		if (strcmp_filedesc == 0) {
-			result = FDO_SI_SET_OSI_STRCMP(result, &bin_len,
+			result = fdo_si_set_osi_strcmp(result, &bin_len,
 						       bin_data, exec_instr);
 			goto end;
 		} else if (strcmp_write == 0) {
-			result = FDO_SI_SET_OSI_WRITE(result, &bin_len,
+			result = fdo_si_set_osi_write(result, &bin_len,
 						      bin_data, exec_instr);
 			goto end;
 		} else if (strcmp_exec == 0 || strcmp_execcb == 0) {
-			result = FDO_SI_SET_OSI_EXEC(
+			result = fdo_si_set_osi_exec(
 			    result, bin_data, exec_instr, exec_array_index,
 			    &exec_instructions_sz, &strcmp_exec,
 			    &strcmp_execcb);
 			goto end;
 		} else if (strcmp_statuscb == 0) {
-			result = FDO_SI_SET_OSI_STATUSCB(
+			result = fdo_si_set_osi_status_cb(
 			    result, &status_cb_array_length, &bin_len, bin_data,
 			    exec_instr);
 			goto end;
 		} else if (strcmp_fetch == 0) {
-			result = FDO_SI_SET_OSI_FETCH(result, &bin_len,
+			result = fdo_si_set_osi_fetch(result, &bin_len,
 						      bin_data, exec_instr);
 			goto end;
 		}
@@ -183,7 +167,7 @@ int fdo_sys(fdo_sdk_si_type type, char *module_message, uint8_t *module_val,
 	}
 
 end:
-	result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+	result = fdo_end(result, bin_data, exec_instr);
 	return result;
 }
 
@@ -313,22 +297,22 @@ static bool write_eot(char *module_message, int status)
 /**
  * List of helper functions used in switch case
  *
- * FDO_SI_START_FUNCTION
- * FDO_SI_FAILURE_FUNCTION
- * FDO_SI_HAS_MORE_DSI_FUNCTION
- * FDO_SI_IS_MORE_DSI_FUNCTION
- * FDO_SI_GET_DSI_COUNT_FUNCTION
- * FDO_SI_GET_DSI_FUNCTION
- * FDO_SI_SET_OSI_FUNCTION
- * 	FDO_SI_SET_OSI_STRCMP
- * 	FDO_SI_SET_OSI_WRITE
- * 	FDO_SI_SET_OSI_EXEC
- * 	FDO_SI_SET_OSI_STATUSCB
- * 	FDO_SI_SET_OSI_FETCH
- * FDO_END_FUNCTION
+ * fdo_si_start
+ * fdo_si_failure
+ * fdo_si_has_more_dsi
+ * fdo_si_is_more_dsi
+ * fdo_si_get_dsi_count
+ * fdo_si_get_dsi
+ * fdo_si_set_osi
+ * fdo_si_set_osi_strcmp
+ * fdo_si_set_osi_write
+ * fdo_si_set_osi_exec
+ * fdo_si_set_osi_status_cb
+ * fdo_si_set_osi_fetch
+ * fdo_end
  */
 
-int FDO_SI_START_FUNCTION(int result)
+int fdo_si_start(int result)
 {
 	// Initialize module's CBOR Reader/Writer objects.
 	fdow = ModuleAlloc(sizeof(fdow_t));
@@ -350,7 +334,7 @@ int FDO_SI_START_FUNCTION(int result)
 	return result;
 }
 
-int FDO_SI_FAILURE_FUNCTION(int result)
+int fdo_si_failure(int result)
 {
 	// perform clean-ups as needed
 	if (!process_data(FDO_SYS_MOD_MSG_EXIT, NULL, 0, NULL, NULL, NULL, NULL,
@@ -372,7 +356,7 @@ int FDO_SI_FAILURE_FUNCTION(int result)
 	return result;
 }
 
-int FDO_SI_HAS_MORE_DSI_FUNCTION(int result, bool *has_more)
+int fdo_si_has_more_dsi(int result, bool *has_more)
 {
 	// calculate whether there is ServiceInfo to send NOW and update
 	// 'has_more'. For testing purposes, set this to true here, and
@@ -391,7 +375,7 @@ int FDO_SI_HAS_MORE_DSI_FUNCTION(int result, bool *has_more)
 	return result;
 }
 
-int FDO_SI_IS_MORE_DSI_FUNCTION(int result, bool *is_more)
+int fdo_si_is_more_dsi(int result, bool *is_more)
 {
 	// calculate whether there is ServiceInfo to send in the NEXT
 	// iteration and update 'is_more'.
@@ -408,7 +392,7 @@ int FDO_SI_IS_MORE_DSI_FUNCTION(int result, bool *is_more)
 	return result;
 }
 
-int FDO_SI_GET_DSI_COUNT_FUNCTION(int result, uint16_t *num_module_messages)
+int fdo_si_get_dsi_count(int result, uint16_t *num_module_messages)
 {
 	// calculate the number of ServiceInfo items to send NOW and update
 	// 'num_module_messages'. For testing purposes, set this to 1 here, and
@@ -422,7 +406,7 @@ int FDO_SI_GET_DSI_COUNT_FUNCTION(int result, uint16_t *num_module_messages)
 	return result;
 }
 
-int FDO_SI_GET_DSI_FUNCTION(int result, size_t mtu, char *module_message,
+int fdo_si_get_dsi(int result, size_t mtu, char *module_message,
 			    uint8_t *module_val, size_t *module_val_sz,
 			    size_t file_remaining, size_t bin_len,
 			    uint8_t *bin_data, size_t temp_module_val_sz)
@@ -592,7 +576,7 @@ int FDO_SI_GET_DSI_FUNCTION(int result, size_t mtu, char *module_message,
 	return result;
 }
 
-int FDO_SI_SET_OSI_FUNCTION(int result, char *module_message,
+int fdo_si_set_osi(int result, char *module_message,
 			    uint8_t *module_val, size_t *module_val_sz,
 			    int *strcmp_filedesc, int *strcmp_write,
 			    int *strcmp_exec, int *strcmp_execcb,
@@ -602,7 +586,7 @@ int FDO_SI_SET_OSI_FUNCTION(int result, char *module_message,
 	if (!module_message || !module_val || !module_val_sz ||
 	    *module_val_sz > MOD_MAX_BUFF_SIZE) {
 		result = FDO_SI_CONTENT_ERROR;
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -630,14 +614,14 @@ int FDO_SI_SET_OSI_FUNCTION(int result, char *module_message,
 			  *module_val_sz)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to copy buffer "
 			       "into temporary FDOR\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 	fdor->b.block_size = *module_val_sz;
 
 	if (!fdor_parser_init(fdor)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to init FDOR parser\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -645,13 +629,13 @@ int FDO_SI_SET_OSI_FUNCTION(int result, char *module_message,
 	return result;
 }
 
-int FDO_SI_SET_OSI_STRCMP(int result, size_t *bin_len, uint8_t *bin_data,
+int fdo_si_set_osi_strcmp(int result, size_t *bin_len, uint8_t *bin_data,
 			  char **exec_instr)
 {
 	if (!fdor_string_length(fdor, bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to read "
 			       "fdo_sys:filedesc length\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -666,28 +650,28 @@ int FDO_SI_SET_OSI_STRCMP(int result, size_t *bin_len, uint8_t *bin_data,
 	if (!bin_data) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "alloc for fdo_sys:filedesc\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (memset_s(bin_data, *bin_len, 0) != 0) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to clear "
 			       "fdo_sys:filedesc buffer\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_text_string(fdor, (char *)bin_data, *bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "read fdo_sys:filedesc\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (memset_s(filename, sizeof(filename), 0) != 0) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to clear "
 			       "fdo_sys:filedesc buffer\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -695,7 +679,7 @@ int FDO_SI_SET_OSI_STRCMP(int result, size_t *bin_len, uint8_t *bin_data,
 	    strncpy_s(filename, FILE_NAME_LEN, (char *)bin_data, *bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "copy fdo:sys:filedesc\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -703,17 +687,17 @@ int FDO_SI_SET_OSI_STRCMP(int result, size_t *bin_len, uint8_t *bin_data,
 		result = FDO_SI_SUCCESS;
 	}
 
-	result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+	result = fdo_end(result, bin_data, exec_instr);
 	return result;
 }
 
-int FDO_SI_SET_OSI_WRITE(int result, size_t *bin_len, uint8_t *bin_data,
+int fdo_si_set_osi_write(int result, size_t *bin_len, uint8_t *bin_data,
 			 char **exec_instr)
 {
 	if (!fdor_string_length(fdor, bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "read fdo_sys:write length\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -726,7 +710,7 @@ int FDO_SI_SET_OSI_WRITE(int result, size_t *bin_len, uint8_t *bin_data,
 		if (!fdor_next(fdor)) {
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to read "
 				       "fdo_sys:write\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 		return FDO_SI_SUCCESS;
@@ -736,20 +720,20 @@ int FDO_SI_SET_OSI_WRITE(int result, size_t *bin_len, uint8_t *bin_data,
 	if (!bin_data) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "alloc for fdo_sys:write\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 	if (memset_s(bin_data, *bin_len, 0) != 0) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "clear fdo_sys:write buffer\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_byte_string(fdor, bin_data, *bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to read value for "
 			       "fdo_sys:write\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -757,22 +741,22 @@ int FDO_SI_SET_OSI_WRITE(int result, size_t *bin_len, uint8_t *bin_data,
 			  NULL, NULL, NULL, NULL)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to process value "
 			       "for fdo_sys:write\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 	result = FDO_SI_SUCCESS;
-	result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+	result = fdo_end(result, bin_data, exec_instr);
 	return result;
 }
 
-int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
+int fdo_si_set_osi_exec(int result, uint8_t *bin_data, char **exec_instr,
 			int exec_array_index, size_t *exec_instructions_sz,
 			int *strcmp_exec, int *strcmp_execcb)
 {
 	if (!fdor_array_length(fdor, &exec_array_length)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to read "
 			       "fdo_sys:exec/exec_cb array length\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -781,14 +765,14 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 			       "fdo_sys:exec/exec_cb\n");
 		// received exec array cannot be empty
 		result = FDO_SI_CONTENT_ERROR;
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_start_array(fdor)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to start "
 			       "fdo_sys:exec/exec_cb array\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -798,7 +782,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 	if (!exec_instr) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to alloc for "
 			       "fdo_sys:exec/exec_cb instructions\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -810,7 +794,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to alloc "
 				       "for single fdo_sys:exec /exec_cb"
 				       " instruction\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 		if (0 != memset_s(exec_instr[exec_array_index],
@@ -819,7 +803,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 			LOG(LOG_DEBUG, "Module fdo_sys -  Failed to clear "
 				       "single fdo_sys:exec/exec_cb"
 				       " instruction\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 		if (!fdor_string_length(fdor, exec_instructions_sz) ||
@@ -827,14 +811,14 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to read "
 				       "fdo_sys:exec/exec_cb text "
 				       "length\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 		if (!fdor_text_string(fdor, exec_instr[exec_array_index],
 				      *exec_instructions_sz)) {
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to read "
 				       "fdo_sys:exec/exec_cb text\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 
@@ -844,7 +828,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 				LOG(LOG_DEBUG, "Module fdo_sys - Failed "
 					       "to clear filename for"
 					       " fdo_sys:exec/exec_cb\n");
-				result = FDO_END_FUNCTION(result, bin_data,
+				result = fdo_end(result, bin_data,
 							  exec_instr);
 				return result;
 			}
@@ -854,7 +838,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 				LOG(LOG_DEBUG, "Module fdo_sys - Failed "
 					       "to copy filename for"
 					       " fdo_sys:exec/exec_cb\n");
-				result = FDO_END_FUNCTION(result, bin_data,
+				result = fdo_end(result, bin_data,
 							  exec_instr);
 				return result;
 			}
@@ -865,7 +849,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 	if (!fdor_end_array(fdor)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to start "
 			       "fdo_sys:exec/exec_cb array\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -874,7 +858,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 				  exec_instr, NULL, NULL, NULL)) {
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 				       "process fdo_sys:exec\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 	} else if (*strcmp_execcb == 0) {
@@ -883,7 +867,7 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 				  &status_cb_resultcode, &status_cb_waitsec)) {
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 				       "process fdo_sys:exec_cb\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 
@@ -893,59 +877,59 @@ int FDO_SI_SET_OSI_EXEC(int result, uint8_t *bin_data, char **exec_instr,
 		write_type = FDO_SYS_MOD_MSG_STATUS_CB;
 	}
 	result = FDO_SI_SUCCESS;
-	result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+	result = fdo_end(result, bin_data, exec_instr);
 	return result;
 }
 
-int FDO_SI_SET_OSI_STATUSCB(int result, size_t *status_cb_array_length,
+int fdo_si_set_osi_status_cb(int result, size_t *status_cb_array_length,
 			    size_t *bin_len, uint8_t *bin_data,
 			    char **exec_instr)
 {
 	if (!fdor_array_length(fdor, status_cb_array_length)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to process "
 			       "fdo_sys:status_cb array length\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 	if (*status_cb_array_length != 3) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Invalid number of items "
 			       "in fdo_sys:status_cb\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_start_array(fdor)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to start "
 			       "fdo_sys:status_cb array\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_boolean(fdor, &status_cb_iscomplete)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to process "
 			       "fdo_sys:status_cb isComplete\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_signed_int(fdor, &status_cb_resultcode)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to process "
 			       "fdo_sys:status_cb resultCode\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_unsigned_int(fdor, &status_cb_waitsec)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to process "
 			       "fdo_sys:status_cb waitSec\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_end_array(fdor)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to end "
 			       "fdo_sys:status_cb array\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -970,22 +954,22 @@ int FDO_SI_SET_OSI_STATUSCB(int result, size_t *status_cb_array_length,
 			  &status_cb_waitsec)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "process fdo_sys:status_cb\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	result = FDO_SI_SUCCESS;
-	result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+	result = fdo_end(result, bin_data, exec_instr);
 	return result;
 }
 
-int FDO_SI_SET_OSI_FETCH(int result, size_t *bin_len, uint8_t *bin_data,
+int fdo_si_set_osi_fetch(int result, size_t *bin_len, uint8_t *bin_data,
 			 char **exec_instr)
 {
 	if (!fdor_string_length(fdor, bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to "
 			       "read fdo_sys:fetch length\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -998,7 +982,7 @@ int FDO_SI_SET_OSI_FETCH(int result, size_t *bin_len, uint8_t *bin_data,
 		if (!fdor_next(fdor)) {
 			LOG(LOG_DEBUG, "Module fdo_sys - Failed to read "
 				       "fdo_sys:fetch\n");
-			result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+			result = fdo_end(result, bin_data, exec_instr);
 			return result;
 		}
 		return FDO_SI_CONTENT_ERROR;
@@ -1007,14 +991,14 @@ int FDO_SI_SET_OSI_FETCH(int result, size_t *bin_len, uint8_t *bin_data,
 	if (memset_s(filename, sizeof(filename), 0) != 0) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to clear "
 			       "fdo_sys:fetch filename buffer\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
 	if (!fdor_text_string(fdor, &filename[0], *bin_len)) {
 		LOG(LOG_DEBUG, "Module fdo_sys - Failed to read value for "
 			       "fdo_sys:fetch\n");
-		result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+		result = fdo_end(result, bin_data, exec_instr);
 		return result;
 	}
 
@@ -1026,11 +1010,11 @@ int FDO_SI_SET_OSI_FETCH(int result, size_t *bin_len, uint8_t *bin_data,
 	file_seek_pos = 0;
 	write_type = FDO_SYS_MOD_MSG_DATA;
 	result = FDO_SI_SUCCESS;
-	result = FDO_END_FUNCTION(result, bin_data, exec_instr);
+	result = fdo_end(result, bin_data, exec_instr);
 	return result;
 }
 
-int FDO_END_FUNCTION(int result, uint8_t *bin_data, char **exec_instr)
+int fdo_end(int result, uint8_t *bin_data, char **exec_instr)
 {
 	// End of function, clean-up state variables/objects
 	if (bin_data) {

@@ -9,7 +9,7 @@
  */
 
 #include "BN_support.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "util.h"

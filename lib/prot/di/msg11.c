@@ -9,7 +9,7 @@
  */
 
 #include "load_credentials.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "fdoprot.h"
 #include "util.h"
 

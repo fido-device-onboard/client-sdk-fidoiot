@@ -7,8 +7,8 @@
 #define __FDO_CSE_H__
 
 #include "safe_lib.h"
-#include "fdoCrypto.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto.h"
+#include "fdo_crypto_hal.h"
 #include "cse_utils.h"
 
 int32_t cse_get_cert_chain(fdo_byte_array_t **cse_cert);

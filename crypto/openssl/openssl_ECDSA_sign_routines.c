@@ -13,7 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/ossl_typ.h>
 #include <openssl/pem.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"

@@ -93,7 +93,7 @@ bool has_header(char *buf, size_t header_start_offset);
 bool get_msg_length(char *curl_buf, size_t *cur_offset, uint32_t *msglen);
 
 /*
- * Receive(read) length of incoming fdo packet.
+ * Receive(read) length of incoming FDO packet.
  *
  * @param[out] protocol_version: FDO protocol version
  * @param[out] message_type: message type of incoming FDO message.
@@ -106,7 +106,7 @@ int32_t fdo_con_parse_msg_header(uint32_t *protocol_version,
 				 char *hdr_buf);
 
 /*
- * Receive(read) incoming fdo packet.
+ * Receive(read) incoming FDO packet.
  *
  * @param[out] buf: data buffer to read into.
  * @param[in] length: Number of received bytes to be read.

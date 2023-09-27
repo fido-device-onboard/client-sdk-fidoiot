@@ -8,7 +8,7 @@
  * \brief Abstraction layer for SSL setup and send/recv APIs of openssl library.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include <openssl/ssl.h>

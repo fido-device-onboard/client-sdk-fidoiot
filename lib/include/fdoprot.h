@@ -152,7 +152,7 @@ typedef struct fdo_prot_s {
 	fdo_dev_cred_t *dev_cred;
 	fdo_public_key_t *owner_public_key; // Owner's public key
 	fdo_service_info_t *service_info;   // store System ServiceInfo
-					    // (devmod+unsupported module list)
+					  // (devmod+unsupported module list)
 	fdo_byte_array_t *ext_service_info; // store External module
 					    // ServiceInfoVal (fdo_sys, for ex.)
 	fdo_public_key_t *tls_key; // unused for now

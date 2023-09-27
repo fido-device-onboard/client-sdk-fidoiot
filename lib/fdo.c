@@ -17,7 +17,7 @@
 #include "fdoprot.h"
 #include "load_credentials.h"
 #include "network_al.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "util.h"
 #include <stdlib.h>
 #include <unistd.h>
@@ -168,7 +168,7 @@ end:
  * @return ret
  *         None.
  */
-static void fdo_protDIExit(app_data_t *app_data)
+static void fdo_prot_di_exit(app_data_t *app_data)
 {
 	fdo_prot_t *ps = &app_data->prot;
 
@@ -190,7 +190,7 @@ static void fdo_protDIExit(app_data_t *app_data)
  * @return ret
  *         None.
  */
-static void fdo_protTO1Exit(app_data_t *app_data)
+static void fdo_prot_to1_exit(app_data_t *app_data)
 {
 	fdo_prot_t *ps = &app_data->prot;
 
@@ -215,7 +215,7 @@ static void fdo_protTO1Exit(app_data_t *app_data)
  * @return ret
  *         None.
  */
-static void fdo_protTO2Exit(app_data_t *app_data)
+static void fdo_prot_to2_exit(app_data_t *app_data)
 {
 	fdo_prot_t *ps = &app_data->prot;
 
@@ -796,7 +796,7 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 	int ret;
 	fdo_sdk_device_status state = FDO_DEVICE_STATE_D;
 
-	/* fdo Global data initialization */
+	/* FDO Global data initialization */
 	g_fdo_data = fdo_alloc(sizeof(app_data_t));
 
 	if (!g_fdo_data) {
@@ -1323,7 +1323,7 @@ static bool _STATE_DI(void)
 #endif
 	ret = true;
 end:
-	fdo_protDIExit(g_fdo_data);
+	fdo_prot_di_exit(g_fdo_data);
 	if (prot_ctx) {
 		fdo_prot_ctx_free(prot_ctx);
 		fdo_free(prot_ctx);
@@ -1496,7 +1496,7 @@ static bool _STATE_TO1(void)
 			LOG(LOG_ERROR, "TO1 failed.\n");
 
 			// clear contents for a fresh start.
-			fdo_protTO1Exit(g_fdo_data);
+			fdo_prot_to1_exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
 			fdo_free(prot_ctx);
 
@@ -1547,7 +1547,7 @@ static bool _STATE_TO1(void)
 	}
 
 end:
-	fdo_protTO1Exit(g_fdo_data);
+	fdo_prot_to1_exit(g_fdo_data);
 	if (prot_ctx) {
 		fdo_prot_ctx_free(prot_ctx);
 		fdo_free(prot_ctx);
@@ -1772,7 +1772,7 @@ static bool _STATE_TO2(void)
 				    "Sv_info: One or more module's FAILURE "
 				    "CB failed\n");
 			}
-			fdo_protTO2Exit(g_fdo_data);
+			fdo_prot_to2_exit(g_fdo_data);
 			fdo_prot_ctx_free(prot_ctx);
 			fdo_free(prot_ctx);
 
@@ -1841,7 +1841,7 @@ static bool _STATE_TO2(void)
 		// if we reach here no failures occurred and TO2 has completed.
 		// So proceed for shutdown and break.
 		g_fdo_data->state_fn = &_STATE_Shutdown;
-		fdo_protTO2Exit(g_fdo_data);
+		fdo_prot_to2_exit(g_fdo_data);
 		fdo_prot_ctx_free(prot_ctx);
 		fdo_free(prot_ctx);
 

@@ -12,7 +12,7 @@
 #include <string.h>
 
 #include "BN_support.h"
-#include <fdoCryptoHal.h>
+#include <fdo_crypto_hal.h>
 
 #ifdef USE_OPENSSL
 #include <openssl/sha.h>

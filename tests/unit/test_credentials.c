@@ -13,8 +13,8 @@
 #include "unity.h"
 #include "load_credentials.h"
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_hal.h"
+#include "fdo_crypto.h"
 #include "platform_utils.h"
 
 #ifdef TARGET_OS_FREERTOS

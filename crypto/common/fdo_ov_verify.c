@@ -9,8 +9,8 @@
  */
 
 #include "fdotypes.h"
-#include "fdoCryptoHal.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_hal.h"
+#include "fdo_crypto.h"
 
 /**
  * This function verifies if the signature message_signature of length

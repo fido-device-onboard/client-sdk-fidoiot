@@ -9,7 +9,7 @@
  * various aspects of FDO protcol.
  */
 
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "util.h"
 #include "fdoprot.h"
 #include "load_credentials.h"

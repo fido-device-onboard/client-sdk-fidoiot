@@ -9,7 +9,7 @@
  * library.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "cse_utils.h"
 
 /**

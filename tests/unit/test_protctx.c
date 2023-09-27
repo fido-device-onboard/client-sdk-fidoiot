@@ -12,7 +12,7 @@
 #include "unity.h"
 #include "test_crypto.h"
 #include <stdlib.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "fdoprotctx.h"
 #include "fdoprot.h"
 #include "fdoblockio.h"

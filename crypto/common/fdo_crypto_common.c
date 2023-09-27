@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "stdlib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
 #endif
@@ -49,25 +49,25 @@ fdo_aes_keyset_t *get_keyset(void)
  * This function returns the address of Ownership voucher hmac key.
  * @return Byte array which holds the OV hmac key
  */
-fdo_byte_array_t **getOVKey(void)
+fdo_byte_array_t **get_OV_key(void)
 {
-	return &crypto_ctx.OVKey;
+	return &crypto_ctx.OV_key;
 }
 
 /**
  * This function returns the address of Ownership voucher replacement hmac key.
  * @return Byte array which holds the OV replacement hmac key
  */
-fdo_byte_array_t **getreplacementOVKey(void)
+fdo_byte_array_t **get_replacement_OV_key(void)
 {
-	return &crypto_ctx.replacement_OVKey;
+	return &crypto_ctx.replacement_OV_key;
 }
 
 /**
  * This function returns the address of the dev key struct inside crypto
  * context.
  */
-fdo_dev_key_ctx_t *getfdo_dev_key_ctx(void)
+fdo_dev_key_ctx_t *get_fdo_dev_key_ctx(void)
 {
 	return &crypto_ctx.dev_key;
 }
@@ -76,7 +76,7 @@ fdo_dev_key_ctx_t *getfdo_dev_key_ctx(void)
  * This function returns the address of the kex struct inside crypto
  * context.
  */
-fdo_kex_ctx_t *getfdo_key_ctx(void)
+fdo_kex_ctx_t *get_fdo_key_ctx(void)
 {
 	return &crypto_ctx.kex;
 }
@@ -131,11 +131,11 @@ static void cleanup_ctx(void)
 	}
 
 	/* cleanup ovkey */
-	fdo_byte_array_free(crypto_ctx.OVKey);
-	crypto_ctx.OVKey = NULL;
-	if (crypto_ctx.replacement_OVKey) {
-		fdo_byte_array_free(crypto_ctx.replacement_OVKey);
-		crypto_ctx.replacement_OVKey = NULL;
+	fdo_byte_array_free(crypto_ctx.OV_key);
+	crypto_ctx.OV_key = NULL;
+	if (crypto_ctx.replacement_OV_key) {
+		fdo_byte_array_free(crypto_ctx.replacement_OV_key);
+		crypto_ctx.replacement_OV_key = NULL;
 	}
 }
 

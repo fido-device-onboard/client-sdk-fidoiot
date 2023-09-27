@@ -7,8 +7,8 @@
 #include "crypto_utils.h"
 #include "fdoprot.h"
 #include "fdotypes.h"
-#include "fdoCrypto.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "fdo.h"
 #include <stdlib.h>

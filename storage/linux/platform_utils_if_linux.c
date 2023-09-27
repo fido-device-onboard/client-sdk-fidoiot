@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include "util.h"
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "platform_utils.h"
 /**
  * Generate platform IV (if not already generated) else provide already
