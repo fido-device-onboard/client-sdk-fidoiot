@@ -238,8 +238,8 @@ void fdo_encrypted_packet_free(fdo_encrypted_packet_t *pkt);
 fdo_encrypted_packet_t *fdo_encrypted_packet_read(fdor_t *fdor);
 bool fdo_aad_write(fdow_t *fdow, int alg_type);
 bool fdo_emblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
-bool fdo_etminnerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
-bool fdo_etmouterblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
+bool fdo_etm_innerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
+bool fdo_etm_outerblock_write(fdow_t *fdow, fdo_encrypted_packet_t *pkt);
 bool fdo_encrypted_packet_unwind(fdor_t *fdor, fdo_encrypted_packet_t *pkt);
 bool fdo_encrypted_packet_windup(fdow_t *fdow, int type);
 bool fdo_prep_simple_encrypted_message(fdo_encrypted_packet_t *pkt,

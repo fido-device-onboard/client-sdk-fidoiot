@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "util.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #if defined(DEVICE_CSE_ENABLED)
 #include "cse_utils.h"
 #include "cse_tools.h"
@@ -164,7 +164,7 @@ bool write_secure_device_credentials(const char *dev_cred_file,
 		ret = false;
 		goto end;
 	}
-	fdo_byte_array_t **ovkey = getOVKey();
+	fdo_byte_array_t **ovkey = get_OV_key();
 	if (!ovkey || !*ovkey) {
 		ret = false;
 		goto end;

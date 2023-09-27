@@ -8,12 +8,12 @@
  * \brief Abstraction layer for ECDSA signature verification
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
 #include "se_config.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include <atca_basic.h>
 #include <atcacert/atcacert_der.h>
 

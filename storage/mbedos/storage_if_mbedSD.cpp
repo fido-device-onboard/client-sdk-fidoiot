@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "crypto_utils.h"
 #include "platform_utils.h"
 #include "safe_lib.h"
@@ -146,7 +146,7 @@ size_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 		} else {
 			/* File format is not correct, not enough data in the file */
 			retval = 0;
-		}		
+		}
 		break;
 	default:
 		LOG(LOG_ERROR, "Invalid storage flag:%d!\n", flags);

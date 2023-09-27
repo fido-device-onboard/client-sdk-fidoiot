@@ -11,7 +11,7 @@
 #include "util.h"
 #include "safe_lib.h"
 #include "tpm20_Utils.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "storage_al.h"
 
 static int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context);

@@ -11,7 +11,7 @@
 
 #include "util.h"
 #include "network_al.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "fdoprotctx.h"
 #include "fdonet.h"
 #include "safe_lib.h"

@@ -16,8 +16,8 @@
 #include "unity.h"
 #include "safe_mem_lib.h"
 #include "crypto_utils.h"
-#include "fdoCryptoHal.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_hal.h"
+#include "fdo_crypto.h"
 
 #ifdef TARGET_OS_LINUX
 /*

@@ -9,7 +9,7 @@
  */
 
 #include "fdotypes.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "se_config.h"

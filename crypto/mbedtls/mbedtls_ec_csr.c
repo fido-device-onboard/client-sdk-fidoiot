@@ -14,7 +14,7 @@
 #include "util.h"
 #include "fdotypes.h"
 #include "mbedtls_random.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "safe_lib.h"
 #include "ecdsa_privkey.h"
 #include "fdocred.h"

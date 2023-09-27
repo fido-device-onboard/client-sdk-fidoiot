@@ -14,7 +14,7 @@
 #include <openssl/ossl_typ.h>
 #include <openssl/ec.h>
 #include <openssl/core_names.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"

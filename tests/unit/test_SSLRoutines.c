@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 #include <test_crypto.h>
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "unity.h"
 
 #ifdef TARGET_OS_LINUX

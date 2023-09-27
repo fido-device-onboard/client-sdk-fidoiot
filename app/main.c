@@ -257,7 +257,7 @@ int app_main(bool is_resale)
 		LOG(LOG_DEBUG, "Sv_info Modules not loaded!\n");
 	}
 
-	/* Init fdo sdk */
+	/* Init FDO sdk */
 	if (FDO_SUCCESS !=
 	    fdo_sdk_init(error_cb, FDO_MAX_MODULES, module_info)) {
 		LOG(LOG_ERROR, "fdo_sdk_init failed!!\n");

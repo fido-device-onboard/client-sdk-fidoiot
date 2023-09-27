@@ -10,7 +10,7 @@
  */
 
 #include "unity.h"
-#include <fdoCryptoHal.h>
+#include <fdo_crypto_hal.h>
 #include <assert.h>
 #include <stdlib.h>
 #include "BN_support.h"

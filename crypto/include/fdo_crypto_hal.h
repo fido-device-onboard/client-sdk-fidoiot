@@ -11,8 +11,8 @@ extern "C" {
 
 #include "fdokeyexchange.h"
 #include "util.h"
-#include "fdoCryptoCommons.h"
-#include "fdoCryptoCtx.h"
+#include "fdo_crypto_commons.h"
+#include "fdo_crypto_ctx.h"
 #ifdef USE_MBEDTLS
 #if !defined(TARGET_OS_LINUX)
 #include "mbedtls/net.h"

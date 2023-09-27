@@ -9,7 +9,7 @@
  * openssl library.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "safe_lib.h"

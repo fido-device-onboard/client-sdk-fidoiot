@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include "network_al.h"
 #include <stdlib.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "fdoprotctx.h"
 #include "rest_interface.h"
 #include <openssl/ssl.h>
