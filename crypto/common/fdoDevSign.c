@@ -27,9 +27,12 @@
  * @param  signature In/Out_pointer to the buffer where the signature is
  *                   stored after the signing operation is completed.
  *                   This buffer is allocated inside the API
+ * @param  signature_length_in/Out_in: Size of the buffer pointed to by
+ * 					 signature
  * @param  eat maroe In/Out_pointer to the buffer where the maroe is
  *                   stored after the signing operation is completed.
  *                   This buffer is allocated inside the API
+ * @param Out: Size of the message signature
  * @return 0 on success and -1 on failure
 
  */
