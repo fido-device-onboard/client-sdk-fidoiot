@@ -16,7 +16,7 @@
 #include <mbedtls/pk.h>
 
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "stdlib.h"
 #include "storage_al.h"

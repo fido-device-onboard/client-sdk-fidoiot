@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "crypto_utils.h"
 #include "BN_support.h"
 #include "safe_lib.h"

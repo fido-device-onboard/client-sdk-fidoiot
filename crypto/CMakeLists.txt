@@ -17,13 +17,13 @@ add_library(crypto "")
 
 client_sdk_sources_with_lib(
   crypto
-  common/fdoOvVerify.c
-  common/fdoKeyExchange.c
-  common/fdoAes.c
-  common/fdoHmac.c
-  common/fdoDevSign.c
-  common/fdoCryptoCommon.c
-  common/fdoDevAttest.c
+  common/fdo_ov_verify.c
+  common/fdo_key_exchange.c
+  common/fdo_aes.c
+  common/fdo_hmac.c
+  common/fdo_dev_sign.c
+  common/fdo_crypto_common.c
+  common/fdo_dev_attest.c
   )
 
 
@@ -31,27 +31,27 @@ client_sdk_sources_with_lib(
 #openssl build
 if (${TLS} STREQUAL openssl)
   client_sdk_sources_with_lib( crypto
-    openssl/openssl_AESRoutines.c
-    openssl/openssl_cryptoSupport.c
-    openssl/openssl_SSLRoutines.c
+    openssl/openssl_AES_routines.c
+    openssl/openssl_crypto_support.c
+    openssl/openssl_SSL_routines.c
     openssl/BN_support.c
     openssl/openssl_key_exchange_ecdh.c)
 
     ### Signature verifications types
     if (${CRYPTO_HW} STREQUAL false)
-          client_sdk_sources_with_lib( crypto openssl/openssl_ECDSAVerifyRoutines.c)
+          client_sdk_sources_with_lib( crypto openssl/openssl_ECDSA_verify_routines.c)
     endif()
 
     if (${DA} STREQUAL cse_ecdsa384)
     client_sdk_sources_with_lib ( crypto
-    openssl/cse_cryptoSupport.c
+    openssl/cse_crypto_support.c
     )
     endif()
 
 
     if (${DA} MATCHES tpm)
 	  client_sdk_sources_with_lib ( crypto
-	    openssl/tpm20_ECDSASignRoutines.c
+	    openssl/tpm20_ECDSA_sign_routines.c
 	    openssl/tpm20_Utils.c
 	    openssl/openssl_csr.c
 	    openssl/ec_key.c
@@ -60,7 +60,7 @@ if (${TLS} STREQUAL openssl)
     elseif (${DA} MATCHES ecdsa)
       if (${CRYPTO_HW} MATCHES false)
 	  client_sdk_sources_with_lib ( crypto
-	    openssl/openssl_ECDSASignRoutines.c
+	    openssl/openssl_ECDSA_sign_routines.c
 	    openssl/openssl_csr.c
 	    openssl/ec_key.c
             ecdsa/ecdsa_privkey.c)
@@ -68,7 +68,7 @@ if (${TLS} STREQUAL openssl)
     endif()
 
     if (${CRYPTO_HW} MATCHES true)
-	  client_sdk_sources_with_lib( crypto openssl/openssl_DERRoutines.c)
+	  client_sdk_sources_with_lib( crypto openssl/openssl_DER_routines.c)
     endif()
 endif()
 
@@ -115,13 +115,13 @@ endif()
 
 if (${CRYPTO_HW} MATCHES true)
   client_sdk_sources_with_lib( crypto
-    se/se_AESGCMRoutines.c
-    se/se_cryptoSupport.c
+    se/se_AES_GCM_routines.c
+    se/se_crypto_support.c
     se/se_csr.c
-    se/se_ECDSAVerifyRoutines.c)
+    se/se_ECDSA_verify_routines.c)
 
   if (${DA} STREQUAL ecdsa256 )
-    client_sdk_sources_with_lib( crypto se/se_ECDSASignRoutines.c)
+    client_sdk_sources_with_lib( crypto se/se_ECDSA_sign_routines.c)
     endif()
   endif()
 

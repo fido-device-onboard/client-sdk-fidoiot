@@ -9,8 +9,8 @@
  */
 
 #include "crypto_utils.h"
-#include "fdoCrypto.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto.h"
+#include "fdo_crypto_hal.h"
 #include "unity.h"
 #include "storage_al.h"
 #include "safe_lib.h"

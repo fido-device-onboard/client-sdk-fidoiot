@@ -9,7 +9,7 @@
  * defined format.
  */
 
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "util.h"
 #include "fdoprot.h"
 #include "fdocred.h"

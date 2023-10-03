@@ -10,7 +10,7 @@
 
 #include "fdoprot.h"
 #include "util.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 
 /**
  * msg60() - TO2.HelloDevice

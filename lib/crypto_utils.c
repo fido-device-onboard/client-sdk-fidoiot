@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "snprintf_s.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 
 /**
  * Encrypt the characters in the clear_txt buffer, place the result

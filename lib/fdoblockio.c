@@ -73,11 +73,12 @@ bool fdo_block_alloc_with_size(fdo_block_t *fdob, size_t block_sz)
 		return false;
 	}
 	fdob->block = fdo_alloc(block_sz * sizeof(uint8_t));
-	fdob->block_size = block_sz;
 	if (fdob->block == NULL) {
 		LOG(LOG_ERROR, "FDOBlock alloc() failed!\n");
 		return false;
 	}
+
+	fdob->block_size = block_sz;
 
 	if (memset_s(fdob->block, fdob->block_size, 0) != 0) {
 		LOG(LOG_ERROR, "FDOBlock memset() failed!\n");

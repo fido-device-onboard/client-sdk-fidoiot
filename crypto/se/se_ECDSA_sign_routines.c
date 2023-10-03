@@ -8,11 +8,11 @@
  * \ brief Abstraction layer for ECDSA signing routine using SE
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include <atca_basic.h>
 #include "se_config.h"
 

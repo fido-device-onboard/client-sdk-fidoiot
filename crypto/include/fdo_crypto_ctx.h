@@ -36,8 +36,8 @@ typedef struct {
 	fdo_dev_key_ctx_t dev_key;
 	fdo_to2Sym_enc_ctx_t to2Sym_enc;
 	fdo_kex_ctx_t kex;
-	fdo_byte_array_t *OVKey;
-	fdo_byte_array_t *replacement_OVKey;
+	fdo_byte_array_t *OV_key;
+	fdo_byte_array_t *replacement_OV_key;
 } fdo_crypto_context_t;
 
 fdo_aes_keyset_t *get_keyset(void);

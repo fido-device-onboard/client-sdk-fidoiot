@@ -12,7 +12,7 @@
 #include "fdoprot.h"
 #include "fdotypes.h"
 #include "network_al.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "util.h"
 #include "fdo.h"
 #include <stdlib.h>

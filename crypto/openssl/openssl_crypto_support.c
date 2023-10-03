@@ -20,7 +20,7 @@
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include <assert.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 
 #ifndef SECURE_ELEMENT
 static bool g_random_initialised;

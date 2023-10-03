@@ -12,7 +12,7 @@
 #include "safe_lib.h"
 #include "fdokeyexchange.h"
 #include "util.h"
-#include "fdoCryptoCommons.h"
+#include "fdo_crypto_commons.h"
 
 /**
  * msg61 - TO2.ProveOVHdr
