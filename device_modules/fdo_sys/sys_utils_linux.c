@@ -121,7 +121,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			return false;
 		} else if (exec_pid == 0) {
 			// child process
-			status = execv(command[0], command);
+			status = execvp(command[0], command);
 			if (status == -1) {
 #ifdef DEBUG_LOGS
 				printf("fdo_sys exec : Failed to execute "
