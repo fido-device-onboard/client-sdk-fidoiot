@@ -29,6 +29,7 @@ set (BLOB_PATH .)
 set (TPM2_TCTI_TYPE tabrmd)
 set (RESALE true)
 set (REUSE true)
+set (MTLS false)
 
 #for CSE
 set (CSE_SHUTDOWN true)
@@ -826,4 +827,31 @@ if (${DA} MATCHES cse)
   set(CACHED_CSE_CLEAR ${CSE_CLEAR} CACHE STRING "Selected CSE_CLEAR")
   message("Selected CSE_CLEAR ${CSE_CLEAR}")
 endif()
+###########################################
+# FOR MTLS
+get_property(cached_mtls_value CACHE MTLS PROPERTY VALUE)
+
+set(mtls_cli_arg ${cached_mtls_value})
+if(mtls_cli_arg STREQUAL CACHED_MTLS)
+  unset(mtls_cli_arg)
+endif()
+
+set(mtls_app_cmake_lists ${MTLS})
+if(cached_mtls_value STREQUAL MTLS)
+  unset(mtls_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_MTLS)
+  if ((DEFINED mtls_cli_arg) AND (NOT(CACHED_MTLS STREQUAL mtls_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(MTLS ${CACHED_MTLS})
+elseif(DEFINED mtls_cli_arg)
+  set(MTLS ${mtls_cli_arg})
+elseif(DEFINED mtls_app_cmake_lists)
+  set(MTLS ${mtls_app_cmake_lists})
+endif()
+
+set(CACHED_MTLS ${MTLS} CACHE STRING "Selected MTLS")
+message("Selected MTLS ${MTLS}")
 ###########################################

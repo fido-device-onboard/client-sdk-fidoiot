@@ -1,4 +1,5 @@
 
+
 # Build Configuration
 Following are some of the options to choose when building the device:
 - BUILD: Release or debug mode
@@ -86,6 +87,9 @@ SNI=false # SNI support is disabled.
 > ***Note***: If you have server IP configured in no_proxy environment variable, also add the
 server name in that list for SNI enablement to work as expected.
 ```
+Option to enable/disable mTLS connection:
+MTLS=true 	# mTLS connection enabled
+MTLS=false 	# mTLS connection disabled (default) 
 
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
