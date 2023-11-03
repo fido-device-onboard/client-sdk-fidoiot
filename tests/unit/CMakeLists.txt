@@ -31,14 +31,14 @@ set (UNIT_TEST_SOURCES
   test_fdotypes.c
   test_fdonet.c
   test_credentials.c
-  #test_cryptoSupport.c
+  test_cryptoSupport.c
   test_bn_support.c
   test_utils.c
   test_cryptoUtils.c
   test_AESRoutines.c
   test_protctx.c
   test_SSLRoutines.c
-  #test_ECDSASignRoutines.c
+  test_ECDSASignRoutines.c
   test_fdoblockio.c
 )
 

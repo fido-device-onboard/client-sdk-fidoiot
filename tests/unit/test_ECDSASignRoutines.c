@@ -14,8 +14,15 @@
 #include "storage_al.h"
 #include "unity.h"
 #include "openssl/core_names.h"
+#include <openssl/evp.h>
+#include <openssl/param_build.h>
+#include <openssl/ec.h>
+#include <openssl/ssl.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
+#include <openssl/encoder.h>
 
-//#define HEXDEBUG 1
+// #define HEXDEBUG 1
 
 #define CLR_TXT_LENGTH BUFF_SIZE_1K_BYTES
 #define ECDSA_SIG_MAX_LENGTH 150
@@ -238,16 +245,64 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 	EVP_PKEY *privkey = EVP_PKEY_new();
 	TEST_ASSERT_NOT_NULL(privkey);
 
-	//	if (!EVP_PKEY_assign_EC_KEY(privkey,avalidkey))
-	if (!EVP_PKEY_set1_EC_KEY(privkey, avalidkey))
-		printf(" assigning ECC key to EVP_PKEY fail.\n");
-	const EC_GROUP *group = EC_KEY_get0_group(avalidkey);
+	BIGNUM *priv;
+	OSSL_PARAM_BLD *param_bld;
+	OSSL_PARAM *params = NULL;
+	EVP_PKEY_CTX *ctx; // Creating new EVP_PKEY context
 
-	PEM_write_bio_ECPKParameters(outbio, group);
-	if (!PEM_write_bio_ECPrivateKey(outbio, avalidkey, NULL, NULL, 0, 0,
-					NULL))
+	priv = BN_bin2bn(privatekey, privatekey_buflen, NULL);
+	param_bld = OSSL_PARAM_BLD_new();
+
+	if (priv != NULL && param_bld != NULL &&
+	    OSSL_PARAM_BLD_push_utf8_string(param_bld, "group", "prime256v1",
+					    0) &&
+	    OSSL_PARAM_BLD_push_BN(param_bld, "priv", priv) &&
+	    OSSL_PARAM_BLD_push_octet_string(param_bld, "pub", NULL, 0)) {
+		params = OSSL_PARAM_BLD_to_param(param_bld);
+	}
+
+	ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+
+	if (ctx == NULL || params == NULL || EVP_PKEY_fromdata_init(ctx) <= 0 ||
+	    EVP_PKEY_fromdata(ctx, &privkey, EVP_PKEY_KEYPAIR, params) <= 0) {
+		exit(1);
+	}
+
+	size_t group_name_size;
+	char group_name[64];
+
+	EVP_PKEY_get_utf8_string_param(privkey, OSSL_PKEY_PARAM_GROUP_NAME,
+				       NULL, 0, &group_name_size);
+	if (group_name_size >= sizeof(group_name)) {
+		LOG(LOG_ERROR, "Unexpected long group name : %zu for EC key\n",
+		    group_name_size);
+		exit(1);
+	}
+
+	if (!EVP_PKEY_get_utf8_string_param(privkey, OSSL_PKEY_PARAM_GROUP_NAME,
+					    group_name, sizeof(group_name),
+					    &group_name_size)) {
+		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
+		exit(1);
+	}
+
+	int group_nid = OBJ_sn2nid(group_name);
+	const EC_GROUP *group = EC_GROUP_new_by_curve_name(group_nid);
+
+	if (group == NULL) {
+		LOG(LOG_ERROR, "Failed to get the group name fo EC EVP key\n");
+		exit(1);
+	}
+
+	if (!PEM_write_bio_Parameters(outbio, privkey)) {
+		BIO_printf(outbio, "Error writing parameters in PEM format");
+	}
+
+	if (PEM_write_bio_PrivateKey(outbio, privkey, NULL, NULL, 0, 0, NULL) ==
+	    0) {
 		BIO_printf(outbio,
 			   "Error writing private key data in PEM format");
+	}
 
 	BUF_MEM *bptr = NULL;
 	BIO_get_mem_ptr(outbio, &bptr);
@@ -400,7 +455,7 @@ TEST_CASE("crypto_hal_ecdsa_sign", "[ECDSARoutines][fdo]")
 
 #ifdef USE_MBEDTLS
 	mbedtls_md_type_t hash_type = MBEDTLS_MD_NONE;
-	// create the hash of the plaintext
+// create the hash of the plaintext
 #if defined(ECDSA256_DA)
 	hash_type = MBEDTLS_MD_SHA256;
 #elif defined(ECDSA384_DA)
