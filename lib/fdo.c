@@ -55,6 +55,9 @@ static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
 
+char *mfg_addr = NULL;
+bool use_mfg_addr_bin = true;
+
 #if defined(DEVICE_CSE_ENABLED)
 TEEHANDLE fdo_cse_handle;
 #endif
@@ -1256,32 +1259,47 @@ static bool _STATE_DI(void)
 
 	fdo_prot_di_init(&g_fdo_data->prot, g_fdo_data->devcred);
 
-	fsize = fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
-	if (fsize > 0) {
-		buffer = fdo_alloc(fsize + 1);
-		if (buffer == NULL) {
-			LOG(LOG_ERROR, "malloc failed\n");
+	if (use_mfg_addr_bin) {
+		fsize =
+		    fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
+		if (fsize > 0) {
+			buffer = fdo_alloc(fsize + 1);
+			if (buffer == NULL) {
+				LOG(LOG_ERROR, "malloc failed\n");
+				goto end;
+			}
+
+			if (fdo_blob_read((char *)MANUFACTURER_ADDR,
+					  FDO_SDK_RAW_DATA, (uint8_t *)buffer,
+					  fsize) == -1) {
+				LOG(LOG_ERROR,
+				    "Failed to read Manufacturer address\n");
+				goto end;
+			}
+
+			buffer[fsize] = '\0';
+
+			if (!parse_manufacturer_address(
+				buffer, fsize, &tls, &mfg_ip, mfg_dns,
+				sizeof(mfg_dns), &mfg_port)) {
+				LOG(LOG_ERROR, "Failed to parse Manufacturer "
+					       "Network address.\n");
+				goto end;
+			}
+		} else {
+			LOG(LOG_ERROR,
+			    "Manufacturer Network address file is empty.\n");
 			goto end;
 		}
-
-		if (fdo_blob_read((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA,
-				  (uint8_t *)buffer, fsize) == -1) {
-			LOG(LOG_ERROR, "Failed to read Manufacturer address\n");
-			goto end;
-		}
-
-		buffer[fsize] = '\0';
-
-		if (!parse_manufacturer_address(buffer, fsize, &tls, &mfg_ip,
+	} else {
+		fsize = strnlen_s(mfg_addr, FDO_MAX_STR_SIZE);
+		if (!parse_manufacturer_address(mfg_addr, fsize, &tls, &mfg_ip,
 						mfg_dns, sizeof(mfg_dns),
 						&mfg_port)) {
 			LOG(LOG_ERROR,
 			    "Failed to parse Manufacturer Network address.\n");
 			goto end;
 		}
-	} else {
-		LOG(LOG_ERROR, "Manufacturer Network address file is empty.\n");
-		goto end;
 	}
 
 	g_fdo_data->delaysec = default_delay;

@@ -229,9 +229,41 @@ int app_main(bool is_resale)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 	int ret = -1;
-
+	bool resale = false;
 	bool do_resale = false;
+	int strcmp_res = 0;
+
 	LOG(LOG_DEBUG, "Starting FIDO Device Onboard\n");
+
+	for (int index = 1; index < argc; index++) {
+		if (index + 1 < argc &&
+		    (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE, "-ip",
+			       &strcmp_res) &&
+		     !strcmp_res)) {
+			index++;
+			mfg_addr = argv[index];
+			use_mfg_addr_bin = false;
+		} else if (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE,
+				     "-ss", &strcmp_res) &&
+			   !strcmp_res) {
+#if defined SELF_SIGNED_CERTS_SUPPORTED
+			useSelfSignedCerts = true;
+#endif
+		} else if (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE,
+				     "-r", &strcmp_res) &&
+			   !strcmp_res) {
+			resale = true;
+		} else {
+			printf("Usage: linux-client -ip <http|https>://<mfg "
+			       "addr>:<port>\n"
+			       "\tif -ip not specified, manufacturer_addr.bin "
+			       "will be used\n"
+			       "\t-ss: specify if backend servers are using "
+			       "self-signed certificates\n"
+			       "\t-r: enable resale\n");
+			exit(1);
+		}
+	}
 
 #ifdef SECURE_ELEMENT
 	if (-1 == se_provisioning()) {
@@ -278,7 +310,7 @@ int app_main(bool is_resale)
 #endif
 
 #if defined TARGET_OS_LINUX
-	if (argc > 1 && *argv[1] == '1') {
+	if (resale == true) {
 		do_resale = true;
 	}
 #else
@@ -286,17 +318,7 @@ int app_main(bool is_resale)
 		do_resale = true;
 	}
 #endif
-#if defined SELF_SIGNED_CERTS_SUPPORTED
-	int strcmp_ss = 1;
-	int res = -1;
 
-	res = (int)strcmp_s((char *)argv[1], DATA_CONTENT_SIZE, "-ss",
-			    &strcmp_ss);
-
-	if (argc > 1 && (!res && !strcmp_ss)) {
-		useSelfSignedCerts = true;
-	}
-#endif
 	if (is_ownership_transfer(do_resale)) {
 		ret = 0;
 		goto end;
