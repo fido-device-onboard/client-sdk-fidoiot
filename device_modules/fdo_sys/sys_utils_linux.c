@@ -15,82 +15,6 @@
 // Process ID of the process created by fdo_sys:exec_cb
 static pid_t exec_pid = -1;
 
-/* Allow only alphanumeric file name either shell or python script*/
-static bool is_valid_filename(const char *fname)
-{
-	bool ret = false;
-	int strcmp_result = -1;
-	uint8_t i = 0;
-	static const char *const whitelisted[] = {"sh", "py"};
-	char *substring = NULL, *t1 = NULL;
-	char filenme_woextension[FILE_NAME_LEN] = {0};
-	size_t fname_len = 0;
-	size_t ext_len = 0;
-	const size_t EXT_MAX_LEN = 3;
-
-	if (fname == NULL) {
-		goto end;
-	}
-
-	fname_len = strnlen_s(fname, FILE_NAME_LEN);
-	if (!fname_len || fname_len == FILE_NAME_LEN) {
-		printf("ERROR: Didn't receive valid filename\n");
-		goto end;
-	}
-
-	if (strncpy_s(filenme_woextension, FILE_NAME_LEN, fname, fname_len)) {
-		goto end;
-	}
-
-	if (strlastchar_s(filenme_woextension, FILE_NAME_LEN, '.',
-			  &substring)) {
-		goto end;
-	}
-
-	*substring = '\0'; // Nullify the pointer
-
-	// Now the array is as follow
-	//  "TEST FILENAME" "ext"
-
-	// check the whitelisted extension type
-	substring++;
-	for (i = 0; i < (sizeof(whitelisted) / sizeof(whitelisted[0])); i++) {
-		ext_len = strnlen_s(substring, EXT_MAX_LEN);
-		if (!ext_len || ext_len == EXT_MAX_LEN) {
-			printf("Couldn't find file extension\n");
-			ret = false;
-			break;
-		}
-		strcmp_s(substring, ext_len, whitelisted[i], &strcmp_result);
-		if (!strcmp_result) {
-			// extension matched
-			ret = true;
-			break;
-		}
-	}
-	if (ret != true) {
-		goto end;
-	}
-	ret = false;
-	t1 = filenme_woextension;
-
-	// check for only alphanumeric no special char except underscore '_' and
-	// hyphen '-'
-	while (*t1 != '\0') {
-		if ((*t1 >= 'a' && *t1 <= 'z') || (*t1 >= 'A' && *t1 <= 'Z') ||
-		    (*t1 >= '0' && *t1 <= '9') || (*t1 == '_') ||
-		    (*t1 == '-')) {
-			t1++;
-		} else {
-			goto end;
-		}
-	}
-
-	ret = true;
-end:
-	return ret;
-}
-
 void *ModuleAlloc(int size)
 {
 	if (size <= 0) {
@@ -165,7 +89,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 	// For exec/exec_cb call
 	if (type == FDO_SYS_MOD_MSG_EXEC || type == FDO_SYS_MOD_MSG_EXEC_CB) {
 
-		if (!file_name || !is_valid_filename((const char *)file_name)) {
+		if (!file_name) {
 #ifdef DEBUG_LOGS
 			printf("fdo_sys exec/exec_cb : Invalid filename\n");
 #endif
@@ -197,7 +121,7 @@ bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t data_len,
 			return false;
 		} else if (exec_pid == 0) {
 			// child process
-			status = execv(command[0], command);
+			status = execvp(command[0], command);
 			if (status == -1) {
 #ifdef DEBUG_LOGS
 				printf("fdo_sys exec : Failed to execute "
