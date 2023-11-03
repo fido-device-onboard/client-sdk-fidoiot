@@ -106,7 +106,7 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 	}
 
 	pub_key_size = EC_POINT_point2oct(
-	    ec_grp, pub_key, POINT_CONVERSION_COMPRESSED, NULL, 0, NULL);
+	    ec_grp, pub_key, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, NULL);
 	if (!pub_key_size) {
 		LOG(LOG_ERROR, "Failed to get public key size\n");
 		ret = -1;
@@ -119,7 +119,7 @@ int32_t crypto_hal_get_device_csr(fdo_byte_array_t **csr)
 		ret = -1;
 		goto err;
 	}
-	if (!EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_COMPRESSED,
+	if (!EC_POINT_point2oct(ec_grp, pub_key, POINT_CONVERSION_UNCOMPRESSED,
 				octet_pub_key->bytes, octet_pub_key->byte_sz,
 				NULL)) {
 		LOG(LOG_ERROR, "Failed to process public key\n");
