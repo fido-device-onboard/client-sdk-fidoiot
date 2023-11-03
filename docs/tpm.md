@@ -328,7 +328,12 @@ make pristine
 cmake -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
 make -j$(nproc)
 ```
-
+> ***NOTE***:  To run with mTLS connection, 
+> 1. Compile the code with `-DMTLS=true` flag.
+> 2. If signing with external CA, copy CA cert and CA key to `data` folder.
+> 3. Execute `bash utlils/user_csr_req.sh .`
+> This will generate client CSR and private key.
+> 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section [FDO Build configurations](build_conf.md)
 
