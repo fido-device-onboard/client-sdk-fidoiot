@@ -24,6 +24,13 @@ if(TARGET_OS MATCHES linux)
       -DDEVICE_CSE_ENABLED
     )
     endif()
+    
+  if (${MTLS} MATCHES true)
+    client_sdk_compile_definitions(
+      -DSSL_CERT=\"${BLOB_PATH}/data/apiUser.pem\"
+      -DSSL_KEY=\"${BLOB_PATH}/data/clientKey.pem\"
+    )
+    endif()
 
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(

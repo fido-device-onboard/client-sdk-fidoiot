@@ -271,4 +271,8 @@ endif()
 if(${CSE_CLEAR} STREQUAL true)
   client_sdk_compile_definitions(-DCSE_CLEAR)
 endif()
+
+if(${MTLS} STREQUAL true)
+  client_sdk_compile_definitions(-DMTLS)
+endif()
 ############################################################

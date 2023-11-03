@@ -1,4 +1,5 @@
 
+
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
@@ -192,7 +193,12 @@ bash utils/keys_gen.sh .
 > ***NOTE***:  [Keys_Gen](../utils/keys_gen.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
 > OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
 >
-
+> ***NOTE***:  To run with mTLS connection, 
+> 1. Compile the code with `-DMTLS=true` flag.
+> 2. If signing with external CA, copy CA cert and CA key to `data` folder.
+> 3. Execute `bash utlils/user_csr_req.sh .`
+> This will generate client CSR and private key.
+> 
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section. [FDO Build configurations](build_conf.md)
 
