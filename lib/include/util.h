@@ -158,6 +158,9 @@ char *strdup_s(const char *str);
 /* Print timestamp */
 int print_timestamp(void);
 
+/* Get device serial number */
+int get_device_serial(char *str);
+
 #ifdef __cplusplus
 }
 #endif
