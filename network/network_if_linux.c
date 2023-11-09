@@ -422,6 +422,8 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 		}
 #endif
 		if (enable_sni) {
+			LOG(LOG_DEBUG, "Using DNS\n");
+
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 					  (char *)dn, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -455,6 +457,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			}
 		} else {
 			(void)dn;
+			LOG(LOG_DEBUG, "Using IP\n");
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 					  ip_ascii, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -883,13 +886,15 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 #if defined(MTLS)
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLCERT, (char *)SSL_CERT);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client certificate.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client "
+			       "certificate.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLKEY, (char *)SSL_KEY);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client key.\n");
+		LOG(LOG_ERROR,
+		    "CURL_ERROR: Could not able to select client key.\n");
 		goto err;
 	}
 #endif

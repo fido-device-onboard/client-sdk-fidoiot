@@ -75,7 +75,17 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 	// use the DNS directly, since the DNS is resolved and cached,
 	// and the resolved IP is used directly
 	if (host_dns) {
-		prot_ctx->host_dns = host_dns;
+		size_t host_dns_len = strnlen_s(host_dns, FDO_MAX_STR_SIZE);
+		prot_ctx->host_dns = fdo_alloc(host_dns_len + 1);
+		if (!prot_ctx->host_dns) {
+			LOG(LOG_ERROR, "Failed to alloc host DNS\n");
+			goto err;
+		}
+		if (0 != strncpy_s((char *)prot_ctx->host_dns, FDO_MAX_STR_SIZE,
+				   host_dns, host_dns_len)) {
+			LOG(LOG_ERROR, "Failed to copy host DNS\n");
+			goto err;
+		}
 	}
 
 	prot_ctx->protdata = protdata;
@@ -87,6 +97,9 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 err:
 	if (prot_ctx->host_ip) {
 		fdo_free(prot_ctx->host_ip);
+	}
+	if (prot_ctx->host_dns) {
+		fdo_free(prot_ctx->host_dns);
 	}
 	return NULL;
 }
@@ -102,6 +115,9 @@ void fdo_prot_ctx_free(fdo_prot_ctx_t *prot_ctx)
 		}
 		if (prot_ctx->host_ip) {
 			fdo_free(prot_ctx->host_ip);
+		}
+		if (prot_ctx->host_dns) {
+			fdo_free(prot_ctx->host_dns);
 		}
 	}
 }
@@ -168,6 +184,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 					    prot_ctx->host_dns,
 					    prot_ctx->host_port, prot_ctx->tls);
 		if (!ret) {
+			LOG(LOG_DEBUG, "Invalid DNS. Using IP\n");
 			ret = connect_to_rendezvous(prot_ctx->host_ip, NULL,
 						    prot_ctx->host_port,
 						    prot_ctx->tls);
@@ -214,6 +231,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		    connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_dns,
 				     prot_ctx->host_port, prot_ctx->tls);
 		if (!ret) {
+			LOG(LOG_DEBUG, "Invalid DNS. Using IP\n");
 			ret = connect_to_owner(prot_ctx->host_ip, NULL,
 					       prot_ctx->host_port,
 					       prot_ctx->tls);
