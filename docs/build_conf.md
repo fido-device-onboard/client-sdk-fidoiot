@@ -89,7 +89,7 @@ server name in that list for SNI enablement to work as expected.
 ```
 Option to enable/disable mTLS connection:
 MTLS=true 	# mTLS connection enabled
-MTLS=false 	# mTLS connection disabled (default) 
+MTLS=false 	# mTLS connection disabled (default)
 
 Option to enable/disable Device credential resue and resale feature:
 REUSE=true            # Reuse feature enabled (default)
@@ -100,6 +100,10 @@ RESALE=true           # Resale feature enabled (default)
 Option to enable/disable Error Recovery:
 RETRY=true            # Error Recovery enabled (default)
 RETRY=false           # Error Recovery disabled
+
+Option to get device serial from system BIOS table:
+GET_DEV_SERIAL=true            # get device serial enabled
+GET_DEV_SERIAL=false           # get device serial disabled (default)
 
 List of options to clean targets:
 pristine              # cleanup by remove generated files
