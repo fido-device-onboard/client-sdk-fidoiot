@@ -275,4 +275,8 @@ endif()
 if(${MTLS} STREQUAL true)
   client_sdk_compile_definitions(-DMTLS)
 endif()
+
+if(${GET_DEV_SERIAL} STREQUAL true)
+  client_sdk_compile_definitions(-DGET_DEV_SERIAL)
+endif()
 ############################################################

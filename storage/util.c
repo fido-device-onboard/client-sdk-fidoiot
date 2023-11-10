@@ -322,6 +322,7 @@ int print_timestamp(void)
 	return 0;
 }
 
+#if defined(GET_DEV_SERIAL)
 // Get device serial number
 int get_device_serial(char *serial_buff)
 {
@@ -374,3 +375,4 @@ end:
 	}
 	return ret;
 }
+#endif

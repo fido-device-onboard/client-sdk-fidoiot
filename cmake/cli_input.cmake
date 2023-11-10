@@ -30,6 +30,7 @@ set (TPM2_TCTI_TYPE tabrmd)
 set (RESALE true)
 set (REUSE true)
 set (MTLS false)
+set (GET_DEV_SERIAL false)
 
 #for CSE
 set (CSE_SHUTDOWN true)
@@ -854,4 +855,31 @@ endif()
 
 set(CACHED_MTLS ${MTLS} CACHE STRING "Selected MTLS")
 message("Selected MTLS ${MTLS}")
+###########################################
+# FOR GET_DEV_SERIAL
+get_property(cached_get_dev_serial_value CACHE GET_DEV_SERIAL PROPERTY VALUE)
+
+set(get_dev_serial_cli_arg ${cached_get_dev_serial_value})
+if(get_dev_serial_cli_arg STREQUAL CACHED_GET_DEV_SERIAL)
+  unset(get_dev_serial_cli_arg)
+endif()
+
+set(get_dev_serial_app_cmake_lists ${GET_DEV_SERIAL})
+if(cached_get_dev_serial_value STREQUAL GET_DEV_SERIAL)
+  unset(get_dev_serial_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_GET_DEV_SERIAL)
+  if ((DEFINED get_dev_serial_cli_arg) AND (NOT(CACHED_GET_DEV_SERIAL STREQUAL get_dev_serial_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(GET_DEV_SERIAL ${CACHED_GET_DEV_SERIAL})
+elseif(DEFINED get_dev_serial_cli_arg)
+  set(GET_DEV_SERIAL ${get_dev_serial_cli_arg})
+elseif(DEFINED get_dev_serial_app_cmake_lists)
+  set(GET_DEV_SERIAL ${get_dev_serial_app_cmake_lists})
+endif()
+
+set(CACHED_GET_DEV_SERIAL ${GET_DEV_SERIAL} CACHE STRING "Selected GET_DEV_SERIAL")
+message("Selected GET_DEV_SERIAL ${GET_DEV_SERIAL}")
 ###########################################

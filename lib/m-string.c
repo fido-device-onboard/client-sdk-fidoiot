@@ -68,6 +68,8 @@ static int read_fill_modelserial(void)
 	uint8_t def_serial_sz = 0;
 	uint8_t def_model_sz = 0;
 	size_t fsize = 0;
+
+#if defined(GET_DEV_SERIAL)
 	int strcmp_res = -1;
 	char temp_device_serial[MAX_DEV_SERIAL_SZ];
 	uint8_t temp_serial_sz = 0;
@@ -77,12 +79,55 @@ static int read_fill_modelserial(void)
 		goto err;
 	}
 
+	ret = get_device_serial(temp_device_serial);
+	if (ret) {
+		LOG(LOG_ERROR, "Failed to get serial no.\n");
+	}
+
+	if (ret || (!strcmp_s((char *)temp_device_serial, MAX_DEV_SERIAL_SZ,
+			      "Not Specified\n", &strcmp_res) &&
+		    !strcmp_res)) {
+		LOG(LOG_DEBUG, "Defaulting serial num to 'abcdef'\n");
+		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
+		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_ERROR, "Default serial number string isn't "
+				       "NULL terminated\n");
+			goto err;
+		}
+
+		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ, DEF_SERIAL_NO,
+				def_serial_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to copy serial no!\n");
+			goto err;
+		}
+	} else {
+		temp_serial_sz =
+		    strnlen_s(temp_device_serial, MAX_DEV_SERIAL_SZ);
+		if (!temp_serial_sz || temp_serial_sz == MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_ERROR, "Default serial number string isn't "
+				       "NULL terminated\n");
+			goto err;
+		}
+
+		if (*temp_device_serial &&
+		    temp_device_serial[temp_serial_sz - 1] == '\n') {
+			temp_device_serial[temp_serial_sz - 1] = '\0';
+		}
+
+		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ,
+				temp_device_serial, temp_serial_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to copy serial no!\n");
+			goto err;
+		}
+	}
+#else
 	fsize = fdo_blob_size((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_DEV_SERIAL_SZ)) {
 
 		if (fdo_blob_read((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA,
 				  (uint8_t *)device_serial, fsize) <= 0) {
-
 			LOG(LOG_ERROR, "Failed to get serial no\n");
 			goto err;
 		}
@@ -94,56 +139,21 @@ static int read_fill_modelserial(void)
 			LOG(LOG_INFO, "No serialno file present!\n");
 		}
 
-		ret = get_device_serial(temp_device_serial);
-		if (ret) {
-			LOG(LOG_ERROR, "Failed to get serial no. "
-				       "Defaulting it to 'abcdef'\n");
+		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
+		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_ERROR, "Default serial number string isn't "
+				       "NULL terminated\n");
+			goto err;
 		}
 
-		if (ret ||
-		    (!strcmp_s((char *)temp_device_serial, MAX_DEV_SERIAL_SZ,
-			       "Not Specified\n", &strcmp_res) &&
-		     !strcmp_res)) {
-			def_serial_sz =
-			    strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
-			if (!def_serial_sz ||
-			    def_serial_sz == MAX_DEV_SERIAL_SZ) {
-				LOG(LOG_ERROR,
-				    "Default serial number string isn't "
-				    "NULL terminated\n");
-				goto err;
-			}
-
-			ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ,
-					DEF_SERIAL_NO, def_serial_sz);
-			if (ret) {
-				LOG(LOG_ERROR, "Failed to get serial no\n");
-				goto err;
-			}
-		} else {
-			temp_serial_sz =
-			    strnlen_s(temp_device_serial, MAX_DEV_SERIAL_SZ);
-			if (!temp_serial_sz ||
-			    temp_serial_sz == MAX_DEV_SERIAL_SZ) {
-				LOG(LOG_ERROR,
-				    "Default serial number string isn't "
-				    "NULL terminated\n");
-				goto err;
-			}
-
-			if (*temp_device_serial &&
-			    temp_device_serial[temp_serial_sz - 1] == '\n') {
-				temp_device_serial[temp_serial_sz - 1] = '\0';
-			}
-
-			ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ,
-					temp_device_serial, temp_serial_sz);
-			if (ret) {
-				LOG(LOG_ERROR, "Failed to copy serial no!\n");
-				goto err;
-			}
+		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ, DEF_SERIAL_NO,
+				def_serial_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to get serial no\n");
+			goto err;
 		}
 	}
+#endif
 	LOG(LOG_DEBUG, "Device serial = %s\n", device_serial);
 
 	fsize = fdo_blob_size((const char *)MODEL_FILE, FDO_SDK_RAW_DATA);
