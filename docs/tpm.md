@@ -377,6 +377,10 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ./build/linux-client
   ```
 > ***NOTE***:  linux-client may require elevated privileges. Please use 'sudo' to execute.
+> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
+        if -ip not specified, manufacturer_addr.bin will be used
+        `-ss`: specify if backend servers are using self-signed certificates
+        `-r`: enable resale
 
 
 
