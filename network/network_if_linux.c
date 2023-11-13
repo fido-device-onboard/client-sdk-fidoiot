@@ -365,7 +365,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			if (CURL_VERSION_SSL ==
 			    (vinfo->features & CURL_VERSION_SSL)) {
 				// SSL support enabled
-				LOG(LOG_INFO, "SSL support verified.\n");
+				LOG(LOG_DEBUG, "SSL support verified.\n");
 			}
 
 			// Add option to force the https TLS connection to TLS
@@ -404,8 +404,8 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 					    "verify host.\n");
 					goto err;
 				}
-				LOG(LOG_INFO, "Set connection for self signed "
-					      "certificate usage.\n");
+				LOG(LOG_DEBUG, "Set connection for self signed "
+					       "certificate usage.\n");
 			}
 #endif
 			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL,
@@ -471,8 +471,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 
 		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
 		if (curlCode != CURLE_OK) {
-			LOG(LOG_ERROR,
-			    "CURL_ERROR: Unable to pass url.\n");
+			LOG(LOG_ERROR, "CURL_ERROR: Unable to pass url.\n");
 			goto err;
 		}
 
@@ -893,8 +892,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLKEY, (char *)SSL_KEY);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Unable to select client key.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to select client key.\n");
 		goto err;
 	}
 #endif
@@ -925,8 +923,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Unable to pass POST data.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass POST data.\n");
 		goto err;
 	}
 
@@ -957,8 +954,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode = curl_easy_setopt(curl, CURLOPT_HEADERDATA,
 				    (void *)&temp_header_buf);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Unable to pass header buffer.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass header buffer.\n");
 		goto err;
 	}
 
@@ -973,8 +969,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode =
 	    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&temp_body_buf);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Unable to pass body buffer.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass body buffer.\n");
 		goto err;
 	}
 

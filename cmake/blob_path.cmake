@@ -24,7 +24,7 @@ if(TARGET_OS MATCHES linux)
       -DDEVICE_CSE_ENABLED
     )
     endif()
-    
+
   if (${MTLS} MATCHES true)
     client_sdk_compile_definitions(
       -DSSL_CERT=\"${BLOB_PATH}/data/apiUser.pem\"
@@ -176,9 +176,11 @@ if(TARGET_OS MATCHES linux)
 # Configure if needed at a later point
 # configure_file(${BLOB_PATH}/data/Normal.blob NEWLINE_STYLE DOS)
 
-file(WRITE ${BLOB_PATH}/data/platform_iv.bin "")
-file(WRITE ${BLOB_PATH}/data/platform_hmac_key.bin "")
-file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
-file(WRITE ${BLOB_PATH}/data/Normal.blob "")
-file(WRITE ${BLOB_PATH}/data/Secure.blob "")
-file(WRITE ${BLOB_PATH}/data/raw.blob "")
+if (NOT ${DA} MATCHES tpm)
+  file(WRITE ${BLOB_PATH}/data/platform_iv.bin "")
+  file(WRITE ${BLOB_PATH}/data/platform_hmac_key.bin "")
+  file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
+  file(WRITE ${BLOB_PATH}/data/Normal.blob "")
+  file(WRITE ${BLOB_PATH}/data/Secure.blob "")
+  file(WRITE ${BLOB_PATH}/data/raw.blob "")
+endif()

@@ -16,4 +16,10 @@ client_sdk_sources_with_lib( storage
   util.c
   )
 
+if (${DA} MATCHES tpm)
+  client_sdk_sources_with_lib( storage
+    linux/tpm2_nv_storage.c
+  )
+endif()
+
 target_link_libraries(storage PUBLIC client_sdk_interface)

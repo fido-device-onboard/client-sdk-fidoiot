@@ -1160,8 +1160,11 @@ fdo_sdk_status fdo_sdk_resale(void)
 			LOG(LOG_ERROR, "Reading {Mfg|Secret} blob failied!\n");
 			return FDO_ERROR;
 		}
-
+#if defined(DEVICE_TPM20_ENABLED)
+		ret = store_tpm_credential(g_fdo_data->devcred);
+#else
 		ret = store_credential(g_fdo_data->devcred);
+#endif
 #endif
 		if (!ret) {
 			LOG(LOG_INFO, "Set Resale complete\n");

@@ -28,6 +28,10 @@
 #include "cse_utils.h"
 #include "cse_tools.h"
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#include "fdo_crypto.h"
+#endif
 
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
@@ -273,13 +277,28 @@ int app_main(bool is_resale)
 #endif /* SECURE_ELEMENT */
 
 #if !defined(DEVICE_CSE_ENABLED)
-	LOG(LOG_DEBUG, "CSE not enabled, Normal Blob Modules loaded!\n");
+#if defined(DEVICE_TPM20_ENABLED)
+	if (0 == is_valid_tpm_data_protection_key_present()) {
+		if (0 != fdo_generate_storage_hmac_key()) {
+			LOG(LOG_ERROR, "Failed to generate TPM data protection"
+				       " key.\n");
+			ret = -1;
+			goto end;
+		}
+
+		LOG(LOG_DEBUG,
+		    "TPM data protection key generated successfully.\n");
+	}
+#else
+	LOG(LOG_DEBUG,
+	    "CSE and TPM not enabled, Normal Blob Modules loaded!\n");
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");
 		ret = -1;
 		goto end;
 	}
+#endif
 #endif
 
 	/* List and Init all Sv_info modules */

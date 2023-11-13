@@ -36,6 +36,7 @@
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
 #include "fdo_crypto.h"
+#include "tpm2_nv_storage.h"
 #endif
 
 #if !defined(DEVICE_TPM20_ENABLED)

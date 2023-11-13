@@ -124,6 +124,11 @@ int32_t msg70(fdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.Done: FDO OVH COMMIT succeeded %u\n", fdo_status);
+#elif defined(DEVICE_TPM20_ENABLED)
+	if (store_tpm_credential(ps->dev_cred) != 0) {
+		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");
+		goto err;
+	}
 #else
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");
