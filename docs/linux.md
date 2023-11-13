@@ -1,5 +1,6 @@
 
 
+
 # Linux* OS
 The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
@@ -229,3 +230,8 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
+
+> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
+        if -ip not specified, manufacturer_addr.bin will be used
+        `-ss`: specify if backend servers are using self-signed certificates
+        `-r`: enable resale

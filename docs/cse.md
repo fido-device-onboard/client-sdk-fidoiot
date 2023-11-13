@@ -254,6 +254,10 @@ After a successful compilation, the Intel<sup>&reg;</sup> CSE enabled FDO Client
   ```shell
   sudo ./build/linux-client
   ```
+> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
+        if -ip not specified, manufacturer_addr.bin will be used
+        `-ss`: specify if backend servers are using self-signed certificates
+        `-r`: enable resale
 > ***NOTE***: To do the DI again we need to clear the Device status from CSE storage.
 > To clear the storage, compile the code with "-DCSE_CLEAR=true" flag and then execute the following command
 ```shell
