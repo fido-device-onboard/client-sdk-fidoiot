@@ -422,6 +422,8 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 		}
 #endif
 		if (enable_sni) {
+			LOG(LOG_DEBUG, "Using DNS\n");
+
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 					  (char *)dn, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -455,6 +457,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			}
 		} else {
 			(void)dn;
+			LOG(LOG_DEBUG, "Using IP\n");
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 					  ip_ascii, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -469,14 +472,14 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
 		if (curlCode != CURLE_OK) {
 			LOG(LOG_ERROR,
-			    "CURL_ERROR: Could not able to pass url.\n");
+			    "CURL_ERROR: Unable to pass url.\n");
 			goto err;
 		}
 
 		curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
 		if (curlCode != CURLE_OK) {
 			LOG(LOG_ERROR,
-			    "CURL_ERROR: Could not able connect to host.\n");
+			    "CURL_ERROR: Unable to connect to host.\n");
 			goto err;
 		}
 
@@ -883,26 +886,28 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 #if defined(MTLS)
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLCERT, (char *)SSL_CERT);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client certificate.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to select client "
+			       "certificate.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLKEY, (char *)SSL_KEY);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client key.\n");
+		LOG(LOG_ERROR,
+		    "CURL_ERROR: Unable to select client key.\n");
 		goto err;
 	}
 #endif
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_URL, msg_header->data);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass url.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, msg_header);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass header.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass header.\n");
 		goto err;
 	}
 
@@ -921,7 +926,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR,
-		    "CURL_ERROR: Could not able to pass POST data.\n");
+		    "CURL_ERROR: Unable to pass POST data.\n");
 		goto err;
 	}
 
@@ -934,7 +939,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode =
 	    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, WriteMemoryCallback);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass header "
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass header "
 			       "WriteMemoryCallback.\n");
 		goto err;
 	}
@@ -953,14 +958,14 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 				    (void *)&temp_header_buf);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR,
-		    "CURL_ERROR: Could not able to pass header buffer.\n");
+		    "CURL_ERROR: Unable to pass header buffer.\n");
 		goto err;
 	}
 
 	curlCode =
 	    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass "
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass "
 			       "WriteMemoryCallback.\n");
 		goto err;
 	}
@@ -969,13 +974,13 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&temp_body_buf);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR,
-		    "CURL_ERROR: Could not able to pass body buffer.\n");
+		    "CURL_ERROR: Unable to pass body buffer.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to suppress connect "
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to suppress connect "
 			       "headers.\n");
 		goto err;
 	}
