@@ -8,19 +8,19 @@
 
 # Linux* TPM* Implementation
 
-`Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+`Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version [8.4|8.6|8.8] / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.8 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.12 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries with TPM* 2.0:
 
-* For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
+* For Ubuntu* OS version [20.04|22.04] / Debian 11.4:
 ```shell
 sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake mercurial nghttp2 libnghttp2-dev
 ```
 
-* For RHEL* OS version 8.4 or 8.6:
+* For RHEL* OS version [8.4|8.6|8.8]:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -30,10 +30,10 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial nghttp2 libnghttp2-devel
 ```
 
-OpenSSL* toolkit version 3.0.8.
-Curl version 8.1.2
+OpenSSL* toolkit version 3.0.12.
+Curl version 8.4.0
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.12
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
 > ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
@@ -44,7 +44,7 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	sudo ./install_openssl_curl.sh -i -v 3.0.12
 	```
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
@@ -61,11 +61,11 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 	```
 2. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-3.0.8.tar.gz
+	wget https://www.openssl.org/source/openssl-3.0.12.tar.gz
 	```
 3. Unpack the tarball with:
 	```
-	tar -zxf openssl-3.0.8.tar.gz && cd openssl-3.0.8
+	tar -zxf openssl-3.0.12.tar.gz && cd openssl-3.0.12
 	```
 4. Issue the command:
 	```
@@ -104,20 +104,20 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 3.0.8  7 Feb 2023
+	OpenSSL* 3.0.12  24 Oct 2023
 	```
 
-#### Steps to install curl version 8.1.2 configured with openssl
+#### Steps to install curl version 8.4.0 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://curl.se/download/curl-8.1.2.tar.gz
+	wget https://curl.se/download/curl-8.4.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-8.1.2.tar.gz && cd curl-8.1.2
+	tar -zxf curl-8.4.0.tar.gz && cd curl-8.4.0
 	```
 3. Issue the command to configure the curl with openssl and nghttp2:
 	```
@@ -140,10 +140,10 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.8 zlib/1.2.11
+    curl 8.4.0 (x86_64-pc-linux-gnu) libcurl/8.4.0 OpenSSL/3.0.12 zlib/1.2.11
     ```
 
-Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.1.2. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.4.0. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
@@ -434,12 +434,12 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
   ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 3.0.8 for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 3.0.12 for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
   ```shell
   openssl version
   ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.8, follow the steps given in section 1 to update the OpenSSL* version to 3.0.8.
+  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.12, follow the steps given in section 1 to update the OpenSSL* version to 3.0.12.
 
 
