@@ -323,11 +323,18 @@ int print_timestamp(void)
 }
 
 #if defined(GET_DEV_SERIAL)
-// Get device serial number
+/**
+ * Internal API
+ * Get device serial number from system BIOS table
+ * */
 int get_device_serial(char *serial_buff)
 {
+	if (!serial_buff) {
+		return -1;
+	}
+
 	FILE *fp;
-	char *cmd = "dmidecode -s system-serial-number";
+	const char *cmd = "dmidecode -s system-serial-number";
 	int out_sz;
 	char out[MAX_DEV_SERIAL_SZ];
 	int results_sz = 0;
