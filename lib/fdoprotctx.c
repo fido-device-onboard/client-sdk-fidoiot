@@ -400,8 +400,7 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		if ((fdor->msg_type < FDO_DI_APP_START) ||
 		    (fdor->msg_type > FDO_TYPE_ERROR)) {
-			ret = -1;
-			break;
+			msglen = 0;
 		}
 
 		// clear the block contents in preparation for the next FDOR
