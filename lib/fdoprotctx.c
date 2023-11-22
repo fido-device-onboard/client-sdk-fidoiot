@@ -339,12 +339,14 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		if (memset_s(hdr_buf, REST_MAX_MSGHDR_SIZE, 0) != 0) {
 			LOG(LOG_ERROR, "Memset() failed!\n");
-			return false;
+			ret = -1;
+			break;
 		}
 
 		if (memset_s(body_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
 			LOG(LOG_ERROR, "Memset() failed!\n");
-			return false;
+			ret = -1;
+			break;
 		}
 
 		n = -1;
@@ -394,6 +396,11 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
 			break;
+		}
+
+		if ((fdor->msg_type < FDO_DI_APP_START) ||
+		    (fdor->msg_type > FDO_TYPE_ERROR)) {
+			msglen = 0;
 		}
 
 		// clear the block contents in preparation for the next FDOR
