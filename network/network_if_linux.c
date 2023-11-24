@@ -877,6 +877,10 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
+	if (length > REST_MAX_MSGHDR_SIZE) {
+		msg_header = curl_slist_append(msg_header, "Expect:");
+	}
+
 	curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 0L);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR, "CURL_ERROR: Could not disable connect only.\n");
