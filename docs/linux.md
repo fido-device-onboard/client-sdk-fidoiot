@@ -29,8 +29,8 @@ GCC version > 7.5
 Curl version 8.4.0
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
 >
 **Script usage command**
@@ -54,7 +54,7 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 	```
 	sudo yum remove libcurl-devel openssl-devel
 	```
- 
+
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.12
 
 1. Pull the tarball:
@@ -69,7 +69,7 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 	```
 	./config --libdir=/usr/local/lib
 	```
-	
+
 4. Issue the command:
 	```
 	make
@@ -191,15 +191,15 @@ cmake .
 make
 bash utils/keys_gen.sh .
 ```
-> ***NOTE***:  [Keys_Gen](../utils/keys_gen.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
+> ***NOTE***:  [Keys_Gen](../utils/keys_gen.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script
 > OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
 >
-> ***NOTE***:  To run with mTLS connection, 
+> ***NOTE***:  To run with mTLS connection,
 > 1. Compile the code with `-DMTLS=true` flag.
 > 2. If signing with external CA, copy CA cert and CA key to `data` folder.
-> 3. Execute `bash utlils/user_csr_req.sh .`
+> 3. Execute `bash utils/user_csr_req.sh .`
 > This will generate client CSR and private key.
-> 
+>
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section. [FDO Build configurations](build_conf.md)
 
@@ -231,7 +231,11 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ./build/linux-client
   ```
 
-> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
-        if -ip not specified, manufacturer_addr.bin will be used
-        `-ss`: specify if backend servers are using self-signed certificates
-        `-r`: enable resale
+> ***NOTE***: Usage:
+>
+> ```
+>./build/linux-client -ip <http|https>://<mfg addr>:<port>
+>if -ip not specified, manufacturer_addr.bin will be used
+>-ss: specify if backend servers are using self-signed certificates
+>-r: enable resale
+>```

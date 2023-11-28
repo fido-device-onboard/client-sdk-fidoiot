@@ -38,8 +38,8 @@ GCC version > 7.5
 Curl version 8.4.0
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
 >
 **Script usage command**
@@ -145,8 +145,8 @@ Issue the following command from the terminal:
     curl 8.4.0 (x86_64-pc-linux-gnu) libcurl/8.4.0 OpenSSL/3.0.12 zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
 
 **Script usage command**
@@ -219,12 +219,12 @@ make pristine
 cmake -DDA=cse_ecdsa384 .
 make -j$(nproc)
 ```
-> ***NOTE***:  To run with mTLS connection, 
+> ***NOTE***:  To run with mTLS connection,
 > 1. Compile the code with `-DMTLS=true` flag.
 > 2. If signing with external CA, copy CA cert and CA key to `data` folder.
-> 3. Execute `bash utlils/user_csr_req.sh .`
+> 3. Execute `bash utils/user_csr_req.sh .`
 > This will generate client CSR and private key.
-> 
+>
 Refer to the section [FDO Build configurations](build_conf.md) for more build options.
 
 <a name="run_linux_fdo"></a>
@@ -254,10 +254,16 @@ After a successful compilation, the Intel<sup>&reg;</sup> CSE enabled FDO Client
   ```shell
   sudo ./build/linux-client
   ```
-> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
-        if -ip not specified, manufacturer_addr.bin will be used
-        `-ss`: specify if backend servers are using self-signed certificates
-        `-r`: enable resale
+
+> ***NOTE***: Usage:
+>
+> ```
+>./build/linux-client -ip <http|https>://<mfg addr>:<port>
+>if -ip not specified, manufacturer_addr.bin will be used
+>-ss: specify if backend servers are using self-signed certificates
+>-r: enable resale
+>```
+>
 > ***NOTE***: To do the DI again we need to clear the Device status from CSE storage.
 > To clear the storage, compile the code with "-DCSE_CLEAR=true" flag and then execute the following command
 ```shell
