@@ -36,10 +36,10 @@ Curl version 8.4.0
 #### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.12
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
-> 
+>
 **Script usage command**
 
 * Command to install OpenSSL and Curl
@@ -194,8 +194,8 @@ CURL_INCLUDE=/opt/curl/include (can be /usr/include or /usr/local/include)
 OPENSSL3_LIB=/opt/openssl/lib64 (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
 CURL_LIB=/opt/curl/lib (can be /usr/lib or /usr/local/lib or /usr/lib/x86_64-linux-gnu)
 * **On RHEL\* OS version 8.4 or 8.6:**
-> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4 or 8.6. 
-> Before executing [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh), make sure OpenSSL v3 and Curl is installed on the system (at /usr/local/ path). Use steps in section 1 to install OpenSSL and Curl on the system. 
+> ***NOTE***: Use [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh) for RHEL 8.4 or 8.6.
+> Before executing [TPM-Library-Installation-Script-RHEL](../utils/install_tpm_libs_rhel.sh), make sure OpenSSL v3 and Curl is installed on the system (at /usr/local/ path). Use steps in section 1 to install OpenSSL and Curl on the system.
 ```shell
 sudo ./install_tpm_libs_rhel.sh -h
 ```
@@ -328,12 +328,12 @@ make pristine
 cmake -DDA=tpm20_ecdsa256 -DTPM2_TCTI_TYPE=tpmrm0 .
 make -j$(nproc)
 ```
-> ***NOTE***:  To run with mTLS connection, 
+> ***NOTE***:  To run with mTLS connection,
 > 1. Compile the code with `-DMTLS=true` flag.
 > 2. If signing with external CA, copy CA cert and CA key to `data` folder.
-> 3. Execute `bash utlils/user_csr_req.sh .`
+> 3. Execute `bash utils/user_csr_req.sh .`
 > This will generate client CSR and private key.
-> 
+>
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section [FDO Build configurations](build_conf.md)
 
@@ -361,7 +361,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```
 > ***NOTE 1***:  [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script
 > OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
-> 
+>
 > ***NOTE 2***: Some platforms do not have the support for ECDSA 384 in TPM. [TPM Make Ready](../utils/tpm_make_ready_ecdsa.sh) script with option "-e 384" will fail in those platforms. Please use ECDSA 256 in that case.
 >
 - Once the TPM* make ready script is executed successfully, the device is now initialized with the credentials and is ready for ownership transfer. To run the device against the FDO PRI Manufacturer for the DI protocol, do the following:
@@ -376,13 +376,17 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ```shell
   ./build/linux-client
   ```
+
+> ***NOTE***: Usage:
+>
+> ```
+>./build/linux-client -ip <http|https>://<mfg addr>:<port>
+>if -ip not specified, manufacturer_addr.bin will be used
+>-ss: specify if backend servers are using self-signed certificates
+>-r: enable resale
+>```
+
 > ***NOTE***:  linux-client may require elevated privileges. Please use 'sudo' to execute.
-> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
-        if -ip not specified, manufacturer_addr.bin will be used
-        `-ss`: specify if backend servers are using self-signed certificates
-        `-r`: enable resale
-
-
 
 ### 7.1 Prepare FDO Client SDK Data Folder
 
