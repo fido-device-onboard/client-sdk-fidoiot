@@ -2,18 +2,18 @@
 
 
 # Linux* OS
-The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+The development and execution OS used was `Ubuntu* OS version [20.04|22.04] / RHEL* OS version [8.4|8.6|8.8] / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.8 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.12 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries:
-* For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
+* For Ubuntu* OS version [20.04|22.04] / Debian 11.4:
 ```shell
 sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake mercurial nghttp2 libnghttp2-dev
 ```
 
-* For RHEL* OS version 8.4 or 8.6:
+* For RHEL* OS version [8.4|8.6|8.8]:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -24,20 +24,20 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
 ```
 ## 2. Packages Requirements when Executing Binaries:
 
-OpenSSL* toolkit version 3.0.8
+OpenSSL* toolkit version 3.0.12
 GCC version > 7.5
-Curl version 8.1.2
+Curl version 8.4.0
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
 >
 **Script usage command**
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	sudo ./install_openssl_curl.sh -i -v 3.0.12
 	```
 
 #### Steps to remove the older OpenSSL and curl packages
@@ -54,22 +54,22 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 	```
 	sudo yum remove libcurl-devel openssl-devel
 	```
- 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
+
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.12
 
 1. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-3.0.8.tar.gz
+	wget https://www.openssl.org/source/openssl-3.0.12.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf openssl-3.0.8.tar.gz && cd openssl-3.0.8
+	tar -zxf openssl-3.0.12.tar.gz && cd openssl-3.0.12
 	```
 3. Issue the command:
 	```
 	./config --libdir=/usr/local/lib
 	```
-	
+
 4. Issue the command:
 	```
 	make
@@ -103,20 +103,20 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 3.0.8  7 Feb 2023
+	OpenSSL* 3.0.12  24 Oct 2023
 	```
 
-#### Steps to install curl version 8.1.2 configured with openssl
+#### Steps to install curl version 8.4.0 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://curl.se/download/curl-8.1.2.tar.gz
+	wget https://curl.se/download/curl-8.4.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-8.1.2.tar.gz && cd curl-8.1.2
+	tar -zxf curl-8.4.0.tar.gz && cd curl-8.4.0
 	```
 3. Issue the command to configure the curl with openssl and nghttp2:
 	```
@@ -139,9 +139,9 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.8 zlib/1.2.11
+    curl 8.4.0 (x86_64-pc-linux-gnu) libcurl/8.4.0 OpenSSL/3.0.12 zlib/1.2.11
     ```
-Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.1.2 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.4.0 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
@@ -191,15 +191,15 @@ cmake .
 make
 bash utils/keys_gen.sh .
 ```
-> ***NOTE***:  [Keys_Gen](../utils/keys_gen.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script 
+> ***NOTE***:  [Keys_Gen](../utils/keys_gen.sh) script will use OpenSSL from `/opt/` by default. To provide a different path, use `which openssl` command to get the exact path of OpenSSL and modify this variable in the script
 > OPENSSL3_BIN=/opt/openssl/bin (can be /usr/bin or /usr/local/bin)
 >
-> ***NOTE***:  To run with mTLS connection, 
+> ***NOTE***:  To run with mTLS connection,
 > 1. Compile the code with `-DMTLS=true` flag.
 > 2. If signing with external CA, copy CA cert and CA key to `data` folder.
-> 3. Execute `bash utlils/user_csr_req.sh .`
+> 3. Execute `bash utils/user_csr_req.sh .`
 > This will generate client CSR and private key.
-> 
+>
 Several other options to choose when building the device are, but not limited to, the following: device-attestation (DA) methods, Advanced Encryption Standard (AES) encryption modes (AES_MODE), and underlying cryptography library to use (TLS).
 Refer to the section. [FDO Build configurations](build_conf.md)
 
@@ -231,7 +231,11 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
   ./build/linux-client
   ```
 
-> ***NOTE***: Usage: `linux-client -ip <http|https>://<mfg addr>:<port>`
-        if -ip not specified, manufacturer_addr.bin will be used
-        `-ss`: specify if backend servers are using self-signed certificates
-        `-r`: enable resale
+> ***NOTE***: Usage:
+>
+> ```
+>./build/linux-client -ip <http|https>://<mfg addr>:<port>
+>if -ip not specified, manufacturer_addr.bin will be used
+>-ss: specify if backend servers are using self-signed certificates
+>-r: enable resale
+>```

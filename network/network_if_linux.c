@@ -829,12 +829,13 @@ err:
 
 /**
  * Send and Receive data.
- *
- * @param protocol_version - FDO protocol version
- * @param message_type - message type of outgoing FDO message.
- * @param buf - data buffer to write from.
- * @param length - Number of sent bytes.
- * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
+ * @param[in] protocol_version: FDO protocol version
+ * @param[in] message_type: message type of outgoing FDO message.
+ * @param[in] buf: data buffer to write from.
+ * @param[in] length: Number of sent bytes.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
+ * @param[in] header_buf: header data buffer to read into  msg received by curl.
+ * @param[in] body_buf: body data buffer to read into  msg received by curl.
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_send_recv_message(uint32_t protocol_version,
@@ -874,6 +875,10 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	if (!construct_rest_header(rest, &msg_header) || msg_header == NULL) {
 		LOG(LOG_ERROR, "Error during constrcution of REST hdr!\n");
 		goto err;
+	}
+
+	if (length > REST_MAX_MSGHDR_SIZE) {
+		msg_header = curl_slist_append(msg_header, "Expect:");
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 0L);
@@ -1000,10 +1005,14 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
-	if (memcpy_s(body_buf, temp_body_buf.size, temp_body_buf.memory,
-		     temp_body_buf.size)) {
-		LOG(LOG_ERROR, "Failed to copy msg data in byte array\n");
-		goto err;
+	if ((message_type >= FDO_DI_APP_START) &&
+	    (message_type < FDO_TYPE_ERROR)) {
+		if (memcpy_s(body_buf, temp_body_buf.size, temp_body_buf.memory,
+			     temp_body_buf.size)) {
+			LOG(LOG_ERROR,
+			    "Failed to copy msg data in byte array\n");
+			goto err;
+		}
 	}
 
 	ret = 0;
