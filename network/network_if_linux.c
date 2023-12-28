@@ -365,7 +365,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			if (CURL_VERSION_SSL ==
 			    (vinfo->features & CURL_VERSION_SSL)) {
 				// SSL support enabled
-				LOG(LOG_INFO, "SSL support verified.\n");
+				LOG(LOG_DEBUG, "SSL support verified.\n");
 			}
 
 			// Add option to force the https TLS connection to TLS
@@ -404,8 +404,6 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 					    "verify host.\n");
 					goto err;
 				}
-				LOG(LOG_INFO, "Set connection for self signed "
-					      "certificate usage.\n");
 			}
 #endif
 			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL,
