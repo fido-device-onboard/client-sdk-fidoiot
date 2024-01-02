@@ -128,6 +128,24 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 	}
 	module_info[0].service_info_callback = fdo_sys;
 
+	/* module#2: fdo.download */
+	if (strncpy_s(module_info[1].module_name, FDO_MODULE_NAME_LEN,
+		      "fdo.download", FDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		fdo_free(module_info);
+		return NULL;
+	}
+	module_info[1].service_info_callback = fdo_sim_download;
+
+	/* module#3: fdo.command */
+	if (strncpy_s(module_info[2].module_name, FDO_MODULE_NAME_LEN,
+		      "fdo.command", FDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		fdo_free(module_info);
+		return NULL;
+	}
+	module_info[2].service_info_callback = fdo_sim_command;
+
 	return module_info;
 }
 

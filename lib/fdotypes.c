@@ -6194,25 +6194,41 @@ bool fdo_serviceinfo_modules_list_write(fdow_t *fdow)
 {
 
 	bool ret = false;
-	char module_value[8] = "fdo_sys";
+	char module_value1[FDO_MODULE_NAME_LEN] = "fdo_sys";
+	char module_value2[FDO_MODULE_NAME_LEN] = "fdo.download";
+	char module_value3[FDO_MODULE_NAME_LEN] = "fdo.command";
 
-	if (!fdow_start_array(fdow, 3)) {
+	if (!fdow_start_array(fdow, 5)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to start "
 			       "ServiceInfoVal (modules) array\n");
 		goto end;
 	}
-	if (!fdow_signed_int(fdow, 1)) {
+	if (!fdow_signed_int(fdow, 3)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write "
 			       "ServiceInfoVal (modules) nummodules\n");
 		goto end;
 	}
-	if (!fdow_signed_int(fdow, 1)) {
+	if (!fdow_signed_int(fdow, 3)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write "
 			       "ServiceInfoVal (modules) return count\n");
 		goto end;
 	}
-	if (!fdow_text_string(fdow, module_value,
-			      strnlen_s(module_value, FDO_MAX_STR_SIZE))) {
+	if (!fdow_text_string(fdow, module_value1,
+			      strnlen_s(module_value1, FDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write "
+			       "ServiceInfoVal (modules) module name\n");
+		goto end;
+	}
+
+	if (!fdow_text_string(fdow, module_value2,
+			      strnlen_s(module_value2, FDO_MAX_STR_SIZE))) {
+		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write "
+			       "ServiceInfoVal (modules) module name\n");
+		goto end;
+	}
+
+	if (!fdow_text_string(fdow, module_value3,
+			      strnlen_s(module_value3, FDO_MAX_STR_SIZE))) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write "
 			       "ServiceInfoVal (modules) module name\n");
 		goto end;
