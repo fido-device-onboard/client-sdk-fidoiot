@@ -38,8 +38,7 @@ typedef enum {
 
 void *FSIMModuleAlloc(int size);
 bool fsim_process_data(fdoSimModMsg type, uint8_t *data, uint32_t dataLen,
-		       char *file_name, char **command, bool *status_iscomplete,
-		       int *status_resultcode, uint64_t *status_waitsec);
+		       char *file_name, char **command);
 
 size_t fsim_get_file_sz(char const *filename);
 bool fsim_read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer,

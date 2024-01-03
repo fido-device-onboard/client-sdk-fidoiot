@@ -445,12 +445,6 @@ end:
 int fdo_si_set_osi_exec(uint8_t **exec_instr)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
-	// status_cb isComplete value
-	bool status_cb_iscomplete = false;
-	//  status_cb resultCode value
-	int status_cb_resultcode = -1;
-	// status_cb waitSec value
-	uint64_t status_cb_waitsec = -1;
 
 	if (fdor_is_value_null(fdor)) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to read "
@@ -459,10 +453,8 @@ int fdo_si_set_osi_exec(uint8_t **exec_instr)
 	}
 
 	if (exec_instr) {
-		if (!fsim_process_data(
-			FDO_SIM_MOD_MSG_EXEC, NULL, 0, filename,
-			(char **)exec_instr, &status_cb_iscomplete,
-			&status_cb_resultcode, &status_cb_waitsec)) {
+		if (!fsim_process_data(FDO_SIM_MOD_MSG_EXEC, NULL, 0, filename,
+				       (char **)exec_instr)) {
 			LOG(LOG_ERROR, "Module fdo.command - Failed to "
 				       "process fdo.command:execute\n");
 			goto end;

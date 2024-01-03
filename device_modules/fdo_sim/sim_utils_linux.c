@@ -38,8 +38,7 @@ end:
 }
 
 bool fsim_process_data(fdoSimModMsg type, uint8_t *data, uint32_t data_len,
-		       char *file_name, char **command, bool *status_iscomplete,
-		       int *status_resultcode, uint64_t *status_waitsec)
+		       char *file_name, char **command)
 {
 	bool ret = false;
 	FILE *fp = NULL;
@@ -90,7 +89,7 @@ bool fsim_process_data(fdoSimModMsg type, uint8_t *data, uint32_t data_len,
 	}
 
 	// For exec/exec_cb call
-	if (type == FDO_SIM_MOD_MSG_EXEC || type == FDO_SIM_MOD_MSG_EXEC_CB) {
+	if (type == FDO_SIM_MOD_MSG_EXEC) {
 
 		if (!file_name) {
 #ifdef DEBUG_LOGS
@@ -167,89 +166,8 @@ bool fsim_process_data(fdoSimModMsg type, uint8_t *data, uint32_t data_len,
 						goto end;
 					}
 				}
-			} else {
-				if (!status_iscomplete || !status_resultcode ||
-				    !status_waitsec) {
-#ifdef DEBUG_LOGS
-					printf("Module fdo.commmand:execute : "
-					       "Invalid "
-					       "params\n");
-#endif
-					return ret;
-				}
-				*status_iscomplete = false;
-				*status_resultcode = 0;
-				*status_waitsec = 5;
-				ret = true;
-#ifdef DEBUG_LOGS
-				printf("Module fdo.commmand:execute : Process "
-				       "execution "
-				       "started\n");
-#endif
 			}
 		}
-
-		ret = true;
-	}
-
-	// For status_cb
-	if (type == FDO_SIM_MOD_MSG_STATUS_CB) {
-
-		if (!status_iscomplete || !status_resultcode ||
-		    !status_waitsec) {
-#ifdef DEBUG_LOGS
-			printf("Module status_cb : Invalid params\n");
-#endif
-			return ret;
-		}
-		if (*status_iscomplete && exec_pid < 0) {
-			// final Acknowledgement message from the Owner. NO-OP
-			ret = true;
-			return ret;
-		}
-		if (*status_iscomplete && exec_pid > 0) {
-			// kill the process as requested by the Owner
-			kill(exec_pid, SIGTERM);
-			*status_iscomplete = true;
-			*status_resultcode = 0;
-			*status_waitsec = 0;
-			ret = true;
-			goto end;
-		} else {
-			// check for process status every second, until the
-			// given waitsec
-			int wait_timer = *status_waitsec;
-			while (wait_timer > 0) {
-				if (waitpid(exec_pid, &status, WNOHANG) == -1) {
-#ifdef DEBUG_LOGS
-					printf("Module status_cb : Error "
-					       "occurred while checking "
-					       "process status\n");
-#endif
-					return ret;
-				}
-				if (WIFEXITED(status)) {
-					*status_resultcode =
-					    WEXITSTATUS(status);
-					*status_iscomplete = true;
-					*status_waitsec = 0;
-#ifdef DEBUG_LOGS
-					printf("Module status_cb: Process "
-					       "execution completed\n");
-#endif
-					// reset the process ID since execution
-					// is done
-					exec_pid = -1;
-					ret = true;
-					goto end;
-				}
-				sleep(1);
-				wait_timer--;
-			}
-			*status_iscomplete = false;
-			*status_resultcode = 0;
-		}
-
 		ret = true;
 	}
 

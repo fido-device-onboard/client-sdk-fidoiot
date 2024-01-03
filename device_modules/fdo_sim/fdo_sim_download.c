@@ -356,7 +356,7 @@ int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data)
 	}
 
 	if (!fsim_process_data(FDO_SIM_MOD_MSG_WRITE, bin_data, bin_len,
-			       filename, NULL, NULL, NULL, NULL)) {
+			       filename, NULL)) {
 		LOG(LOG_ERROR, "Module fdo.download - Failed to process value "
 			       "for fdo.download:data\n");
 		goto end;

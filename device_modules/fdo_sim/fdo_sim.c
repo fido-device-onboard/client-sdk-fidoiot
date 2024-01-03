@@ -63,8 +63,7 @@ end:
 int fdo_si_failure(fdor_t **fdor, fdow_t **fdow)
 {
 	// perform clean-ups as needed
-	if (!fsim_process_data(FDO_SIM_MOD_MSG_EXIT, NULL, 0, NULL, NULL, NULL,
-			       NULL, NULL)) {
+	if (!fsim_process_data(FDO_SIM_MOD_MSG_EXIT, NULL, 0, NULL, NULL)) {
 		LOG(LOG_ERROR, "Module fdo_sim - Failed to perform "
 			       "clean-up operations\n");
 		return FDO_SI_INTERNAL_ERROR;
