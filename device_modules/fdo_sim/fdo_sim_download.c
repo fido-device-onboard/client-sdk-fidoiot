@@ -159,7 +159,7 @@ int fdo_si_set_osi_strcmp(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
+	bin_data = FSIMModuleAlloc(bin_len * sizeof(uint8_t));
 	if (!bin_data) {
 		LOG(LOG_ERROR, "Module fdo.download - Failed to "
 			       "alloc for fdo.download:name\n");
@@ -185,7 +185,7 @@ int fdo_si_set_osi_strcmp(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	if (true == delete_old_file((const char *)filename)) {
+	if (true == fsim_delete_old_file((const char *)filename)) {
 		result = FDO_SI_SUCCESS;
 	}
 	LOG(LOG_INFO, "Module fdo.download - File created on path: %s\n",
@@ -247,7 +247,7 @@ int fdo_si_set_osi_sha_384(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
+	bin_data = FSIMModuleAlloc(bin_len * sizeof(uint8_t));
 	if (!bin_data) {
 		LOG(LOG_ERROR, "Module fdo.download - Failed to "
 			       "alloc for fdo.download:sha384\n");
@@ -298,16 +298,16 @@ int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data)
 	if (bin_len == 0) {
 		// Entire file has been sent
 		// Validate hash of received file
-		file_len = get_file_sz(filename);
-		file_data = ModuleAlloc(file_len * sizeof(uint8_t));
+		file_len = fsim_get_file_sz(filename);
+		file_data = FSIMModuleAlloc(file_len * sizeof(uint8_t));
 		if (!file_data) {
 			LOG(LOG_ERROR, "Module fdo.download - Failed to "
 				       "alloc for fdo.download:data\n");
 			goto end;
 		}
 
-		if (!read_buffer_from_file_from_pos(filename, file_data,
-						    file_len, 0)) {
+		if (!fsim_read_buffer_from_file_from_pos(filename, file_data,
+							 file_len, 0)) {
 			LOG(LOG_ERROR,
 			    "Module fdo.download - Failed to read "
 			    "fdo.download:data content from %s\n",
@@ -342,7 +342,7 @@ int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
+	bin_data = FSIMModuleAlloc(bin_len * sizeof(uint8_t));
 	if (!bin_data) {
 		LOG(LOG_ERROR, "Module fdo.download - Failed to "
 			       "alloc for fdo.download:data\n");
@@ -355,8 +355,8 @@ int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	if (!process_data(FDO_SIM_MOD_MSG_WRITE, bin_data, bin_len, filename,
-			  NULL, NULL, NULL, NULL)) {
+	if (!fsim_process_data(FDO_SIM_MOD_MSG_WRITE, bin_data, bin_len,
+			       filename, NULL, NULL, NULL, NULL)) {
 		LOG(LOG_ERROR, "Module fdo.download - Failed to process value "
 			       "for fdo.download:data\n");
 		goto end;
@@ -370,7 +370,7 @@ end:
 		fdo_hash_free(expectedCheckSum);
 	}
 	if (!bin_len && file_data) {
-		ModuleFree(file_data);
+		FSIMModuleFree(file_data);
 	}
 	result = fdo_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
 			 &write_type);

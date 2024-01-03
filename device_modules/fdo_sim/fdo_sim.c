@@ -39,7 +39,7 @@ int fdo_si_start(fdor_t **fdor, fdow_t **fdow)
 	int result = FDO_SI_INTERNAL_ERROR;
 
 	// Initialize module's CBOR Reader/Writer objects.
-	*fdow = ModuleAlloc(sizeof(fdow_t));
+	*fdow = FSIMModuleAlloc(sizeof(fdow_t));
 	if (!fdow_init(*fdow) ||
 	    !fdo_block_alloc_with_size(&(*fdow)->b, 8192)) {
 		LOG(LOG_ERROR, "Module fdo_sim - FDOW "
@@ -48,7 +48,7 @@ int fdo_si_start(fdor_t **fdor, fdow_t **fdow)
 		goto end;
 	}
 
-	*fdor = ModuleAlloc(sizeof(fdor_t));
+	*fdor = FSIMModuleAlloc(sizeof(fdor_t));
 	if (!fdor_init(*fdor) ||
 	    !fdo_block_alloc_with_size(&(*fdor)->b, 8192)) {
 		LOG(LOG_ERROR, "Module fdo_sim - FDOR "
@@ -63,8 +63,8 @@ end:
 int fdo_si_failure(fdor_t **fdor, fdow_t **fdow)
 {
 	// perform clean-ups as needed
-	if (!process_data(FDO_SIM_MOD_MSG_EXIT, NULL, 0, NULL, NULL, NULL, NULL,
-			  NULL)) {
+	if (!fsim_process_data(FDO_SIM_MOD_MSG_EXIT, NULL, 0, NULL, NULL, NULL,
+			       NULL, NULL)) {
 		LOG(LOG_ERROR, "Module fdo_sim - Failed to perform "
 			       "clean-up operations\n");
 		return FDO_SI_INTERNAL_ERROR;
@@ -72,11 +72,11 @@ int fdo_si_failure(fdor_t **fdor, fdow_t **fdow)
 
 	if (*fdow) {
 		fdow_flush(*fdow);
-		ModuleFree(*fdow);
+		FSIMModuleFree(*fdow);
 	}
 	if (*fdor) {
 		fdor_flush(*fdor);
-		ModuleFree(*fdor);
+		FSIMModuleFree(*fdor);
 	}
 	return FDO_SI_SUCCESS;
 }
@@ -182,15 +182,15 @@ int fdo_end(fdor_t **fdor, fdow_t **fdow, int result, uint8_t *bin_data,
 {
 	// End of function, clean-up state variables/objects
 	if (bin_data) {
-		ModuleFree(bin_data);
+		FSIMModuleFree(bin_data);
 	}
 	if (exec_instr && total_exec_array_length > 0) {
 		int exec_counter = total_exec_array_length - 1;
 		while (exec_counter >= 0) {
-			ModuleFree(exec_instr[exec_counter]);
+			FSIMModuleFree(exec_instr[exec_counter]);
 			--exec_counter;
 		}
-		ModuleFree(exec_instr);
+		FSIMModuleFree(exec_instr);
 		total_exec_array_length = 0;
 	}
 	if (result != FDO_SI_SUCCESS) {
@@ -203,11 +203,11 @@ int fdo_end(fdor_t **fdor, fdow_t **fdow, int result, uint8_t *bin_data,
 
 		if (*fdow) {
 			fdow_flush(*fdow);
-			ModuleFree(*fdow);
+			FSIMModuleFree(*fdow);
 		}
 		if (*fdor) {
 			fdor_flush(*fdor);
-			ModuleFree(*fdor);
+			FSIMModuleFree(*fdor);
 		}
 	}
 	return result;

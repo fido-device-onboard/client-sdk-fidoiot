@@ -15,7 +15,7 @@
 // Process ID of the process created by Module:exec_cb
 static pid_t exec_pid = -1;
 
-void *ModuleAlloc(int size)
+void *FSIMModuleAlloc(int size)
 {
 	if (size <= 0) {
 		return NULL;
@@ -37,9 +37,9 @@ end:
 	return buf;
 }
 
-bool process_data(fdoSimModMsg type, uint8_t *data, uint32_t data_len,
-		  char *file_name, char **command, bool *status_iscomplete,
-		  int *status_resultcode, uint64_t *status_waitsec)
+bool fsim_process_data(fdoSimModMsg type, uint8_t *data, uint32_t data_len,
+		       char *file_name, char **command, bool *status_iscomplete,
+		       int *status_resultcode, uint64_t *status_waitsec)
 {
 	bool ret = false;
 	FILE *fp = NULL;
@@ -278,7 +278,7 @@ end:
 	return ret;
 }
 
-bool delete_old_file(const char *filename)
+bool fsim_delete_old_file(const char *filename)
 {
 	FILE *file = NULL;
 	bool ret = false;
@@ -297,7 +297,7 @@ bool delete_old_file(const char *filename)
 /**
  * Return the length of the given file.
  */
-size_t get_file_sz(char const *filename)
+size_t fsim_get_file_sz(char const *filename)
 {
 	if (!filename || !filename[0]) {
 		return 0;
@@ -325,8 +325,8 @@ size_t get_file_sz(char const *filename)
  * Read the filename's content (size bytes) into the given buffer (pre-allocated
  * memory) starting at the specified offset (from).
  */
-bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer,
-				    size_t size, int from)
+bool fsim_read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer,
+					 size_t size, int from)
 {
 	FILE *file = NULL;
 	size_t bytes_read = 0;

@@ -275,7 +275,7 @@ int fdo_si_set_osi_cmd(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	bin_data = ModuleAlloc(bin_len * sizeof(uint8_t));
+	bin_data = FSIMModuleAlloc(bin_len * sizeof(uint8_t));
 	if (!bin_data) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to "
 			       "alloc for fdo.command:command\n");
@@ -289,7 +289,7 @@ int fdo_si_set_osi_cmd(size_t bin_len, uint8_t *bin_data)
 	}
 
 	fdo_cmd_len = bin_len;
-	fdo_cmd = ModuleAlloc(fdo_cmd_len * sizeof(uint8_t));
+	fdo_cmd = FSIMModuleAlloc(fdo_cmd_len * sizeof(uint8_t));
 	if (!fdo_cmd) {
 		LOG(LOG_DEBUG, "Module fdo.command - Failed to "
 			       "alloc for fdo.command:command\n");
@@ -335,8 +335,8 @@ int fdo_si_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 
 	total_exec_array_length = exec_array_length + 1;
 	// allocate memory for exec_instr
-	fdo_exec_instr = (uint8_t **)ModuleAlloc(sizeof(uint8_t *) *
-						 (total_exec_array_length + 1));
+	fdo_exec_instr = (uint8_t **)FSIMModuleAlloc(
+	    sizeof(uint8_t *) * (total_exec_array_length + 1));
 	if (!fdo_exec_instr) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to alloc for "
 			       "fdo.command:args instructions\n");
@@ -344,7 +344,7 @@ int fdo_si_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 	}
 
 	fdo_exec_instr[0] =
-	    (uint8_t *)ModuleAlloc(sizeof(uint8_t) * MOD_MAX_EXEC_ARG_LEN);
+	    (uint8_t *)FSIMModuleAlloc(sizeof(uint8_t) * MOD_MAX_EXEC_ARG_LEN);
 	if (!fdo_exec_instr[0]) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to alloc "
 			       "for single fdo.command:args"
@@ -368,7 +368,7 @@ int fdo_si_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 
 	for (exec_array_index = 1; exec_array_index <= (int)exec_array_length;
 	     exec_array_index++) {
-		fdo_exec_instr[exec_array_index] = (uint8_t *)ModuleAlloc(
+		fdo_exec_instr[exec_array_index] = (uint8_t *)FSIMModuleAlloc(
 		    sizeof(uint8_t) * MOD_MAX_EXEC_ARG_LEN);
 		if (!fdo_exec_instr[exec_array_index]) {
 			LOG(LOG_ERROR, "Module fdo.command - Failed to alloc "
@@ -459,9 +459,10 @@ int fdo_si_set_osi_exec(uint8_t **exec_instr)
 	}
 
 	if (exec_instr) {
-		if (!process_data(FDO_SIM_MOD_MSG_EXEC_CB, NULL, 0, filename,
-				  (char **)exec_instr, &status_cb_iscomplete,
-				  &status_cb_resultcode, &status_cb_waitsec)) {
+		if (!fsim_process_data(
+			FDO_SIM_MOD_MSG_EXEC, NULL, 0, filename,
+			(char **)exec_instr, &status_cb_iscomplete,
+			&status_cb_resultcode, &status_cb_waitsec)) {
 			LOG(LOG_ERROR, "Module fdo.command - Failed to "
 				       "process fdo.command:execute\n");
 			goto end;

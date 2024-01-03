@@ -5459,7 +5459,6 @@ bool fdo_supply_serviceinfoval(char *module_name, char *module_message,
 	bool retval = false;
 	bool module_name_found = false;
 	bool active = false;
-	fdo_sdk_service_info_module_list_t *traverse_list = module_list;
 	fdor_t temp_fdor = {0};
 
 	if (!cb_return_val) {
@@ -5512,14 +5511,6 @@ bool fdo_supply_serviceinfoval(char *module_name, char *module_message,
 				}
 
 				if (active) {
-					// traverse the list to deactivate every
-					// module
-					while (traverse_list) {
-						traverse_list->module.active =
-						    false;
-						traverse_list =
-						    traverse_list->next;
-					}
 					// now activate the current module
 					module_list->module.active = active;
 					LOG(LOG_INFO,
