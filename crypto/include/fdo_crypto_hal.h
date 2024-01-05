@@ -54,7 +54,7 @@ int32_t crypto_close(void);
 /* Calculate hash of "buffer" and place the result in "output". "output" must
  * be allocated already.
  */
-int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
+int32_t crypto_hal_hash(int hash_type, const uint8_t *buffer,
 			size_t buffer_length, uint8_t *output,
 			size_t output_length);
 

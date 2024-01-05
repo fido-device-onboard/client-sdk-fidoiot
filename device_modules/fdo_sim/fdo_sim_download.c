@@ -323,9 +323,9 @@ int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data)
 			goto end;
 		}
 
-		if ((0 != fdo_crypto_hash(file_data, file_len,
-					  hash->hash->bytes,
-					  hash->hash->byte_sz))) {
+		if ((0 != crypto_hal_hash(
+			      FDO_CRYPTO_HASH_TYPE_SHA_384, file_data, file_len,
+			      hash->hash->bytes, hash->hash->byte_sz))) {
 			LOG(LOG_ERROR,
 			    "Module fdo.download - Failed to calculate hash\n");
 			fdo_hash_free(hash);
