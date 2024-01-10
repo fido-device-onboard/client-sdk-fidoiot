@@ -599,7 +599,8 @@ int fdo_tpm_nvdel(uint32_t nv)
 	int exists = (capability_data->data.handles.count > 0 &&
 		      capability_data->data.handles.handle[0] == nv);
 	if (exists != 1) {
-		LOG(LOG_ERROR, "NV index doesn't exist.\n");
+		LOG(LOG_DEBUG, "NV index doesn't exist.\n");
+		ret = 0;
 		goto err;
 	}
 

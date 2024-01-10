@@ -14,6 +14,7 @@
 
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
+#include "tpm2_nv_storage.h"
 #endif
 
 #if defined(DEVICE_CSE_ENABLED)
@@ -151,15 +152,16 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 	if (is_replacement_hmac) {
 #if defined(DEVICE_TPM20_ENABLED)
 		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-					TPM_HMAC_REPLACEMENT_PUB_KEY,
-					TPM_HMAC_REPLACEMENT_PRIV_KEY);
+					TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX,
+					TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX);
 #else
 		keyset = get_replacement_OV_key();
 #endif
 	} else {
 #if defined(DEVICE_TPM20_ENABLED)
 		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-					TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
+					TPM_HMAC_PUB_KEY_NV_IDX,
+					TPM_HMAC_PRIV_KEY_NV_IDX);
 #else
 		keyset = get_OV_key();
 #endif
@@ -225,8 +227,8 @@ int32_t fdo_generate_ov_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 !=
-	    fdo_tpm_generate_hmac_key(TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_PUB_KEY_NV_IDX,
+					   TPM_HMAC_PRIV_KEY_NV_IDX)) {
 		LOG(LOG_ERROR, "Failed to generate device HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -270,8 +272,9 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_REPLACEMENT_PUB_KEY,
-					   TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
+	if (0 !=
+	    fdo_tpm_generate_hmac_key(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX,
+				      TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX)) {
 		LOG(LOG_ERROR, "Failed to generate device replacement HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -367,8 +370,9 @@ int32_t fdo_compute_storage_hmac(const uint8_t *data, uint32_t data_length,
 
 #if defined(DEVICE_TPM20_ENABLED)
 	if (0 != fdo_tpm_get_hmac(data, data_length, computed_hmac,
-				  computed_hmac_size, TPM_HMAC_DATA_PUB_KEY,
-				  TPM_HMAC_DATA_PRIV_KEY)) {
+				  computed_hmac_size,
+				  TPM_HMAC_DATA_PUB_KEY_NV_IDX,
+				  TPM_HMAC_DATA_PRIV_KEY_NV_IDX)) {
 		LOG(LOG_ERROR, "TPM HMAC Computation failed!\n");
 		goto error;
 	}
@@ -420,8 +424,8 @@ int32_t fdo_generate_storage_hmac_key(void)
 	return 0;
 
 #elif defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_DATA_PUB_KEY,
-					   TPM_HMAC_DATA_PRIV_KEY)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_DATA_PUB_KEY_NV_IDX,
+					   TPM_HMAC_DATA_PRIV_KEY_NV_IDX)) {
 		LOG(LOG_ERROR, "Failed to generate TPM data protection "
 			       "key.\n");
 		return ret;

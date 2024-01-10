@@ -568,69 +568,40 @@ exit:
 
 #if defined(DEVICE_TPM20_ENABLED)
 /**
- * fdo_blob_size Get specified FDO blob(file) size
- * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
+ * fdo_tpm_size_nv Get specified FDO nv size
  * @param nv - ptpm nv index
- * @param flags - descriptor telling type of file
  * @return file size on success, 0 if file does not exist or on other failure
  */
 
-size_t fdo_blob_size_nv(uint32_t nv, fdo_sdk_blob_flags flags)
+size_t fdo_tpm_size_nv(uint32_t nv)
 {
 	size_t retval = 0;
-	const size_t NORMAL_BLOB_OVERHEAD =
+	const size_t NORMAL_NV_OVERHEAD =
 	    PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
-	const size_t SECURE_BLOB_OVERHEAD =
-	    AES_TAG_LEN + PLATFORM_IV_DEFAULT_LEN + BLOB_CONTENT_SIZE;
 
 	if (!nv) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
 		goto end;
 	}
 
+	/* Normal cred is stored as:
+	 * [HMAC(32bytes)||data-content-size(4bytes)||data-content(?)]
+	 */
+	retval = fdo_tpm_nvread_size(nv);
+
 	// Return 0 if the file is empty.
-	if (fdo_tpm_nvread_size(nv) == 0) {
+	if (retval == 0) {
 		LOG(LOG_DEBUG, "NV is empty!\n");
 		retval = 0;
 		goto end;
 	}
 
-	switch (flags) {
-	case FDO_SDK_RAW_DATA:
-		/* Raw Files are stored as plain files */
-		retval = fdo_tpm_nvread_size(nv);
-		break;
-	case FDO_SDK_NORMAL_DATA:
-		/* Normal blob is stored as:
-		 * [HMAC(32bytes)||data-content-size(4bytes)||data-content(?)]
-		 */
-		retval = fdo_tpm_nvread_size(nv);
-
-		if (retval >= NORMAL_BLOB_OVERHEAD) {
-			retval -= NORMAL_BLOB_OVERHEAD;
-		} else {
-			/* File format is not correct, not enough data in the
-			 * file */
-			retval = 0;
-		}
-		break;
-	case FDO_SDK_SECURE_DATA:
-		/* Secure blob is stored as:
-		 * [IV_data(12byte)||TAG(16bytes)||
-		 * data-content-size(4bytes)||data-content(?)]
-		 */
-		retval = fdo_tpm_nvread_size(nv);
-		if (retval >= SECURE_BLOB_OVERHEAD) {
-			retval -= SECURE_BLOB_OVERHEAD;
-		} else {
-			/* File format is not correct, not enough data in the
-			 * file */
-			retval = 0;
-		}
-		break;
-	default:
-		LOG(LOG_ERROR, "Invalid storage flag:%d!\n", flags);
-		goto end;
+	if (retval >= NORMAL_NV_OVERHEAD) {
+		retval -= NORMAL_NV_OVERHEAD;
+	} else {
+		/* File format is not correct, not enough data in the
+		 * file */
+		retval = 0;
 	}
 
 end:
@@ -652,8 +623,8 @@ end:
  * @param n_bytes - length of data(in bytes) to be read
  * @return num of bytes read if success, -1 on error
  */
-int32_t fdo_blob_read_nv(uint32_t nv, fdo_sdk_blob_flags flags, uint8_t *buf,
-			 uint32_t n_bytes)
+int32_t fdo_tpm_read_nv(uint32_t nv, fdo_sdk_blob_flags flags, uint8_t *buf,
+			uint32_t n_bytes)
 {
 	int retval = -1;
 	uint8_t *data = NULL;
@@ -882,8 +853,8 @@ exit:
  * @return num of bytes write if success, -1 on error
  */
 
-int32_t fdo_blob_write_nv(uint32_t nv, fdo_sdk_blob_flags flags,
-			  const uint8_t *buf, uint32_t n_bytes)
+int32_t fdo_tpm_write_nv(uint32_t nv, fdo_sdk_blob_flags flags,
+			 const uint8_t *buf, uint32_t n_bytes)
 {
 	int retval = -1;
 	FILE *f = NULL;
@@ -1044,7 +1015,7 @@ int32_t fdo_blob_write_nv(uint32_t nv, fdo_sdk_blob_flags flags,
 	}
 
 	if (fdo_tpm_nvwrite(write_context, write_context_len, nv)) {
-		LOG(LOG_ERROR, "Could not get platform AES Key!\n");
+		LOG(LOG_ERROR, "Failed to write in TPM NV!\n");
 		goto exit;
 	}
 

@@ -10,6 +10,7 @@
  */
 #include "util.h"
 #include "safe_lib.h"
+#include "tpm2_nv_storage.h"
 #include "tpm20_Utils.h"
 #include "fdo_crypto_hal.h"
 #include "storage_al.h"
@@ -39,8 +40,8 @@ static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
  *	-1, on failure
  */
 int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
-			 size_t hmac_length, char *tpmHMACPub_key,
-			 char *tpmHMACPriv_key)
+			 size_t hmac_length, uint32_t tpmHMACPub_key_nv,
+			 uint32_t tpmHMACPriv_key_nv)
 {
 	int32_t ret = -1, ret_val = -1, file_size = 0;
 	size_t hashed_length = 0;
@@ -63,8 +64,9 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	/* Validating all input parameters are passed in the function call*/
 
-	if (!data || !data_length || !tpmHMACPub_key || !tpmHMACPriv_key ||
-	    !hmac || (hmac_length != PLATFORM_HMAC_SIZE)) {
+	if (!data || !data_length || !tpmHMACPub_key_nv ||
+	    !tpmHMACPriv_key_nv || !hmac ||
+	    (hmac_length != PLATFORM_HMAC_SIZE)) {
 		LOG(LOG_ERROR,
 		    "Failed to generate HMAC from TPM, invalid parameter"
 		    " received.\n");
@@ -87,7 +89,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	/* Unmarshalling the HMAC Private key from the HMAC Private key file*/
 
-	file_size = get_file_size(tpmHMACPriv_key);
+	file_size = fdo_tpm_nvread_size(tpmHMACPriv_key_nv);
 
 	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
 	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
@@ -98,10 +100,8 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 	LOG(LOG_DEBUG,
 	    "TPM HMAC Private Key file size retreived successfully.\n");
 
-	ret_val = read_buffer_from_file(tpmHMACPriv_key, bufferTPMHMACPriv_key,
-					file_size);
-
-	if (ret_val != 0) {
+	if (fdo_tpm_read_nv(tpmHMACPriv_key_nv, FDO_SDK_RAW_DATA,
+			    bufferTPMHMACPriv_key, file_size) == -1) {
 		LOG(LOG_ERROR,
 		    "Failed to load TPM HMAC Private Key into buffer.\n");
 		goto err;
@@ -123,7 +123,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	/* Unmarshalling the HMAC Public key from the HMAC public key file*/
 
-	file_size = get_file_size(tpmHMACPub_key);
+	file_size = fdo_tpm_nvread_size(tpmHMACPub_key_nv);
 
 	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
 		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
@@ -133,12 +133,10 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 	LOG(LOG_DEBUG,
 	    "TPM HMAC Public Key file size retreived successfully.\n");
 
-	ret_val = read_buffer_from_file(tpmHMACPub_key, bufferTPMHMACPub_key,
-					file_size);
-
-	if (ret_val != 0) {
+	if (fdo_tpm_read_nv(tpmHMACPub_key_nv, FDO_SDK_RAW_DATA,
+			    bufferTPMHMACPub_key, file_size) == -1) {
 		LOG(LOG_ERROR,
-		    "Failed to load TPM HMAC Public key into buffer.\n");
+		    "Failed to load TPM HMAC Public Key into buffer.\n");
 		goto err;
 	}
 
@@ -353,7 +351,8 @@ err:
  *		0, on success
  *		-1, on failure
  */
-int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
+int32_t fdo_tpm_generate_hmac_key(uint32_t tpmHMACPub_key_nv,
+				  uint32_t tpmHMACPriv_key_nv)
 {
 	int32_t ret = -1;
 	TSS2_RC ret_val = TPM2_RC_FAILURE;
@@ -374,19 +373,9 @@ int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	size_t offset = 0;
 
-	if (!tpmHMACPub_key || !tpmHMACPriv_key) {
+	if (!tpmHMACPub_key_nv || !tpmHMACPriv_key_nv) {
 		LOG(LOG_ERROR, "Failed to generate HMAC Key,"
 			       "invalid parameters received.\n");
-		goto err;
-	}
-
-	if ((file_exists(tpmHMACPub_key) && !remove(tpmHMACPub_key)) &&
-	    (file_exists(tpmHMACPriv_key) && !remove(tpmHMACPriv_key))) {
-		LOG(LOG_DEBUG, "Successfully deleted old HMAC key.\n");
-	} else if (file_exists(tpmHMACPub_key) ||
-		   file_exists(tpmHMACPriv_key)) {
-		LOG(LOG_DEBUG, "HMAC key generation failed,"
-			       "failed to delete the old HMAC key.\n");
 		goto err;
 	}
 
@@ -417,8 +406,9 @@ int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 		goto err;
 	}
 
-	if ((int32_t)offset !=
-	    fdo_blob_write(tpmHMACPub_key, FDO_SDK_RAW_DATA, buffer, offset)) {
+	if ((int32_t)offset != fdo_tpm_write_nv(tpmHMACPub_key_nv,
+						FDO_SDK_RAW_DATA, buffer,
+						offset)) {
 		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
 		goto err;
 	}
@@ -433,8 +423,9 @@ int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key)
 		goto err;
 	}
 
-	if ((int32_t)offset !=
-	    fdo_blob_write(tpmHMACPriv_key, FDO_SDK_RAW_DATA, buffer, offset)) {
+	if ((int32_t)offset != fdo_tpm_write_nv(tpmHMACPriv_key_nv,
+						FDO_SDK_RAW_DATA, buffer,
+						offset)) {
 		LOG(LOG_ERROR,
 		    "Failed to save the private HMAC key context.\n");
 		goto err;
@@ -689,23 +680,14 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 int32_t fdo_tpm_commit_replacement_hmac_key(void)
 {
 	size_t file_size = 0;
-	// internal return value
-	int32_t ret_val = -1;
 	// function return value
 	int32_t ret = -1;
 	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
 	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
 
-	if (!file_exists(TPM_HMAC_PRIV_KEY) || !file_exists(TPM_HMAC_PUB_KEY) ||
-	    !file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY) ||
-	    !file_exists(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
-		LOG(LOG_ERROR, "One or more HMAC objects are missing.\n");
-		goto err;
-	}
-
 	// read TPM_HMAC_REPLACEMENT_PRIV_KEY contents and write it into
 	// TPM_HMAC_PRIV_KEY
-	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PRIV_KEY);
+	file_size = fdo_tpm_nvread_size(TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX);
 
 	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
 	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
@@ -717,18 +699,17 @@ int32_t fdo_tpm_commit_replacement_hmac_key(void)
 	LOG(LOG_DEBUG, "TPM HMAC Replacement Private Key file size retreived "
 		       "successfully.\n");
 
-	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PRIV_KEY,
-					bufferTPMHMACPriv_key, file_size);
-
-	if (ret_val != 0) {
+	if (fdo_tpm_read_nv(TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX,
+			    FDO_SDK_RAW_DATA, bufferTPMHMACPriv_key,
+			    file_size) == -1) {
 		LOG(LOG_ERROR, "Failed to load TPM HMAC Replacement Private "
 			       "Key into buffer.\n");
 		goto err;
 	}
 
 	if ((int32_t)file_size !=
-	    fdo_blob_write(TPM_HMAC_PRIV_KEY, FDO_SDK_RAW_DATA,
-			   bufferTPMHMACPriv_key, file_size)) {
+	    fdo_tpm_write_nv(TPM_HMAC_PRIV_KEY_NV_IDX, FDO_SDK_RAW_DATA,
+			     bufferTPMHMACPriv_key, file_size)) {
 		LOG(LOG_ERROR,
 		    "Failed to save the private HMAC key context.\n");
 		goto err;
@@ -736,7 +717,7 @@ int32_t fdo_tpm_commit_replacement_hmac_key(void)
 
 	// now, read TPM_HMAC_REPLACEMENT_PUB_KEY contents and write it into
 	// TPM_HMAC_PUB_KEY
-	file_size = get_file_size(TPM_HMAC_REPLACEMENT_PUB_KEY);
+	file_size = fdo_tpm_nvread_size(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX);
 
 	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
 		LOG(LOG_ERROR,
@@ -747,18 +728,17 @@ int32_t fdo_tpm_commit_replacement_hmac_key(void)
 	LOG(LOG_DEBUG, "TPM HMAC Replacement Public Key file size retreived "
 		       "successfully.\n");
 
-	ret_val = read_buffer_from_file(TPM_HMAC_REPLACEMENT_PUB_KEY,
-					bufferTPMHMACPub_key, file_size);
-
-	if (ret_val != 0) {
+	if (fdo_tpm_read_nv(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX,
+			    FDO_SDK_RAW_DATA, bufferTPMHMACPub_key,
+			    file_size) == -1) {
 		LOG(LOG_ERROR, "Failed to load TPM HMAC Replacement Public key "
 			       "into buffer.\n");
 		goto err;
 	}
 
 	if ((int32_t)file_size !=
-	    fdo_blob_write(TPM_HMAC_PUB_KEY, FDO_SDK_RAW_DATA,
-			   bufferTPMHMACPub_key, file_size)) {
+	    fdo_tpm_write_nv(TPM_HMAC_PUB_KEY_NV_IDX, FDO_SDK_RAW_DATA,
+			     bufferTPMHMACPub_key, file_size)) {
 		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
 		goto err;
 	}
@@ -774,15 +754,13 @@ err:
 void fdo_tpm_clear_replacement_hmac_key(void)
 {
 	// remove the files if they exist, else return
-	if (file_exists(TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
-		if (0 != remove(TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
-			LOG(LOG_ERROR, "Failed to cleanup private object\n");
-		}
+
+	if (0 != fdo_tpm_nvdel(TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to cleanup private object\n");
 	}
-	if (file_exists(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
-		if (0 != remove(TPM_HMAC_REPLACEMENT_PUB_KEY)) {
-			LOG(LOG_ERROR, "Failed to cleanup public object\n");
-		}
+
+	if (0 != fdo_tpm_nvdel(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to cleanup public object\n");
 	}
 }
 
@@ -795,12 +773,10 @@ void fdo_tpm_clear_replacement_hmac_key(void)
  */
 int32_t is_valid_tpm_data_protection_key_present(void)
 {
-	return (file_exists(TPM_HMAC_DATA_PUB_KEY) &&
-		(TPM_HMAC_PUB_KEY_CONTEXT_SIZE ==
-		 get_file_size(TPM_HMAC_DATA_PUB_KEY)) &&
-		file_exists(TPM_HMAC_DATA_PRIV_KEY) &&
+	return ((TPM_HMAC_PUB_KEY_CONTEXT_SIZE ==
+		 fdo_tpm_nvread_size(TPM_HMAC_DATA_PUB_KEY_NV_IDX)) &&
 		(TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 ==
-		     get_file_size(TPM_HMAC_DATA_PRIV_KEY) ||
+		     fdo_tpm_nvread_size(TPM_HMAC_DATA_PRIV_KEY_NV_IDX) ||
 		 TPM_HMAC_PRIV_KEY_CONTEXT_SIZE ==
-		     get_file_size(TPM_HMAC_DATA_PRIV_KEY)));
+		     fdo_tpm_nvread_size(TPM_HMAC_DATA_PRIV_KEY_NV_IDX)));
 }

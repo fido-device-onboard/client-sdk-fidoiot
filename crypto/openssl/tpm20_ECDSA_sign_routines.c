@@ -15,9 +15,12 @@
 #include <openssl/provider.h>
 #include <openssl/crypto.h>
 #include <openssl/store.h>
+#include <openssl/bio.h>
 #include "safe_lib.h"
 #include "util.h"
 #include "fdo_crypto_hal.h"
+#include "tpm20_Utils.h"
+#include "tpm2_nv_storage.h"
 
 /**
  * Sign a message using provided ECDSA Private Keys.
@@ -45,6 +48,8 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	EVP_MD_CTX *mdctx = NULL;
 	OSSL_STORE_CTX *ctx = NULL;
 	OSSL_STORE_INFO *info = NULL;
+	BIO *mem = NULL;
+	unsigned char *pri_key = NULL;
 
 	if (!data || !data_len || !message_signature || !signature_length) {
 		LOG(LOG_ERROR, "Invalid Parameters received.");
@@ -58,23 +63,31 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	}
 
 	// Read the key
-	if ((ctx = OSSL_STORE_open(TPM_ECDSA_DEVICE_KEY, NULL, NULL, NULL,
-				   NULL)) == NULL) {
-		LOG(LOG_ERROR, "Error during OSSL_STORE_open\n");
+	size_t file_size = fdo_tpm_nvread_size(TPM_ECDSA_DEVICE_KEY_NV_IDX);
+
+	pri_key = fdo_alloc(file_size);
+	if (!pri_key) {
+		LOG(LOG_ERROR, "Failed to allocate memory for private key.\n");
 		goto error;
 	}
 
-	while (!OSSL_STORE_eof(ctx) && (info = OSSL_STORE_load(ctx)) != NULL) {
-		if (OSSL_STORE_INFO_get_type(info) == OSSL_STORE_INFO_PKEY) {
-			pkey = OSSL_STORE_INFO_get1_PKEY(info);
-			break;
-		}
-		OSSL_STORE_INFO_free(info);
-		info = NULL;
+	if (fdo_tpm_nvread(TPM_ECDSA_DEVICE_KEY_NV_IDX, file_size, &pri_key) ==
+	    -1) {
+		LOG(LOG_ERROR,
+		    "Failed to load TPM HMAC Private Key into buffer.\n");
+		goto error;
 	}
 
-	if (!pkey) {
+	mem = BIO_new_mem_buf(pri_key, file_size);
+	if (mem == NULL) {
+		LOG(LOG_ERROR, "Failed to create memory BIO\n");
+		goto error;
+	}
+
+	pkey = PEM_read_bio_PrivateKey(mem, NULL, NULL, NULL);
+	if (pkey == NULL) {
 		LOG(LOG_ERROR, "Error during reading Private key.\n");
+		BIO_free(mem);
 		goto error;
 	}
 
@@ -198,6 +211,12 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	ret = 0;
 
 error:
+	if (pri_key) {
+		fdo_free(pri_key);
+	}
+	if (mem) {
+		BIO_free(mem);
+	}
 	if (pkey) {
 		EVP_PKEY_free(pkey);
 	}

@@ -35,16 +35,6 @@ if(TARGET_OS MATCHES linux)
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
-       -DTPM_DEVICE_CSR=\"${BLOB_PATH}/data/tpm_device_csr\"
-       -DTPM_ECDSA_DEVICE_KEY=\"${BLOB_PATH}/data/tpm_ecdsa_priv_pub_blob.key\"
-       -DTPM_INPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_input_data_temp_file\"
-       -DTPM_OUTPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_output_data_temp_file\"
-       -DTPM_HMAC_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_pub.key\"
-       -DTPM_HMAC_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_priv.key\"
-       -DTPM_HMAC_REPLACEMENT_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_pub.key\"
-       -DTPM_HMAC_REPLACEMENT_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_priv.key\"
-       -DTPM_HMAC_DATA_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_pub.key\"
-       -DTPM_HMAC_DATA_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_priv.key\"
 	)
     endif()
 

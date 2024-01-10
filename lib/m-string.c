@@ -20,6 +20,11 @@
 #include "cse_utils.h"
 #include "cse_tools.h"
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#include "fdo_crypto.h"
+#include "tpm2_nv_storage.h"
+#endif
 
 #include <inttypes.h>
 
@@ -247,7 +252,7 @@ int ps_get_m_string(fdo_prot_t *ps)
 
 	/* Get the CSR data */
 #if defined(DEVICE_TPM20_ENABLED)
-	size_t m_string_sz = get_file_size(TPM_DEVICE_CSR);
+	size_t m_string_sz = fdo_tpm_nvread_size(TPM_DEVICE_CSR_NV_IDX);
 
 	csr = fdo_byte_array_alloc(m_string_sz);
 	if (!csr) {
@@ -256,11 +261,12 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 
-	ret = read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes, csr->byte_sz);
-	if (0 != ret) {
-		LOG(LOG_ERROR, "Failed to read %s file!\n", TPM_DEVICE_CSR);
+	if (fdo_tpm_read_nv(TPM_DEVICE_CSR_NV_IDX, FDO_SDK_RAW_DATA, csr->bytes,
+			    csr->byte_sz) == -1) {
+		LOG(LOG_ERROR, "Failed to load TPM DEVICE CSR into buffer.\n");
 		goto err;
 	}
+	ret = 0;
 #elif defined(DEVICE_CSE_ENABLED)
 	// CSR will be NULL for CSE
 	csr = fdo_byte_array_alloc(0);

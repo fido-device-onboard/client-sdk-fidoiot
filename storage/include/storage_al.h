@@ -47,13 +47,13 @@ size_t fdo_blob_size(const char *blob_name, fdo_sdk_blob_flags flags);
 int32_t create_hmac_normal_blob(void);
 
 #if defined(DEVICE_TPM20_ENABLED)
-int32_t fdo_blob_read_nv(uint32_t nv, fdo_sdk_blob_flags flags, uint8_t *buffer,
-			 uint32_t length);
+int32_t fdo_tpm_read_nv(uint32_t nv, fdo_sdk_blob_flags flags, uint8_t *buffer,
+			uint32_t length);
 
-int32_t fdo_blob_write_nv(uint32_t nv, fdo_sdk_blob_flags flags,
-			  const uint8_t *buffer, uint32_t length);
+int32_t fdo_tpm_write_nv(uint32_t nv, fdo_sdk_blob_flags flags,
+			 const uint8_t *buffer, uint32_t length);
 
-size_t fdo_blob_size_nv(uint32_t nv, fdo_sdk_blob_flags flags);
+size_t fdo_tpm_size_nv(uint32_t nv);
 #endif
 #ifdef __cplusplus
 } // endof externc (CPP code)

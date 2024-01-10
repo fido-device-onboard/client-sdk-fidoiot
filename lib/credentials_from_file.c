@@ -559,7 +559,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
 	}
 	fdow->b.block_size = encoded_cred_length;
 
-	if (fdo_blob_write_nv(nv, flags, fdow->b.block, fdow->b.block_size) ==
+	if (fdo_tpm_write_nv(nv, flags, fdow->b.block, fdow->b.block_size) ==
 	    -1) {
 		LOG(LOG_ERROR, "Failed to write DeviceCredential blob\n");
 		ret = false;
@@ -607,7 +607,7 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
 		goto end;
 	}
 
-	dev_cred_len = fdo_blob_size_nv(nv, flags);
+	dev_cred_len = fdo_tpm_size_nv(nv);
 	// Device has not yet been initialized.
 	// Since, Normal.blob is empty, the file size will be 0
 	if (dev_cred_len == 0) {
@@ -627,7 +627,7 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
 		goto end;
 	}
 
-	if (fdo_blob_read_nv(nv, flags, fdor->b.block, fdor->b.block_size) ==
+	if (fdo_tpm_read_nv(nv, flags, fdor->b.block, fdor->b.block_size) ==
 	    -1) {
 		LOG(LOG_ERROR,
 		    "Failed to read DeviceCredential blob : Normal.blob\n");
@@ -744,8 +744,8 @@ int store_tpm_credential(fdo_dev_cred_t *ocred)
 {
 	/* Write in the file and save the Normal device credentials */
 	LOG(LOG_DEBUG, "Writing to TPm NV storage\n");
-	if (!write_tpm_device_credentials(FDO_CRED_NORMAL_NV_IDX,
-					  FDO_SDK_NORMAL_DATA, ocred)) {
+	if (!write_tpm_device_credentials(FDO_CRED_NV_IDX, FDO_SDK_NORMAL_DATA,
+					  ocred)) {
 		LOG(LOG_ERROR, "Could not write to Normal Credentials blob\n");
 		return -1;
 	}
@@ -913,9 +913,9 @@ int load_credential(fdo_dev_cred_t *ocred)
 		return -1;
 	}
 #elif defined(DEVICE_TPM20_ENABLED)
-	/* Read in the blob and save the device credentials */
-	if (!read_tpm_device_credentials(FDO_CRED_NORMAL_NV_IDX,
-					 FDO_SDK_NORMAL_DATA, ocred)) {
+	/* Read and save the device credentials */
+	if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, FDO_SDK_NORMAL_DATA,
+					 ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}
@@ -977,8 +977,7 @@ bool load_device_status(fdo_sdk_device_status *state)
 		return false;
 	}
 #elif defined(DEVICE_TPM20_ENABLED)
-	size_t dev_cred_len =
-	    fdo_blob_size_nv(FDO_CRED_NORMAL_NV_IDX, FDO_SDK_NORMAL_DATA);
+	size_t dev_cred_len = fdo_tpm_size_nv(FDO_CRED_NV_IDX);
 #else
 	size_t dev_cred_len =
 	    fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA);

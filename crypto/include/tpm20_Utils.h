@@ -103,9 +103,10 @@ static const TPM2B_PUBLIC in_publicHMACKey_template = {
 };
 
 int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
-			 size_t hmac_length, char *tpmHMACPub_key,
-			 char *tpmHMACPriv_key);
-int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key);
+			 size_t hmac_length, uint32_t tpmHMACPub_key_nv,
+			 uint32_t tpmHMACPriv_key_nv);
+int32_t fdo_tpm_generate_hmac_key(uint32_t tpmHMACPub_key_nv,
+				  uint32_t tpmHMACPriv_key_nv);
 int32_t fdo_tpm_commit_replacement_hmac_key(void);
 void fdo_tpm_clear_replacement_hmac_key(void);
 int32_t is_valid_tpm_data_protection_key_present(void);
