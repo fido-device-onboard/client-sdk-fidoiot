@@ -63,22 +63,22 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	}
 
 	// Read the key
-	size_t file_size = fdo_tpm_nvread_size(TPM_ECDSA_DEVICE_KEY_NV_IDX);
+	size_t key_size = fdo_tpm_nvread_size(TPM_ECDSA_DEVICE_KEY_NV_IDX);
 
-	pri_key = fdo_alloc(file_size);
+	pri_key = fdo_alloc(key_size);
 	if (!pri_key) {
 		LOG(LOG_ERROR, "Failed to allocate memory for private key.\n");
 		goto error;
 	}
 
-	if (fdo_tpm_nvread(TPM_ECDSA_DEVICE_KEY_NV_IDX, file_size, &pri_key) ==
+	if (fdo_tpm_nvread(TPM_ECDSA_DEVICE_KEY_NV_IDX, key_size, &pri_key) ==
 	    -1) {
 		LOG(LOG_ERROR,
 		    "Failed to load TPM HMAC Private Key into buffer.\n");
 		goto error;
 	}
 
-	mem = BIO_new_mem_buf(pri_key, file_size);
+	mem = BIO_new_mem_buf(pri_key, key_size);
 	if (mem == NULL) {
 		LOG(LOG_ERROR, "Failed to create memory BIO\n");
 		goto error;

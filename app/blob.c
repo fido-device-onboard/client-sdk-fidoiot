@@ -59,7 +59,6 @@ static int32_t gen_rdm_bytestream(uint8_t *random_buffer, size_t num_bytes)
 	}
 	return 0;
 }
-#endif
 
 int32_t configure_normal_blob(void)
 {
@@ -72,19 +71,6 @@ int32_t configure_normal_blob(void)
 	uint8_t *signed_normal_blob = NULL;
 	size_t signed_normal_blob_size = 0;
 	int32_t ret = -1;
-
-#if defined(DEVICE_TPM20_ENABLED)
-	if (0 == is_valid_tpm_data_protection_key_present()) {
-		if (0 != fdo_generate_storage_hmac_key()) {
-			LOG(LOG_ERROR, "Failed to generate TPM data protection"
-				       " key.\n");
-			goto err;
-		}
-
-		LOG(LOG_DEBUG,
-		    "TPM data protection key generated successfully.\n");
-	}
-#else
 	uint8_t hmac_key[PLATFORM_HMAC_KEY_DEFAULT_LEN] = {0};
 
 	size_t key_size_stored =
@@ -115,7 +101,6 @@ int32_t configure_normal_blob(void)
 		LOG(LOG_ERROR, "Failed to read plain Normal blob!\n");
 		goto err;
 	}
-#endif
 
 	raw_normal_blob_size =
 	    fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_RAW_DATA);
@@ -159,13 +144,6 @@ int32_t configure_normal_blob(void)
 		    "Malloc Failed for sealed Normal Blob buffer!\n");
 		goto err;
 	}
-#if defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_compute_storage_hmac(raw_normal_blob, raw_normal_blob_size,
-					  signed_normal_blob,
-					  PLATFORM_HMAC_SIZE)) {
-		goto err;
-	}
-#else
 #if defined(USE_MBEDTLS)
 	if (0 != mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
 				 (const uint8_t *)hmac_key,
@@ -179,7 +157,6 @@ int32_t configure_normal_blob(void)
 			 signed_normal_blob, NULL)) {
 		goto err;
 	}
-#endif
 #endif
 	// copy plain-text size
 	signed_normal_blob[PLATFORM_HMAC_SIZE + 3] = raw_normal_blob_size >> 0;
@@ -215,3 +192,4 @@ err:
 	}
 	return ret;
 }
+#endif

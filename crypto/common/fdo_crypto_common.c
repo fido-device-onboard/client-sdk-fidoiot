@@ -114,10 +114,6 @@ int32_t fdo_crypto_close(void)
 	ret = crypto_close();
 	/* CLeanup of context structs */
 	cleanup_ctx();
-#if defined(DEVICE_TPM20_ENABLED)
-	/* clear the replacement hmac key objects */
-	fdo_tpm_clear_replacement_hmac_key();
-#endif
 	return ret;
 }
 

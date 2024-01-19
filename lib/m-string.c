@@ -261,8 +261,8 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (fdo_tpm_read_nv(TPM_DEVICE_CSR_NV_IDX, FDO_SDK_RAW_DATA, csr->bytes,
-			    csr->byte_sz) == -1) {
+	if (fdo_tpm_read_nv(TPM_DEVICE_CSR_NV_IDX, csr->bytes, csr->byte_sz) ==
+	    -1) {
 		LOG(LOG_ERROR, "Failed to load TPM DEVICE CSR into buffer.\n");
 		goto err;
 	}

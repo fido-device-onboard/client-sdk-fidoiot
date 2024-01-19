@@ -6,7 +6,7 @@ DEVICE_CSR_FILE_INSIDE_DATA_DIR="tpm_device_csr"
 PARENT_DIR=""
 
 TPM_ENDORSEMENT_PRIMARY_KEY_CTX=tpm_primary_key.ctx
-TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE=0x81000001
+TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE=0x81020002
 
 found_path=0
 verbose=0
@@ -106,7 +106,7 @@ execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="Load primary key inside persistance memory at $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE"
 cmd="tpm2_evictcontrol -C o $TPM_ENDORSEMENT_PRIMARY_KEY_PERSISTANT_HANDLE -c $tpm_endorsement_primary_key_ctx -V"
-success_string="$task completed successfully at!!"
+success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
@@ -125,26 +125,26 @@ execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 # write tpm device key and device csr inside tpm
 task="Define a TPM Non-Volatile (NV) index for TPM KEY"
 key_size=$(wc -c < $tpm_device_key_file)
-cmd="tpm2_nvdefine -Q   0x1000008 -C o -s $key_size -a \"ownerwrite|authwrite|write_stclear|ownerread|authread|read_stclear\""
+cmd="tpm2_nvdefine -Q   0x01D10004 -C o -s $key_size -a \"ownerwrite|authwrite|ownerread|authread|no_da\""
 success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="Define a TPM Non-Volatile (NV) index for TPM Device CSR"
 csr_size=$(wc -c < $device_csr_file)
-cmd="tpm2_nvdefine -Q   0x1000009 -C o -s $csr_size -a \"ownerwrite|authwrite|write_stclear|ownerread|authread|read_stclear\""
+cmd="tpm2_nvdefine -Q   0x01D10005 -C o -s $csr_size -a \"ownerwrite|authwrite|ownerread|authread|no_da\""
 success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="Write TPM ECDSA KEY to a Non-Volatile (NV) index"
-cmd="tpm2_nvwrite -Q   0x1000008 -C o -i $tpm_device_key_file"
+cmd="tpm2_nvwrite -Q   0x01D10004 -C o -i $tpm_device_key_file"
 success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="Write TPM Device CSR to a Non-Volatile (NV) index"
-cmd="tpm2_nvwrite -Q   0x1000009 -C o -i $device_csr_file"
+cmd="tpm2_nvwrite -Q   0x01D10005 -C o -i $device_csr_file"
 success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1

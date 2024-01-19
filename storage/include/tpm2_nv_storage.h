@@ -5,19 +5,10 @@
 #include <tss2/tss2_mu.h>
 #include <tss2/tss2_tctildr.h>
 
-#define FDO_CRED_NV_IDX 0x1000001
-
-#define TPM_HMAC_PUB_KEY_NV_IDX 0x1000002
-#define TPM_HMAC_PRIV_KEY_NV_IDX 0x1000003
-
-#define TPM_HMAC_DATA_PUB_KEY_NV_IDX 0x1000004
-#define TPM_HMAC_DATA_PRIV_KEY_NV_IDX 0x1000005
-
-#define TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX 0x1000006
-#define TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX 0x1000007
-
-#define TPM_ECDSA_DEVICE_KEY_NV_IDX 0x1000008
-#define TPM_DEVICE_CSR_NV_IDX 0x1000009
+#define FDO_CRED_NV_IDX 0x01D10001
+#define TPM_PRIMARY_KEY_PERSISTANT_HANDLE 0x81020003
+#define TPM_ECDSA_DEVICE_KEY_NV_IDX 0x01D10004
+#define TPM_DEVICE_CSR_NV_IDX 0x01D10005
 
 #if defined(ECDSA256_DA)
 #define FDO_TPM2_ALG_SHA TPM2_ALG_SHA256
@@ -32,7 +23,7 @@
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvdefine(uint32_t nv, size_t data_size);
+int fdo_tpm_nvdefine(TPMI_RH_NV_INDEX nv, size_t data_size);
 
 /** Store a data in a NV index.
  *
@@ -43,7 +34,7 @@ int fdo_tpm_nvdefine(uint32_t nv, size_t data_size);
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, uint32_t nv);
+int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, TPMI_RH_NV_INDEX nv);
 
 /** Load data size from a NV index.
  *
@@ -52,7 +43,7 @@ int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, uint32_t nv);
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-size_t fdo_tpm_nvread_size(uint32_t nv);
+size_t fdo_tpm_nvread_size(TPMI_RH_NV_INDEX nv);
 
 /** Load a data from a NV index.
  *
@@ -63,7 +54,7 @@ size_t fdo_tpm_nvread_size(uint32_t nv);
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvread(uint32_t nv, size_t data_size, uint8_t **data);
+int fdo_tpm_nvread(TPMI_RH_NV_INDEX nv, size_t data_size, uint8_t **data);
 
 /** Delete data from a NV index.
  *
@@ -72,4 +63,4 @@ int fdo_tpm_nvread(uint32_t nv, size_t data_size, uint8_t **data);
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvdel(uint32_t nv);
+int fdo_tpm_nvdel(TPMI_RH_NV_INDEX nv);

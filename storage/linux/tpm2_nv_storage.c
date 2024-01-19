@@ -157,7 +157,7 @@ static int32_t fdo_tpm_context_clean_up(ESYS_CONTEXT **esys_context,
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvdefine(uint32_t nv, size_t data_size)
+int fdo_tpm_nvdefine(TPMI_RH_NV_INDEX nv, size_t data_size)
 {
 
 	if (!nv) {
@@ -178,9 +178,9 @@ int fdo_tpm_nvdefine(uint32_t nv, size_t data_size)
 	    .nvPublic = {
 		.nvIndex = nv,
 		.nameAlg = FDO_TPM2_ALG_SHA,
-		.attributes = (TPMA_NV_OWNERWRITE | TPMA_NV_AUTHWRITE |
-			       TPMA_NV_WRITE_STCLEAR | TPMA_NV_READ_STCLEAR |
-			       TPMA_NV_AUTHREAD | TPMA_NV_OWNERREAD),
+		.attributes =
+		    (TPMA_NV_OWNERWRITE | TPMA_NV_AUTHWRITE | TPMA_NV_AUTHREAD |
+		     TPMA_NV_OWNERREAD | TPMA_NV_NO_DA),
 		.authPolicy =
 		    {
 			.size = 0,
@@ -255,7 +255,7 @@ err:
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, uint32_t nv)
+int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, TPMI_RH_NV_INDEX nv)
 {
 	if (!data || !nv) {
 		return -1;
@@ -275,9 +275,9 @@ int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, uint32_t nv)
 	    .nvPublic = {
 		.nvIndex = nv,
 		.nameAlg = FDO_TPM2_ALG_SHA,
-		.attributes = (TPMA_NV_OWNERWRITE | TPMA_NV_AUTHWRITE |
-			       TPMA_NV_WRITE_STCLEAR | TPMA_NV_READ_STCLEAR |
-			       TPMA_NV_AUTHREAD | TPMA_NV_OWNERREAD),
+		.attributes =
+		    (TPMA_NV_OWNERWRITE | TPMA_NV_AUTHWRITE | TPMA_NV_AUTHREAD |
+		     TPMA_NV_OWNERREAD | TPMA_NV_NO_DA),
 		.authPolicy =
 		    {
 			.size = 0,
@@ -291,7 +291,6 @@ int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, uint32_t nv)
 		LOG(LOG_ERROR, "Data too large.\n");
 		return -1;
 	}
-	// memcpy(&blob.buffer[0], data, blob.size);
 
 	if (memcpy_s(&blob.buffer[0], blob.size, data, data_size) != 0) {
 		LOG(LOG_ERROR, "Failed to copy data to blob!\n");
@@ -380,7 +379,7 @@ err:
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-size_t fdo_tpm_nvread_size(uint32_t nv)
+size_t fdo_tpm_nvread_size(TPMI_RH_NV_INDEX nv)
 {
 	int ret = -1;
 	TSS2_RC rc;
@@ -471,7 +470,7 @@ err:
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvread(uint32_t nv, size_t data_size, uint8_t **data)
+int fdo_tpm_nvread(TPMI_RH_NV_INDEX nv, size_t data_size, uint8_t **data)
 {
 	int ret = -1;
 	TSS2_RC rc;
@@ -525,9 +524,6 @@ int fdo_tpm_nvread(uint32_t nv, size_t data_size, uint8_t **data)
 		goto err;
 	}
 
-	// *data_size = blob->size;
-	// *data = malloc(blob->size);
-	// memcpy(*data, &blob->buffer[0], blob->size);
 	if (memcpy_s(*data, data_size, &blob->buffer[0], blob->size) != 0) {
 		LOG(LOG_ERROR, "Failed to copy data to blob!\n");
 		goto err;
@@ -556,7 +552,7 @@ err:
  * @retval -1 on undefined/general failure.
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
-int fdo_tpm_nvdel(uint32_t nv)
+int fdo_tpm_nvdel(TPMI_RH_NV_INDEX nv)
 {
 	int ret = -1;
 	TSS2_RC rc;

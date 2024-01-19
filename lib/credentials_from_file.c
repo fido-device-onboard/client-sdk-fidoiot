@@ -480,8 +480,7 @@ int store_credential(fdo_dev_cred_t *ocred)
  * @return true if write and parsed correctly, otherwise false
  */
 
-bool write_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
-				  fdo_dev_cred_t *ocred)
+bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
 {
 	bool ret = true;
 
@@ -559,8 +558,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
 	}
 	fdow->b.block_size = encoded_cred_length;
 
-	if (fdo_tpm_write_nv(nv, flags, fdow->b.block, fdow->b.block_size) ==
-	    -1) {
+	if (fdo_tpm_write_nv(nv, fdow->b.block, fdow->b.block_size) == -1) {
 		LOG(LOG_ERROR, "Failed to write DeviceCredential blob\n");
 		ret = false;
 		goto end;
@@ -582,8 +580,7 @@ end:
  * @param our_dev_cred - pointer to the device credentials block,
  * @return true if read and parsed correctly, otherwise false.
  */
-bool read_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
-				 fdo_dev_cred_t *our_dev_cred)
+bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred)
 {
 	bool ret = false;
 	size_t dev_cred_len = 0;
@@ -627,8 +624,7 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
 		goto end;
 	}
 
-	if (fdo_tpm_read_nv(nv, flags, fdor->b.block, fdor->b.block_size) ==
-	    -1) {
+	if (fdo_tpm_read_nv(nv, fdor->b.block, fdor->b.block_size) == -1) {
 		LOG(LOG_ERROR,
 		    "Failed to read DeviceCredential blob : Normal.blob\n");
 		goto end;
@@ -744,8 +740,7 @@ int store_tpm_credential(fdo_dev_cred_t *ocred)
 {
 	/* Write in the file and save the Normal device credentials */
 	LOG(LOG_DEBUG, "Writing to TPm NV storage\n");
-	if (!write_tpm_device_credentials(FDO_CRED_NV_IDX, FDO_SDK_NORMAL_DATA,
-					  ocred)) {
+	if (!write_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
 		LOG(LOG_ERROR, "Could not write to Normal Credentials blob\n");
 		return -1;
 	}
@@ -914,8 +909,7 @@ int load_credential(fdo_dev_cred_t *ocred)
 	}
 #elif defined(DEVICE_TPM20_ENABLED)
 	/* Read and save the device credentials */
-	if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, FDO_SDK_NORMAL_DATA,
-					 ocred)) {
+	if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
 		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
 		return -1;
 	}

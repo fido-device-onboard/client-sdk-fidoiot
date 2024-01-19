@@ -33,29 +33,23 @@ static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
  * @param hmac: output buffer to save the HMAC
  * @param hmac_length: length of the output HMAC buffer
  *hash length
- * @param tpmHMACPub_key: File name of the TPM HMAC public key
- * @param tpmHMACPriv_key: File name of the TPM HMAC private key
+ * @param persistent_handle: Persistent handle of the TPM HMAC public key
  * @return
  *	0, on success
  *	-1, on failure
  */
 int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
-			 size_t hmac_length, uint32_t tpmHMACPub_key_nv,
-			 uint32_t tpmHMACPriv_key_nv)
+			 size_t hmac_length,
+			 TPMI_DH_PERSISTENT persistent_handle)
 {
-	int32_t ret = -1, ret_val = -1, file_size = 0;
+	int32_t ret = -1, ret_val = -1;
 	size_t hashed_length = 0;
-	size_t offset = 0;
-	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
-	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
 	ESYS_CONTEXT *esys_context = NULL;
 	ESYS_TR primary_key_handle = ESYS_TR_NONE;
 	ESYS_TR auth_session_handle = ESYS_TR_NONE;
 	ESYS_TR hmac_key_handle = ESYS_TR_NONE;
 	ESYS_TR sequence_handle = ESYS_TR_NONE;
 	TPMT_TK_HASHCHECK *validation = NULL;
-	TPM2B_PUBLIC unmarshalHMACPub_key = {0};
-	TPM2B_PRIVATE unmarshalHMACPriv_key = {0};
 	TPM2B_DIGEST *outHMAC = NULL;
 	TPM2B_MAX_BUFFER block = {0};
 	TPM2B_AUTH null_auth = {0};
@@ -64,8 +58,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	/* Validating all input parameters are passed in the function call*/
 
-	if (!data || !data_length || !tpmHMACPub_key_nv ||
-	    !tpmHMACPriv_key_nv || !hmac ||
+	if (!data || !data_length || !persistent_handle || !hmac ||
 	    (hmac_length != PLATFORM_HMAC_SIZE)) {
 		LOG(LOG_ERROR,
 		    "Failed to generate HMAC from TPM, invalid parameter"
@@ -87,82 +80,12 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 
 	LOG(LOG_DEBUG, "TPM Primary Key Context created successfully.\n");
 
-	/* Unmarshalling the HMAC Private key from the HMAC Private key file*/
-
-	file_size = fdo_tpm_nvread_size(tpmHMACPriv_key_nv);
-
-	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
-	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
-		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG,
-	    "TPM HMAC Private Key file size retreived successfully.\n");
-
-	if (fdo_tpm_read_nv(tpmHMACPriv_key_nv, FDO_SDK_RAW_DATA,
-			    bufferTPMHMACPriv_key, file_size) == -1) {
-		LOG(LOG_ERROR,
-		    "Failed to load TPM HMAC Private Key into buffer.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG, "TPM HMAC Private Key file content copied successfully"
-		       " to buffer.\n");
-
-	ret_val = Tss2_MU_TPM2B_PRIVATE_Unmarshal(
-	    bufferTPMHMACPriv_key, file_size, &offset, &unmarshalHMACPriv_key);
-
-	if (ret_val != TSS2_RC_SUCCESS) {
-		LOG(LOG_ERROR, "Failed to unmarshal TPM HMAC Private Key.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG,
-	    "TPM HMAC Private Key Unmarshal complete successfully.\n");
-
-	/* Unmarshalling the HMAC Public key from the HMAC public key file*/
-
-	file_size = fdo_tpm_nvread_size(tpmHMACPub_key_nv);
-
-	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
-		LOG(LOG_ERROR, "TPM HMAC Private Key file size incorrect.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG,
-	    "TPM HMAC Public Key file size retreived successfully.\n");
-
-	if (fdo_tpm_read_nv(tpmHMACPub_key_nv, FDO_SDK_RAW_DATA,
-			    bufferTPMHMACPub_key, file_size) == -1) {
-		LOG(LOG_ERROR,
-		    "Failed to load TPM HMAC Public Key into buffer.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG, "TPM HMAC Public Key file content copied successfully"
-		       " to buffer.\n");
-
-	offset = 0;
-
-	ret_val = Tss2_MU_TPM2B_PUBLIC_Unmarshal(
-	    bufferTPMHMACPub_key, file_size, &offset, &unmarshalHMACPub_key);
-
-	if (ret_val != TSS2_RC_SUCCESS) {
-		LOG(LOG_ERROR, "Failed to unmarshal TPM HMAC Public Key.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG,
-	    "TPM HMAC Public Key Unmarshal complete successfully.\n");
-
 	/* Loading the TPM Primary key, HMAC public key and HMAC Private Key to
 	 * generate the HMAC Key Context */
 
 	ret_val =
-	    Esys_Load(esys_context, primary_key_handle, auth_session_handle,
-		      ESYS_TR_NONE, ESYS_TR_NONE, &unmarshalHMACPriv_key,
-		      &unmarshalHMACPub_key, &hmac_key_handle);
+	    Esys_TR_FromTPMPublic(esys_context, persistent_handle, ESYS_TR_NONE,
+				  ESYS_TR_NONE, ESYS_TR_NONE, &hmac_key_handle);
 
 	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to load HMAC Key Context.\n");
@@ -311,7 +234,7 @@ int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
 err:
 	if (esys_context) {
 		if (hmac_key_handle != ESYS_TR_NONE) {
-			if (Esys_FlushContext(esys_context, hmac_key_handle) !=
+			if (Esys_TR_Close(esys_context, &hmac_key_handle) !=
 			    TSS2_RC_SUCCESS) {
 				LOG(LOG_ERROR,
 				    "Failed to flush HMAC key handle.\n");
@@ -334,10 +257,6 @@ err:
 	}
 	TPM2_ZEROISE_FREE(validation);
 	TPM2_ZEROISE_FREE(outHMAC);
-	memset_s(&unmarshalHMACPriv_key, sizeof(unmarshalHMACPriv_key), 0);
-	memset_s(&unmarshalHMACPub_key, sizeof(unmarshalHMACPub_key), 0);
-	memset_s(bufferTPMHMACPriv_key, sizeof(bufferTPMHMACPriv_key), 0);
-	memset_s(bufferTPMHMACPub_key, sizeof(bufferTPMHMACPub_key), 0);
 
 	return ret;
 }
@@ -345,20 +264,21 @@ err:
 /**
  * Generates HMAC Key inside TPM
  *
- * @param tpmHMACPub_key: File name of the TPM HMAC public key
- * @param tpmHMACPriv_key: File name of the TPM HMAC private key
+ * @param persistent_handle: Persistent handle of the TPM HMAC key
  * @return
  *		0, on success
  *		-1, on failure
  */
-int32_t fdo_tpm_generate_hmac_key(uint32_t tpmHMACPub_key_nv,
-				  uint32_t tpmHMACPriv_key_nv)
+int32_t fdo_tpm_generate_hmac_key(TPMI_DH_PERSISTENT persistent_handle)
 {
 	int32_t ret = -1;
 	TSS2_RC ret_val = TPM2_RC_FAILURE;
 	ESYS_CONTEXT *esys_context = NULL;
 	ESYS_TR primary_key_handle = ESYS_TR_NONE;
 	ESYS_TR auth_session_handle = ESYS_TR_NONE;
+	ESYS_TR object_handle = ESYS_TR_NONE;
+	ESYS_TR pub_object_handle = ESYS_TR_NONE;
+	ESYS_TR persistentHandle = ESYS_TR_NONE;
 	TPM2B_PUBLIC *out_public = NULL;
 	TPM2B_PRIVATE *out_private = NULL;
 	TPM2B_CREATION_DATA *creation_data = NULL;
@@ -370,10 +290,8 @@ int32_t fdo_tpm_generate_hmac_key(uint32_t tpmHMACPub_key_nv,
 	TPML_PCR_SELECTION creationPCR = {0};
 	/* Using same buffer for both public and private context,
 	   private context size > public context size */
-	uint8_t buffer[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
-	size_t offset = 0;
 
-	if (!tpmHMACPub_key_nv || !tpmHMACPriv_key_nv) {
+	if (!persistent_handle) {
 		LOG(LOG_ERROR, "Failed to generate HMAC Key,"
 			       "invalid parameters received.\n");
 		goto err;
@@ -398,40 +316,62 @@ int32_t fdo_tpm_generate_hmac_key(uint32_t tpmHMACPub_key_nv,
 		goto err;
 	}
 
-	ret_val = Tss2_MU_TPM2B_PUBLIC_Marshal(out_public, buffer,
-					       sizeof(buffer), &offset);
+	ret_val = Esys_Load(esys_context, primary_key_handle,
+			    auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE,
+			    out_private, out_public, &object_handle);
 	if (ret_val != TSS2_RC_SUCCESS) {
-		LOG(LOG_ERROR,
-		    "Failed to serialize the public HMAC key context.\n");
+		LOG(LOG_ERROR, "Esys_Load failed: 0x%x\n", ret_val);
+		Esys_Finalize(&esys_context);
 		goto err;
 	}
 
-	if ((int32_t)offset != fdo_tpm_write_nv(tpmHMACPub_key_nv,
-						FDO_SDK_RAW_DATA, buffer,
-						offset)) {
-		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
-		goto err;
-	}
-	LOG(LOG_DEBUG, "Saved HMAC public key context of size %zu.\n", offset);
-
-	offset = 0;
-	ret_val = Tss2_MU_TPM2B_PRIVATE_Marshal(out_private, buffer,
-						sizeof(buffer), &offset);
+	// Search the persistent Handle
+	TPMS_CAPABILITY_DATA *capability_data = NULL;
+	ret_val = Esys_GetCapability(
+	    esys_context, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
+	    TPM2_CAP_HANDLES, persistent_handle, 1, NULL, &capability_data);
 	if (ret_val != TSS2_RC_SUCCESS) {
-		LOG(LOG_ERROR,
-		    "Failed to serialize the private HMAC key context.\n");
+		LOG(LOG_ERROR, "Esys_GetCapability failed!\n");
 		goto err;
 	}
 
-	if ((int32_t)offset != fdo_tpm_write_nv(tpmHMACPriv_key_nv,
-						FDO_SDK_RAW_DATA, buffer,
-						offset)) {
-		LOG(LOG_ERROR,
-		    "Failed to save the private HMAC key context.\n");
+	int exists =
+	    (capability_data->data.handles.count > 0 &&
+	     capability_data->data.handles.handle[0] == persistent_handle);
+	if (exists == 1) {
+		ret_val = Esys_TR_FromTPMPublic(
+		    esys_context, persistent_handle, ESYS_TR_NONE, ESYS_TR_NONE,
+		    ESYS_TR_NONE, &persistentHandle);
+
+		if (ret_val != TSS2_RC_SUCCESS) {
+			LOG(LOG_ERROR, "Failed to load HMAC Key Context.\n");
+			goto err;
+		}
+
+		ret_val = Esys_EvictControl(esys_context, ESYS_TR_RH_OWNER,
+					    persistentHandle, ESYS_TR_PASSWORD,
+					    ESYS_TR_NONE, ESYS_TR_NONE, 0,
+					    &pub_object_handle);
+		if (ret_val != TSS2_RC_SUCCESS) {
+			LOG(LOG_ERROR, "Esys_EvictControl failed: 0x%x\n",
+			    ret_val);
+			Esys_Finalize(&esys_context);
+			goto err;
+		}
+	}
+
+	ret_val = Esys_EvictControl(
+	    esys_context, ESYS_TR_RH_OWNER, object_handle, ESYS_TR_PASSWORD,
+	    ESYS_TR_NONE, ESYS_TR_NONE, persistent_handle, &pub_object_handle);
+	if (ret_val != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Esys_EvictControl failed: 0x%x\n", ret_val);
 		goto err;
 	}
 
-	LOG(LOG_DEBUG, "Saved HMAC private key context of size %zu.\n", offset);
+	LOG(LOG_DEBUG,
+	    "Saved HMAC private key context inside persistance memory at  "
+	    "%d.\n",
+	    persistent_handle);
 	LOG(LOG_DEBUG, "HMAC Key generated successfully!.\n");
 
 	ret = 0;
@@ -443,10 +383,54 @@ err:
 	TPM2_ZEROISE_FREE(creation_hash);
 	TPM2_ZEROISE_FREE(creation_ticket);
 
-	if (esys_context &&
-	    (0 != fdoTPMTSSContext_clean_up(&esys_context, &auth_session_handle,
-					    &primary_key_handle))) {
-		LOG(LOG_ERROR, "Failed to tear down all the TSS context.\n");
+	if (esys_context) {
+		if (object_handle != ESYS_TR_NONE) {
+			if (Esys_TR_Close(esys_context, &object_handle) !=
+			    TSS2_RC_SUCCESS) {
+				LOG(LOG_ERROR,
+				    "Failed to flush object_handle.\n");
+				ret = -1;
+			} else {
+				LOG(LOG_DEBUG,
+				    "object_handle flushed successfully.\n");
+				object_handle = ESYS_TR_NONE;
+			}
+		}
+
+		if (pub_object_handle != ESYS_TR_NONE) {
+			if (Esys_TR_Close(esys_context, &pub_object_handle) !=
+			    TSS2_RC_SUCCESS) {
+				LOG(LOG_ERROR,
+				    "Failed to flush pub_object_handle.\n");
+				ret = -1;
+			} else {
+				LOG(LOG_DEBUG, "pub_object_handle flushed "
+					       "successfully.\n");
+				pub_object_handle = ESYS_TR_NONE;
+			}
+		}
+
+		if (persistentHandle != ESYS_TR_NONE) {
+			if (Esys_TR_Close(esys_context, &persistentHandle) !=
+			    TSS2_RC_SUCCESS) {
+				LOG(LOG_ERROR,
+				    "Failed to flush persistent handle.\n");
+				ret = -1;
+			} else {
+				LOG(LOG_DEBUG, "persistent handle flushed "
+					       "successfully.\n");
+				persistentHandle = ESYS_TR_NONE;
+			}
+		}
+		if (0 != fdoTPMTSSContext_clean_up(&esys_context,
+						   &auth_session_handle,
+						   &primary_key_handle)) {
+			LOG(LOG_ERROR,
+			    "Failed to tear down all the TSS context.\n");
+			ret = -1;
+		} else {
+			LOG(LOG_DEBUG, "TSS context flushed successfully.\n");
+		}
 	}
 
 	return ret;
@@ -667,116 +651,4 @@ static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
 	}
 
 	return 0;
-}
-
-/**
- * Replace the TPM_HMAC_PRIV_KEY with TPM_HMAC_REPLACEMENT_PRIV_KEY and
- * TPM_HMAC_PUB_KEY with TPM_HMAC_REPLACEMENT_PUB_KEY.
- *
- * @return
- *		-1, error
- *		0, success
- */
-int32_t fdo_tpm_commit_replacement_hmac_key(void)
-{
-	size_t file_size = 0;
-	// function return value
-	int32_t ret = -1;
-	uint8_t bufferTPMHMACPriv_key[TPM_HMAC_PRIV_KEY_CONTEXT_SIZE] = {0};
-	uint8_t bufferTPMHMACPub_key[TPM_HMAC_PUB_KEY_CONTEXT_SIZE] = {0};
-
-	// read TPM_HMAC_REPLACEMENT_PRIV_KEY contents and write it into
-	// TPM_HMAC_PRIV_KEY
-	file_size = fdo_tpm_nvread_size(TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX);
-
-	if (file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 &&
-	    file_size != TPM_HMAC_PRIV_KEY_CONTEXT_SIZE) {
-		LOG(LOG_ERROR,
-		    "TPM HMAC Replacement Private Key file size incorrect.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG, "TPM HMAC Replacement Private Key file size retreived "
-		       "successfully.\n");
-
-	if (fdo_tpm_read_nv(TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX,
-			    FDO_SDK_RAW_DATA, bufferTPMHMACPriv_key,
-			    file_size) == -1) {
-		LOG(LOG_ERROR, "Failed to load TPM HMAC Replacement Private "
-			       "Key into buffer.\n");
-		goto err;
-	}
-
-	if ((int32_t)file_size !=
-	    fdo_tpm_write_nv(TPM_HMAC_PRIV_KEY_NV_IDX, FDO_SDK_RAW_DATA,
-			     bufferTPMHMACPriv_key, file_size)) {
-		LOG(LOG_ERROR,
-		    "Failed to save the private HMAC key context.\n");
-		goto err;
-	}
-
-	// now, read TPM_HMAC_REPLACEMENT_PUB_KEY contents and write it into
-	// TPM_HMAC_PUB_KEY
-	file_size = fdo_tpm_nvread_size(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX);
-
-	if (file_size != TPM_HMAC_PUB_KEY_CONTEXT_SIZE) {
-		LOG(LOG_ERROR,
-		    "TPM HMAC Replacement Public Key file size incorrect.\n");
-		goto err;
-	}
-
-	LOG(LOG_DEBUG, "TPM HMAC Replacement Public Key file size retreived "
-		       "successfully.\n");
-
-	if (fdo_tpm_read_nv(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX,
-			    FDO_SDK_RAW_DATA, bufferTPMHMACPub_key,
-			    file_size) == -1) {
-		LOG(LOG_ERROR, "Failed to load TPM HMAC Replacement Public key "
-			       "into buffer.\n");
-		goto err;
-	}
-
-	if ((int32_t)file_size !=
-	    fdo_tpm_write_nv(TPM_HMAC_PUB_KEY_NV_IDX, FDO_SDK_RAW_DATA,
-			     bufferTPMHMACPub_key, file_size)) {
-		LOG(LOG_ERROR, "Failed to save the public HMAC key context.\n");
-		goto err;
-	}
-	ret = 0;
-err:
-	return ret;
-}
-
-/**
- * Clear the Replacement TPM HMAC key objects, if they exist.
- *
- */
-void fdo_tpm_clear_replacement_hmac_key(void)
-{
-	// remove the files if they exist, else return
-
-	if (0 != fdo_tpm_nvdel(TPM_HMAC_REPLACEMENT_PRIV_KEY_NV_IDX)) {
-		LOG(LOG_ERROR, "Failed to cleanup private object\n");
-	}
-
-	if (0 != fdo_tpm_nvdel(TPM_HMAC_REPLACEMENT_PUB_KEY_NV_IDX)) {
-		LOG(LOG_ERROR, "Failed to cleanup public object\n");
-	}
-}
-
-/**
- * Check whether valid data integrity protection HMAC key is present or not.
- *
- * @return
- *		1, present
- *		0, not present
- */
-int32_t is_valid_tpm_data_protection_key_present(void)
-{
-	return ((TPM_HMAC_PUB_KEY_CONTEXT_SIZE ==
-		 fdo_tpm_nvread_size(TPM_HMAC_DATA_PUB_KEY_NV_IDX)) &&
-		(TPM_HMAC_PRIV_KEY_CONTEXT_SIZE_128 ==
-		     fdo_tpm_nvread_size(TPM_HMAC_DATA_PRIV_KEY_NV_IDX) ||
-		 TPM_HMAC_PRIV_KEY_CONTEXT_SIZE ==
-		     fdo_tpm_nvread_size(TPM_HMAC_DATA_PRIV_KEY_NV_IDX)));
 }

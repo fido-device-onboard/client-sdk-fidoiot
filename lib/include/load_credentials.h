@@ -33,10 +33,8 @@ bool load_device_status(fdo_sdk_device_status *state);
 bool store_device_status(fdo_sdk_device_status *state);
 
 #if defined(DEVICE_TPM20_ENABLED)
-bool read_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
-				 fdo_dev_cred_t *our_dev_cred);
-bool write_tpm_device_credentials(uint32_t nv, fdo_sdk_blob_flags flags,
-				  fdo_dev_cred_t *our_dev_cred);
+bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred);
+bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred);
 int store_tpm_credential(fdo_dev_cred_t *ocred);
 #endif
 

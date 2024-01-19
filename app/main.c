@@ -276,20 +276,7 @@ int app_main(bool is_resale)
 	}
 #endif /* SECURE_ELEMENT */
 
-#if !defined(DEVICE_CSE_ENABLED)
-#if defined(DEVICE_TPM20_ENABLED)
-	if (0 == is_valid_tpm_data_protection_key_present()) {
-		if (0 != fdo_generate_storage_hmac_key()) {
-			LOG(LOG_ERROR, "Failed to generate TPM data protection"
-				       " key.\n");
-			ret = -1;
-			goto end;
-		}
-
-		LOG(LOG_DEBUG,
-		    "TPM data protection key generated successfully.\n");
-	}
-#else
+#if !defined(DEVICE_CSE_ENABLED) && !defined(DEVICE_TPM20_ENABLED)
 	LOG(LOG_DEBUG,
 	    "CSE and TPM not enabled, Normal Blob Modules loaded!\n");
 	if (-1 == configure_normal_blob()) {
@@ -298,7 +285,6 @@ int app_main(bool is_resale)
 		ret = -1;
 		goto end;
 	}
-#endif
 #endif
 
 	/* List and Init all Sv_info modules */
