@@ -15,16 +15,6 @@
 #include "fdo_crypto_hal.h"
 #include "storage_al.h"
 
-static int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context);
-static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
-					    ESYS_TR *session_handle);
-static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
-					 ESYS_TR *auth_session_handle,
-					 ESYS_TR *primary_handle);
-static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
-						  ESYS_TR *primary_handle,
-						  ESYS_TR *auth_session_handle);
-
 /**
  * Generates HMAC using TPM
  *
@@ -446,9 +436,9 @@ err:
  *		0, on success
  *		-1, on failure
  */
-static int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
-						  ESYS_TR *primary_key_handle,
-						  ESYS_TR *auth_session_handle)
+int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
+					   ESYS_TR *primary_key_handle,
+					   ESYS_TR *auth_session_handle)
 {
 	int ret = -1;
 	TSS2_RC ret_val = TPM2_RC_FAILURE;
@@ -519,7 +509,7 @@ out:
  *		0, on success
  *		-1, on failure
  */
-static int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context)
+int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context)
 {
 	int ret = -1;
 	TSS2_TCTI_CONTEXT *tcti_context = NULL;
@@ -563,8 +553,8 @@ err:
  *	0, on success
  *	-1, on failure
  */
-static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
-					    ESYS_TR *session_handle)
+int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
+				     ESYS_TR *session_handle)
 {
 	int ret = -1;
 	TPMT_SYM_DEF symmetric = {0};
@@ -593,9 +583,9 @@ static int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
  *	0, on success
  *	-1, on failure
  */
-static int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
-					 ESYS_TR *auth_session_handle,
-					 ESYS_TR *primary_handle)
+int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
+				  ESYS_TR *auth_session_handle,
+				  ESYS_TR *primary_handle)
 {
 	int ret = -1, is_failed = 0;
 	TSS2_TCTI_CONTEXT *tcti_context = NULL;

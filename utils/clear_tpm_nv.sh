@@ -17,12 +17,12 @@ execute_cmd_on_failure_exit()
     return 0
 }
 
-for n in {1,4,5};
+for n in {1,5};
 do
-    task="Deleting a Non-Volatile (NV) index at 0x100000$n"
+    task="Deleting a Non-Volatile (NV) index at 0x01D1000$n"
     cmd="tpm2_nvundefine 0x01D1000$n"
     success_string="$task completed successfully!!"
-    failure_string="Non-Volatile (NV) index at 0x100000$n is not defined!!"
+    failure_string="Non-Volatile (NV) index at 0x01D1000$n is not defined!!"
     execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string"
 done
 echo "TPM NV storage cleared!"

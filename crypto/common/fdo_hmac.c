@@ -152,14 +152,14 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 	if (is_replacement_hmac) {
 #if defined(DEVICE_TPM20_ENABLED)
 		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-					TPM_PRIMARY_KEY_PERSISTANT_HANDLE);
+					TPM_HMAC_KEY_PERSISTANT_HANDLE);
 #else
 		keyset = get_replacement_OV_key();
 #endif
 	} else {
 #if defined(DEVICE_TPM20_ENABLED)
 		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-					TPM_PRIMARY_KEY_PERSISTANT_HANDLE);
+					TPM_HMAC_KEY_PERSISTANT_HANDLE);
 #else
 		keyset = get_OV_key();
 #endif
@@ -225,7 +225,7 @@ int32_t fdo_generate_ov_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_generate_hmac_key(TPM_PRIMARY_KEY_PERSISTANT_HANDLE)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
 		LOG(LOG_ERROR, "Failed to generate device HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -269,7 +269,7 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_generate_hmac_key(TPM_PRIMARY_KEY_PERSISTANT_HANDLE)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
 		LOG(LOG_ERROR, "Failed to generate device replacement HMAC key"
 			       " from TPM.\n");
 		return ret;

@@ -698,7 +698,7 @@ int32_t fdo_tpm_read_nv(TPMI_RH_NV_INDEX nv, uint8_t *buf, uint32_t n_bytes)
 
 		if (0 != fdo_tpm_get_hmac(data, data_length, computed_hmac,
 					  PLATFORM_HMAC_SIZE,
-					  TPM_PRIMARY_KEY_PERSISTANT_HANDLE)) {
+					  TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
 			LOG(LOG_ERROR,
 			    "HMAC computation dailed during"
 			    " %s!\n",
@@ -788,7 +788,7 @@ int32_t fdo_tpm_write_nv(TPMI_RH_NV_INDEX nv, const uint8_t *buf,
 
 		if (0 != fdo_tpm_get_hmac(buf, n_bytes, write_context,
 					  PLATFORM_HMAC_SIZE,
-					  TPM_PRIMARY_KEY_PERSISTANT_HANDLE)) {
+					  TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
 			LOG(LOG_ERROR, "Computing HMAC failed!\n");
 			goto exit;
 		}
