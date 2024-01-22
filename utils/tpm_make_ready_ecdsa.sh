@@ -91,14 +91,6 @@ tpm_device_pub_key_file=$PARENT_DIR"/"$TPM_PUB_KEY_FILE_INSIDE_DATA_DIR
 tpm_device_priv_key_file=$PARENT_DIR"/"$TPM_PRIV_KEY_FILE_INSIDE_DATA_DIR
 device_csr_file=$PARENT_DIR"/"$DEVICE_CSR_FILE_INSIDE_DATA_DIR
 
-rm -f $tpm_endorsement_primary_key_ctx
-
-task="Delete keys if exists from persistance memory"
-cmd="tpm2_evictcontrol -C o -c $TPM_DEVICE_KEY_PERSISTANT_HANDLE -V"
-success_string="$task completed successfully at $TPM_DEVICE_KEY_PERSISTANT_HANDLE !!"
-failure_string="$task failed [probably ignore it]"
-execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 0
-
 task="Primary key generation from endorsement seed"
 cmd="tpm2_createprimary -C e -g sha$ecc -G $primary_key_type -c $tpm_endorsement_primary_key_ctx -V"
 success_string="$task completed successfully at $tpm_endorsement_primary_key_ctx !!"

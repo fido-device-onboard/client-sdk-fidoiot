@@ -1,4 +1,5 @@
 #!/bin/bash
+TPM_DEVICE_KEY_PERSISTANT_HANDLE=0x81020002
 
 execute_cmd_on_failure_exit()
 {
@@ -16,6 +17,12 @@ execute_cmd_on_failure_exit()
 
     return 0
 }
+
+task="Delete keys if exists from persistance memory"
+cmd="tpm2_evictcontrol -C o -c $TPM_DEVICE_KEY_PERSISTANT_HANDLE -V"
+success_string="$task completed successfully at $TPM_DEVICE_KEY_PERSISTANT_HANDLE !!"
+failure_string="$task failed [probably ignore it]"
+execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string"
 
 for n in {1,5};
 do
