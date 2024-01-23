@@ -5,6 +5,7 @@
 #include <tss2/tss2_mu.h>
 #include <tss2/tss2_tctildr.h>
 
+#define FDO_DCActive_NV_IDX 0x01D10000
 #define FDO_CRED_NV_IDX 0x01D10001
 #define TPM_DEVICE_KEY_PERSISTANT_HANDLE 0x81020002
 #define TPM_HMAC_KEY_PERSISTANT_HANDLE 0x81020003

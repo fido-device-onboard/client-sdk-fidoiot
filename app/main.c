@@ -204,19 +204,19 @@ static void print_device_status(void)
 
 	status = fdo_sdk_get_status();
 	if (status == FDO_STATE_PRE_DI) {
-		LOG(LOG_DEBUG, "Device is ready for DI\n");
+		LOG(LOG_INFO, "Device is ready for DI\n");
 	}
 	if (status == FDO_STATE_PRE_TO1) {
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
+		LOG(LOG_INFO, "Device is ready for Ownership transfer\n");
 	}
 	if (status == FDO_STATE_IDLE) {
-		LOG(LOG_DEBUG, "Device Ownership transfer Done\n");
+		LOG(LOG_INFO, "Device Ownership transfer Done\n");
 	}
 	if (status == FDO_STATE_RESALE) {
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
+		LOG(LOG_INFO, "Device is ready for Ownership transfer\n");
 	}
 	if (status == FDO_STATE_ERROR) {
-		LOG(LOG_DEBUG, "Error in getting device status\n");
+		LOG(LOG_ERROR, "Error in getting device status\n");
 	}
 }
 

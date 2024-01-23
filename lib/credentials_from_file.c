@@ -501,7 +501,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
 	/**
 	 * Blob format: Complete DeviceCredential as per Section 3.4.1 of FDO
 	 *Specification, except the DeviceCredential.DCHmacSecret, and addition
-	 *of 'State'. DeviceCredential = [ State, DCActive, DCProtVer,
+	 *of 'State'. DeviceCredential = [ State, DCProtVer,
 	 * 		DCDeviceInfo,
 	 * 		DCGuid,
 	 * 		DCRVInfo,
@@ -509,7 +509,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
 	 * ]
 	 */
 	fdow_next_block(fdow, FDO_DI_SET_CREDENTIALS);
-	if (!fdow_start_array(fdow, 7)) {
+	if (!fdow_start_array(fdow, 6)) {
 		ret = false;
 		goto end;
 	}
@@ -517,10 +517,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
 		ret = false;
 		goto end;
 	}
-	if (!fdow_boolean(fdow, true)) {
-		ret = false;
-		goto end;
-	}
+
 	if (!fdow_signed_int(fdow, ocred->owner_blk->pv)) {
 		ret = false;
 		goto end;
@@ -652,11 +649,6 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred)
 		goto end;
 	}
 
-	if (!fdor_boolean(fdor, &our_dev_cred->dc_active)) {
-		LOG(LOG_ERROR, "DeviceCredential read: DCActive not found\n");
-		goto end;
-	}
-
 	if (!fdor_signed_int(fdor, &our_dev_cred->owner_blk->pv)) {
 		LOG(LOG_ERROR, "DeviceCredential read: DCProtVer not found\n");
 		goto end;
@@ -739,9 +731,23 @@ end:
 int store_tpm_credential(fdo_dev_cred_t *ocred)
 {
 	/* Write in the file and save the Normal device credentials */
-	LOG(LOG_DEBUG, "Writing to TPm NV storage\n");
+	LOG(LOG_DEBUG, "Writing to TPM NV storage\n");
+
+	const char *dc_active = (ocred->dc_active == true) ? "true" : "false";
+	size_t dc_active_len = strnlen_s(dc_active, BUFF_SIZE_8_BYTES);
+	if (!dc_active_len || dc_active_len == BUFF_SIZE_8_BYTES) {
+		LOG(LOG_ERROR, "Strlen() failed!\n")
+		return -1;
+	}
+
+	if (fdo_tpm_nvwrite((uint8_t *)(dc_active), dc_active_len,
+			    FDO_DCActive_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to write DeviceCredential Active\n");
+		return -1;
+	}
+
 	if (!write_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
-		LOG(LOG_ERROR, "Could not write to Normal Credentials blob\n");
+		LOG(LOG_ERROR, "Could not write to Normal Credentials\n");
 		return -1;
 	}
 	return 0;
@@ -909,9 +915,40 @@ int load_credential(fdo_dev_cred_t *ocred)
 	}
 #elif defined(DEVICE_TPM20_ENABLED)
 	/* Read and save the device credentials */
-	if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
-		LOG(LOG_ERROR, "Could not parse the Device Credentials blob\n");
+	u_int8_t *dc_active = NULL;
+	size_t dc_active_len = fdo_tpm_nvread_size(FDO_DCActive_NV_IDX);
+	if (dc_active_len == 0) {
+		LOG(LOG_ERROR, "DeviceCredential Active not found.\n");
 		return -1;
+	}
+
+	dc_active = fdo_alloc(dc_active_len + 1);
+	if (NULL == dc_active) {
+		LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
+		return -1;
+	}
+
+	if (fdo_tpm_nvread(FDO_DCActive_NV_IDX, dc_active_len, &dc_active)) {
+		LOG(LOG_ERROR, "Failed to read file!\n");
+		fdo_free(dc_active);
+		return -1;
+	}
+	int strcmp_res = -1;
+	if (!strcmp_s((char *)dc_active, dc_active_len, "true", &strcmp_res) &&
+	    !strcmp_res) {
+		ocred->dc_active = true;
+		if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
+			LOG(LOG_ERROR,
+			    "Could not parse the Device Credentials blob\n");
+			fdo_free(dc_active);
+			return -1;
+		}
+	} else {
+		ocred->dc_active = false;
+	}
+
+	if (dc_active) {
+		fdo_free(dc_active);
 	}
 #else
 	/* Read in the blob and save the device credentials */
@@ -979,12 +1016,12 @@ bool load_device_status(fdo_sdk_device_status *state)
 	// Device has not yet been initialized.
 	// Since, Normal.blob is empty, the file size will be 0
 	if (dev_cred_len == 0) {
-		LOG(LOG_DEBUG,
+		LOG(LOG_INFO,
 		    "DeviceCredential is empty. Set state to run DI\n");
 		*state = FDO_DEVICE_STATE_PC;
 	} else {
-		LOG(LOG_DEBUG, "DeviceCredential is non-empty. Set state to "
-			       "run TO1/TO2\n");
+		LOG(LOG_INFO, "DeviceCredential is non-empty. Set state to "
+			      "run TO1/TO2\n");
 		// No Device state is being set currently
 	}
 	return true;

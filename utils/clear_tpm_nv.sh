@@ -24,7 +24,7 @@ success_string="$task completed successfully at $TPM_DEVICE_KEY_PERSISTANT_HANDL
 failure_string="$task failed [probably ignore it]"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string"
 
-for n in {1,5};
+for n in {0,1,5};
 do
     task="Deleting a Non-Volatile (NV) index at 0x01D1000$n"
     cmd="tpm2_nvundefine 0x01D1000$n"

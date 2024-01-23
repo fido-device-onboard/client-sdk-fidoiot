@@ -873,6 +873,12 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 		}
 	}
 
+	if (g_fdo_data->devcred->ST != FDO_DEVICE_STATE_PC &&
+	    g_fdo_data->devcred->dc_active == false) {
+		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_IDLE;
+		return FDO_SUCCESS;
+	}
+
 	if ((num_modules == 0) || (num_modules > FDO_MAX_MODULES) ||
 	    (module_information == NULL) ||
 	    (module_information->service_info_callback == NULL)) {
@@ -1177,7 +1183,7 @@ fdo_sdk_status fdo_sdk_resale(void)
 	if (r == FDO_ERROR) {
 		LOG(LOG_ERROR, "Failed to set Resale\n");
 	} else if (r == FDO_RESALE_NOT_READY) {
-		LOG(LOG_DEBUG, "Device is not ready for Resale\n");
+		LOG(LOG_INFO, "Device is not ready for Resale\n");
 	}
 	if (g_fdo_data->devcred) {
 		fdo_dev_cred_free(g_fdo_data->devcred);
