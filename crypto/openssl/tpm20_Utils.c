@@ -338,10 +338,10 @@ int32_t fdo_tpm_generate_hmac_key(TPMI_DH_PERSISTENT persistent_handle)
 			goto err;
 		}
 
-		ret_val = Esys_EvictControl(esys_context, ESYS_TR_RH_OWNER,
-					    persistentHandle, ESYS_TR_PASSWORD,
-					    ESYS_TR_NONE, ESYS_TR_NONE, 0,
-					    &pub_object_handle);
+		ret_val = Esys_EvictControl(
+		    esys_context, ESYS_TR_RH_OWNER, persistentHandle,
+		    auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE, 0,
+		    &pub_object_handle);
 		if (ret_val != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR, "Esys_EvictControl failed: 0x%x\n",
 			    ret_val);
@@ -351,7 +351,7 @@ int32_t fdo_tpm_generate_hmac_key(TPMI_DH_PERSISTENT persistent_handle)
 	}
 
 	ret_val = Esys_EvictControl(
-	    esys_context, ESYS_TR_RH_OWNER, object_handle, ESYS_TR_PASSWORD,
+	    esys_context, ESYS_TR_RH_OWNER, object_handle, auth_session_handle,
 	    ESYS_TR_NONE, ESYS_TR_NONE, persistent_handle, &pub_object_handle);
 	if (ret_val != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Esys_EvictControl failed: 0x%x\n", ret_val);

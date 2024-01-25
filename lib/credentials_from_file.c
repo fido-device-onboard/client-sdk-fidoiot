@@ -472,9 +472,7 @@ int store_credential(fdo_dev_cred_t *ocred)
 #if defined(DEVICE_TPM20_ENABLED)
 /**
  * Write the Device Credentials to nv, contains our state
- * @param dev_cred_file - pointer of type const char to which credentails are
- * to be written.
- * @param flags
+ * @param nv - tpm nv index to be written.
  * @param ocred - pointer of type fdo_dev_cred_t, holds the credentials for
  * writing to dev_cred_file.
  * @return true if write and parsed correctly, otherwise false
@@ -499,7 +497,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
 	}
 
 	/**
-	 * Blob format: Complete DeviceCredential as per Section 3.4.1 of FDO
+	 * Format: Complete DeviceCredential as per Section 3.4.1 of FDO
 	 *Specification, except the DeviceCredential.DCHmacSecret, and addition
 	 *of 'State'. DeviceCredential = [ State, DCProtVer,
 	 * 		DCDeviceInfo,
@@ -556,7 +554,7 @@ bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
 	fdow->b.block_size = encoded_cred_length;
 
 	if (fdo_tpm_write_nv(nv, fdow->b.block, fdow->b.block_size) == -1) {
-		LOG(LOG_ERROR, "Failed to write DeviceCredential blob\n");
+		LOG(LOG_ERROR, "Failed to write DeviceCredential in TPM\n");
 		ret = false;
 		goto end;
 	}
@@ -571,9 +569,8 @@ end:
 }
 
 /**
- * Read the Device Credentials blob from tpm nv, contains our state & owner_blk
- * @param dev_cred_file - the blob the credentials are saved in
- * @param flags - descriptor telling type of file
+ * Read the Device Credentials from tpm nv, contains our state & owner_blk
+ * @param nv - tpm nv index to be read.
  * @param our_dev_cred - pointer to the device credentials block,
  * @return true if read and parsed correctly, otherwise false.
  */
@@ -603,7 +600,6 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred)
 
 	dev_cred_len = fdo_tpm_size_nv(nv);
 	// Device has not yet been initialized.
-	// Since, Normal.blob is empty, the file size will be 0
 	if (dev_cred_len == 0) {
 		LOG(LOG_DEBUG,
 		    "DeviceCredential not found. Proceeding with DI\n");
@@ -611,7 +607,7 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred)
 		return true;
 	}
 
-	LOG(LOG_DEBUG, "Reading DeviceCredential blob of length %" PRIu64 "\n",
+	LOG(LOG_DEBUG, "Reading DeviceCredential of length %" PRIu64 "\n",
 	    dev_cred_len);
 
 	fdor = fdo_alloc(sizeof(fdor_t));
@@ -622,8 +618,7 @@ bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred)
 	}
 
 	if (fdo_tpm_read_nv(nv, fdor->b.block, fdor->b.block_size) == -1) {
-		LOG(LOG_ERROR,
-		    "Failed to read DeviceCredential blob : Normal.blob\n");
+		LOG(LOG_ERROR, "Failed to read TPM DeviceCredential\n");
 		goto end;
 	}
 
@@ -733,23 +728,41 @@ int store_tpm_credential(fdo_dev_cred_t *ocred)
 	/* Write in the file and save the Normal device credentials */
 	LOG(LOG_DEBUG, "Writing to TPM NV storage\n");
 
-	const char *dc_active = (ocred->dc_active == true) ? "true" : "false";
-	size_t dc_active_len = strnlen_s(dc_active, BUFF_SIZE_8_BYTES);
-	if (!dc_active_len || dc_active_len == BUFF_SIZE_8_BYTES) {
-		LOG(LOG_ERROR, "Strlen() failed!\n")
+	uint8_t *dc_active = NULL;
+	size_t dc_active_len = sizeof(uint8_t);
+	dc_active = fdo_alloc(dc_active_len);
+	if (NULL == dc_active) {
+		LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
 		return -1;
 	}
 
-	if (fdo_tpm_nvwrite((uint8_t *)(dc_active), dc_active_len,
-			    FDO_DCActive_NV_IDX)) {
+	*dc_active = ocred->dc_active;
+
+	if (fdo_tpm_nvwrite(dc_active, dc_active_len, FDO_DCActive_NV_IDX)) {
 		LOG(LOG_ERROR, "Failed to write DeviceCredential Active\n");
+		fdo_free(dc_active);
 		return -1;
+	}
+
+	if (dc_active) {
+		fdo_free(dc_active);
 	}
 
 	if (!write_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
 		LOG(LOG_ERROR, "Could not write to Normal Credentials\n");
 		return -1;
 	}
+#if defined(LOCK_TPM)
+	if (fdo_tpm_nvwrite_lock(FDO_CRED_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to lock file!\n");
+		return -1;
+	}
+
+	if (fdo_tpm_nvread_lock(FDO_CRED_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to lock file!\n");
+		return -1;
+	}
+#endif
 	return 0;
 }
 #endif
@@ -915,14 +928,14 @@ int load_credential(fdo_dev_cred_t *ocred)
 	}
 #elif defined(DEVICE_TPM20_ENABLED)
 	/* Read and save the device credentials */
-	u_int8_t *dc_active = NULL;
+	uint8_t *dc_active = NULL;
 	size_t dc_active_len = fdo_tpm_nvread_size(FDO_DCActive_NV_IDX);
 	if (dc_active_len == 0) {
 		LOG(LOG_ERROR, "DeviceCredential Active not found.\n");
 		return -1;
 	}
 
-	dc_active = fdo_alloc(dc_active_len + 1);
+	dc_active = fdo_alloc(dc_active_len);
 	if (NULL == dc_active) {
 		LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
 		return -1;
@@ -933,13 +946,12 @@ int load_credential(fdo_dev_cred_t *ocred)
 		fdo_free(dc_active);
 		return -1;
 	}
-	int strcmp_res = -1;
-	if (!strcmp_s((char *)dc_active, dc_active_len, "true", &strcmp_res) &&
-	    !strcmp_res) {
+
+	if (*dc_active == 1) {
 		ocred->dc_active = true;
 		if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
 			LOG(LOG_ERROR,
-			    "Could not parse the Device Credentials blob\n");
+			    "Could not read the Device Credentials from TPM\n");
 			fdo_free(dc_active);
 			return -1;
 		}

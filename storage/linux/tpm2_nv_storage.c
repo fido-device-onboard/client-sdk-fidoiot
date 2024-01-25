@@ -180,7 +180,8 @@ int fdo_tpm_nvdefine(TPMI_RH_NV_INDEX nv, size_t data_size)
 		.nameAlg = FDO_TPM2_ALG_SHA,
 		.attributes =
 		    (TPMA_NV_OWNERWRITE | TPMA_NV_AUTHWRITE | TPMA_NV_AUTHREAD |
-		     TPMA_NV_OWNERREAD | TPMA_NV_NO_DA),
+		     TPMA_NV_OWNERREAD | TPMA_NV_NO_DA | TPMA_NV_READ_STCLEAR |
+		     TPMA_NV_WRITE_STCLEAR | TPMA_NV_WRITEDEFINE),
 		.authPolicy =
 		    {
 			.size = 0,
@@ -277,7 +278,8 @@ int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, TPMI_RH_NV_INDEX nv)
 		.nameAlg = FDO_TPM2_ALG_SHA,
 		.attributes =
 		    (TPMA_NV_OWNERWRITE | TPMA_NV_AUTHWRITE | TPMA_NV_AUTHREAD |
-		     TPMA_NV_OWNERREAD | TPMA_NV_NO_DA),
+		     TPMA_NV_OWNERREAD | TPMA_NV_NO_DA | TPMA_NV_READ_STCLEAR |
+		     TPMA_NV_WRITEDEFINE),
 		.authPolicy =
 		    {
 			.size = 0,
@@ -329,8 +331,9 @@ int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, TPMI_RH_NV_INDEX nv)
 		      capability_data->data.handles.handle[0] == nv);
 	if (exists == 1) {
 		LOG(LOG_DEBUG, "NV index already exist. Deleting it.\n");
-		rc = Esys_TR_FromTPMPublic(ctx, nv, ESYS_TR_NONE, ESYS_TR_NONE,
-					   ESYS_TR_NONE, &nvHandle);
+		rc = Esys_TR_FromTPMPublic(ctx, nv, auth_session_handle,
+					   ESYS_TR_NONE, ESYS_TR_NONE,
+					   &nvHandle);
 		if (rc != TSS2_RC_SUCCESS) {
 			LOG(LOG_ERROR,
 			    "Failed to constructs an ESYS_TR object.\n");
@@ -357,6 +360,69 @@ int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, TPMI_RH_NV_INDEX nv)
 			   ESYS_TR_NONE, ESYS_TR_NONE, &blob, 0 /*=offset*/);
 	if (rc != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to write in Esys NV space.\n");
+		goto err;
+	}
+
+	ret = 0;
+
+err:
+
+	if (ctx && (0 != fdo_tpm_context_clean_up(&ctx, &auth_session_handle,
+						  &nvHandle))) {
+		LOG(LOG_ERROR, "Failed to tear down all the TSS context.\n");
+		ret = -1;
+	}
+	return ret;
+}
+
+/** Lock the NV index for further writes.
+ *
+ * @param[in] nv NV index to store the data.
+ * @retval 0 on success.
+ * @retval -1 on undefined/general failure.
+ * @retval TSS2_RC response code for failures relayed from the TSS library.
+ */
+int fdo_tpm_nvwrite_lock(TPMI_RH_NV_INDEX nv)
+{
+	if (!nv) {
+		return -1;
+	}
+
+	int ret = -1;
+	TSS2_RC rc;
+	ESYS_CONTEXT *ctx;
+	ESYS_TR nvHandle = ESYS_TR_NONE;
+	ESYS_TR auth_session_handle = ESYS_TR_NONE;
+
+	rc = fdo_tpm_esys_context_init(&ctx);
+	if (rc != TSS2_RC_SUCCESS || !ctx) {
+		LOG(LOG_ERROR, "Failed to intitialize Esys context.\n");
+		goto err;
+	}
+
+	rc = fdo_tpm_esys_auth_session_init(ctx, &auth_session_handle);
+	if (rc != TSS2_RC_SUCCESS || !auth_session_handle) {
+		LOG(LOG_ERROR, "Failed to create Auth Session for Esys API.\n");
+		goto err;
+	}
+
+	rc = Esys_Startup(ctx, TPM2_SU_CLEAR);
+	if (rc != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to start Esys context.\n");
+		goto err;
+	}
+
+	rc = Esys_TR_FromTPMPublic(ctx, nv, auth_session_handle, ESYS_TR_NONE,
+				   ESYS_TR_NONE, &nvHandle);
+	if (rc != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to constructs an ESYS_TR object.\n");
+		goto err;
+	}
+
+	rc = Esys_NV_WriteLock(ctx, ESYS_TR_RH_OWNER, nvHandle,
+			       auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE);
+	if (rc != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to lock NV write.\n");
 		goto err;
 	}
 
@@ -429,15 +495,15 @@ size_t fdo_tpm_nvread_size(TPMI_RH_NV_INDEX nv)
 		goto err;
 	}
 
-	rc = Esys_TR_FromTPMPublic(ctx, nv, ESYS_TR_NONE, ESYS_TR_NONE,
+	rc = Esys_TR_FromTPMPublic(ctx, nv, auth_session_handle, ESYS_TR_NONE,
 				   ESYS_TR_NONE, &nvHandle);
 	if (rc != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to constructs an ESYS_TR object.\n");
 		goto err;
 	}
 
-	rc = Esys_NV_ReadPublic(ctx, nvHandle, ESYS_TR_NONE, ESYS_TR_NONE,
-				ESYS_TR_NONE, &publicInfo, NULL);
+	rc = Esys_NV_ReadPublic(ctx, nvHandle, auth_session_handle,
+				ESYS_TR_NONE, ESYS_TR_NONE, &publicInfo, NULL);
 	if (rc != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to read publicinfo from NV.\n");
 		goto err;
@@ -478,7 +544,6 @@ int fdo_tpm_nvread(TPMI_RH_NV_INDEX nv, size_t data_size, uint8_t **data)
 	ESYS_TR nvHandle = ESYS_TR_NONE;
 	ESYS_TR auth_session_handle = ESYS_TR_NONE;
 	TPM2B_MAX_NV_BUFFER *blob;
-	TPM2B_NV_PUBLIC *publicInfo;
 
 	if (!nv) {
 		return -1;
@@ -502,17 +567,10 @@ int fdo_tpm_nvread(TPMI_RH_NV_INDEX nv, size_t data_size, uint8_t **data)
 		goto err;
 	}
 
-	rc = Esys_TR_FromTPMPublic(ctx, nv, ESYS_TR_NONE, ESYS_TR_NONE,
+	rc = Esys_TR_FromTPMPublic(ctx, nv, auth_session_handle, ESYS_TR_NONE,
 				   ESYS_TR_NONE, &nvHandle);
 	if (rc != TSS2_RC_SUCCESS) {
 		LOG(LOG_ERROR, "Failed to constructs an ESYS_TR object.\n");
-		goto err;
-	}
-
-	rc = Esys_NV_ReadPublic(ctx, nvHandle, ESYS_TR_NONE, ESYS_TR_NONE,
-				ESYS_TR_NONE, &publicInfo, NULL);
-	if (rc != TSS2_RC_SUCCESS) {
-		LOG(LOG_ERROR, "Failed to read publicinfo from NV.\n");
 		goto err;
 	}
 
@@ -533,9 +591,68 @@ int fdo_tpm_nvread(TPMI_RH_NV_INDEX nv, size_t data_size, uint8_t **data)
 
 err:
 
-	if (publicInfo) {
-		free(publicInfo);
+	if (ctx && (0 != fdo_tpm_context_clean_up(&ctx, &auth_session_handle,
+						  &nvHandle))) {
+		LOG(LOG_ERROR, "Failed to tear down all the TSS context.\n");
+		ret = -1;
 	}
+	return ret;
+}
+
+/** Lock the NV index for further reads.
+ *
+ * @param[in] nv NV index to store the data.
+ * @retval 0 on success.
+ * @retval -1 on undefined/general failure.
+ * @retval TSS2_RC response code for failures relayed from the TSS library.
+ */
+int fdo_tpm_nvread_lock(TPMI_RH_NV_INDEX nv)
+{
+	if (!nv) {
+		return -1;
+	}
+
+	int ret = -1;
+	TSS2_RC rc;
+	ESYS_CONTEXT *ctx;
+	ESYS_TR nvHandle = ESYS_TR_NONE;
+	ESYS_TR auth_session_handle = ESYS_TR_NONE;
+
+	rc = fdo_tpm_esys_context_init(&ctx);
+	if (rc != TSS2_RC_SUCCESS || !ctx) {
+		LOG(LOG_ERROR, "Failed to intitialize Esys context.\n");
+		goto err;
+	}
+
+	rc = fdo_tpm_esys_auth_session_init(ctx, &auth_session_handle);
+	if (rc != TSS2_RC_SUCCESS || !auth_session_handle) {
+		LOG(LOG_ERROR, "Failed to create Auth Session for Esys API.\n");
+		goto err;
+	}
+
+	rc = Esys_Startup(ctx, TPM2_SU_CLEAR);
+	if (rc != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to start Esys context.\n");
+		goto err;
+	}
+
+	rc = Esys_TR_FromTPMPublic(ctx, nv, auth_session_handle, ESYS_TR_NONE,
+				   ESYS_TR_NONE, &nvHandle);
+	if (rc != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to constructs an ESYS_TR object.\n");
+		goto err;
+	}
+
+	rc = Esys_NV_ReadLock(ctx, ESYS_TR_RH_OWNER, nvHandle,
+			      auth_session_handle, ESYS_TR_NONE, ESYS_TR_NONE);
+	if (rc != TSS2_RC_SUCCESS) {
+		LOG(LOG_ERROR, "Failed to lock NV read.\n");
+		goto err;
+	}
+
+	ret = 0;
+
+err:
 
 	if (ctx && (0 != fdo_tpm_context_clean_up(&ctx, &auth_session_handle,
 						  &nvHandle))) {

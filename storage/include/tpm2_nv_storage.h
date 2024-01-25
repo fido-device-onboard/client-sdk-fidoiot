@@ -37,6 +37,15 @@ int fdo_tpm_nvdefine(TPMI_RH_NV_INDEX nv, size_t data_size);
  */
 int fdo_tpm_nvwrite(const uint8_t *data, size_t data_size, TPMI_RH_NV_INDEX nv);
 
+/** Lock the NV index for further writes.
+ *
+ * @param[in] nv NV index to store the data.
+ * @retval 0 on success.
+ * @retval -1 on undefined/general failure.
+ * @retval TSS2_RC response code for failures relayed from the TSS library.
+ */
+int fdo_tpm_nvwrite_lock(TPMI_RH_NV_INDEX nv);
+
 /** Load data size from a NV index.
  *
  * @param[in] nv NV index of the data.
@@ -56,6 +65,15 @@ size_t fdo_tpm_nvread_size(TPMI_RH_NV_INDEX nv);
  * @retval TSS2_RC response code for failures relayed from the TSS library.
  */
 int fdo_tpm_nvread(TPMI_RH_NV_INDEX nv, size_t data_size, uint8_t **data);
+
+/** Lock the NV index for further reads.
+ *
+ * @param[in] nv NV index to store the data.
+ * @retval 0 on success.
+ * @retval -1 on undefined/general failure.
+ * @retval TSS2_RC response code for failures relayed from the TSS library.
+ */
+int fdo_tpm_nvread_lock(TPMI_RH_NV_INDEX nv);
 
 /** Delete data from a NV index.
  *

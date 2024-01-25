@@ -266,6 +266,12 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "Failed to load TPM DEVICE CSR into buffer.\n");
 		goto err;
 	}
+#if defined(LOCK_TPM)
+	if (fdo_tpm_nvread_lock(TPM_DEVICE_CSR_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to lock file!\n");
+		goto err;
+	}
+#endif
 	ret = 0;
 #elif defined(DEVICE_CSE_ENABLED)
 	// CSR will be NULL for CSE

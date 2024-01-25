@@ -124,7 +124,7 @@ execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 # # write device csr inside tpm
 task="Define a TPM Non-Volatile (NV) index for TPM Device CSR"
 csr_size=$(wc -c < $device_csr_file)
-cmd="tpm2_nvdefine -Q   0x01D10005 -C o -s $csr_size -a \"ownerwrite|authwrite|ownerread|authread|no_da\""
+cmd="tpm2_nvdefine -Q   0x01D10005 -C o -s $csr_size -a \"ownerwrite|authwrite|ownerread|authread|no_da|read_stclear|writedefine\""
 success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
