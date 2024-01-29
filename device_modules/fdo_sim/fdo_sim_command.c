@@ -459,11 +459,6 @@ int fdo_si_set_osi_exec(uint8_t **exec_instr)
 				       "process fdo.command:execute\n");
 			goto end;
 		}
-
-		// respond with initial fdo.commandstatus_cb
-		// message
-		hasmore = true;
-		write_type = FDO_SIM_MOD_MSG_STATUS_CB;
 	}
 	result = FDO_SI_SUCCESS;
 end:
