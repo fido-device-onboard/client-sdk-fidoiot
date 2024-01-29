@@ -135,6 +135,12 @@ success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
+task="Lock the Device CSR Non-Volatile (NV) index for further writes"
+cmd="tpm2_nvwritelock -C o 0x01D10005"
+success_string="$task completed successfully!!"
+failure_string="$task failed"
+execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
+
 rm -f $tpm_device_pub_key_file
 rm -f $tpm_device_priv_key_file
 rm -f $device_csr_file
