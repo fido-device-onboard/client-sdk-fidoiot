@@ -22,6 +22,7 @@
 #endif
 
 #include <inttypes.h>
+#include <ctype.h>
 
 /*
  * Generate the "m" string value.
@@ -70,7 +71,9 @@ static int read_fill_modelserial(void)
 	size_t fsize = 0;
 
 #if defined(GET_DEV_SERIAL)
-	int strcmp_res = -1;
+	int flag = 0;
+	int curr = 0;
+	char ch;
 	char temp_device_serial[MAX_DEV_SERIAL_SZ];
 	uint8_t temp_serial_sz = 0;
 
@@ -84,9 +87,16 @@ static int read_fill_modelserial(void)
 		LOG(LOG_ERROR, "Failed to get serial no.\n");
 	}
 
-	if (ret || (!strcmp_s((char *)temp_device_serial, MAX_DEV_SERIAL_SZ,
-			      "Not Specified\n", &strcmp_res) &&
-		    !strcmp_res)) {
+	ch = temp_device_serial[0];
+	while (ch != '\0') {
+		ch = temp_device_serial[curr];
+		if (!isalnum(ch)) {
+			flag = 1;
+		}
+		curr++;
+	}
+
+	if (ret || flag) {
 		LOG(LOG_DEBUG, "Defaulting serial num to 'abcdef'\n");
 		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
 		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
