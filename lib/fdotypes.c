@@ -1323,7 +1323,7 @@ fdo_public_key_t *fdo_public_key_read(fdor_t *fdor)
 		LOG(LOG_ERROR, "Invalid PublicKey: Start array not found\n");
 		goto err;
 	}
-	if (!fdor_signed_int(fdor, &pk->pkalg) || pk->pkalg != FDO_PK_ALGO) {
+	if (!fdor_signed_int(fdor, &pk->pkalg)) {
 		LOG(LOG_ERROR, "Invalid PublicKey: Unable to decode pkType\n");
 		goto err;
 	}

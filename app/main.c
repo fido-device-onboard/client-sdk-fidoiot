@@ -266,6 +266,8 @@ int app_main(bool is_resale)
 			   !strcmp_res) {
 #if defined SELF_SIGNED_CERTS_SUPPORTED
 			useSelfSignedCerts = true;
+			LOG(LOG_INFO, "Set connection for self signed "
+					      "certificate usage.\n");
 #endif
 		} else if (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE,
 				     "-r", &strcmp_res) &&
