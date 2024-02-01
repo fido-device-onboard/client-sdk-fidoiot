@@ -80,4 +80,31 @@ int fdo_sys(fdo_sdk_si_type type, char *module_message, uint8_t *module_val,
 	    size_t *module_val_sz, uint16_t *num_module_messages,
 	    bool *has_more, bool *is_more, size_t mtu);
 
+// Prototype definitions for functions that are implemented in the module
+int fdo_si_start(void);
+int fdo_si_failure(void);
+int fdo_si_has_more_dsi(bool *has_more);
+int fdo_si_is_more_dsi(bool *is_more);
+int fdo_si_get_dsi_count(uint16_t *num_module_messages);
+int fdo_si_get_dsi(size_t mtu, char *module_message, uint8_t *module_val,
+		   size_t *module_val_sz, size_t file_remaining, size_t bin_len,
+		   uint8_t *bin_data, size_t temp_module_val_sz);
+
+int fdo_si_set_osi(char *module_message, uint8_t *module_val,
+		   size_t *module_val_sz, int *strcmp_filedesc,
+		   int *strcmp_write, int *strcmp_exec, int *strcmp_execcb,
+		   int *strcmp_statuscb, int *strcmp_fetch);
+
+int fdo_si_set_osi_strcmp(size_t bin_len, uint8_t *bin_data);
+int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data);
+
+int fdo_si_set_osi_exec(char **exec_instr,
+			int exec_array_index, size_t *exec_instructions_sz,
+			int *strcmp_exec, int *strcmp_execcb);
+
+int fdo_si_set_osi_status_cb(size_t *status_cb_array_length);
+
+int fdo_si_set_osi_fetch(size_t bin_len);
+
+int fdo_end(int result, uint8_t *bin_data, char **exec_instr);
 #endif /* __FDO_SYS_H__ */
