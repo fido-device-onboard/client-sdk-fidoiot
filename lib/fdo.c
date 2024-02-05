@@ -699,11 +699,9 @@ static bool add_module_devmod(void)
 	}
 
 	// should ideally contain supported ServiceInfo module list and its
-	// count. for now, set this to 1, since we've only 1 module 'fdo_sys'
-	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo
-	// module support is added.
+	// count.
 	if (!fdo_service_info_add_kv_int(g_fdo_data->service_info,
-					 "devmod:nummodules", 1)) {
+					 "devmod:nummodules", 3)) {
 		LOG(LOG_ERROR, "Failed to add devmod:nummodules\n");
 		return false;
 	}

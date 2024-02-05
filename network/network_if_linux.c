@@ -404,8 +404,6 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 					    "verify host.\n");
 					goto err;
 				}
-				LOG(LOG_DEBUG, "Set connection for self signed "
-					       "certificate usage.\n");
 			}
 #endif
 			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL,

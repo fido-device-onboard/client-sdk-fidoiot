@@ -17,7 +17,7 @@
 #ifdef EXTRA_MODULES
 #define FDO_MAX_MODULES 4
 #else
-#define FDO_MAX_MODULES 1
+#define FDO_MAX_MODULES 3
 #endif
 
 #define FDO_MODULE_MESSAGE_ACTIVE "active"
@@ -70,5 +70,15 @@ extern int fdo_sys(fdo_sdk_si_type type, char *module_message,
 		   uint8_t *module_val, size_t *module_val_sz,
 		   uint16_t *num_module_messages, bool *has_more, bool *is_more,
 		   size_t mtu);
+
+extern int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
+			    uint8_t *module_val, size_t *module_val_sz,
+			    uint16_t *num_module_messages, bool *has_more,
+			    bool *is_more, size_t mtu);
+
+extern int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
+			   uint8_t *module_val, size_t *module_val_sz,
+			   uint16_t *num_module_messages, bool *has_more,
+			   bool *is_more, size_t mtu);
 
 #endif /* __FDOTYPES_H__ */
