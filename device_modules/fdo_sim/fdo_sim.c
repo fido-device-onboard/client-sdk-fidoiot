@@ -25,16 +25,16 @@ static bool ismore = false;
 /**
  * List of helper functions used in switch case
  *
- * fdo_si_start
- * fdo_si_failure
- * fdo_si_has_more_dsi
- * fdo_si_is_more_dsi
- * fdo_si_get_dsi_count
- * fdo_si_get_dsi
- * fdo_end
+ * fdo_sim_start
+ * fdo_sim_failure
+ * fdo_sim_has_more_dsi
+ * fdo_sim_is_more_dsi
+ * fdo_sim_get_dsi_count
+ * fdo_sim_get_dsi
+ * fdo_sim_end
  */
 
-int fdo_si_start(fdor_t **fdor, fdow_t **fdow)
+int fdo_sim_start(fdor_t **fdor, fdow_t **fdow)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -60,7 +60,7 @@ end:
 	return result;
 }
 
-int fdo_si_failure(fdor_t **fdor, fdow_t **fdow)
+int fdo_sim_failure(fdor_t **fdor, fdow_t **fdow)
 {
 	// perform clean-ups as needed
 	if (!fsim_process_data(FDO_SIM_MOD_MSG_EXIT, NULL, 0, NULL, NULL)) {
@@ -80,7 +80,7 @@ int fdo_si_failure(fdor_t **fdor, fdow_t **fdow)
 	return FDO_SI_SUCCESS;
 }
 
-int fdo_si_has_more_dsi(bool *has_more, bool hasmore)
+int fdo_sim_has_more_dsi(bool *has_more, bool hasmore)
 {
 	// calculate whether there is ServiceInfo to send NOW and update
 	// 'has_more'. For testing purposes, set this to true here, and
@@ -97,7 +97,7 @@ int fdo_si_has_more_dsi(bool *has_more, bool hasmore)
 	return FDO_SI_SUCCESS;
 }
 
-int fdo_si_is_more_dsi(bool *is_more)
+int fdo_sim_is_more_dsi(bool *is_more)
 {
 	// calculate whether there is ServiceInfo to send in the NEXT
 	// iteration and update 'is_more'.
@@ -113,7 +113,7 @@ int fdo_si_is_more_dsi(bool *is_more)
 	return FDO_SI_SUCCESS;
 }
 
-int fdo_si_get_dsi_count(uint16_t *num_module_messages)
+int fdo_sim_get_dsi_count(uint16_t *num_module_messages)
 {
 	// calculate the number of ServiceInfo items to send NOW and update
 	// 'num_module_messages'. For testing purposes, set this to 1 here, and
@@ -125,7 +125,7 @@ int fdo_si_get_dsi_count(uint16_t *num_module_messages)
 	return FDO_SI_SUCCESS;
 }
 
-int fdo_si_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
+int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
 		   uint8_t *module_val, size_t *module_val_sz, size_t bin_len,
 		   uint8_t *bin_data, size_t temp_module_val_sz, bool *hasmore,
 		   fdoSimModMsg *write_type, char *filename)
@@ -171,11 +171,11 @@ int fdo_si_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
 	result = FDO_SI_SUCCESS;
 end:
 	result =
-	    fdo_end(NULL, fdow, result, bin_data, NULL, 0, hasmore, write_type);
+	    fdo_sim_end(NULL, fdow, result, bin_data, NULL, 0, hasmore, write_type);
 	return result;
 }
 
-int fdo_end(fdor_t **fdor, fdow_t **fdow, int result, uint8_t *bin_data,
+int fdo_sim_end(fdor_t **fdor, fdow_t **fdow, int result, uint8_t *bin_data,
 	    uint8_t **exec_instr, size_t total_exec_array_length, bool *hasmore,
 	    fdoSimModMsg *write_type)
 {

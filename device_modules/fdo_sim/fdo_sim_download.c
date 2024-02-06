@@ -43,29 +43,29 @@ int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
 
 	switch (type) {
 	case FDO_SI_START:
-		result = fdo_si_start(&fdor, &fdow);
+		result = fdo_sim_start(&fdor, &fdow);
 		goto end;
 	case FDO_SI_END:
 	case FDO_SI_FAILURE:
-		result = fdo_si_failure(&fdor, &fdow);
+		result = fdo_sim_failure(&fdor, &fdow);
 		goto end;
 	case FDO_SI_HAS_MORE_DSI:
-		result = fdo_si_has_more_dsi(has_more, hasmore);
+		result = fdo_sim_has_more_dsi(has_more, hasmore);
 		goto end;
 	case FDO_SI_IS_MORE_DSI:
-		result = fdo_si_is_more_dsi(is_more);
+		result = fdo_sim_is_more_dsi(is_more);
 		goto end;
 	case FDO_SI_GET_DSI_COUNT:
-		result = fdo_si_get_dsi_count(num_module_messages);
+		result = fdo_sim_get_dsi_count(num_module_messages);
 		goto end;
 	case FDO_SI_GET_DSI:
-		result = fdo_si_get_dsi(&fdow, mtu, module_message, module_val,
+		result = fdo_sim_get_dsi(&fdow, mtu, module_message, module_val,
 					module_val_sz, bin_len, bin_data,
 					temp_module_val_sz, &hasmore,
 					&write_type, filename);
 		goto end;
 	case FDO_SI_SET_OSI:
-		result = fdo_si_set_osi_download(
+		result = fdo_sim_set_osi_download(
 		    module_message, module_val, module_val_sz, &strcmp_filedesc,
 		    &strcmp_length, &strcmp_sha_384, &strcmp_write);
 
@@ -74,16 +74,16 @@ int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
 		}
 
 		if (strcmp_filedesc == 0) {
-			result = fdo_si_set_osi_strcmp(bin_len, bin_data);
+			result = fdo_sim_set_osi_strcmp(bin_len, bin_data);
 			goto end;
 		} else if (strcmp_length == 0) {
-			result = fdo_si_set_osi_length(bin_len);
+			result = fdo_sim_set_osi_length(bin_len);
 			goto end;
 		} else if (strcmp_sha_384 == 0) {
-			result = fdo_si_set_osi_sha_384(bin_len, bin_data);
+			result = fdo_sim_set_osi_sha_384(bin_len, bin_data);
 			goto end;
 		} else if (strcmp_write == 0) {
-			result = fdo_si_set_osi_write(bin_len, bin_data);
+			result = fdo_sim_set_osi_write(bin_len, bin_data);
 			goto end;
 		}
 	default:
@@ -91,12 +91,12 @@ int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
 	}
 
 end:
-	result = fdo_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
+	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
 			 &write_type);
 	return result;
 }
 
-int fdo_si_set_osi_download(char *module_message, uint8_t *module_val,
+int fdo_sim_set_osi_download(char *module_message, uint8_t *module_val,
 			    size_t *module_val_sz, int *strcmp_filedesc,
 			    int *strcmp_length, int *strcmp_sha_384,
 			    int *strcmp_write)
@@ -141,7 +141,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_strcmp(size_t bin_len, uint8_t *bin_data)
+int fdo_sim_set_osi_strcmp(size_t bin_len, uint8_t *bin_data)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -191,12 +191,12 @@ int fdo_si_set_osi_strcmp(size_t bin_len, uint8_t *bin_data)
 	LOG(LOG_INFO, "Module fdo.download - File created on path: %s\n",
 	    filename);
 end:
-	result = fdo_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
+	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
 			 &write_type);
 	return result;
 }
 
-int fdo_si_set_osi_length(size_t bin_len)
+int fdo_sim_set_osi_length(size_t bin_len)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -221,7 +221,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_sha_384(size_t bin_len, uint8_t *bin_data)
+int fdo_sim_set_osi_sha_384(size_t bin_len, uint8_t *bin_data)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -277,12 +277,12 @@ int fdo_si_set_osi_sha_384(size_t bin_len, uint8_t *bin_data)
 	}
 	result = FDO_SI_SUCCESS;
 end:
-	result = fdo_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
+	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
 			 &write_type);
 	return result;
 }
 
-int fdo_si_set_osi_write(size_t bin_len, uint8_t *bin_data)
+int fdo_sim_set_osi_write(size_t bin_len, uint8_t *bin_data)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 	fdo_hash_t *hash = NULL;
@@ -372,7 +372,7 @@ end:
 	if (!bin_len && file_data) {
 		FSIMModuleFree(file_data);
 	}
-	result = fdo_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
+	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
 			 &write_type);
 	return result;
 }

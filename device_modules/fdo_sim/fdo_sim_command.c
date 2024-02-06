@@ -50,29 +50,29 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 
 	switch (type) {
 	case FDO_SI_START:
-		result = fdo_si_start(&fdor, &fdow);
+		result = fdo_sim_start(&fdor, &fdow);
 		goto end;
 	case FDO_SI_END:
 	case FDO_SI_FAILURE:
-		result = fdo_si_failure(&fdor, &fdow);
+		result = fdo_sim_failure(&fdor, &fdow);
 		goto end;
 	case FDO_SI_HAS_MORE_DSI:
-		result = fdo_si_has_more_dsi(has_more, hasmore);
+		result = fdo_sim_has_more_dsi(has_more, hasmore);
 		goto end;
 	case FDO_SI_IS_MORE_DSI:
-		result = fdo_si_is_more_dsi(is_more);
+		result = fdo_sim_is_more_dsi(is_more);
 		goto end;
 	case FDO_SI_GET_DSI_COUNT:
-		result = fdo_si_get_dsi_count(num_module_messages);
+		result = fdo_sim_get_dsi_count(num_module_messages);
 		goto end;
 	case FDO_SI_GET_DSI:
-		result = fdo_si_get_dsi(&fdow, mtu, module_message, module_val,
+		result = fdo_sim_get_dsi(&fdow, mtu, module_message, module_val,
 					module_val_sz, bin_len, bin_data,
 					temp_module_val_sz, &hasmore,
 					&write_type, filename);
 		goto end;
 	case FDO_SI_SET_OSI:
-		result = fdo_si_set_osi_command(
+		result = fdo_sim_set_osi_command(
 		    module_message, module_val, module_val_sz, &strcmp_cmd,
 		    &strcmp_args, &strcmp_may_fail, &strcmp_return_stdout,
 		    &strcmp_return_stderr, &strcmp_sig, &strcmp_exec);
@@ -82,26 +82,26 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		}
 
 		if (strcmp_cmd == 0) {
-			result = fdo_si_set_osi_cmd(bin_len, bin_data);
+			result = fdo_sim_set_osi_cmd(bin_len, bin_data);
 			goto end;
 		} else if (strcmp_args == 0) {
-			result = fdo_si_set_osi_args(exec_array_index,
+			result = fdo_sim_set_osi_args(exec_array_index,
 						     &exec_instructions_sz);
 			goto end;
 		} else if (strcmp_may_fail == 0) {
-			result = fdo_si_set_osi_may_fail();
+			result = fdo_sim_set_osi_may_fail();
 			goto end;
 		} else if (strcmp_return_stdout == 0) {
-			result = fdo_si_set_osi_return_stdout();
+			result = fdo_sim_set_osi_return_stdout();
 			goto end;
 		} else if (strcmp_return_stderr == 0) {
-			result = fdo_si_set_osi_return_stderr();
+			result = fdo_sim_set_osi_return_stderr();
 			goto end;
 		} else if (strcmp_sig == 0) {
-			result = fdo_si_set_osi_sig(bin_len);
+			result = fdo_sim_set_osi_sig(bin_len);
 			goto end;
 		} else if (strcmp_exec == 0) {
-			result = fdo_si_set_osi_exec(fdo_exec_instr);
+			result = fdo_sim_set_osi_exec(fdo_exec_instr);
 			goto end;
 		}
 	default:
@@ -109,12 +109,12 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 	}
 
 end:
-	result = fdo_end(&fdor, &fdow, result, bin_data, exec_instr,
+	result = fdo_sim_end(&fdor, &fdow, result, bin_data, exec_instr,
 			 total_exec_array_length, &hasmore, &write_type);
 	return result;
 }
 
-int fdo_si_set_osi_command(char *module_message, uint8_t *module_val,
+int fdo_sim_set_osi_command(char *module_message, uint8_t *module_val,
 			   size_t *module_val_sz, int *strcmp_cmd,
 			   int *strcmp_args, int *strcmp_may_fail,
 			   int *strcmp_return_stdout, int *strcmp_return_stderr,
@@ -168,7 +168,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_may_fail(void)
+int fdo_sim_set_osi_may_fail(void)
 {
 	bool may_fail;
 	int result = FDO_SI_INTERNAL_ERROR;
@@ -188,7 +188,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_return_stdout(void)
+int fdo_sim_set_osi_return_stdout(void)
 {
 	bool return_stdout;
 	int result = FDO_SI_INTERNAL_ERROR;
@@ -207,7 +207,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_return_stderr(void)
+int fdo_sim_set_osi_return_stderr(void)
 {
 	bool return_stderr;
 	int result = FDO_SI_INTERNAL_ERROR;
@@ -226,7 +226,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_sig(size_t sigValue)
+int fdo_sim_set_osi_sig(size_t sigValue)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -248,7 +248,7 @@ int fdo_si_set_osi_sig(size_t sigValue)
 	    sigValue);
 
 	if (sigValue == 9 || sigValue == 15) {
-		result = fdo_si_failure(&fdor, &fdow);
+		result = fdo_sim_failure(&fdor, &fdow);
 		goto end;
 	}
 
@@ -257,7 +257,7 @@ end:
 	return result;
 }
 
-int fdo_si_set_osi_cmd(size_t bin_len, uint8_t *bin_data)
+int fdo_sim_set_osi_cmd(size_t bin_len, uint8_t *bin_data)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -302,12 +302,12 @@ int fdo_si_set_osi_cmd(size_t bin_len, uint8_t *bin_data)
 	}
 	result = FDO_SI_SUCCESS;
 end:
-	result = fdo_end(&fdor, &fdow, result, bin_data, NULL,
+	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL,
 			 total_exec_array_length, &hasmore, &write_type);
 	return result;
 }
 
-int fdo_si_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
+int fdo_sim_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 	int flag = 0;
@@ -432,17 +432,17 @@ int fdo_si_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 end:
 	if (!flag) {
 		result =
-		    fdo_end(&fdor, &fdow, result, fdo_cmd, fdo_exec_instr,
+		    fdo_sim_end(&fdor, &fdow, result, fdo_cmd, fdo_exec_instr,
 			    total_exec_array_length, &hasmore, &write_type);
 	} else {
 		result =
-		    fdo_end(&fdor, &fdow, result, fdo_cmd, NULL,
+		    fdo_sim_end(&fdor, &fdow, result, fdo_cmd, NULL,
 			    total_exec_array_length, &hasmore, &write_type);
 	}
 	return result;
 }
 
-int fdo_si_set_osi_exec(uint8_t **exec_instr)
+int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
 
@@ -462,7 +462,7 @@ int fdo_si_set_osi_exec(uint8_t **exec_instr)
 	}
 	result = FDO_SI_SUCCESS;
 end:
-	result = fdo_end(&fdor, &fdow, result, NULL, exec_instr,
+	result = fdo_sim_end(&fdor, &fdow, result, NULL, exec_instr,
 			 total_exec_array_length, &hasmore, &write_type);
 	return result;
 }
