@@ -91,23 +91,24 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 int fdo_sim_start(fdor_t **fdor, fdow_t **fdow);
 int fdo_sim_failure(fdor_t **fdor, fdow_t **fdow);
 int fdo_sim_has_more_dsi(bool *has_more, bool hasmore);
-int fdo_sim_is_more_dsi(bool *is_more);
+int fdo_sim_is_more_dsi(bool *is_more, bool ismore);
 int fdo_sim_get_dsi_count(uint16_t *num_module_messages);
 int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
-		   uint8_t *module_val, size_t *module_val_sz, size_t bin_len,
-		   uint8_t *bin_data, size_t temp_module_val_sz, bool *hasmore,
-		   fdoSimModMsg *write_type, char *filename);
+		    uint8_t *module_val, size_t *module_val_sz, size_t bin_len,
+		    uint8_t *bin_data, size_t temp_module_val_sz, bool *hasmore,
+		    fdoSimModMsg *write_type, char *filename);
 
 int fdo_sim_set_osi_download(char *module_message, uint8_t *module_val,
-			    size_t *module_val_sz, int *strcmp_filedesc,
-			    int *strcmp_length, int *strcmp_sha_384,
-			    int *strcmp_write);
+			     size_t *module_val_sz, int *strcmp_filedesc,
+			     int *strcmp_length, int *strcmp_sha_384,
+			     int *strcmp_write);
 
 int fdo_sim_set_osi_command(char *module_message, uint8_t *module_val,
-			   size_t *module_val_sz, int *strcmp_cmd,
-			   int *strcmp_args, int *strcmp_may_fail,
-			   int *strcmp_return_stdout, int *strcmp_return_stderr,
-			   int *strcmp_sig, int *strcmp_exec);
+			    size_t *module_val_sz, int *strcmp_cmd,
+			    int *strcmp_args, int *strcmp_may_fail,
+			    int *strcmp_return_stdout,
+			    int *strcmp_return_stderr, int *strcmp_sig,
+			    int *strcmp_exec);
 
 int fdo_sim_set_osi_strcmp(size_t bin_len, uint8_t *bin_data);
 int fdo_sim_set_osi_sha_384(size_t bin_len, uint8_t *bin_data);
@@ -123,6 +124,6 @@ int fdo_sim_set_osi_exec(uint8_t **exec_instr);
 int fdo_sim_set_osi_status_cb(size_t *status_cb_array_length);
 int fdo_sim_set_osi_fetch(size_t bin_len);
 int fdo_sim_end(fdor_t **fdor, fdow_t **fdow, int result, uint8_t *bin_data,
-	    uint8_t **exec_instr, size_t total_exec_array_length, bool *hasmore,
-	    fdoSimModMsg *write_type);
+		uint8_t **exec_instr, size_t total_exec_array_length,
+		bool *hasmore, fdoSimModMsg *write_type);
 #endif /* __FDO_SYS_H__ */
