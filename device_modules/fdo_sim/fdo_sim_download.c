@@ -390,15 +390,18 @@ int fdo_sim_set_osi_write(size_t bin_len, uint8_t *bin_data)
 
 	result = FDO_SI_SUCCESS;
 end:
-	if (!bin_len && hash) {
-		fdo_hash_free(hash);
+	if (bytes_received == expected_len) {
+		if (hash) {
+			fdo_hash_free(hash);
+		}
+		if (expectedCheckSum) {
+			fdo_hash_free(expectedCheckSum);
+		}
+		if (file_data) {
+			FSIMModuleFree(file_data);
+		}
 	}
-	if (!bin_len && expectedCheckSum) {
-		fdo_hash_free(expectedCheckSum);
-	}
-	if (!bin_len && file_data) {
-		FSIMModuleFree(file_data);
-	}
+
 	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
 			     &write_type);
 	return result;
