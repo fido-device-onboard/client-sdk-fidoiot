@@ -213,14 +213,6 @@ int fdo_sim_set_osi_length(size_t bin_len)
 		goto end;
 	}
 
-	if (bin_len == 0) {
-		LOG(LOG_ERROR, "Module fdo.download - Empty value received for "
-			       "fdo.download:length\n");
-		// received file name cannot be empty
-		result = FDO_SI_CONTENT_ERROR;
-		goto end;
-	}
-
 	expected_len = bin_len;
 
 	LOG(LOG_INFO, "Module fdo.download - expected file length %ld\n",
@@ -304,7 +296,7 @@ int fdo_sim_set_osi_write(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	if (bytes_received == expected_len) {
+	if (bytes_received == expected_len || !bin_len) {
 		// Entire file has been sent
 		result = FDO_SI_SUCCESS;
 		goto end;
@@ -393,9 +385,11 @@ end:
 	if (bytes_received == expected_len) {
 		if (hash) {
 			fdo_hash_free(hash);
+			hash = NULL;
 		}
 		if (expectedCheckSum) {
 			fdo_hash_free(expectedCheckSum);
+			expectedCheckSum = NULL;
 		}
 		if (file_data) {
 			FSIMModuleFree(file_data);

@@ -142,21 +142,22 @@ int32_t msg68(fdo_prot_t *ps)
 			ps->serviceinfo_invalid_modnames = NULL;
 		}
 
-
-		// get any external module that has some ServiceInfo to
-		// send 'NOW',
-		ext_module = fdo_serviceinfo_get_external_mod_to_write(
-			&ps->fdow, ps->sv_info_mod_list_head,
-			ps->maxDeviceServiceInfoSz -
-			SERVICEINFO_MTU_FIT_MARGIN);
-		// reset FDOW because it may have been used by the above
-		// method
-		fdo_block_reset(&ps->fdow.b);
-		ps->fdor.b.block_size = ps->prot_buff_sz;
-		if (!fdow_encoder_init(&ps->fdow)) {
-			LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed "
-						"to initialize FDOW encoder\n");
-			goto err;
+		if (!ps->owner_serviceinfo_isdone) {
+			// get any external module that has some ServiceInfo to
+			// send 'NOW',
+			ext_module = fdo_serviceinfo_get_external_mod_to_write(
+			    &ps->fdow, ps->sv_info_mod_list_head,
+			    ps->maxDeviceServiceInfoSz -
+				SERVICEINFO_MTU_FIT_MARGIN);
+			// reset FDOW because it may have been used by the above
+			// method
+			fdo_block_reset(&ps->fdow.b);
+			ps->fdor.b.block_size = ps->prot_buff_sz;
+			if (!fdow_encoder_init(&ps->fdow)) {
+				LOG(LOG_ERROR, "TO2.DeviceServiceInfo: Failed "
+					       "to initialize FDOW encoder\n");
+				goto err;
+			}
 		}
 
 		// Finally, Send ServiceInfo in priority:

@@ -31,6 +31,7 @@ static fdoSimModMsg write_type = FDO_SIM_MOD_MSG_EXIT;
 static uint8_t *fdo_cmd = NULL;
 static size_t fdo_cmd_len = 0;
 static uint8_t **fdo_exec_instr = NULL;
+static int exit_code = -1;
 
 int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		    uint8_t *module_val, size_t *module_val_sz,
@@ -71,7 +72,7 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		goto end;
 	case FDO_SI_GET_DSI:
 		result = fdo_sim_get_dsi(&fdow, mtu, module_message, module_val,
-					 module_val_sz, bin_len, bin_data,
+					 module_val_sz, exit_code, bin_data,
 					 temp_module_val_sz, &hasmore,
 					 &write_type, filename);
 		goto end;
@@ -464,6 +465,9 @@ int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 				       "process fdo.command:execute\n");
 			goto end;
 		}
+		exit_code = 0;
+		hasmore = true;
+		write_type = FDO_SIM_MOD_MSG_EXIT_CODE;
 	}
 	result = FDO_SI_SUCCESS;
 end:

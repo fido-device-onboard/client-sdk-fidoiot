@@ -48,6 +48,35 @@ static bool write_done(fdow_t *fdow, char *module_message, size_t bin_len)
 }
 
 /**
+ * Write CBOR-encoded fdo.command:exitcode content into FDOW with given data.
+ */
+static bool write_exitcode(fdow_t *fdow, char *module_message, size_t bin_len)
+{
+
+	if (!module_message) {
+		LOG(LOG_ERROR, "Module fdo_sim - Invalid params for "
+			       "fdo.command:exitcode\n");
+		return false;
+	}
+
+	const char message[] = "exitcode";
+	if (memcpy_s(module_message, sizeof(message), message,
+		     sizeof(message)) != 0) {
+		LOG(LOG_ERROR,
+		    "Module fdo_sim - Failed to copy module message data\n");
+		return false;
+	}
+
+	if (!fdow_signed_int(fdow, bin_len)) {
+		LOG(LOG_ERROR, "Module fdo_sim - Failed to write "
+			       "fdo.command:exitcode content\n");
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * List of helper functions used in switch case
  *
  * fdo_sim_start
@@ -187,6 +216,15 @@ int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
 		*hasmore = false;
 		LOG(LOG_DEBUG,
 		    "Module fdo_sim - Responded with fdo.download:done\n");
+	} else if (*write_type == FDO_SIM_MOD_MSG_EXIT_CODE) {
+		if (!write_exitcode(*fdow, module_message, bin_len)) {
+			LOG(LOG_ERROR, "Module fdo_sim - Failed to "
+				       "respond with fdo.command:exitcode\n");
+			goto end;
+		}
+		*hasmore = false;
+		LOG(LOG_DEBUG,
+		    "Module fdo_sim - Responded with fdo.command:exitcode\n");
 	} else if (*write_type == FDO_SIM_MOD_MSG_NONE) {
 		// shouldn't reach here, if we do, it might a logical
 		// error log and fail

@@ -40,7 +40,6 @@ int32_t msg69(fdo_prot_t *ps)
 	fdo_encrypted_packet_t *pkt = NULL;
 	int module_ret_val = -1;
 	fdo_sdk_service_info_module_list_t *module_list_itr = NULL;
-	fdo_sdk_service_info_module *ext_module = NULL;
 
 	if (!ps) {
 		LOG(LOG_ERROR, "Invalid protocol state\n");
@@ -119,14 +118,6 @@ int32_t msg69(fdo_prot_t *ps)
 				goto err;
 			}
 
-			if (ps->owner_serviceinfo_isdone) {
-				// get any external module that has some ServiceInfo to
-				// send 'NOW',
-				ext_module = fdo_serviceinfo_get_external_mod_to_write(
-					&ps->fdow, module_list_itr,
-					ps->maxDeviceServiceInfoSz -
-					SERVICEINFO_MTU_FIT_MARGIN);
-			}
 		} else {
 			// do not process ServiceInfo since the ServiceInfo size
 			// received is more than the agreed
@@ -144,7 +135,7 @@ int32_t msg69(fdo_prot_t *ps)
 		goto err;
 	}
 
-	if (ps->owner_serviceinfo_isdone && !ext_module) {
+	if (ps->owner_serviceinfo_isdone) {
 		if (ps->owner_serviceinfo_ismore) {
 			LOG(LOG_ERROR,
 			    "TO2.OwnerServiceInfo: Both isMoreServiceInfo and "
