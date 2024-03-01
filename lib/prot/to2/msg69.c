@@ -117,6 +117,7 @@ int32_t msg69(fdo_prot_t *ps)
 					       "to read ServiceInfo\n");
 				goto err;
 			}
+
 		} else {
 			// do not process ServiceInfo since the ServiceInfo size
 			// received is more than the agreed

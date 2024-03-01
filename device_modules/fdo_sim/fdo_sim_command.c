@@ -23,10 +23,15 @@ static size_t total_exec_array_length = 0;
 // local hasMore flag that represents whether the module has data/response to
 // send NOW 'true' if there is data to send, 'false' otherwise
 static bool hasmore = false;
+// local isMore flag that represents whether the module has data/response to
+// send in the NEXT messege SHOULD be 'true' if there is data to send, 'false'
+// otherwise For simplicity, it is 'false' always (also a valid value)
+static bool ismore = false;
 static fdoSimModMsg write_type = FDO_SIM_MOD_MSG_EXIT;
 static uint8_t *fdo_cmd = NULL;
 static size_t fdo_cmd_len = 0;
 static uint8_t **fdo_exec_instr = NULL;
+static int exit_code = -1;
 
 int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		    uint8_t *module_val, size_t *module_val_sz,
@@ -60,16 +65,16 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		result = fdo_sim_has_more_dsi(has_more, hasmore);
 		goto end;
 	case FDO_SI_IS_MORE_DSI:
-		result = fdo_sim_is_more_dsi(is_more);
+		result = fdo_sim_is_more_dsi(is_more, ismore);
 		goto end;
 	case FDO_SI_GET_DSI_COUNT:
 		result = fdo_sim_get_dsi_count(num_module_messages);
 		goto end;
 	case FDO_SI_GET_DSI:
 		result = fdo_sim_get_dsi(&fdow, mtu, module_message, module_val,
-					module_val_sz, bin_len, bin_data,
-					temp_module_val_sz, &hasmore,
-					&write_type, filename);
+					 module_val_sz, exit_code, bin_data,
+					 temp_module_val_sz, &hasmore,
+					 &write_type, filename);
 		goto end;
 	case FDO_SI_SET_OSI:
 		result = fdo_sim_set_osi_command(
@@ -86,7 +91,7 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 			goto end;
 		} else if (strcmp_args == 0) {
 			result = fdo_sim_set_osi_args(exec_array_index,
-						     &exec_instructions_sz);
+						      &exec_instructions_sz);
 			goto end;
 		} else if (strcmp_may_fail == 0) {
 			result = fdo_sim_set_osi_may_fail();
@@ -110,15 +115,16 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 
 end:
 	result = fdo_sim_end(&fdor, &fdow, result, bin_data, exec_instr,
-			 total_exec_array_length, &hasmore, &write_type);
+			     total_exec_array_length, &hasmore, &write_type);
 	return result;
 }
 
 int fdo_sim_set_osi_command(char *module_message, uint8_t *module_val,
-			   size_t *module_val_sz, int *strcmp_cmd,
-			   int *strcmp_args, int *strcmp_may_fail,
-			   int *strcmp_return_stdout, int *strcmp_return_stderr,
-			   int *strcmp_sig, int *strcmp_exec)
+			    size_t *module_val_sz, int *strcmp_cmd,
+			    int *strcmp_args, int *strcmp_may_fail,
+			    int *strcmp_return_stdout,
+			    int *strcmp_return_stderr, int *strcmp_sig,
+			    int *strcmp_exec)
 {
 	if (!module_message || !module_val || !module_val_sz ||
 	    *module_val_sz > MOD_MAX_BUFF_SIZE) {
@@ -303,7 +309,7 @@ int fdo_sim_set_osi_cmd(size_t bin_len, uint8_t *bin_data)
 	result = FDO_SI_SUCCESS;
 end:
 	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL,
-			 total_exec_array_length, &hasmore, &write_type);
+			     total_exec_array_length, &hasmore, &write_type);
 	return result;
 }
 
@@ -433,11 +439,11 @@ end:
 	if (!flag) {
 		result =
 		    fdo_sim_end(&fdor, &fdow, result, fdo_cmd, fdo_exec_instr,
-			    total_exec_array_length, &hasmore, &write_type);
+				total_exec_array_length, &hasmore, &write_type);
 	} else {
 		result =
 		    fdo_sim_end(&fdor, &fdow, result, fdo_cmd, NULL,
-			    total_exec_array_length, &hasmore, &write_type);
+				total_exec_array_length, &hasmore, &write_type);
 	}
 	return result;
 }
@@ -459,10 +465,13 @@ int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 				       "process fdo.command:execute\n");
 			goto end;
 		}
+		exit_code = 0;
+		hasmore = true;
+		write_type = FDO_SIM_MOD_MSG_EXIT_CODE;
 	}
 	result = FDO_SI_SUCCESS;
 end:
 	result = fdo_sim_end(&fdor, &fdow, result, NULL, exec_instr,
-			 total_exec_array_length, &hasmore, &write_type);
+			     total_exec_array_length, &hasmore, &write_type);
 	return result;
 }

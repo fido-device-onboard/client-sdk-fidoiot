@@ -96,7 +96,7 @@
 #define FDO_PROT_SPEC_VERSION 101
 
 // minimum ServiceInfo size
-#define MIN_SERVICEINFO_SZ 256
+#define MIN_SERVICEINFO_SZ 1300
 // maximum ServiceInfo size
 #define MAX_SERVICEINFO_SZ 64000
 // the margin considered while trying to fit Device ServiceInfo within MTU

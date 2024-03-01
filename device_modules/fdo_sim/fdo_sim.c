@@ -17,10 +17,64 @@ static size_t file_seek_pos = 0;
 static size_t file_sz = 0;
 // EOT value whose value is 0 for 'fetch-data'success, and 1 for failure
 static int fetch_data_status = 1;
-// local isMore flag that represents whether the module has data/response to
-// send in the NEXT messege SHOULD be 'true' if there is data to send, 'false'
-// otherwise For simplicity, it is 'false' always (also a valid value)
-static bool ismore = false;
+
+/**
+ * Write CBOR-encoded fdo.download:done content into FDOW with given data.
+ */
+static bool write_done(fdow_t *fdow, char *module_message, size_t bin_len)
+{
+
+	if (!module_message || !bin_len) {
+		LOG(LOG_ERROR,
+		    "Module fdo_sim - Invalid params for fdo.download:done\n");
+		return false;
+	}
+
+	const char message[] = "done";
+	if (memcpy_s(module_message, sizeof(message), message,
+		     sizeof(message)) != 0) {
+		LOG(LOG_ERROR,
+		    "Module fdo_sim - Failed to copy module message data\n");
+		return false;
+	}
+
+	if (!fdow_signed_int(fdow, bin_len)) {
+		LOG(LOG_ERROR, "Module fdo_sim - Failed to write "
+			       "fdo.download:done content\n");
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Write CBOR-encoded fdo.command:exitcode content into FDOW with given data.
+ */
+static bool write_exitcode(fdow_t *fdow, char *module_message, size_t bin_len)
+{
+
+	if (!module_message) {
+		LOG(LOG_ERROR, "Module fdo_sim - Invalid params for "
+			       "fdo.command:exitcode\n");
+		return false;
+	}
+
+	const char message[] = "exitcode";
+	if (memcpy_s(module_message, sizeof(message), message,
+		     sizeof(message)) != 0) {
+		LOG(LOG_ERROR,
+		    "Module fdo_sim - Failed to copy module message data\n");
+		return false;
+	}
+
+	if (!fdow_signed_int(fdow, bin_len)) {
+		LOG(LOG_ERROR, "Module fdo_sim - Failed to write "
+			       "fdo.command:exitcode content\n");
+		return false;
+	}
+
+	return true;
+}
 
 /**
  * List of helper functions used in switch case
@@ -41,7 +95,7 @@ int fdo_sim_start(fdor_t **fdor, fdow_t **fdow)
 	// Initialize module's CBOR Reader/Writer objects.
 	*fdow = FSIMModuleAlloc(sizeof(fdow_t));
 	if (!fdow_init(*fdow) ||
-	    !fdo_block_alloc_with_size(&(*fdow)->b, 8192)) {
+	    !fdo_block_alloc_with_size(&(*fdow)->b, MOD_MAX_BUFF_SIZE)) {
 		LOG(LOG_ERROR, "Module fdo_sim - FDOW "
 			       "Initialization/Allocation failed!\n");
 		result = FDO_SI_CONTENT_ERROR;
@@ -50,7 +104,7 @@ int fdo_sim_start(fdor_t **fdor, fdow_t **fdow)
 
 	*fdor = FSIMModuleAlloc(sizeof(fdor_t));
 	if (!fdor_init(*fdor) ||
-	    !fdo_block_alloc_with_size(&(*fdor)->b, 8192)) {
+	    !fdo_block_alloc_with_size(&(*fdor)->b, MOD_MAX_BUFF_SIZE)) {
 		LOG(LOG_ERROR, "Module fdo_sim - FDOR "
 			       "Initialization/Allocation failed!\n");
 		goto end;
@@ -97,7 +151,7 @@ int fdo_sim_has_more_dsi(bool *has_more, bool hasmore)
 	return FDO_SI_SUCCESS;
 }
 
-int fdo_sim_is_more_dsi(bool *is_more)
+int fdo_sim_is_more_dsi(bool *is_more, bool ismore)
 {
 	// calculate whether there is ServiceInfo to send in the NEXT
 	// iteration and update 'is_more'.
@@ -126,9 +180,9 @@ int fdo_sim_get_dsi_count(uint16_t *num_module_messages)
 }
 
 int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
-		   uint8_t *module_val, size_t *module_val_sz, size_t bin_len,
-		   uint8_t *bin_data, size_t temp_module_val_sz, bool *hasmore,
-		   fdoSimModMsg *write_type, char *filename)
+		    uint8_t *module_val, size_t *module_val_sz, size_t bin_len,
+		    uint8_t *bin_data, size_t temp_module_val_sz, bool *hasmore,
+		    fdoSimModMsg *write_type, char *filename)
 {
 	// write Device ServiceInfo using 'fdow' by partitioning the
 	// messages as per MTU, here.
@@ -138,7 +192,6 @@ int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
 
 	int result = FDO_SI_INTERNAL_ERROR;
 
-	(void)bin_len;
 	(void)filename;
 
 	// reset and initialize FDOW's encoder for usage
@@ -154,7 +207,30 @@ int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
 		goto end;
 	}
 
-	// TO-DO: Imlement functionality
+	if (*write_type == FDO_SIM_MOD_MSG_DONE) {
+		if (!write_done(*fdow, module_message, bin_len)) {
+			LOG(LOG_ERROR, "Module fdo_sim - Failed to "
+				       "respond with fdo.download:done\n");
+			goto end;
+		}
+		*hasmore = false;
+		LOG(LOG_DEBUG,
+		    "Module fdo_sim - Responded with fdo.download:done\n");
+	} else if (*write_type == FDO_SIM_MOD_MSG_EXIT_CODE) {
+		if (!write_exitcode(*fdow, module_message, bin_len)) {
+			LOG(LOG_ERROR, "Module fdo_sim - Failed to "
+				       "respond with fdo.command:exitcode\n");
+			goto end;
+		}
+		*hasmore = false;
+		LOG(LOG_DEBUG,
+		    "Module fdo_sim - Responded with fdo.command:exitcode\n");
+	} else if (*write_type == FDO_SIM_MOD_MSG_NONE) {
+		// shouldn't reach here, if we do, it might a logical
+		// error log and fail
+		LOG(LOG_ERROR, "Module fdo_sim - Invalid module write state\n");
+		goto end;
+	}
 
 	if (!fdow_encoded_length(*fdow, &temp_module_val_sz)) {
 		LOG(LOG_ERROR,
@@ -170,14 +246,14 @@ int fdo_sim_get_dsi(fdow_t **fdow, size_t mtu, char *module_message,
 	}
 	result = FDO_SI_SUCCESS;
 end:
-	result =
-	    fdo_sim_end(NULL, fdow, result, bin_data, NULL, 0, hasmore, write_type);
+	result = fdo_sim_end(NULL, fdow, result, bin_data, NULL, 0, hasmore,
+			     write_type);
 	return result;
 }
 
 int fdo_sim_end(fdor_t **fdor, fdow_t **fdow, int result, uint8_t *bin_data,
-	    uint8_t **exec_instr, size_t total_exec_array_length, bool *hasmore,
-	    fdoSimModMsg *write_type)
+		uint8_t **exec_instr, size_t total_exec_array_length,
+		bool *hasmore, fdoSimModMsg *write_type)
 {
 	// End of function, clean-up state variables/objects
 	if (bin_data) {
