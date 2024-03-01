@@ -58,14 +58,17 @@ int32_t msg70(fdo_prot_t *ps)
 
 	fdo_public_key_free(ps->dev_cred->owner_blk->pk);
 	ps->dev_cred->owner_blk->pk = ps->osc->pubkey;
+	ps->dev_cred->dc_active = false;
 
 	if (ps->reuse_enabled && reuse_supported) {
 		// Reuse scenario, moving to post DI state
 		ps->dev_cred->ST = FDO_DEVICE_STATE_READY1;
+		ps->dev_cred->dc_active = true;
 	} else if (resale_supported) {
 		// Done with FIDO Device Onboard.
 		// As of now moving to done state for resale
 		ps->dev_cred->ST = FDO_DEVICE_STATE_IDLE;
+		ps->dev_cred->dc_active = true;
 		// create new Owner's public key hash
 		fdo_hash_free(ps->dev_cred->owner_blk->pkh);
 		ps->dev_cred->owner_blk->pkh =
@@ -124,6 +127,11 @@ int32_t msg70(fdo_prot_t *ps)
 		goto err;
 	}
 	LOG(LOG_DEBUG, "TO2.Done: FDO OVH COMMIT succeeded %u\n", fdo_status);
+#elif defined(DEVICE_TPM20_ENABLED)
+	if (store_tpm_credential(ps->dev_cred) != 0) {
+		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");
+		goto err;
+	}
 #else
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");

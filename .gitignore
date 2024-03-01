@@ -12,6 +12,12 @@
 *.so
 *.so.*
 *.a
+*.blob
+*.bin
+*.pem
+*.dat
+*.ctx
+*.key
 
 # Packages #
 ############
@@ -51,6 +57,7 @@ Thumbs.db
 ###############
 CMakeCache.txt
 CMakeFiles
+Makefile
 CMakeScripts
 cmake_install.cmake
 install_manifest.txt
@@ -92,6 +99,7 @@ buildNumber.properties
 .metadata
 *.iml
 *.ipr
+.vscode
 
 # Visual Studio files #
 #######################

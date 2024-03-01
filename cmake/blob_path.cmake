@@ -24,7 +24,7 @@ if(TARGET_OS MATCHES linux)
       -DDEVICE_CSE_ENABLED
     )
     endif()
-    
+
   if (${MTLS} MATCHES true)
     client_sdk_compile_definitions(
       -DSSL_CERT=\"${BLOB_PATH}/data/apiUser.pem\"
@@ -35,16 +35,6 @@ if(TARGET_OS MATCHES linux)
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
-       -DTPM_DEVICE_CSR=\"${BLOB_PATH}/data/tpm_device_csr\"
-       -DTPM_ECDSA_DEVICE_KEY=\"${BLOB_PATH}/data/tpm_ecdsa_priv_pub_blob.key\"
-       -DTPM_INPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_input_data_temp_file\"
-       -DTPM_OUTPUT_DATA_TEMP_FILE=\"${BLOB_PATH}/data/tpm_output_data_temp_file\"
-       -DTPM_HMAC_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_pub.key\"
-       -DTPM_HMAC_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_priv.key\"
-       -DTPM_HMAC_REPLACEMENT_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_pub.key\"
-       -DTPM_HMAC_REPLACEMENT_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_replacement_priv.key\"
-       -DTPM_HMAC_DATA_PUB_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_pub.key\"
-       -DTPM_HMAC_DATA_PRIV_KEY=\"${BLOB_PATH}/data/tpm_hmac_data_priv.key\"
 	)
     endif()
 
@@ -176,9 +166,11 @@ if(TARGET_OS MATCHES linux)
 # Configure if needed at a later point
 # configure_file(${BLOB_PATH}/data/Normal.blob NEWLINE_STYLE DOS)
 
-file(WRITE ${BLOB_PATH}/data/platform_iv.bin "")
-file(WRITE ${BLOB_PATH}/data/platform_hmac_key.bin "")
-file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
-file(WRITE ${BLOB_PATH}/data/Normal.blob "")
-file(WRITE ${BLOB_PATH}/data/Secure.blob "")
-file(WRITE ${BLOB_PATH}/data/raw.blob "")
+if (NOT ${DA} MATCHES tpm)
+  file(WRITE ${BLOB_PATH}/data/platform_iv.bin "")
+  file(WRITE ${BLOB_PATH}/data/platform_hmac_key.bin "")
+  file(WRITE ${BLOB_PATH}/data/platform_aes_key.bin "")
+  file(WRITE ${BLOB_PATH}/data/Normal.blob "")
+  file(WRITE ${BLOB_PATH}/data/Secure.blob "")
+  file(WRITE ${BLOB_PATH}/data/raw.blob "")
+endif()
