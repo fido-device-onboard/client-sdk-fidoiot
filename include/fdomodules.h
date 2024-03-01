@@ -39,10 +39,12 @@ typedef enum {
 } fdo_sdk_si_type;
 
 // enum for Sv_info module CB return value
-enum { FDO_SI_CONTENT_ERROR,
-       FDO_SI_INTERNAL_ERROR,
-       FDO_SI_SUCCESS,
-       FDO_SI_INVALID_MOD_ERROR };
+enum {
+	FDO_SI_CONTENT_ERROR,
+	FDO_SI_INTERNAL_ERROR,
+	FDO_SI_SUCCESS,
+	FDO_SI_INVALID_MOD_ERROR
+};
 
 typedef struct fdo_sdk_si_key_value {
 	char *key;

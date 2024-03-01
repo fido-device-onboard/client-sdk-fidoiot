@@ -279,4 +279,8 @@ endif()
 if(${GET_DEV_SERIAL} STREQUAL true)
   client_sdk_compile_definitions(-DGET_DEV_SERIAL)
 endif()
+
+if(${LOCK_TPM} STREQUAL true)
+  client_sdk_compile_definitions(-DLOCK_TPM)
+endif()
 ############################################################

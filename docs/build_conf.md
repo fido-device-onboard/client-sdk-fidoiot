@@ -78,15 +78,14 @@ $ ./build/linux-client -ss
 ```
 > ***WARN***: Accepting Self Signed Certificates is not recommended. If compromised, self-signed certificates can pose serious security risks.
 
-```
-
+```shell
 Option to enable SNI(Server Name Indication extension in client(device) msgs to server):
 SNI=true  # SNI support is enabled. (default)
 SNI=false # SNI support is disabled.
 ```
 > ***Note***: If you have server IP configured in no_proxy environment variable, also add the
 server name in that list for SNI enablement to work as expected.
-```
+```shell
 Option to enable/disable mTLS connection:
 MTLS=true 	# mTLS connection enabled
 MTLS=false 	# mTLS connection disabled (default)
@@ -104,6 +103,10 @@ RETRY=false           # Error Recovery disabled
 Option to get device serial from system BIOS table:
 GET_DEV_SERIAL=true            # get device serial enabled
 GET_DEV_SERIAL=false           # get device serial disabled (default)
+
+Option to lock TPM for futher reads and writes:
+LOCK_TPM=true            # TPM Locked for futher reads and writes (default)
+LOCK_TPM=false           # TPM not locked for futher reads and writes
 
 List of options to clean targets:
 pristine              # cleanup by remove generated files

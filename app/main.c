@@ -28,6 +28,10 @@
 #include "cse_utils.h"
 #include "cse_tools.h"
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#include "fdo_crypto.h"
+#endif
 
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
@@ -218,19 +222,19 @@ static void print_device_status(void)
 
 	status = fdo_sdk_get_status();
 	if (status == FDO_STATE_PRE_DI) {
-		LOG(LOG_DEBUG, "Device is ready for DI\n");
+		LOG(LOG_INFO, "Device is ready for DI\n");
 	}
 	if (status == FDO_STATE_PRE_TO1) {
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
+		LOG(LOG_INFO, "Device is ready for Ownership transfer\n");
 	}
 	if (status == FDO_STATE_IDLE) {
-		LOG(LOG_DEBUG, "Device Ownership transfer Done\n");
+		LOG(LOG_INFO, "Device Ownership transfer Done\n");
 	}
 	if (status == FDO_STATE_RESALE) {
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
+		LOG(LOG_INFO, "Device is ready for Ownership transfer\n");
 	}
 	if (status == FDO_STATE_ERROR) {
-		LOG(LOG_DEBUG, "Error in getting device status\n");
+		LOG(LOG_ERROR, "Error in getting device status\n");
 	}
 }
 
@@ -292,8 +296,9 @@ int app_main(bool is_resale)
 	}
 #endif /* SECURE_ELEMENT */
 
-#if !defined(DEVICE_CSE_ENABLED)
-	LOG(LOG_DEBUG, "CSE not enabled, Normal Blob Modules loaded!\n");
+#if !defined(DEVICE_CSE_ENABLED) && !defined(DEVICE_TPM20_ENABLED)
+	LOG(LOG_DEBUG,
+	    "CSE and TPM not enabled, Normal Blob Modules loaded!\n");
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");

@@ -387,41 +387,53 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
 >```
 
 > ***NOTE***:  linux-client may require elevated privileges. Please use 'sudo' to execute.
+>  ***NOTE***: To do the DI again we need to clear the Device status from TPM storage.
+> To clear the TPM storage, execute the clear TPM* script. Refer to [Clear TPM](../utils/clear_tpm_nv.sh).
+
+```shell
+sudo  utils/clear_tpm_nv.sh
+```
+
+>  ***NOTE***: Enabling LOCK_TPM flag in cmake/cli_input.cmake will lock TPM for further reads/writes.
+> This flag is enabled by default. But note that this may require the user to reboot the system before any consecutive execution of linux-client.
 
 ### 7.1 Prepare FDO Client SDK Data Folder
 
 - Persistent Storage Index in TPM*
 
-  Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81000001 index for the following command examples.
+Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81020002 index for the following command examples.
 
-  ```shell
-  sudo tpm2_getcap handles-persistent
-  ```
-
+```shell
+sudo tpm2_getcap handles-persistent
+```
 
 - Primary Key Generation from Endorsement Hierarchy
 
-  ```shell
-  sudo tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
-  ```
+```shell
+sudo tpm2_createprimary -C e -g sha256 -G ecc256:aes128cfb -c data/tpm_primary_key.ctx -V
+sudo tpm2_create -g sha256 -G ecc256 -u data/tpm_ecdsa_pub.key -r data/tpm_ecdsa_priv.key -C data/tpm_primary_key.ctx -a "fixedtpm|sensitivedataorigin|fixedparent|sign|userwithauth" -V
+```
 
-- Load the Primary Key into TPM* Persistent Memory
+-   Device ECDSA Key-Pair Generation and Load the Primary Key into TPM* Persistent Memory
 
-  ```shell
-  sudo tpm2_evictcontrol -C o 0x81000001 -c data/tpm_primary_key.ctx -V
-  ```
-
-- Device ECDSA Key-Pair Generation
-
-  ```shell
-  sudo tpm2tss-genkey -a ecdsa -c nist_p256 data/tpm_ecdsa_priv_pub_blob.key -v -P 0x81000001
-  ```
+```shell
+sudo tpm2_load -C data/tpm_primary_key.ctx -u data/tpm_ecdsa_pub.key -r data/tpm_ecdsa_priv.key -c data/tpm_ecdsa_key.ctx -V
+sudo tpm2_evictcontrol -C o 0x81020002 -c data/tpm_primary_key.ctx -V
+```
 
 - Generate Device MString
 
-  ```shell
-  sudo openssl req -new -provider tpm2 -provider default -out data/device_mstring -key data/tpm_ecdsa_priv_pub_blob.key -subj "/CN=www.fdoDevice1.intel.com" -verbose; truncate -s -1 data/device_mstring; echo -n "13" > /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "intel-1234" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; echo -n "model-123456" >> /tmp/m_string.txt; truncate -s +1 /tmp/m_string.txt; cat data/device_mstring >> /tmp/m_string.txt; base64 -w 0 /tmp/m_string.txt > data/device_mstring; rm -f /tmp/m_string.txt
-  ```
+```shell
+sudo openssl req -new -provider tpm2 -provider default -outform DER -out data/tpm_device_csr -key handle:0x81020002 -subj "/CN=fdo-tpm-device" -verbose
+```
+
+- Define a TPM Non-Volatile (NV) index for TPM Device CSR and Write TPM Device CSR to a Non-Volatile (NV) index
+
+```shell
+csr_size=$(wc -c < data/tpm_device_csr)
+sudo tpm2_nvdefine -Q   0x01D10005 -C o -s csr_size -a "ownerwrite|authwrite|ownerread|authread|no_da|read_stclear|writedefine"
+sudo tpm2_nvwrite -Q   0x01D10005 -C o -i data/tpm_device_csr
+```
 
 ## 8. Troubleshooting Details
 
@@ -431,19 +443,19 @@ Clear TPM* from the BIOS. To run the TPM* enabled FDO Client SDK implementation,
 - Clear the Used Persistent Index in TPM*.<br />
 Use the tpm2_evictcontrol command to delete the content or clear TPM* from the BIOS. To run the TPM* based FDO implementation, the TPM* on the device should not be owned. To reset the TPM*, go to your device BIOS and clear the TPM*. To find the location of the option in the BIOS of your device, refer to your device manual.
 
-  Assuming that the index is 0x81000001, run the following command to delete the keys.
+To clear the TPM storage, execute the clear TPM* script. Refer to [Clear TPM](../utils/clear_tpm_nv.sh).
 
-  ```shell
-  sudo tpm2_evictcontrol -C o -c 0x81000001 -V
-  ```
+```shell
+sudo  utils/clear_tpm_nv.sh
+```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
   There is a dependency on the OpenSSL* toolkit version 3.0.12 for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
-  ```shell
+```shell
   openssl version
-  ```
+```
   If the OpenSSL* toolkit version in your machine is earlier than version 3.0.12, follow the steps given in section 1 to update the OpenSSL* version to 3.0.12.
 
 

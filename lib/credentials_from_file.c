@@ -21,10 +21,13 @@
 #include "cse_utils.h"
 #include "cse_tools.h"
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm2_nv_storage.h"
+#endif
 
 static bool validate_state(fdo_sdk_device_status current_status);
 
-#if !defined(DEVICE_CSE_ENABLED)
+#if !defined(DEVICE_CSE_ENABLED) && !defined(DEVICE_TPM20_ENABLED)
 /**
  * Write the Device Credentials blob, contains our state
  * @param dev_cred_file - pointer of type const char to which credentails are
@@ -454,7 +457,6 @@ int store_credential(fdo_dev_cred_t *ocred)
 		return -1;
 	}
 
-#if !defined(DEVICE_TPM20_ENABLED)
 	/* Write in the file and save the Secure device credentials */
 	LOG(LOG_DEBUG, "Writing to %s blob\n", "Secure.blob");
 	if (!write_secure_device_credentials((char *)FDO_CRED_SECURE,
@@ -462,8 +464,305 @@ int store_credential(fdo_dev_cred_t *ocred)
 		LOG(LOG_ERROR, "Could not write to Secure Credentials blob\n");
 		return -1;
 	}
+
+	return 0;
+}
 #endif
 
+#if defined(DEVICE_TPM20_ENABLED)
+/**
+ * Write the Device Credentials to nv, contains our state
+ * @param nv - tpm nv index to be written.
+ * @param ocred - pointer of type fdo_dev_cred_t, holds the credentials for
+ * writing to dev_cred_file.
+ * @return true if write and parsed correctly, otherwise false
+ */
+
+bool write_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *ocred)
+{
+	bool ret = true;
+
+	if (!ocred || !nv) {
+		return false;
+	}
+#ifndef NO_PERSISTENT_STORAGE
+
+	fdow_t *fdow = fdo_alloc(sizeof(fdow_t));
+	if (!fdow || !fdow_init(fdow) ||
+	    !fdo_block_alloc_with_size(&fdow->b, BUFF_SIZE_4K_BYTES) ||
+	    !fdow_encoder_init(fdow)) {
+		LOG(LOG_ERROR, "FDOW Initialization/Allocation failed!\n");
+		ret = false;
+		goto end;
+	}
+
+	/**
+	 * Format: Complete DeviceCredential as per Section 3.4.1 of FDO
+	 *Specification, except the DeviceCredential.DCHmacSecret, and addition
+	 *of 'State'. DeviceCredential = [ State, DCProtVer,
+	 * 		DCDeviceInfo,
+	 * 		DCGuid,
+	 * 		DCRVInfo,
+	 * 		DCPubKeyHash
+	 * ]
+	 */
+	fdow_next_block(fdow, FDO_DI_SET_CREDENTIALS);
+	if (!fdow_start_array(fdow, 6)) {
+		ret = false;
+		goto end;
+	}
+	if (!fdow_signed_int(fdow, ocred->ST)) {
+		ret = false;
+		goto end;
+	}
+
+	if (!fdow_signed_int(fdow, ocred->owner_blk->pv)) {
+		ret = false;
+		goto end;
+	}
+
+	if (!fdow_text_string(fdow, ocred->mfg_blk->d->bytes,
+			      ocred->mfg_blk->d->byte_sz)) {
+		ret = false;
+		goto end;
+	}
+	if (!fdow_byte_string(fdow, ocred->owner_blk->guid->bytes,
+			      ocred->owner_blk->guid->byte_sz)) {
+		ret = false;
+		goto end;
+	}
+	if (!fdo_rendezvous_list_write(fdow, ocred->owner_blk->rvlst)) {
+		ret = false;
+		goto end;
+	}
+	if (!fdo_hash_write(fdow, ocred->owner_blk->pkh)) {
+		ret = false;
+		goto end;
+	}
+	if (!fdow_end_array(fdow)) {
+		ret = false;
+		goto end;
+	}
+	size_t encoded_cred_length = 0;
+	if (!fdow_encoded_length(fdow, &encoded_cred_length) ||
+	    encoded_cred_length == 0) {
+		LOG(LOG_ERROR,
+		    "Failed to get DeviceCredential encoded length\n");
+		ret = false;
+		goto end;
+	}
+	fdow->b.block_size = encoded_cred_length;
+
+	if (fdo_tpm_write_nv(nv, fdow->b.block, fdow->b.block_size) == -1) {
+		LOG(LOG_ERROR, "Failed to write DeviceCredential in TPM\n");
+		ret = false;
+		goto end;
+	}
+
+end:
+	if (fdow) {
+		fdow_flush(fdow);
+		fdo_free(fdow);
+	}
+#endif
+	return ret;
+}
+
+/**
+ * Read the Device Credentials from tpm nv, contains our state & owner_blk
+ * @param nv - tpm nv index to be read.
+ * @param our_dev_cred - pointer to the device credentials block,
+ * @return true if read and parsed correctly, otherwise false.
+ */
+bool read_tpm_device_credentials(uint32_t nv, fdo_dev_cred_t *our_dev_cred)
+{
+	bool ret = false;
+	size_t dev_cred_len = 0;
+	fdor_t *fdor = NULL;
+	int dev_state = -1;
+
+	if (!nv || !our_dev_cred) {
+		LOG(LOG_ERROR, "Invalid params\n");
+		return false;
+	}
+
+	if (our_dev_cred->owner_blk != NULL) {
+		fdo_cred_owner_free(our_dev_cred->owner_blk);
+		our_dev_cred->owner_blk = NULL;
+	}
+
+	/* Memory allocating data.inside dev_cred. */
+	our_dev_cred->owner_blk = fdo_cred_owner_alloc();
+	if (!our_dev_cred->owner_blk) {
+		LOG(LOG_ERROR, "dev_cred's owner_blk allocation failed\n");
+		goto end;
+	}
+
+	dev_cred_len = fdo_tpm_size_nv(nv);
+	// Device has not yet been initialized.
+	if (dev_cred_len == 0) {
+		LOG(LOG_DEBUG,
+		    "DeviceCredential not found. Proceeding with DI\n");
+		our_dev_cred->ST = FDO_DEVICE_STATE_PC;
+		return true;
+	}
+
+	LOG(LOG_DEBUG, "Reading DeviceCredential of length %" PRIu64 "\n",
+	    dev_cred_len);
+
+	fdor = fdo_alloc(sizeof(fdor_t));
+	if (!fdor || !fdor_init(fdor) ||
+	    !fdo_block_alloc_with_size(&fdor->b, dev_cred_len)) {
+		LOG(LOG_ERROR, "FDOR Initialization/Allocation failed!\n");
+		goto end;
+	}
+
+	if (fdo_tpm_read_nv(nv, fdor->b.block, fdor->b.block_size) == -1) {
+		LOG(LOG_ERROR, "Failed to read TPM DeviceCredential\n");
+		goto end;
+	}
+
+	if (!fdor_parser_init(fdor)) {
+		LOG(LOG_ERROR, "FDOR Parser Initialization failed!\n");
+		goto end;
+	}
+
+	if (!fdor_start_array(fdor)) {
+		LOG(LOG_ERROR,
+		    "DeviceCredential read: Begin Array not found\n");
+		goto end;
+	}
+
+	if (!fdor_signed_int(fdor, &dev_state)) {
+		LOG(LOG_ERROR, "DeviceCredential read: ST not found\n");
+		goto end;
+	}
+	our_dev_cred->ST = dev_state;
+
+	if (!validate_state(our_dev_cred->ST)) {
+		LOG(LOG_ERROR, "DeviceCredential read: Invalid ST\n");
+		goto end;
+	}
+
+	if (!fdor_signed_int(fdor, &our_dev_cred->owner_blk->pv)) {
+		LOG(LOG_ERROR, "DeviceCredential read: DCProtVer not found\n");
+		goto end;
+	}
+
+	size_t device_info_length = 0;
+	if (!fdor_string_length(fdor, &device_info_length) ||
+	    device_info_length == 0) {
+		LOG(LOG_ERROR,
+		    "DeviceCredential read: Invalid DCDeviceInfo length\n");
+		goto end;
+	}
+
+	our_dev_cred->mfg_blk = fdo_cred_mfg_alloc();
+	if (!our_dev_cred->mfg_blk) {
+		LOG(LOG_ERROR,
+		    "DeviceCredential read: Malloc for DCDeviceInfo failed");
+		goto end;
+	}
+
+	our_dev_cred->mfg_blk->d = fdo_string_alloc_size(device_info_length);
+	if (!our_dev_cred->mfg_blk->d ||
+	    !fdor_text_string(fdor, our_dev_cred->mfg_blk->d->bytes,
+			      our_dev_cred->mfg_blk->d->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "DeviceCredential read: DCDeviceInfo not found\n");
+		goto end;
+	}
+	our_dev_cred->mfg_blk->d->bytes[device_info_length] = '\0';
+
+	size_t guid_length = 0;
+	if (!fdor_string_length(fdor, &guid_length) || guid_length == 0) {
+		LOG(LOG_ERROR,
+		    "DeviceCredential read: Invalid DCGuid length\n");
+		goto end;
+	}
+	our_dev_cred->owner_blk->guid = fdo_byte_array_alloc(guid_length);
+	if (!our_dev_cred->owner_blk->guid ||
+	    !fdor_byte_string(fdor, our_dev_cred->owner_blk->guid->bytes,
+			      our_dev_cred->owner_blk->guid->byte_sz)) {
+		LOG(LOG_ERROR, "DeviceCredential read: DCGuid not found\n");
+		goto end;
+	}
+
+	our_dev_cred->owner_blk->rvlst = fdo_rendezvous_list_alloc();
+	if (!our_dev_cred->owner_blk->rvlst ||
+	    !fdo_rendezvous_list_read(fdor, our_dev_cred->owner_blk->rvlst)) {
+		LOG(LOG_ERROR, "DeviceCredential read: DCRVInfo not found\n");
+		goto end;
+	}
+
+	our_dev_cred->owner_blk->pkh =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	if (!our_dev_cred->owner_blk->pkh ||
+	    !fdo_hash_read(fdor, our_dev_cred->owner_blk->pkh)) {
+		LOG(LOG_ERROR,
+		    "DeviceCredential read: DCPubKeyHash not found\n");
+		goto end;
+	}
+
+	if (!fdor_end_array(fdor)) {
+		LOG(LOG_ERROR, "DeviceCredential read: End Array not found\n");
+		goto end;
+	}
+	ret = true;
+end:
+	if (fdor) {
+		fdor_flush(fdor);
+		fdo_free(fdor);
+	}
+	return ret;
+}
+
+/**
+ * Write and save the device credentials passed as an parameter ocred of type
+ * fdo_dev_cred_t.
+ * @param ocred - Pointer of type fdo_dev_cred_t, credentials to be copied
+ * @return 0 if success, else -1 on failure.
+ */
+int store_tpm_credential(fdo_dev_cred_t *ocred)
+{
+	/* Write in the file and save the Normal device credentials */
+	LOG(LOG_DEBUG, "Writing to TPM NV storage\n");
+
+	uint8_t *dc_active = NULL;
+	size_t dc_active_len = sizeof(uint8_t);
+	dc_active = fdo_alloc(dc_active_len);
+	if (NULL == dc_active) {
+		LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
+		return -1;
+	}
+
+	*dc_active = ocred->dc_active;
+
+	if (fdo_tpm_nvwrite(dc_active, dc_active_len, FDO_DCActive_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to write DeviceCredential Active\n");
+		fdo_free(dc_active);
+		return -1;
+	}
+
+	if (dc_active) {
+		fdo_free(dc_active);
+	}
+
+	if (!write_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
+		LOG(LOG_ERROR, "Could not write to Normal Credentials\n");
+		return -1;
+	}
+#if defined(LOCK_TPM)
+	if (fdo_tpm_nvwrite_lock(FDO_CRED_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to lock file!\n");
+		return -1;
+	}
+
+	if (fdo_tpm_nvread_lock(FDO_CRED_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to lock file!\n");
+		return -1;
+	}
+#endif
 	return 0;
 }
 #endif
@@ -627,6 +926,42 @@ int load_credential(fdo_dev_cred_t *ocred)
 		    "Could not parse the Device Credentials form CSE\n");
 		return -1;
 	}
+#elif defined(DEVICE_TPM20_ENABLED)
+	/* Read and save the device credentials */
+	uint8_t *dc_active = NULL;
+	size_t dc_active_len = fdo_tpm_nvread_size(FDO_DCActive_NV_IDX);
+	if (dc_active_len == 0) {
+		LOG(LOG_ERROR, "DeviceCredential Active not found.\n");
+		return -1;
+	}
+
+	dc_active = fdo_alloc(dc_active_len);
+	if (NULL == dc_active) {
+		LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
+		return -1;
+	}
+
+	if (fdo_tpm_nvread(FDO_DCActive_NV_IDX, dc_active_len, &dc_active)) {
+		LOG(LOG_ERROR, "Failed to read file!\n");
+		fdo_free(dc_active);
+		return -1;
+	}
+
+	if (*dc_active == 1) {
+		ocred->dc_active = true;
+		if (!read_tpm_device_credentials(FDO_CRED_NV_IDX, ocred)) {
+			LOG(LOG_ERROR,
+			    "Could not read the Device Credentials from TPM\n");
+			fdo_free(dc_active);
+			return -1;
+		}
+	} else {
+		ocred->dc_active = false;
+	}
+
+	if (dc_active) {
+		fdo_free(dc_active);
+	}
 #else
 	/* Read in the blob and save the device credentials */
 	if (!read_normal_device_credentials((char *)FDO_CRED_NORMAL,
@@ -684,6 +1019,8 @@ bool load_device_status(fdo_sdk_device_status *state)
 		    "DeviceCredential read: Unable to load file form CSE\n");
 		return false;
 	}
+#elif defined(DEVICE_TPM20_ENABLED)
+	size_t dev_cred_len = fdo_tpm_size_nv(FDO_CRED_NV_IDX);
 #else
 	size_t dev_cred_len =
 	    fdo_blob_size((char *)FDO_CRED_NORMAL, FDO_SDK_NORMAL_DATA);
@@ -691,12 +1028,12 @@ bool load_device_status(fdo_sdk_device_status *state)
 	// Device has not yet been initialized.
 	// Since, Normal.blob is empty, the file size will be 0
 	if (dev_cred_len == 0) {
-		LOG(LOG_DEBUG,
+		LOG(LOG_INFO,
 		    "DeviceCredential is empty. Set state to run DI\n");
 		*state = FDO_DEVICE_STATE_PC;
 	} else {
-		LOG(LOG_DEBUG, "DeviceCredential is non-empty. Set state to "
-			       "run TO1/TO2\n");
+		LOG(LOG_INFO, "DeviceCredential is non-empty. Set state to "
+			      "run TO1/TO2\n");
 		// No Device state is being set currently
 	}
 	return true;
