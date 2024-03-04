@@ -451,6 +451,7 @@ end:
 int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
+	exit_code = -1;
 
 	if (fdor_is_value_null(fdor)) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to read "

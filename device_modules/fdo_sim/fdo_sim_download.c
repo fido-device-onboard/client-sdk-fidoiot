@@ -31,8 +31,10 @@ static fdoSimModMsg write_type = FDO_SIM_MOD_MSG_NONE;
 
 static fdo_hash_t *expectedCheckSum = NULL;
 static size_t expected_len = -1;
-static int return_code = -1;
 static size_t bytes_received = 0;
+static int fdo_sim_download_queue[MOD_MAX_BUFF_SIZE];
+static int front = -1;
+static int rear = -1;
 
 int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
 		     uint8_t *module_val, size_t *module_val_sz,
@@ -47,6 +49,7 @@ int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
 	uint8_t *bin_data = NULL;
 	size_t bin_len = 0;
 	size_t temp_module_val_sz = 0;
+	int return_code = -1;
 
 	switch (type) {
 	case FDO_SI_START:
@@ -66,10 +69,14 @@ int fdo_sim_download(fdo_sdk_si_type type, char *module_message,
 		result = fdo_sim_get_dsi_count(num_module_messages);
 		goto end;
 	case FDO_SI_GET_DSI:
+		return_code = (front == -1 || front > rear)
+				  ? -1
+				  : fdo_sim_download_queue[front++];
 		result = fdo_sim_get_dsi(&fdow, mtu, module_message, module_val,
 					 module_val_sz, return_code, bin_data,
 					 temp_module_val_sz, &hasmore,
 					 &write_type, filename);
+		hasmore = (front > rear) ? false : true;
 		goto end;
 	case FDO_SI_SET_OSI:
 		result = fdo_sim_set_osi_download(
@@ -298,6 +305,7 @@ int fdo_sim_set_osi_write(size_t bin_len, uint8_t *bin_data)
 
 	if (bytes_received == expected_len || !bin_len) {
 		// Entire file has been sent
+		bytes_received = 0;
 		result = FDO_SI_SUCCESS;
 		goto end;
 	}
@@ -365,15 +373,19 @@ int fdo_sim_set_osi_write(size_t bin_len, uint8_t *bin_data)
 				goto end;
 			}
 
+			if (front == -1) {
+				front = 0;
+			}
+
 			if (fdo_compare_hashes(hash, expectedCheckSum)) {
 				LOG(LOG_DEBUG,
 				    "Module fdo.download - Hash matched \n");
-				return_code = file_len;
+				fdo_sim_download_queue[++rear] = file_len;
 			} else {
 				LOG(LOG_ERROR,
 				    "Module fdo.download: Failed to verify "
 				    " hash\n");
-				return_code = -1;
+				fdo_sim_download_queue[++rear] = -1;
 			}
 		}
 		hasmore = true;
