@@ -31,7 +31,9 @@ static fdoSimModMsg write_type = FDO_SIM_MOD_MSG_EXIT;
 static uint8_t *fdo_cmd = NULL;
 static size_t fdo_cmd_len = 0;
 static uint8_t **fdo_exec_instr = NULL;
-static int exit_code = -1;
+static int fdo_sim_command_queue[MOD_MAX_BUFF_SIZE];
+static int front = -1;
+static int rear = -1;
 
 int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		    uint8_t *module_val, size_t *module_val_sz,
@@ -52,6 +54,7 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 	uint8_t **exec_instr = NULL;
 	size_t exec_instructions_sz = 0;
 	size_t temp_module_val_sz = 0;
+	int exit_code = -1;
 
 	switch (type) {
 	case FDO_SI_START:
@@ -71,10 +74,14 @@ int fdo_sim_command(fdo_sdk_si_type type, char *module_message,
 		result = fdo_sim_get_dsi_count(num_module_messages);
 		goto end;
 	case FDO_SI_GET_DSI:
+		exit_code = (front == -1 || front > rear)
+				? -1
+				: fdo_sim_command_queue[front++];
 		result = fdo_sim_get_dsi(&fdow, mtu, module_message, module_val,
 					 module_val_sz, exit_code, bin_data,
 					 temp_module_val_sz, &hasmore,
 					 &write_type, filename);
+		hasmore = (front > rear) ? false : true;
 		goto end;
 	case FDO_SI_SET_OSI:
 		result = fdo_sim_set_osi_command(
@@ -451,7 +458,11 @@ end:
 int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 {
 	int result = FDO_SI_INTERNAL_ERROR;
-	exit_code = -1;
+	int exit_code = -1;
+
+	if (front == -1) {
+		front = 0;
+	}
 
 	if (fdor_is_value_null(fdor)) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to read "
@@ -470,6 +481,7 @@ int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 		hasmore = true;
 		write_type = FDO_SIM_MOD_MSG_EXIT_CODE;
 	}
+	fdo_sim_command_queue[++rear] = exit_code;
 	result = FDO_SI_SUCCESS;
 end:
 	result = fdo_sim_end(&fdor, &fdow, result, NULL, exec_instr,
