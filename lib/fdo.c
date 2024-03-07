@@ -870,13 +870,13 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 			return FDO_ERROR;
 		}
 	}
-
+#if defined(DEVICE_TPM20_ENABLED)
 	if (g_fdo_data->devcred->ST != FDO_DEVICE_STATE_PC &&
 	    g_fdo_data->devcred->dc_active == false) {
 		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_IDLE;
 		return FDO_SUCCESS;
 	}
-
+#endif
 	if ((num_modules == 0) || (num_modules > FDO_MAX_MODULES) ||
 	    (module_information == NULL) ||
 	    (module_information->service_info_callback == NULL)) {
