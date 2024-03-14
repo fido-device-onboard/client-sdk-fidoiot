@@ -337,9 +337,7 @@ int get_device_serial(char *serial_buff)
 	const char *cmd = "dmidecode -s system-serial-number";
 	int out_sz;
 	char out[MAX_DEV_SERIAL_SZ];
-	int results_sz = 0;
 	int ret = -1;
-	char *results = (char *)malloc(MAX_DEV_SERIAL_SZ * sizeof(char));
 
 	if (cmd != NULL) {
 		/* Open the command for reading. */
@@ -348,23 +346,11 @@ int get_device_serial(char *serial_buff)
 
 			/* Read the output a line at a time - output it. */
 			while (fgets(out, out_sz = sizeof(out), fp) != NULL) {
-				if (strcat_s(results, MAX_DEV_SERIAL_SZ, out) !=
+				if (strcat_s(serial_buff, MAX_DEV_SERIAL_SZ, out) !=
 				    0) {
 					LOG(LOG_ERROR, "Strcat() failed!\n");
 					goto end;
 				}
-			}
-
-			results_sz = strnlen_s(results, MAX_DEV_SERIAL_SZ);
-			if (!results_sz) {
-				goto end;
-			}
-
-			if (memcpy_s(serial_buff, results_sz, results,
-				     results_sz)) {
-				LOG(LOG_ERROR,
-				    "Failed to copy device serial contents\n");
-				goto end;
 			}
 		} else {
 			goto end;
@@ -375,10 +361,6 @@ end:
 	/* close */
 	if (fp) {
 		pclose(fp);
-	}
-	if (results) {
-		free(results);
-		results = NULL;
 	}
 	return ret;
 }
