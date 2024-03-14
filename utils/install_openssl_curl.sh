@@ -1,15 +1,15 @@
 OPENSSL_ROOT=/opt/openssl
 CURL_ROOT=/opt/curl
-CURL_VER="8.4.0"
-CURL_LINK="https://curl.se/download/curl-8.4.0.tar.gz --no-check-certificate"
+CURL_VER="8.6.0"
+CURL_LINK="https://curl.se/download/curl-8.6.0.tar.gz --no-check-certificate"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
 
 
 
-install() 
-{  
+install()
+{
     OPENSSL_LINK="https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz --no-check-certificate"
     echo "Build & Install OpenSSL version : $OPENSSL_VER"
     cd $PARENT_DIR
@@ -21,20 +21,20 @@ install()
     ./config --prefix=$OPENSSL_ROOT --openssldir=/usr/local/ssl
     make -j$(nproc)
     make install
-    
+
     grep -qxF '$OPENSSL_ROOT/lib64/' /etc/ld.so.conf.d/libc.conf || echo $OPENSSL_ROOT/lib64/ | sudo tee -a /etc/ld.so.conf.d/libc.conf
     ldconfig
-	
+
     echo "Build & Install Curl version : $CURL_VER"
     cd $PARENT_DIR
     wget $CURL_LINK
     tar -xvzf curl-$CURL_VER.tar.gz
     cd curl-$CURL_VER
 
-    ./configure --prefix=$CURL_ROOT --with-openssl=$OPENSSL_ROOT --with-nghttp2 --enable-versioned-symbols
+    ./configure --prefix=$CURL_ROOT --with-openssl=$OPENSSL_ROOT --with-nghttp2 --enable-versioned-symbols --without-libpsl
     make -j$(nproc)
     make install
-    
+
     $OPENSSL_ROOT/bin/openssl version
     $CURL_ROOT/bin/curl -V
 }
@@ -44,7 +44,7 @@ uninstall()
 {
     OPENSSL_LINK="https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz --no-check-certificate"
     echo "Uninstall OpenSSL version : $OPENSSL_VER"
-	
+
     cd $PARENT_DIR
     rm -f openssl-$OPENSSL_VER.tar.gz
     wget $OPENSSL_LINK
@@ -66,7 +66,7 @@ usage()
         ./$0 <OPTION>\n
         OPTION:
             -i - Install OpenSSL.
-	          -u - Uninstall OpenSSL. (e.g. -v 3.0.8)
+            -u - Uninstall OpenSSL. (e.g. -v 3.0.13)
             -v - OpenSSL Version
             -h - Help."
 }
