@@ -93,12 +93,18 @@ static int read_fill_modelserial(void)
 	}
 
 	ch = temp_device_serial[0];
-	while (ch != '\0') {
-		ch = temp_device_serial[curr];
-		if (!isalnum(ch)) {
-			flag = 1;
+	if (ch == '\0') {
+		flag = 1;
+	} else {
+		while (ch != '\0') {
+			if (!isalnum(ch)) {
+				flag = 1;
+			}
+			ch = temp_device_serial[++curr];
+			if (ch == '\n') {
+				ch = temp_device_serial[++curr];
+			}
 		}
-		curr++;
 	}
 
 	if (ret || flag) {
