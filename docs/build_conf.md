@@ -103,6 +103,7 @@ RETRY=false           # Error Recovery disabled
 Option to get device serial from system BIOS table:
 GET_DEV_SERIAL=true            # get device serial enabled
 GET_DEV_SERIAL=false           # get device serial disabled (default)
+NOTE: linux-client required elevated privileges to get device serial from system BIOS table. Use 'sudo' to execute.
 
 Option to lock TPM for futher reads and writes:
 LOCK_TPM=true            # TPM Locked for futher reads and writes (default)
