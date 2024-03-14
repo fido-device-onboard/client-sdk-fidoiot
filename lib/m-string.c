@@ -94,11 +94,13 @@ static int read_fill_modelserial(void)
 
 	ch = temp_device_serial[0];
 	while (ch != '\0') {
-		ch = temp_device_serial[curr];
 		if (!isalnum(ch)) {
 			flag = 1;
 		}
-		curr++;
+		ch = temp_device_serial[++curr];
+		if (ch == '\n') {
+			ch = temp_device_serial[++curr];
+		}
 	}
 
 	if (ret || flag) {
