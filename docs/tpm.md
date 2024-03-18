@@ -114,7 +114,7 @@ After installing openssl, proceed with the installation of curl.
 	```
 3. Issue the command to configure the curl with openssl and nghttp2:
 	```
-	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols --without-libpsl
 	```
 4. Issue the command to build curl:
 	```
@@ -384,7 +384,7 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
 > To clear the TPM storage, execute the clear TPM* script. Refer to [Clear TPM](../utils/clear_tpm_nv.sh).
 
 ```shell
-sudo  utils/clear_tpm_nv.sh
+sudo  ./utils/clear_tpm_nv.sh
 ```
 
 >  ***NOTE***: Enabling LOCK_TPM flag in cmake/cli_input.cmake will lock TPM for further reads/writes.
@@ -439,7 +439,7 @@ Use the tpm2_evictcontrol command to delete the content or clear TPM* from the B
 To clear the TPM storage, execute the clear TPM* script. Refer to [Clear TPM](../utils/clear_tpm_nv.sh).
 
 ```shell
-sudo  utils/clear_tpm_nv.sh
+sudo  ./utils/clear_tpm_nv.sh
 ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />

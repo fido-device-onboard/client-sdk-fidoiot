@@ -118,7 +118,7 @@ After installing openssl, proceed with the installation of curl.
 	```
 3. Issue the command to configure the curl with openssl and nghttp2:
 	```
-	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols --without-libpsl
 	```
 4. Issue the command to build curl:
 	```
