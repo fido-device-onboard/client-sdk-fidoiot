@@ -14,8 +14,6 @@
 #include "cse_utils.h"
 #endif
 
-#define ECDSA_SIGNATURE_MAX_LEN BUFF_SIZE_256_BYTES
-
 /* This function signs a message passed in message of size message_length.
  * The generated signature will be available in signature of size
  * signature_length. This API shall use the default device private key
