@@ -36,6 +36,7 @@ extern "C" {
 #define SHA384_DIGEST_SIZE BUFF_SIZE_48_BYTES
 #define SHA512_DIGEST_SIZE BUFF_SIZE_64_BYTES
 #define HMACSHA256_KEY_SIZE BUFF_SIZE_32_BYTES
+#define ECDSA_SIGNATURE_MAX_LEN BUFF_SIZE_256_BYTES
 
 /* Initialize randomization library. */
 int random_init(void);

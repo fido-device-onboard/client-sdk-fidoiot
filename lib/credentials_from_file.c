@@ -1028,11 +1028,11 @@ bool load_device_status(fdo_sdk_device_status *state)
 	// Device has not yet been initialized.
 	// Since, Normal.blob is empty, the file size will be 0
 	if (dev_cred_len == 0) {
-		LOG(LOG_INFO,
+		LOG(LOG_DEBUG,
 		    "DeviceCredential is empty. Set state to run DI\n");
 		*state = FDO_DEVICE_STATE_PC;
 	} else {
-		LOG(LOG_INFO, "DeviceCredential is non-empty. Set state to "
+		LOG(LOG_DEBUG, "DeviceCredential is non-empty. Set state to "
 			      "run TO1/TO2\n");
 		// No Device state is being set currently
 	}

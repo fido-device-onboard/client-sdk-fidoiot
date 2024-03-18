@@ -99,6 +99,7 @@ int fdo_sim_start(fdor_t **fdor, fdow_t **fdow)
 		LOG(LOG_ERROR, "Module fdo_sim - FDOW "
 			       "Initialization/Allocation failed!\n");
 		result = FDO_SI_CONTENT_ERROR;
+		FSIMModuleFree(*fdow);
 		goto end;
 	}
 
@@ -107,6 +108,7 @@ int fdo_sim_start(fdor_t **fdor, fdow_t **fdow)
 	    !fdo_block_alloc_with_size(&(*fdor)->b, MOD_MAX_BUFF_SIZE)) {
 		LOG(LOG_ERROR, "Module fdo_sim - FDOR "
 			       "Initialization/Allocation failed!\n");
+		FSIMModuleFree(*fdor);
 		goto end;
 	}
 	result = FDO_SI_SUCCESS;
