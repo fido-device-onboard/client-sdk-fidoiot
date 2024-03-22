@@ -394,11 +394,13 @@ sudo  ./utils/clear_tpm_nv.sh
 
 - Persistent Storage Index in TPM*
 
-Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the 0x81020002 index for the following command examples.
+Find a persistent storage index that is unused in the TPM* and note it down. It usually starts from 0x81000000. To see the indexes that are already being used, use the following command. FDO uses the indexes mentioned in the [TPM spec](https://fidoalliance.org/specs/FDO/securing-fdo-in-tpm-v1.0-rd-20231010/securing-fdo-in-tpm-v1.0-rd-20231010.html#Handles_LABEL) for the following command examples.
 
 ```shell
 sudo tpm2_getcap handles-persistent
+sudo tpm2_getcap handles-nv-index
 ```
+>  ***NOTE***: Please note that the [FIDO Alliance specification "Securing FDO Credentials in the TPM"](https://fidoalliance.org/specs/FDO/securing-fdo-in-tpm-v1.0-rd-20231010/securing-fdo-in-tpm-v1.0-rd-20231010.html) has been published as a Review Draft by the FIDO Alliance, and is still subject to comment and change. With respect to [section 4.2, Handles for FDO Credentials](https://fidoalliance.org/specs/FDO/securing-fdo-in-tpm-v1.0-rd-20231010/securing-fdo-in-tpm-v1.0-rd-20231010.html#Handles_LABEL), Trusted Computing Group (TCG) has allocated the NVRAM addresses referenced, and is moving towards approval of the persistent object handles.
 
 - Primary Key Generation from Endorsement Hierarchy
 
