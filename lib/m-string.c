@@ -20,8 +20,14 @@
 #include "cse_utils.h"
 #include "cse_tools.h"
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#include "fdo_crypto.h"
+#include "tpm2_nv_storage.h"
+#endif
 
 #include <inttypes.h>
+#include <ctype.h>
 
 /*
  * Generate the "m" string value.
@@ -69,12 +75,80 @@ static int read_fill_modelserial(void)
 	uint8_t def_model_sz = 0;
 	size_t fsize = 0;
 
+#if defined(GET_DEV_SERIAL)
+	int flag = 0;
+	int curr = 0;
+	char ch;
+	char temp_device_serial[MAX_DEV_SERIAL_SZ];
+	uint8_t temp_serial_sz = 0;
+
+	if (memset_s(temp_device_serial, sizeof(temp_device_serial), 0) != 0) {
+		LOG(LOG_ERROR, "Memset() failed!\n");
+		goto err;
+	}
+
+	ret = get_device_serial(temp_device_serial);
+	if (ret) {
+		LOG(LOG_ERROR, "Failed to get serial no.\n");
+	}
+
+	ch = temp_device_serial[0];
+	if (ch == '\0') {
+		flag = 1;
+	} else {
+		while (ch != '\0') {
+			if (!isalnum(ch)) {
+				flag = 1;
+			}
+			ch = temp_device_serial[++curr];
+			if (ch == '\n') {
+				ch = temp_device_serial[++curr];
+			}
+		}
+	}
+
+	if (ret || flag) {
+		LOG(LOG_DEBUG, "Defaulting serial num to 'abcdef'\n");
+		def_serial_sz = strnlen_s(DEF_SERIAL_NO, MAX_DEV_SERIAL_SZ);
+		if (!def_serial_sz || def_serial_sz == MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_ERROR, "Default serial number string isn't "
+				       "NULL terminated\n");
+			goto err;
+		}
+
+		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ, DEF_SERIAL_NO,
+				def_serial_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to copy serial no!\n");
+			goto err;
+		}
+	} else {
+		temp_serial_sz =
+		    strnlen_s(temp_device_serial, MAX_DEV_SERIAL_SZ);
+		if (!temp_serial_sz || temp_serial_sz == MAX_DEV_SERIAL_SZ) {
+			LOG(LOG_ERROR, "Default serial number string isn't "
+				       "NULL terminated\n");
+			goto err;
+		}
+
+		if (*temp_device_serial &&
+		    temp_device_serial[temp_serial_sz - 1] == '\n') {
+			temp_device_serial[temp_serial_sz - 1] = '\0';
+		}
+
+		ret = strncpy_s(device_serial, MAX_DEV_SERIAL_SZ,
+				temp_device_serial, temp_serial_sz);
+		if (ret) {
+			LOG(LOG_ERROR, "Failed to copy serial no!\n");
+			goto err;
+		}
+	}
+#else
 	fsize = fdo_blob_size((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_DEV_SERIAL_SZ)) {
 
 		if (fdo_blob_read((const char *)SERIAL_FILE, FDO_SDK_RAW_DATA,
 				  (uint8_t *)device_serial, fsize) <= 0) {
-
 			LOG(LOG_ERROR, "Failed to get serial no\n");
 			goto err;
 		}
@@ -82,7 +156,7 @@ static int read_fill_modelserial(void)
 		if (fsize > MAX_DEV_SERIAL_SZ) {
 			LOG(LOG_INFO, "Serialno exceeds 255 characters. "
 				      "Defaulting it to 'abcdef'\n");
-		} else {
+		} else if (!fsize) {
 			LOG(LOG_INFO, "No serialno file present!\n");
 		}
 
@@ -100,6 +174,8 @@ static int read_fill_modelserial(void)
 			goto err;
 		}
 	}
+#endif
+	LOG(LOG_DEBUG, "Device serial = %s\n", device_serial);
 
 	fsize = fdo_blob_size((const char *)MODEL_FILE, FDO_SDK_RAW_DATA);
 	if ((fsize > 0) && (fsize <= MAX_MODEL_NO_SZ)) {
@@ -192,7 +268,7 @@ int ps_get_m_string(fdo_prot_t *ps)
 
 	/* Get the CSR data */
 #if defined(DEVICE_TPM20_ENABLED)
-	size_t m_string_sz = get_file_size(TPM_DEVICE_CSR);
+	size_t m_string_sz = fdo_tpm_nvread_size(TPM_DEVICE_CSR_NV_IDX);
 
 	csr = fdo_byte_array_alloc(m_string_sz);
 	if (!csr) {
@@ -201,11 +277,18 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 
-	ret = read_buffer_from_file(TPM_DEVICE_CSR, csr->bytes, csr->byte_sz);
-	if (0 != ret) {
-		LOG(LOG_ERROR, "Failed to read %s file!\n", TPM_DEVICE_CSR);
+	if (fdo_tpm_read_nv(TPM_DEVICE_CSR_NV_IDX, csr->bytes, csr->byte_sz) ==
+	    -1) {
+		LOG(LOG_ERROR, "Failed to load TPM DEVICE CSR into buffer.\n");
 		goto err;
 	}
+#if defined(LOCK_TPM)
+	if (fdo_tpm_nvread_lock(TPM_DEVICE_CSR_NV_IDX)) {
+		LOG(LOG_ERROR, "Failed to lock file!\n");
+		goto err;
+	}
+#endif
+	ret = 0;
 #elif defined(DEVICE_CSE_ENABLED)
 	// CSR will be NULL for CSE
 	csr = fdo_byte_array_alloc(0);

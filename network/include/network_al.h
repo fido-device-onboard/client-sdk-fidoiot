@@ -116,7 +116,7 @@ int32_t fdo_con_parse_msg_header(uint32_t *protocol_version,
 int32_t fdo_con_parse_msg_body(uint8_t *buf, size_t length, char *body_buf);
 
 /*
- * Send(write) data.
+ * Send(write) and receive(read) data.
  *
  * @param[in] protocol_version: FDO protocol version
  * @param[in] message_type: message type of outgoing FDO message.

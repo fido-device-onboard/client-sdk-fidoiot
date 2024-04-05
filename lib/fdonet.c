@@ -507,8 +507,6 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn,
 	}
 
 	if (ip && ip->length > 0) {
-		LOG(LOG_DEBUG, "using IP\n");
-
 		connect_ok = fdo_con_connect(ip, dn, port, tls);
 		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO, "Failed to connect to Manufacturer "
@@ -590,8 +588,6 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 	}
 
 	if (ip && ip->length > 0) {
-		LOG(LOG_DEBUG, "using IP\n");
-
 		connect_ok = fdo_con_connect(ip, dn, port, tls);
 		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO, "Failed to connect to Rendezvous server: "
@@ -675,8 +671,6 @@ bool connect_to_owner(fdo_ip_address_t *ip, const char *dn, uint16_t port,
 	}
 
 	if (ip && ip->length > 0) {
-		LOG(LOG_DEBUG, "using IP\n");
-
 		connect_ok = fdo_con_connect(ip, dn, port, tls);
 		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO,

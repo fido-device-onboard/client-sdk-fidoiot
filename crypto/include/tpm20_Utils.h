@@ -36,78 +36,87 @@
 
 static const TPM2B_PUBLIC in_public_primary_key_template = {
     .size = 0,
-    .publicArea =
-	{
-	    .type = TPM2_ALG_ECC,
-	    .nameAlg = FDO_TPM2_ALG_SHA,
-	    .objectAttributes =
-		(TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_RESTRICTED |
-		 TPMA_OBJECT_DECRYPT | TPMA_OBJECT_FIXEDTPM |
-		 TPMA_OBJECT_FIXEDPARENT | TPMA_OBJECT_SENSITIVEDATAORIGIN),
-	    .authPolicy =
-		{
-		    .size = 0,
-		},
+    .publicArea = {
+	.type = TPM2_ALG_ECC,
+	.nameAlg = FDO_TPM2_ALG_SHA,
+	.objectAttributes =
+	    (TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_RESTRICTED |
+	     TPMA_OBJECT_DECRYPT | TPMA_OBJECT_FIXEDTPM |
+	     TPMA_OBJECT_FIXEDPARENT | TPMA_OBJECT_SENSITIVEDATAORIGIN),
+	.authPolicy =
+	    {
+		.size = 0,
+	    },
+	.parameters
+	    .eccDetail = {.symmetric = {.algorithm = TPM2_ALG_AES,
+					.keyBits.aes = TPM_AES_BITS,
+					.mode.aes = TPM2_ALG_CFB},
+			  .scheme = {.scheme = TPM2_ALG_NULL, .details = {{0}}},
+			  .curveID = FDO_TPM2_CURVE_ID,
+			  .kdf = {.scheme = TPM2_ALG_NULL, .details = {{0}}}},
+	.unique.ecc = {.x = {.size = 0, .buffer = {0}},
+		       .y = {.size = 0, .buffer = {0}}}}};
 
-	    .parameters.eccDetail = {.symmetric =
-					 {
-					     .algorithm = TPM2_ALG_AES,
-					     .keyBits.aes = TPM_AES_BITS,
-					     .mode.aes = TPM2_ALG_CFB,
-					 },
-				     .scheme =
-					 {
-					     .scheme = TPM2_ALG_NULL,
-					     .details = {{0}},
-					 },
-				     .curveID = FDO_TPM2_CURVE_ID,
-				     .kdf = {.scheme = TPM2_ALG_NULL,
-					     .details = {{0}}}},
-	    .unique.ecc =
-		{
-		    .x = {.size = 0, .buffer = {0}},
-		    .y = {.size = 0, .buffer = {0}},
-		},
-	},
-};
+static const TPM2B_PUBLIC in_publicECKey_template = {
+    .size = 0,
+    .publicArea = {
+	.type = TPM2_ALG_ECC,
+	.nameAlg = FDO_TPM2_ALG_SHA,
+	.objectAttributes =
+	    (TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_SIGN_ENCRYPT |
+	     TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT |
+	     TPMA_OBJECT_SENSITIVEDATAORIGIN),
+	.authPolicy =
+	    {
+		.size = 0,
+	    },
+	.parameters.eccDetail =
+	    {.symmetric = {.algorithm = TPM2_ALG_NULL,
+			   .keyBits.aes = 0,
+			   .mode.aes = 0},
+	     .scheme = {.scheme = TPM2_ALG_ECDSA,
+			.details = {.ecdsa = {.hashAlg = FDO_TPM2_ALG_SHA}}},
+	     .curveID = FDO_TPM2_CURVE_ID,
+	     .kdf = {.scheme = TPM2_ALG_NULL, .details = {{0}}}},
+	.unique.ecc = {.x = {.size = 0, .buffer = {0}},
+		       .y = {.size = 0, .buffer = {0}}}}};
 
 static const TPM2B_PUBLIC in_publicHMACKey_template = {
     .size = 0,
-    .publicArea =
-	{
-	    .type = TPM2_ALG_KEYEDHASH,
-	    .nameAlg = FDO_TPM2_ALG_SHA,
-	    .objectAttributes =
-		(TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_DECRYPT |
-		 TPMA_OBJECT_SIGN_ENCRYPT | TPMA_OBJECT_FIXEDTPM |
-		 TPMA_OBJECT_FIXEDPARENT | TPMA_OBJECT_SENSITIVEDATAORIGIN),
-	    .authPolicy =
-		{
-		    .size = 0,
-		},
-
-	    .parameters.keyedHashDetail =
-		{
-		    .scheme =
-			{
-			    .scheme = TPM2_ALG_NULL,
-			    .details = {{0}},
-			},
-		},
-	    .unique.keyedHash =
-		{
-		    .size = 0,
-		    .buffer = {0},
-		},
-	},
-};
+    .publicArea = {
+	.type = TPM2_ALG_KEYEDHASH,
+	.nameAlg = FDO_TPM2_ALG_SHA,
+	.objectAttributes =
+	    (TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_SIGN_ENCRYPT |
+	     TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT |
+	     TPMA_OBJECT_SENSITIVEDATAORIGIN),
+	.authPolicy =
+	    {
+		.size = 0,
+	    },
+	.parameters.keyedHashDetail =
+	    {.scheme = {.scheme = TPM2_ALG_HMAC,
+			.details = {.hmac = {.hashAlg = FDO_TPM2_ALG_SHA}}}},
+	.unique.keyedHash =
+	    {
+		.size = 0,
+		.buffer = {0},
+	    },
+    }};
 
 int32_t fdo_tpm_get_hmac(const uint8_t *data, size_t data_length, uint8_t *hmac,
-			 size_t hmac_length, char *tpmHMACPub_key,
-			 char *tpmHMACPriv_key);
-int32_t fdo_tpm_generate_hmac_key(char *tpmHMACPub_key, char *tpmHMACPriv_key);
-int32_t fdo_tpm_commit_replacement_hmac_key(void);
-void fdo_tpm_clear_replacement_hmac_key(void);
-int32_t is_valid_tpm_data_protection_key_present(void);
+			 size_t hmac_length,
+			 TPMI_DH_PERSISTENT persistent_handle);
+int32_t fdo_tpm_generate_hmac_key(TPMI_DH_PERSISTENT persistent_handle);
+
+int32_t fdoTPMEsys_context_init(ESYS_CONTEXT **esys_context);
+int32_t fdoTPMEsys_auth_session_init(ESYS_CONTEXT *esys_context,
+				     ESYS_TR *session_handle);
+int32_t fdoTPMTSSContext_clean_up(ESYS_CONTEXT **esys_context,
+				  ESYS_TR *auth_session_handle,
+				  ESYS_TR *primary_handle);
+int32_t fdoTPMGenerate_primary_key_context(ESYS_CONTEXT **esys_context,
+					   ESYS_TR *primary_handle,
+					   ESYS_TR *auth_session_handle);
 
 #endif /* #ifndef __TPM20_UTILS_H__ */

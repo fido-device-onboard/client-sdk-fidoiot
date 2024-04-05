@@ -1,14 +1,8 @@
 
-
-
-
-
-
-
 # Intel<sup>&reg;</sup> CSE Implementation
-The development and execution OS used was `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version 8.4 or 8.6 / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
+The development and execution OS used was `Ubuntu* OS version [20.04|22.04] / RHEL* OS version [8.4|8.6|8.8] / Debian 11.4` on x86. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The Intel<sup>&reg;</sup> CSE (Intel<sup>&reg;</sup>  Converged Security Engine) enabled FDO Client SDK execution depends on OpenSSL* toolkit 3.0.8 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The Intel<sup>&reg;</sup> CSE (Intel<sup>&reg;</sup>  Converged Security Engine) enabled FDO Client SDK execution depends on OpenSSL* toolkit 3.0.13 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 # Prerequisites for Intel<sup>&reg;</sup> CSE support
 The system hardware should have the support for Intel<sup>&reg;</sup> CSE FDO client with UUID: 125405e0-fca9-4110-8f88-b4dbcdcb876f
@@ -16,13 +10,13 @@ The system hardware should have the support for Intel<sup>&reg;</sup> CSE FDO cl
 The linux kernel should have the support to enable the Intel<sup>&reg;</sup> CSE clients and have FDO in that list. This support is available in intel-next kernel version 5.9 onwards and is upstreamed in kernel.org version 6.2-rc7 onwards.
 
 ## 1. Packages Requirements when Building Binaries:
-* For Ubuntu* OS version 20.04 or 22.04 / Debian 11.4:
+* For Ubuntu* OS version [20.04|22.04] / Debian 11.4:
 ```shell
 sudo apt-get install build-essential python-setuptools clang-format dos2unix ruby \
   libglib2.0-dev libpcap-dev autoconf libtool libproxy-dev doxygen cmake libssl-dev mercurial nghttp2 libnghttp2-dev
 ```
 
-* For RHEL* OS version 8.4 or 8.6:
+* For RHEL* OS version [8.4|8.6|8.8]:
 ```shell
 sudo subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms
 sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -31,22 +25,23 @@ sudo yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.
 sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix ruby perl glibc-static \
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake openssl-devel make mercurial perl nghttp2 libnghttp2-devel
 ```
+
 ## 2. Packages Requirements when Executing Binaries:
 
-OpenSSL* toolkit version 3.0.8
+OpenSSL* toolkit version 3.0.13
 GCC version > 7.5
-Curl version 8.1.2
+Curl version 8.6.0
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
 >
 **Script usage command**
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	sudo ./install_openssl_curl.sh -i -v 3.0.13
 	```
 #### Steps to remove the older curl packages
 
@@ -59,15 +54,15 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 	yum remove curl libcurl-devel
 	```
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.8
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.13
 
 1. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-3.0.8.tar.gz
+	wget https://www.openssl.org/source/openssl-3.0.13.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf openssl-3.0.8.tar.gz && cd openssl-3.0.8
+	tar -zxf openssl-3.0.13.tar.gz && cd openssl-3.0.13
 	```
 3. Issue the command:
 	```
@@ -106,24 +101,24 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 3.0.8  7 Feb 2023
+	OpenSSL* 3.0.13  30 Jan 2024
 	```
 
-#### Steps to install curl version 8.1.2 configured with openssl
+#### Steps to install curl version 8.6.0 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://curl.se/download/curl-8.1.2.tar.gz
+	wget https://curl.se/download/curl-8.6.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-8.1.2.tar.gz && cd curl-8.1.2
+	tar -zxf curl-8.6.0.tar.gz && cd curl-8.6.0
 	```
 3. Issue the command to configure the curl with openssl and nghttp2:
 	```
-	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols
+	./configure --with-openssl="OpenSSL Path" --with-nghttp2 --enable-versioned-symbols --without-libpsl
 	```
 4. Issue the command to build curl:
 	```
@@ -142,26 +137,26 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 8.1.2 (x86_64-pc-linux-gnu) libcurl/8.1.2 OpenSSL/3.0.8 zlib/1.2.11
+    curl 8.6.0 (x86_64-pc-linux-gnu) libcurl/8.6.0 OpenSSL/3.0.13 zlib/1.2.11
     ```
 Alternatively, execute  [Installation-Script](../utils/install_openssl_curl.sh) which can be used for both installation and uninstallation of OpenSSL and Curl.
-> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script 
-> OPENSSL_ROOT=/opt/openssl 
+> ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl to /opt/ by default. To provide different path, modify these variables in the script
+> OPENSSL_ROOT=/opt/openssl
 > CURL_ROOT=/opt/curl
 
 **Script usage command**
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.8
+	sudo ./install_openssl_curl.sh -i -v 3.0.13
 	```
 
 * Command to uninstall OpenSSL
 	```
-	sudo ./install_openssl_curl.sh -u -v 3.0.8
+	sudo ./install_openssl_curl.sh -u -v 3.0.13
 	```
 
-Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.1.2 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses along with curl 8.6.0 in your setup, ensure to use CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519) as given in below examples.
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
@@ -219,12 +214,12 @@ make pristine
 cmake -DDA=cse_ecdsa384 .
 make -j$(nproc)
 ```
-> ***NOTE***:  To run with mTLS connection, 
+> ***NOTE***:  To run with mTLS connection,
 > 1. Compile the code with `-DMTLS=true` flag.
 > 2. If signing with external CA, copy CA cert and CA key to `data` folder.
-> 3. Execute `bash utlils/user_csr_req.sh .`
+> 3. Execute `bash utils/user_csr_req.sh .`
 > This will generate client CSR and private key.
-> 
+>
 Refer to the section [FDO Build configurations](build_conf.md) for more build options.
 
 <a name="run_linux_fdo"></a>
@@ -254,6 +249,16 @@ After a successful compilation, the Intel<sup>&reg;</sup> CSE enabled FDO Client
   ```shell
   sudo ./build/linux-client
   ```
+
+> ***NOTE***: Usage:
+>
+> ```
+>./build/linux-client -ip <http|https>://<mfg addr>:<port>
+>if -ip not specified, manufacturer_addr.bin will be used
+>-ss: specify if backend servers are using self-signed certificates
+>-r: enable resale
+>```
+>
 > ***NOTE***: To do the DI again we need to clear the Device status from CSE storage.
 > To clear the storage, compile the code with "-DCSE_CLEAR=true" flag and then execute the following command
 ```shell

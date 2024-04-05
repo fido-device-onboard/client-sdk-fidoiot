@@ -365,7 +365,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			if (CURL_VERSION_SSL ==
 			    (vinfo->features & CURL_VERSION_SSL)) {
 				// SSL support enabled
-				LOG(LOG_INFO, "SSL support verified.\n");
+				LOG(LOG_DEBUG, "SSL support verified.\n");
 			}
 
 			// Add option to force the https TLS connection to TLS
@@ -404,8 +404,6 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 					    "verify host.\n");
 					goto err;
 				}
-				LOG(LOG_INFO, "Set connection for self signed "
-					      "certificate usage.\n");
 			}
 #endif
 			curlCode = curl_easy_setopt(curl, CURLOPT_USE_SSL,
@@ -422,6 +420,8 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 		}
 #endif
 		if (enable_sni) {
+			LOG(LOG_DEBUG, "Using DNS\n");
+
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 					  (char *)dn, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -455,6 +455,7 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			}
 		} else {
 			(void)dn;
+			LOG(LOG_DEBUG, "Using IP\n");
 			if (snprintf_s_si(temp, HTTP_MAX_URL_SIZE, "%s:%d",
 					  ip_ascii, port) < 0) {
 				LOG(LOG_ERROR, "Snprintf() failed!\n");
@@ -468,15 +469,14 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 
 		curlCode = curl_easy_setopt(curl, CURLOPT_URL, url);
 		if (curlCode != CURLE_OK) {
-			LOG(LOG_ERROR,
-			    "CURL_ERROR: Could not able to pass url.\n");
+			LOG(LOG_ERROR, "CURL_ERROR: Unable to pass url.\n");
 			goto err;
 		}
 
 		curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
 		if (curlCode != CURLE_OK) {
 			LOG(LOG_ERROR,
-			    "CURL_ERROR: Could not able connect to host.\n");
+			    "CURL_ERROR: Unable to connect to host.\n");
 			goto err;
 		}
 
@@ -827,12 +827,13 @@ err:
 
 /**
  * Send and Receive data.
- *
- * @param protocol_version - FDO protocol version
- * @param message_type - message type of outgoing FDO message.
- * @param buf - data buffer to write from.
- * @param length - Number of sent bytes.
- * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
+ * @param[in] protocol_version: FDO protocol version
+ * @param[in] message_type: message type of outgoing FDO message.
+ * @param[in] buf: data buffer to write from.
+ * @param[in] length: Number of sent bytes.
+ * @param[in] tls: flag describing whether HTTP (false) or HTTPS (true) is
+ * @param[in] header_buf: header data buffer to read into  msg received by curl.
+ * @param[in] body_buf: body data buffer to read into  msg received by curl.
  * @retval -1 on failure, 0 on success.
  */
 int32_t fdo_con_send_recv_message(uint32_t protocol_version,
@@ -874,6 +875,10 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
+	if (length > REST_MAX_MSGHDR_SIZE) {
+		msg_header = curl_slist_append(msg_header, "Expect:");
+	}
+
 	curlCode = curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 0L);
 	if (curlCode != CURLE_OK) {
 		LOG(LOG_ERROR, "CURL_ERROR: Could not disable connect only.\n");
@@ -883,26 +888,27 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 #if defined(MTLS)
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLCERT, (char *)SSL_CERT);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client certificate.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to select client "
+			       "certificate.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_SSLKEY, (char *)SSL_KEY);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to select client key.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to select client key.\n");
 		goto err;
 	}
 #endif
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_URL, msg_header->data);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass url.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass url.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, msg_header);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass header.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass header.\n");
 		goto err;
 	}
 
@@ -920,8 +926,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Could not able to pass POST data.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass POST data.\n");
 		goto err;
 	}
 
@@ -934,7 +939,7 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode =
 	    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, WriteMemoryCallback);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass header "
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass header "
 			       "WriteMemoryCallback.\n");
 		goto err;
 	}
@@ -952,15 +957,14 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode = curl_easy_setopt(curl, CURLOPT_HEADERDATA,
 				    (void *)&temp_header_buf);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Could not able to pass header buffer.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass header buffer.\n");
 		goto err;
 	}
 
 	curlCode =
 	    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to pass "
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass "
 			       "WriteMemoryCallback.\n");
 		goto err;
 	}
@@ -968,14 +972,13 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 	curlCode =
 	    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&temp_body_buf);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR,
-		    "CURL_ERROR: Could not able to pass body buffer.\n");
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to pass body buffer.\n");
 		goto err;
 	}
 
 	curlCode = curl_easy_setopt(curl, CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
 	if (curlCode != CURLE_OK) {
-		LOG(LOG_ERROR, "CURL_ERROR: Could not able to suppress connect "
+		LOG(LOG_ERROR, "CURL_ERROR: Unable to suppress connect "
 			       "headers.\n");
 		goto err;
 	}
@@ -1000,10 +1003,14 @@ int32_t fdo_con_send_recv_message(uint32_t protocol_version,
 		goto err;
 	}
 
-	if (memcpy_s(body_buf, temp_body_buf.size, temp_body_buf.memory,
-		     temp_body_buf.size)) {
-		LOG(LOG_ERROR, "Failed to copy msg data in byte array\n");
-		goto err;
+	if ((message_type >= FDO_DI_APP_START) &&
+	    (message_type < FDO_TYPE_ERROR)) {
+		if (memcpy_s(body_buf, temp_body_buf.size, temp_body_buf.memory,
+			     temp_body_buf.size)) {
+			LOG(LOG_ERROR,
+			    "Failed to copy msg data in byte array\n");
+			goto err;
+		}
 	}
 
 	ret = 0;

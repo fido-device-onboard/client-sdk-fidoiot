@@ -142,8 +142,6 @@ int32_t msg68(fdo_prot_t *ps)
 			ps->serviceinfo_invalid_modnames = NULL;
 		}
 
-		// As per the spec, Only send Device ServiceInfo modules IF
-		// Owner is not done
 		if (!ps->owner_serviceinfo_isdone) {
 			// get any external module that has some ServiceInfo to
 			// send 'NOW',

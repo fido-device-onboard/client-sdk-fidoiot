@@ -55,6 +55,9 @@ static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
 
+char *mfg_addr = NULL;
+bool use_mfg_addr_bin = true;
+
 #if defined(DEVICE_CSE_ENABLED)
 TEEHANDLE fdo_cse_handle;
 #endif
@@ -696,11 +699,9 @@ static bool add_module_devmod(void)
 	}
 
 	// should ideally contain supported ServiceInfo module list and its
-	// count. for now, set this to 1, since we've only 1 module 'fdo_sys'
-	// TO-DO : Move this to fdotypes later when multiple Device ServiceInfo
-	// module support is added.
+	// count.
 	if (!fdo_service_info_add_kv_int(g_fdo_data->service_info,
-					 "devmod:nummodules", 1)) {
+					 "devmod:nummodules", 3)) {
 		LOG(LOG_ERROR, "Failed to add devmod:nummodules\n");
 		return false;
 	}
@@ -869,7 +870,13 @@ fdo_sdk_status fdo_sdk_init(fdo_sdk_errorCB error_handling_callback,
 			return FDO_ERROR;
 		}
 	}
-
+#if defined(DEVICE_TPM20_ENABLED)
+	if (g_fdo_data->devcred->ST != FDO_DEVICE_STATE_PC &&
+	    g_fdo_data->devcred->dc_active == false) {
+		g_fdo_data->devcred->ST = FDO_DEVICE_STATE_IDLE;
+		return FDO_SUCCESS;
+	}
+#endif
 	if ((num_modules == 0) || (num_modules > FDO_MAX_MODULES) ||
 	    (module_information == NULL) ||
 	    (module_information->service_info_callback == NULL)) {
@@ -1157,8 +1164,11 @@ fdo_sdk_status fdo_sdk_resale(void)
 			LOG(LOG_ERROR, "Reading {Mfg|Secret} blob failied!\n");
 			return FDO_ERROR;
 		}
-
+#if defined(DEVICE_TPM20_ENABLED)
+		ret = store_tpm_credential(g_fdo_data->devcred);
+#else
 		ret = store_credential(g_fdo_data->devcred);
+#endif
 #endif
 		if (!ret) {
 			LOG(LOG_INFO, "Set Resale complete\n");
@@ -1171,7 +1181,7 @@ fdo_sdk_status fdo_sdk_resale(void)
 	if (r == FDO_ERROR) {
 		LOG(LOG_ERROR, "Failed to set Resale\n");
 	} else if (r == FDO_RESALE_NOT_READY) {
-		LOG(LOG_DEBUG, "Device is not ready for Resale\n");
+		LOG(LOG_INFO, "Device is not ready for Resale\n");
 	}
 	if (g_fdo_data->devcred) {
 		fdo_dev_cred_free(g_fdo_data->devcred);
@@ -1256,32 +1266,47 @@ static bool _STATE_DI(void)
 
 	fdo_prot_di_init(&g_fdo_data->prot, g_fdo_data->devcred);
 
-	fsize = fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
-	if (fsize > 0) {
-		buffer = fdo_alloc(fsize + 1);
-		if (buffer == NULL) {
-			LOG(LOG_ERROR, "malloc failed\n");
+	if (use_mfg_addr_bin) {
+		fsize =
+		    fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
+		if (fsize > 0) {
+			buffer = fdo_alloc(fsize + 1);
+			if (buffer == NULL) {
+				LOG(LOG_ERROR, "malloc failed\n");
+				goto end;
+			}
+
+			if (fdo_blob_read((char *)MANUFACTURER_ADDR,
+					  FDO_SDK_RAW_DATA, (uint8_t *)buffer,
+					  fsize) == -1) {
+				LOG(LOG_ERROR,
+				    "Failed to read Manufacturer address\n");
+				goto end;
+			}
+
+			buffer[fsize] = '\0';
+
+			if (!parse_manufacturer_address(
+				buffer, fsize, &tls, &mfg_ip, mfg_dns,
+				sizeof(mfg_dns), &mfg_port)) {
+				LOG(LOG_ERROR, "Failed to parse Manufacturer "
+					       "Network address.\n");
+				goto end;
+			}
+		} else {
+			LOG(LOG_ERROR,
+			    "Manufacturer Network address file is empty.\n");
 			goto end;
 		}
-
-		if (fdo_blob_read((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA,
-				  (uint8_t *)buffer, fsize) == -1) {
-			LOG(LOG_ERROR, "Failed to read Manufacturer address\n");
-			goto end;
-		}
-
-		buffer[fsize] = '\0';
-
-		if (!parse_manufacturer_address(buffer, fsize, &tls, &mfg_ip,
+	} else {
+		fsize = strnlen_s(mfg_addr, FDO_MAX_STR_SIZE);
+		if (!parse_manufacturer_address(mfg_addr, fsize, &tls, &mfg_ip,
 						mfg_dns, sizeof(mfg_dns),
 						&mfg_port)) {
 			LOG(LOG_ERROR,
 			    "Failed to parse Manufacturer Network address.\n");
 			goto end;
 		}
-	} else {
-		LOG(LOG_ERROR, "Manufacturer Network address file is empty.\n");
-		goto end;
 	}
 
 	g_fdo_data->delaysec = default_delay;

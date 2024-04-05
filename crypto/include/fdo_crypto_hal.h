@@ -36,6 +36,7 @@ extern "C" {
 #define SHA384_DIGEST_SIZE BUFF_SIZE_48_BYTES
 #define SHA512_DIGEST_SIZE BUFF_SIZE_64_BYTES
 #define HMACSHA256_KEY_SIZE BUFF_SIZE_32_BYTES
+#define ECDSA_SIGNATURE_MAX_LEN BUFF_SIZE_256_BYTES
 
 /* Initialize randomization library. */
 int random_init(void);
@@ -54,7 +55,7 @@ int32_t crypto_close(void);
 /* Calculate hash of "buffer" and place the result in "output". "output" must
  * be allocated already.
  */
-int32_t crypto_hal_hash(uint8_t hash_type, const uint8_t *buffer,
+int32_t crypto_hal_hash(int hash_type, const uint8_t *buffer,
 			size_t buffer_length, uint8_t *output,
 			size_t output_length);
 

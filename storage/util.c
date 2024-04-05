@@ -20,6 +20,10 @@
 #include "freertos/task.h"
 #endif
 
+#ifndef MAX_DEV_SERIAL_SZ
+#define MAX_DEV_SERIAL_SZ 255
+#endif
+
 bool file_exists(char const *filename)
 {
 	FILE *fp = NULL;
@@ -317,3 +321,47 @@ int print_timestamp(void)
 #endif
 	return 0;
 }
+
+#if defined(GET_DEV_SERIAL)
+/**
+ * Internal API
+ * Get device serial number from system BIOS table
+ * */
+int get_device_serial(char *serial_buff)
+{
+	if (!serial_buff) {
+		return -1;
+	}
+
+	FILE *fp;
+	const char *cmd = "dmidecode -s system-serial-number";
+	int out_sz;
+	char out[MAX_DEV_SERIAL_SZ];
+	int ret = -1;
+
+	if (cmd != NULL) {
+		/* Open the command for reading. */
+		fp = popen(cmd, "r");
+		if (fp != NULL) {
+
+			/* Read the output a line at a time - output it. */
+			while (fgets(out, out_sz = sizeof(out), fp) != NULL) {
+				if (strcat_s(serial_buff, MAX_DEV_SERIAL_SZ, out) !=
+				    0) {
+					LOG(LOG_ERROR, "Strcat() failed!\n");
+					goto end;
+				}
+			}
+		} else {
+			goto end;
+		}
+		ret = 0;
+	}
+end:
+	/* close */
+	if (fp) {
+		pclose(fp);
+	}
+	return ret;
+}
+#endif

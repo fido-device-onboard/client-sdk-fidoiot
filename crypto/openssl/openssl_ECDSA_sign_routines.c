@@ -144,6 +144,11 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 	}
 
 	*signature_length = sig_r_len + sig_s_len;
+	if (*signature_length > ECDSA_SIGNATURE_MAX_LEN) {
+		LOG(LOG_ERROR, "Invalid signature length\n");
+		goto end;
+	}
+
 	if (memcpy_s(message_signature, *signature_length, (char *)sig_r,
 		     (size_t)sig_r_len) != 0) {
 		LOG(LOG_ERROR, "Memcpy Failed\n");

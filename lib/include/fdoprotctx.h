@@ -27,7 +27,7 @@ typedef struct fdo_prot_ctx_s {
 	bool (*protrun)(fdo_prot_t *ps);
 	fdo_ip_address_t *host_ip;
 	uint16_t host_port;
-	const char *host_dns;
+	char *host_dns;
 	fdo_ip_address_t *resolved_ip;
 } fdo_prot_ctx_t;
 
