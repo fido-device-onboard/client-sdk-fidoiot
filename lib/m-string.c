@@ -52,6 +52,8 @@
 /* All below sizes are excluding NULL termination */
 #if defined(DEVICE_CSE_ENABLED)
 #define DEVICE_MFG_STRING_ARRAY_SZ 8
+#elif defined(DEVICE_TPM20_ENABLED)
+#define DEVICE_MFG_STRING_ARRAY_SZ 6
 #else
 #define DEVICE_MFG_STRING_ARRAY_SZ 5
 #endif
@@ -233,6 +235,11 @@ int ps_get_m_string(fdo_prot_t *ps)
 	fdow_t temp_fdow = {0};
 	size_t enc_device_mfginfo = 0;
 
+#if defined(DEVICE_TPM20_ENABLED)
+	fdo_byte_array_t *tpm_ek = NULL;
+	size_t tpm_ek_sz = 0;
+#endif
+
 #if defined(DEVICE_CSE_ENABLED)
 	fdo_byte_array_t *cse_cert = NULL;
 	fdo_byte_array_t *cse_maroeprefix = NULL;
@@ -282,6 +289,22 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "Failed to load TPM DEVICE CSR into buffer.\n");
 		goto err;
 	}
+
+	tpm_ek_sz = get_file_size(TPM_DEVICE_EK);
+
+	tpm_ek = fdo_byte_array_alloc(tpm_ek_sz);
+	if (!tpm_ek) {
+		LOG(LOG_ERROR, "Failed to allocate memory for TPM EK.\n");
+		goto err;
+	}
+
+	ret = read_buffer_from_file(TPM_DEVICE_EK, tpm_ek->bytes,
+				    tpm_ek->byte_sz);
+	if (0 != ret) {
+		LOG(LOG_ERROR, "Failed to read %s file!\n", TPM_DEVICE_EK);
+		goto err;
+	}
+
 #if defined(LOCK_TPM)
 	if (fdo_tpm_nvread_lock(TPM_DEVICE_CSR_NV_IDX)) {
 		LOG(LOG_ERROR, "Failed to lock file!\n");
@@ -415,6 +438,12 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+	if (!fdow_byte_string(&temp_fdow, tpm_ek->bytes, tpm_ek->byte_sz)) {
+		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write TPM EK\n");
+		goto err;
+	}
+#endif
 	if (!fdow_end_array(&temp_fdow)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to end array\n");
 		goto err;
@@ -438,6 +467,12 @@ err:
 	if (csr) {
 		fdo_byte_array_free(csr);
 	}
+#if defined(DEVICE_TPM20_ENABLED)
+	if (tpm_ek) {
+		fdo_byte_array_free(tpm_ek);
+		tpm_ek_sz = 0;
+	}
+#endif
 #if defined(DEVICE_CSE_ENABLED)
 	if (cose_sig_structure) {
 		fdo_byte_array_free(cose_sig_structure);

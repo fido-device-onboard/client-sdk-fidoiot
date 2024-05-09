@@ -4,6 +4,8 @@ export OPENSSL3_BIN=/opt/openssl/bin
 TPM_PUB_KEY_FILE_INSIDE_DATA_DIR="tpm_ecdsa_pub.key"
 TPM_PRIV_KEY_FILE_INSIDE_DATA_DIR="tpm_ecdsa_priv.key"
 DEVICE_CSR_FILE_INSIDE_DATA_DIR="tpm_device_csr"
+TPM_ENDORSEMENT_KEY_CERT="tpm_ek_cert"
+TPM_ENDORSEMENT_KEY_CERT_FILE="tpm_ek_cert.pem"
 PARENT_DIR=""
 
 TPM_ENDORSEMENT_PRIMARY_KEY_CTX=tpm_primary_key.ctx
@@ -90,6 +92,8 @@ tpm_ecdsa_key_ctx=$PARENT_DIR"/"$TPM_ECDSA_KEY_CTX
 tpm_device_pub_key_file=$PARENT_DIR"/"$TPM_PUB_KEY_FILE_INSIDE_DATA_DIR
 tpm_device_priv_key_file=$PARENT_DIR"/"$TPM_PRIV_KEY_FILE_INSIDE_DATA_DIR
 device_csr_file=$PARENT_DIR"/"$DEVICE_CSR_FILE_INSIDE_DATA_DIR
+tpm_endorsement_key_cert=$PARENT_DIR"/"$TPM_ENDORSEMENT_KEY_CERT
+tpm_endorsement_key_cert_pem=$PARENT_DIR"/"$TPM_ENDORSEMENT_KEY_CERT_FILE
 
 task="Primary key generation from endorsement seed"
 cmd="tpm2_createprimary -C e -g sha$ecc -G $primary_key_type -c $tpm_endorsement_primary_key_ctx -V"
@@ -137,6 +141,20 @@ execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
 
 task="Lock the Device CSR Non-Volatile (NV) index for further writes"
 cmd="tpm2_nvwritelock -C o 0x01D10005"
+success_string="$task completed successfully!!"
+failure_string="$task failed"
+execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
+
+# # generate tpm ek cert
+
+task="TPM EK CERT generation from TPM"
+cmd="tpm2_getekcertificate -o $tpm_endorsement_key_cert"
+success_string="$task completed successfully!!"
+failure_string="$task failed"
+execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1
+
+task="Generate tpm ek cert pem file"
+cmd="$OPENSSL3_BIN/openssl x509 -in $tpm_endorsement_key_cert -out $tpm_endorsement_key_cert_pem"
 success_string="$task completed successfully!!"
 failure_string="$task failed"
 execute_cmd_on_failure_exit "\$cmd" "\$success_string" "\$failure_string" 1 1

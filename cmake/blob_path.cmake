@@ -35,6 +35,7 @@ if(TARGET_OS MATCHES linux)
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
+       -DTPM_DEVICE_EK=\"${BLOB_PATH}/data/tpm_ek_cert.pem\"
 	)
     endif()
 
