@@ -33,6 +33,9 @@ set (MTLS false)
 set (GET_DEV_SERIAL false)
 set (LOCK_TPM true)
 
+#Mfg toolkit specific
+set (BUILD_MFG_TOOLKIT false)
+
 #for CSE
 set (CSE_SHUTDOWN true)
 set (CSE_CLEAR false)
@@ -912,3 +915,29 @@ if (${DA} MATCHES tpm)
   set(CACHED_LOCK_TPM ${LOCK_TPM} CACHE STRING "Selected LOCK_TPM")
   message("Selected LOCK_TPM ${LOCK_TPM}")
 endif()
+###########################################
+# FOR BUILD MFG TOOLKIT
+get_property(cached_build_mfg_toolkit_value CACHE BUILD_MFG_TOOLKIT PROPERTY VALUE)
+set(build_mfg_toolkit_cli_arg ${cached_build_mfg_toolkit_value})
+if(build_mfg_toolkit_cli_arg STREQUAL CACHED_BUILD_MFG_TOOLKIT)
+  unset(build_mfg_toolkit_cli_arg)
+endif()
+
+set(build_mfg_toolkit_app_cmake_lists ${BUILD_MFG_TOOLKIT})
+if(cached_build_mfg_toolkit_value STREQUAL BUILD_MFG_TOOLKIT)
+  unset(build_mfg_toolkit_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_BUILD_MFG_TOOLKIT)
+  if ((DEFINED build_mfg_toolkit_cli_arg) AND (NOT(CACHED_BUILD_MFG_TOOLKIT STREQUAL build_mfg_toolkit_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(BUILD_MFG_TOOLKIT ${CACHED_BUILD_MFG_TOOLKIT})
+elseif(DEFINED build_mfg_toolkit_cli_arg)
+  set(BUILD_MFG_TOOLKIT ${build_mfg_toolkit_cli_arg})
+elseif(DEFINED build_mfg_toolkit_app_cmake_lists)
+  set(BUILD_MFG_TOOLKIT ${build_mfg_toolkit_app_cmake_lists})
+endif()
+
+set(CACHED_BUILD_MFG_TOOLKIT ${BUILD_MFG_TOOLKIT} CACHE STRING "Selected BUILD_MFG_TOOLKIT")
+message("Selected BUILD_MFG_TOOLKIT ${BUILD_MFG_TOOLKIT}")

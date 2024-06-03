@@ -52,6 +52,8 @@
 /* All below sizes are excluding NULL termination */
 #if defined(DEVICE_CSE_ENABLED)
 #define DEVICE_MFG_STRING_ARRAY_SZ 8
+#elif defined(BUILD_MFG_TOOLKIT)
+#define DEVICE_MFG_STRING_ARRAY_SZ 6
 #else
 #define DEVICE_MFG_STRING_ARRAY_SZ 5
 #endif
@@ -233,6 +235,11 @@ int ps_get_m_string(fdo_prot_t *ps)
 	fdow_t temp_fdow = {0};
 	size_t enc_device_mfginfo = 0;
 
+#if defined(BUILD_MFG_TOOLKIT)
+	fdo_byte_array_t *mac_addresses = NULL;
+	size_t mac_addresses_sz = 0;
+#endif
+
 #if defined(DEVICE_CSE_ENABLED)
 	fdo_byte_array_t *cse_cert = NULL;
 	fdo_byte_array_t *cse_maroeprefix = NULL;
@@ -350,6 +357,23 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 #endif
+#if defined(BUILD_MFG_TOOLKIT)
+	mac_addresses_sz = get_file_size(MAC_ADDRESSES);
+
+	mac_addresses = fdo_byte_array_alloc(mac_addresses_sz);
+	if (!mac_addresses) {
+		LOG(LOG_ERROR,
+		    "Failed to allocate memory for MAC ADDRESSES.\n");
+		goto err;
+	}
+
+	ret = read_buffer_from_file(MAC_ADDRESSES, mac_addresses->bytes,
+				    mac_addresses->byte_sz);
+	if (0 != ret) {
+		LOG(LOG_ERROR, "Failed to read %s file!\n", MAC_ADDRESSES);
+		goto err;
+	}
+#endif
 	// use this temporary FDOW to write DeviceMfgInfo array
 	// 4K bytes is probably sufficient, extend if required
 	if (!fdow_init(&temp_fdow) ||
@@ -415,6 +439,14 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 #endif
+#if defined(BUILD_MFG_TOOLKIT)
+	if (!fdow_byte_string(&temp_fdow, mac_addresses->bytes,
+			      mac_addresses->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to write mac_addresses\n");
+		goto err;
+	}
+#endif
 	if (!fdow_end_array(&temp_fdow)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to end array\n");
 		goto err;
@@ -438,6 +470,12 @@ err:
 	if (csr) {
 		fdo_byte_array_free(csr);
 	}
+#if defined(BUILD_MFG_TOOLKIT)
+	if (mac_addresses) {
+		fdo_byte_array_free(mac_addresses);
+		mac_addresses_sz = 0;
+	}
+#endif
 #if defined(DEVICE_CSE_ENABLED)
 	if (cose_sig_structure) {
 		fdo_byte_array_free(cose_sig_structure);

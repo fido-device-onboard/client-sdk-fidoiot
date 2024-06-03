@@ -32,6 +32,12 @@ if(TARGET_OS MATCHES linux)
     )
     endif()
 
+  if (${BUILD_MFG_TOOLKIT} MATCHES true)
+    client_sdk_compile_definitions(
+      -DMAC_ADDRESSES=\"${BLOB_PATH}/data/mac_addresses.bin\"
+    )
+    endif()
+
   if (${DA} MATCHES tpm)
     client_sdk_compile_definitions(
        -DDEVICE_TPM20_ENABLED
