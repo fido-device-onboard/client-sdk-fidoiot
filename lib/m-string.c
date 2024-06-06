@@ -51,11 +51,9 @@
 
 /* All below sizes are excluding NULL termination */
 #if defined(DEVICE_CSE_ENABLED)
-#define DEVICE_MFG_STRING_ARRAY_SZ 8
-#elif defined(BUILD_MFG_TOOLKIT)
-#define DEVICE_MFG_STRING_ARRAY_SZ 6
+#define DEVICE_MFG_STRING_ARRAY_SZ 9
 #else
-#define DEVICE_MFG_STRING_ARRAY_SZ 5
+#define DEVICE_MFG_STRING_ARRAY_SZ 6
 #endif
 
 #define MAX_DEV_SERIAL_SZ 255
@@ -406,13 +404,24 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 
-#if defined(DEVICE_CSE_ENABLED)
-
 	if (!fdow_byte_string(&temp_fdow, csr->bytes, csr->byte_sz)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSR\n");
 		goto err;
 	}
-
+#if defined(BUILD_MFG_TOOLKIT)
+	if (!fdow_byte_string(&temp_fdow, mac_addresses->bytes,
+			      mac_addresses->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "DeviceMfgInfo: Failed to write mac_addresses\n");
+		goto err;
+	}
+#else
+	if (!fdow_null(&temp_fdow)) {
+		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write NULL\n");
+		goto err;
+	}
+#endif
+#if defined(DEVICE_CSE_ENABLED)
 	if (!fdow_byte_string(&temp_fdow, cse_cert->bytes, cse_cert->byte_sz)) {
 		LOG(LOG_ERROR,
 		    "DeviceMfgInfo: Failed to write CSE cert data\n");
@@ -433,19 +442,6 @@ int ps_get_m_string(fdo_prot_t *ps)
 		goto err;
 	}
 	ret = 0;
-#else
-	if (!fdow_byte_string(&temp_fdow, csr->bytes, csr->byte_sz)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSR\n");
-		goto err;
-	}
-#endif
-#if defined(BUILD_MFG_TOOLKIT)
-	if (!fdow_byte_string(&temp_fdow, mac_addresses->bytes,
-			      mac_addresses->byte_sz)) {
-		LOG(LOG_ERROR,
-		    "DeviceMfgInfo: Failed to write mac_addresses\n");
-		goto err;
-	}
 #endif
 	if (!fdow_end_array(&temp_fdow)) {
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to end array\n");
