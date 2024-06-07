@@ -232,11 +232,8 @@ int ps_get_m_string(fdo_prot_t *ps)
 	fdo_byte_array_t *csr = NULL;
 	fdow_t temp_fdow = {0};
 	size_t enc_device_mfginfo = 0;
-
-#if defined(BUILD_MFG_TOOLKIT)
 	fdo_byte_array_t *mac_addresses = NULL;
 	size_t mac_addresses_sz = 0;
-#endif
 
 #if defined(DEVICE_CSE_ENABLED)
 	fdo_byte_array_t *cse_cert = NULL;
@@ -371,6 +368,13 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "Failed to read %s file!\n", MAC_ADDRESSES);
 		goto err;
 	}
+#else
+	mac_addresses = fdo_byte_array_alloc(mac_addresses_sz);
+	if (!mac_addresses) {
+		LOG(LOG_ERROR,
+		    "Failed to allocate memory for MAC ADDRESSES.\n");
+		goto err;
+	}
 #endif
 	// use this temporary FDOW to write DeviceMfgInfo array
 	// 4K bytes is probably sufficient, extend if required
@@ -408,19 +412,13 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSR\n");
 		goto err;
 	}
-#if defined(BUILD_MFG_TOOLKIT)
+
 	if (!fdow_byte_string(&temp_fdow, mac_addresses->bytes,
 			      mac_addresses->byte_sz)) {
 		LOG(LOG_ERROR,
 		    "DeviceMfgInfo: Failed to write mac_addresses\n");
 		goto err;
 	}
-#else
-	if (!fdow_null(&temp_fdow)) {
-		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write NULL\n");
-		goto err;
-	}
-#endif
 #if defined(DEVICE_CSE_ENABLED)
 	if (!fdow_byte_string(&temp_fdow, cse_cert->bytes, cse_cert->byte_sz)) {
 		LOG(LOG_ERROR,
@@ -466,12 +464,12 @@ err:
 	if (csr) {
 		fdo_byte_array_free(csr);
 	}
-#if defined(BUILD_MFG_TOOLKIT)
+
 	if (mac_addresses) {
 		fdo_byte_array_free(mac_addresses);
 		mac_addresses_sz = 0;
 	}
-#endif
+
 #if defined(DEVICE_CSE_ENABLED)
 	if (cose_sig_structure) {
 		fdo_byte_array_free(cose_sig_structure);
