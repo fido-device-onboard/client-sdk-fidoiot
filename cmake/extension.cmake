@@ -283,4 +283,8 @@ endif()
 if(${LOCK_TPM} STREQUAL true)
   client_sdk_compile_definitions(-DLOCK_TPM)
 endif()
+
+if(${BUILD_MFG_TOOLKIT} STREQUAL true)
+  client_sdk_compile_definitions(-DBUILD_MFG_TOOLKIT)
+endif()
 ############################################################
