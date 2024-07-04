@@ -51,7 +51,7 @@ install_tpm2tss()
     ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
-    
+
     udevadm control --reload-rules
     udevadm trigger
     ldconfig
@@ -63,7 +63,8 @@ install_tpm2abrmd()
     yum -y install tpm2-abrmd
     service tpm2-abrmd stop
     service tpm2-abrmd start
-    service tpm2-abrmd status
+    STATUS=$(service tpm2-abrmd status)
+    echo $STATUS
     systemctl enable tpm2-abrmd.service
 }
 

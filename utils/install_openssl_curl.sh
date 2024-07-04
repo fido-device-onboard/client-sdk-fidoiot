@@ -1,7 +1,7 @@
 OPENSSL_ROOT=/opt/openssl
 CURL_ROOT=/opt/curl
-CURL_VER="8.6.0"
-CURL_LINK="https://curl.se/download/curl-8.6.0.tar.gz --no-check-certificate"
+CURL_VER="8.8.0"
+CURL_LINK="https://curl.se/download/curl-8.8.0.tar.gz --no-check-certificate"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -66,7 +66,7 @@ usage()
         ./$0 <OPTION>\n
         OPTION:
             -i - Install OpenSSL.
-            -u - Uninstall OpenSSL. (e.g. -v 3.0.13)
+            -u - Uninstall OpenSSL. (e.g. -v 3.0.14)
             -v - OpenSSL Version
             -h - Help."
 }

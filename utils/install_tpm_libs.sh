@@ -77,7 +77,7 @@ install_tpm2abrmd()
     wget $TPM2_ABRMD_LINK
     tar -xvzf tpm2-abrmd-$TPM2_ABRMD_VER.tar.gz
     cd tpm2-abrmd-$TPM2_ABRMD_VER
-    
+
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/:$OPENSSL3_LIB/pkgconfig/:$CURL_LIB/pkgconfig/ \
     ./configure --with-dbuspolicydir=/etc/dbus-1/system.d --with-systemdsystemunitdir=/lib/systemd/system/ --with-systemdpresetdir=/lib/systemd/system-preset/ \
     CFLAGS="-I$OPENSSL3_INCLUDE -I$CURL_INCLUDE" LDFLAGS="-L$OPENSSL3_LIB -L$CURL_LIB"
@@ -89,9 +89,11 @@ install_tpm2abrmd()
     service tpm2-abrmd stop
     pkill -HUP dbus-daemon
     systemctl daemon-reload
-    service tpm2-abrmd status
+    STATUS=$(service tpm2-abrmd status)
+    echo $STATUS
     service tpm2-abrmd start
-    service tpm2-abrmd status
+    STATUS=$(service tpm2-abrmd status)
+    echo $STATUS
     systemctl enable tpm2-abrmd.service
 }
 

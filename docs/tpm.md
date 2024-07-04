@@ -3,7 +3,7 @@
 
 `Ubuntu* OS version 20.04 or 22.04 / RHEL* OS version [8.4|8.6|8.8] / Debian 11.4` on x86 was used as a development and execution OS. Follow these steps to compile and execute FIDO Device Onboard (FDO).
 
-The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.13 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
+The FDO Client SDK execution depends on OpenSSL* toolkit 3.0.14 version. Users must install or upgrade the toolkit before compilation if the toolkit is not available by default in the environment.
 
 ## 1. Packages Requirements when Building Binaries with TPM* 2.0:
 
@@ -23,10 +23,10 @@ sudo yum -y install gcc gcc-c++ python3-setuptools git-clang-format dos2unix rub
   glib2-devel libpcap-devel autoconf libtool libproxy-devel mozjs52-devel doxygen cmake make mercurial nghttp2 libnghttp2-devel
 ```
 
-OpenSSL* toolkit version 3.0.13.
-Curl version 8.6.0
+OpenSSL* toolkit version 3.0.14.
+Curl version 8.8.0
 
-#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.13
+#### Steps to Upgrade the OpenSSL* Toolkit to Version 3.0.14
 
 Following steps will replace the existing versions of OpenSSL and Curl from the system. If you want to keep the existing versions then use [Installation-Script](../utils/install_openssl_curl.sh) script to install Openssl and Curl at a different location.
 > ***NOTE***: [Installation-Script](../utils/install_openssl_curl.sh) will install OpenSSL and Curl at /opt/ by default. To provide different path, modify these variables in the script
@@ -37,7 +37,7 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 
 * Command to install OpenSSL and Curl
 	```
-	sudo ./install_openssl_curl.sh -i -v 3.0.13
+	sudo ./install_openssl_curl.sh -i -v 3.0.14
 	```
 
 1. If libssl-dev, curl and libcurl are installed, uninstall it:
@@ -54,11 +54,11 @@ Following steps will replace the existing versions of OpenSSL and Curl from the 
 	```
 2. Pull the tarball:
 	```
-	wget https://www.openssl.org/source/openssl-3.0.13.tar.gz
+	wget https://www.openssl.org/source/openssl-3.0.14.tar.gz
 	```
 3. Unpack the tarball with:
 	```
-	tar -zxf openssl-3.0.13.tar.gz && cd openssl-3.0.13
+	tar -zxf openssl-3.0.14.tar.gz && cd openssl-3.0.14
 	```
 4. Issue the command:
 	```
@@ -97,20 +97,20 @@ Issue the following command from the terminal:
 	```
 	  Your output should be as follows:
 	```
-	OpenSSL* 3.0.13  30 Jan 2024
+	OpenSSL* 3.0.14  04 Jun 2024
 	```
 
-#### Steps to install curl version 8.6.0 configured with openssl
+#### Steps to install curl version 8.8.0 configured with openssl
 
 After installing openssl, proceed with the installation of curl.
 
 1. Pull the tarball:
 	```
-	wget https://curl.se/download/curl-8.6.0.tar.gz
+	wget https://curl.se/download/curl-8.8.0.tar.gz
 	```
 2. Unpack the tarball with:
 	```
-	tar -zxf curl-8.6.0.tar.gz && cd curl-8.6.0
+	tar -zxf curl-8.8.0.tar.gz && cd curl-8.8.0
 	```
 3. Issue the command to configure the curl with openssl and nghttp2:
 	```
@@ -133,10 +133,10 @@ Issue the following command from the terminal:
 	```
 	 Your output should point to the openssl version which you installed.
     ```
-    curl 8.6.0 (x86_64-pc-linux-gnu) libcurl/8.6.0 OpenSSL/3.0.13 zlib/1.2.11
+    curl 8.8.0 (x86_64-pc-linux-gnu) libcurl/8.8.0 OpenSSL/3.0.14 zlib/1.2.11
     ```
 
-Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.6.0. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
+Note 1: If you are using no_proxy environment variable to exclude proxying for any FDO server IP addresses, it may not work with curl 8.8.0. Workaround for this is to ensure the no_proxy IP is specified in CIDR notation (https://datatracker.ietf.org/doc/html/rfc1519)
 
 Single IP address example: no_proxy="10.60.132.45/32"
 Two IP addresses example: no_proxy="10.60.132.45/32,10.60.132.46/32"
@@ -445,12 +445,12 @@ sudo  ./utils/clear_tpm_nv.sh
 ```
 
 - OpenSSL* Toolkit Library Linking Related Error While Building FDO Client SDK.<br />
-  There is a dependency on the OpenSSL* toolkit version 3.0.13 for building and running the FDO Client SDK.
+  There is a dependency on the OpenSSL* toolkit version 3.0.14 for building and running the FDO Client SDK.
   Check the version of the OpenSSL* toolkit installed in your machine with the command
 
 ```shell
   openssl version
 ```
-  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.13, follow the steps given in section 1 to update the OpenSSL* version to 3.0.13.
+  If the OpenSSL* toolkit version in your machine is earlier than version 3.0.14, follow the steps given in section 1 to update the OpenSSL* version to 3.0.14.
 
 
