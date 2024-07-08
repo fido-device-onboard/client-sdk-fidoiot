@@ -1,0 +1,97 @@
+---
+name: "AI Reviewer Cache"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+    # TODO: Update with the repos trunk branch.
+      - "master"
+
+jobs:
+  generate-cache:
+    name: Generate AI Cache
+    container: amr-registry.caas.intel.com/devops-ai-platform/gasp-oidc:0.0.4
+    # TODO: Update'runs-on' to specify the type of runner your repo uses.
+    # If using GASP, do not add additional labels. Use ONLY "gasp".
+    runs-on:  ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+    # Login using OIDC Auth
+    - name: Authenticate
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    # Get a temporary access token. Expires in 5-60 minutes.
+    - name: Retrieve Access Token
+      id: auth
+      run: |
+        export output=$(az account get-access-token --resource https://cognitiveservices.azure.com --query \"accessToken\" -o tsv);
+        echo "result=$output" >> $GITHUB_OUTPUT;
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Cache embeddings
+      id: cache-embeddings
+      uses: actions/cache@v4
+      env:
+        cache-name: cache-embeddings
+      with:
+        path: ./cache
+        key: ${{ env.cache-name }}-${{ github.run_id }}
+        restore-keys: ${{ env.cache-name }}
+
+    - name: Create Document Embeddings
+      uses: intel-innersource/frameworks.devops.ai-devops-platform.embedding-action@v3
+      env:
+        no_proxy: "*.azure.com"
+      with:
+        name: documentation_lookup
+        description: Used to answer questions about documentation.
+        service_model: embedding
+        service_token: bearer ${{ steps.auth.outputs.result }}
+        # TODO: Update 'file_types' with the code file extensions to parse. *Note it is a newline delimited list.
+        file_types: |
+          .cpp
+          .js
+          .txt
+        # TODO: Update 'languages' to include the languages in the repository. *Note it is a newline delimited list.
+        # Supports the following values: 'cpp', 'go', 'java', 'js', 'php', 'proto', 'python', 'rst', 'ruby', 'rust', 'scala', 'swift', 'markdown', 'latex', 'html'
+        languages: |
+          cpp
+          js
+        # TODO: Update 'path' to represent the top level path where code files are found.
+        path: ./docs
+        cache_path: ./cache
+
+    - name: Create Code Embeddings
+      uses: intel-innersource/frameworks.devops.ai-devops-platform.embedding-action@v3
+      env:
+        no_proxy: "*.azure.com"
+      with:
+        name: code_lookup
+        description: Used to get additional context for code.
+        service_model: embedding
+        service_token: bearer ${{ steps.auth.outputs.result }}
+        # TODO: Update 'file_types' with the code file extensions to parse. *Note it is a newline delimited list.
+        file_types: |
+          .txt
+          .cpp
+          .h
+          .js
+        # TODO: Update 'languages' to include the languages in the repository. *Note it is a newline delimited list.
+        # Supports the following values: 'cpp', 'go', 'java', 'js', 'php', 'proto', 'python', 'rst', 'ruby', 'rust', 'scala', 'swift', 'markdown', 'latex', 'html'
+        languages: |
+          cpp
+          js
+        # TODO: Update 'path' to represent the top level path where code files are found.
+        path: ./docs
+        cache_path: ./cache
