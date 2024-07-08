@@ -14,7 +14,7 @@ jobs:
     if: ${{ github.actor != 'dependabot[bot]' }}
     # TODO: Update'runs-on' to specify the type of runner your repo uses.
     # If using GASP, do not add additional labels. Use ONLY "[gasp, azure]".
-    runs-on: [gasp, azure]
+    runs-on:  ubuntu-latest
     container: amr-registry.caas.intel.com/devops-ai-platform/gasp-oidc:0.0.4
     permissions:
       contents: read
