@@ -3,7 +3,7 @@ name: "AI Reviewer Cache"
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
     # TODO: Update with the repos trunk branch.
       - "master"
