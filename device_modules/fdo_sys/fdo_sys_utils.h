@@ -19,9 +19,9 @@
 
 #else
 #define ModuleFree(x)                                                          \
-	{								       \
+	{                                                                      \
 		free(x);                                                       \
-		x = NULL;						       \
+		x = NULL;                                                      \
 	}
 #endif
 
@@ -38,11 +38,11 @@ typedef enum {
 
 void *ModuleAlloc(int size);
 bool process_data(fdoSysModMsg type, uint8_t *data, uint32_t dataLen,
-		  char *file_name, char **command,
-		  bool *status_iscomplete, int *status_resultcode,
-		  uint64_t *status_waitsec);
+		  char *file_name, char **command, bool *status_iscomplete,
+		  int *status_resultcode, uint64_t *status_waitsec);
 
 size_t get_file_sz(char const *filename);
-bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer, size_t size, int from);
+bool read_buffer_from_file_from_pos(const char *filename, uint8_t *buffer,
+				    size_t size, int from);
 bool delete_old_file(const char *file_name);
 #endif /* __SYS_UTILS_H__ */

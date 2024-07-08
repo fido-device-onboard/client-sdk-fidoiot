@@ -33,27 +33,27 @@
 
 TEESTATUS heci_init(TEEHANDLE *cl);
 void heci_deinit(TEEHANDLE *cl);
-TEESTATUS fdo_heci_get_version(TEEHANDLE *cl, uint16_t *major_v, uint16_t
-                *minor_v, FDO_STATUS *fdo_status);
-TEESTATUS fdo_heci_get_cert_chain(TEEHANDLE *cl, uint8_t *cert_chain, uint16_t
-                *len_cert, FDO_STATUS *fdo_status);
-TEESTATUS fdo_heci_ecdsa_device_sign_challenge(TEEHANDLE *cl, uint8_t *data,
-                uint32_t data_length, uint8_t *sig_ptr, size_t sig_len, uint8_t
-                *mp_ptr, uint32_t *mp_len, FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_get_version(TEEHANDLE *cl, uint16_t *major_v,
+			       uint16_t *minor_v, FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_get_cert_chain(TEEHANDLE *cl, uint8_t *cert_chain,
+				  uint16_t *len_cert, FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_ecdsa_device_sign_challenge(
+    TEEHANDLE *cl, uint8_t *data, uint32_t data_length, uint8_t *sig_ptr,
+    size_t sig_len, uint8_t *mp_ptr, uint32_t *mp_len, FDO_STATUS *fdo_status);
 TEESTATUS fdo_heci_generate_random(TEEHANDLE *cl, uint8_t *random_bytes,
-                uint32_t length, FDO_STATUS *fdo_status);
-TEESTATUS fdo_heci_load_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
-                *fdo_status);
+				   uint32_t length, FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_load_file(TEEHANDLE *cl, uint32_t file_id,
+			     FDO_STATUS *fdo_status);
 TEESTATUS fdo_heci_update_file(TEEHANDLE *cl, uint32_t file_id, uint8_t *data,
-                uint32_t data_length, uint8_t *hmac_ptr, size_t hmac_length, FDO_STATUS
-                *fdo_status);
-TEESTATUS fdo_heci_commit_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
-                *fdo_status);
-TEESTATUS fdo_heci_read_file(TEEHANDLE *cl, uint32_t file_id, uint8_t
-                *data_ptr, uint32_t *data_length, uint8_t *hmac_ptr, size_t hmac_sz,
-                FDO_STATUS *fdo_status);
-TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id, FDO_STATUS
-                *fdo_status);
+			       uint32_t data_length, uint8_t *hmac_ptr,
+			       size_t hmac_length, FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_commit_file(TEEHANDLE *cl, uint32_t file_id,
+			       FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_read_file(TEEHANDLE *cl, uint32_t file_id, uint8_t *data_ptr,
+			     uint32_t *data_length, uint8_t *hmac_ptr,
+			     size_t hmac_sz, FDO_STATUS *fdo_status);
+TEESTATUS fdo_heci_clear_file(TEEHANDLE *cl, uint32_t file_id,
+			      FDO_STATUS *fdo_status);
 TEESTATUS fdo_heci_close_interface(TEEHANDLE *cl, FDO_STATUS *fdo_status);
 
 #endif /* __FDOCSE_H__ */

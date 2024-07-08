@@ -8,7 +8,7 @@
  * \brief Abstraction layer for SSL setup and send/recv APIs of openssl library.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include <openssl/ssl.h>
@@ -64,7 +64,7 @@ void *fdo_ssl_setup(int sock)
 
 	return (void *)ssl;
 err:
-	if(ctx) {
+	if (ctx) {
 		SSL_CTX_free(ctx);
 		ctx = NULL;
 	}
@@ -109,7 +109,7 @@ int fdo_ssl_connect(void *ssl)
  */
 int fdo_ssl_close(void *ssl)
 {
-	if(NULL == ssl) {
+	if (NULL == ssl) {
 		return -1;
 	}
 
@@ -135,7 +135,7 @@ int fdo_ssl_close(void *ssl)
 	}
 end:
 	SSL_free((SSL *)ssl);
-	if(ctx) {
+	if (ctx) {
 		SSL_CTX_free(ctx);
 		ctx = NULL;
 	}

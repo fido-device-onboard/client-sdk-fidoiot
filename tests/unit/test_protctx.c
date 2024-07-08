@@ -12,7 +12,7 @@
 #include "unity.h"
 #include "test_crypto.h"
 #include <stdlib.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "fdoprotctx.h"
 #include "fdoprot.h"
 #include "fdoblockio.h"
@@ -224,7 +224,6 @@ TEST_CASE("fdo_prot_ctx_run", "[protctx][fdo]")
 	prot_ctx->protdata = fdo_alloc(sizeof(fdo_prot_t));
 	TEST_ASSERT_NOT_NULL(prot_ctx->protdata);
 
-	prot_ctx->sock_hdl = FDO_CON_INVALID_HANDLE;
 	return_socket = -1;
 	prot_ctx->protrun = &fdo_prot_dummy;
 	prot_ctx->host_port = host_port;

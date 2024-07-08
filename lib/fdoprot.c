@@ -9,7 +9,7 @@
  * various aspects of FDO protcol.
  */
 
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "util.h"
 #include "fdoprot.h"
 #include "load_credentials.h"
@@ -191,7 +191,9 @@ bool fdo_process_states(fdo_prot_t *ps)
 		}
 
 		if (ps->state != FDO_STATE_DONE && state_fn && state_fn(ps)) {
-			LOG(LOG_ERROR, "Error occurred while processing Type %d\n", ps->state);
+			LOG(LOG_ERROR,
+			    "Error occurred while processing Type %d\n",
+			    ps->state);
 			char err_msg[64] = {0};
 			size_t err_msg_sz = 0;
 
@@ -200,13 +202,15 @@ bool fdo_process_states(fdo_prot_t *ps)
 					   ps->state);
 			err_msg_sz = strnlen_s(err_msg, sizeof(err_msg));
 			if (!err_msg_sz || err_msg_sz == sizeof(err_msg)) {
-				LOG(LOG_ERROR, "Failed to get error message length\n");
+				LOG(LOG_ERROR,
+				    "Failed to get error message length\n");
 				break;
 			}
 			// clear the block contents to write error message
 			fdo_block_reset(&ps->fdow.b);
 			if (!fdow_encoder_init(&ps->fdow)) {
-				LOG(LOG_ERROR, "Failed to initilize FDOW encoder\n");
+				LOG(LOG_ERROR,
+				    "Failed to initilize FDOW encoder\n");
 				break;
 			}
 			fdo_send_error_message(&ps->fdow, MESSAGE_BODY_ERROR,
@@ -283,7 +287,8 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 	ps->dev_cred = dev_cred;
 	ps->g2 = dev_cred->owner_blk->guid;
 	ps->round_trip_count = 0;
-	ps->hello_device_hash = fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
+	ps->hello_device_hash =
+	    fdo_hash_alloc(FDO_CRYPTO_HASH_TYPE_USED, FDO_SHA_DIGEST_SIZE_USED);
 	if (!ps->hello_device_hash) {
 		return false;
 	}
@@ -299,7 +304,8 @@ bool fdo_prot_to2_init(fdo_prot_t *ps, fdo_service_info_t *si,
 		}
 
 		ps->sv_info_mod_list_head = module_list;
-		if (!fdo_serviceinfo_deactivate_modules(ps->sv_info_mod_list_head)) {
+		if (!fdo_serviceinfo_deactivate_modules(
+			ps->sv_info_mod_list_head)) {
 			return false;
 		}
 		ps->dsi_info = fdo_alloc(sizeof(fdo_sv_info_dsi_info_t));
@@ -347,8 +353,7 @@ bool fdo_check_to2_round_trips(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "Exceeded maximum number of TO2 rounds\n");
 		char err_msg[] = "Exceeded max number of rounds";
 		fdo_send_error_message(&ps->fdow, INTERNAL_SERVER_ERROR,
-				       ps->state,
-				       err_msg, sizeof(err_msg));
+				       ps->state, err_msg, sizeof(err_msg));
 		ps->state = FDO_STATE_ERROR;
 		return false;
 	}
@@ -378,12 +383,12 @@ bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep)
 
 	if (!fdor->have_block) {
 		/*
-		* The way this method is used to maintain the state,
-		* it's not an error scenario if there's no block to read.
-		* have_block false means that the response has not yet come since the
-		* requet has not been sent.
-		* TO-DO : Investigate for a better approach than this.
-		*/
+		 * The way this method is used to maintain the state,
+		 * it's not an error scenario if there's no block to read.
+		 * have_block false means that the response has not yet come
+		 * since the requet has not been sent. TO-DO : Investigate for a
+		 * better approach than this.
+		 */
 		return false;
 	}
 
@@ -398,8 +403,8 @@ bool fdo_prot_rcv_msg(fdor_t *fdor, fdow_t *fdow, char *prot_name, int *statep)
  *
  * Internal API
  */
-void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
-			    char *errmsg, size_t errmsg_sz)
+void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum, char *errmsg,
+			    size_t errmsg_sz)
 {
 	LOG(LOG_ERROR, "Sending Error Message\n");
 
@@ -416,11 +421,11 @@ void fdo_send_error_message(fdow_t *fdow, int ecode, int msgnum,
 		LOG(LOG_ERROR, "Error Message: Failed to write EMPrevMsgID\n");
 		return;
 	}
-	if (!fdow_text_string(fdow, errmsg , errmsg_sz)) {
+	if (!fdow_text_string(fdow, errmsg, errmsg_sz)) {
 		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorStr");
 		return;
 	}
-	if (!fdow_signed_int(fdow, (int) time(NULL))) {
+	if (!fdow_signed_int(fdow, (int)time(NULL))) {
 		LOG(LOG_ERROR, "Error Message: Failed to write EMErrorTs\n");
 		return;
 	}

@@ -43,6 +43,9 @@ typedef enum {
 	FDO_STATE_ERROR
 } fdo_sdk_device_state;
 
+extern char *mfg_addr;
+extern bool use_mfg_addr_bin;
+
 #if defined(SELF_SIGNED_CERTS_SUPPORTED)
 extern bool useSelfSignedCerts;
 #endif

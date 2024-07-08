@@ -9,7 +9,7 @@
  */
 
 #include "load_credentials.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 #include "fdoprot.h"
 #include "util.h"
 
@@ -86,18 +86,20 @@ int32_t msg11(fdo_prot_t *ps)
 	}
 
 	if (!fdor_string_length(&ps->fdor, &ovheader_sz) || ovheader_sz == 0) {
-		LOG(LOG_ERROR,
-		    "DISetCredentials: Failed to read OVeader as bstr length\n");
+		LOG(LOG_ERROR, "DISetCredentials: Failed to read OVeader as "
+			       "bstr length\n");
 		goto err;
 	}
 
 	ovheader = fdo_byte_array_alloc(ovheader_sz);
 	if (!ovheader) {
-		LOG(LOG_ERROR, "DISetCredentials: Failed to alloc for OVHeader as bstr\n");
+		LOG(LOG_ERROR,
+		    "DISetCredentials: Failed to alloc for OVHeader as bstr\n");
 		goto err;
 	}
 	if (!fdor_byte_string(&ps->fdor, ovheader->bytes, ovheader->byte_sz)) {
-		LOG(LOG_ERROR, "DISetCredentials: Failed to read OVHeader as bstr\n");
+		LOG(LOG_ERROR,
+		    "DISetCredentials: Failed to read OVHeader as bstr\n");
 		goto err;
 	}
 

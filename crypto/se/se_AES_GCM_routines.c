@@ -9,7 +9,7 @@
  * openssl library.
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "safe_lib.h"
@@ -44,13 +44,10 @@
  * @return ret
  *        return cipher_length in bytes during success and -1 during any error.
  */
-int32_t fdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
-				   uint32_t plain_text_length,
-				   uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length)
+int32_t fdo_crypto_aes_gcm_encrypt(
+    const uint8_t *plain_text, uint32_t plain_text_length, uint8_t *cipher_text,
+    uint32_t cipher_text_length, const uint8_t *iv, uint32_t iv_length,
+    const uint8_t *key, uint32_t key_length, uint8_t *tag, uint32_t tag_length)
 {
 	atca_aes_gcm_ctx_t ctx;
 
@@ -122,13 +119,10 @@ int32_t fdo_crypto_aes_gcm_encrypt(const uint8_t *plain_text,
  *        return clear_text_length in bytes during success and -1 during any
  * error.
  */
-int32_t fdo_crypto_aes_gcm_decrypt(uint8_t *clear_text,
-				   uint32_t clear_text_length,
-				   const uint8_t *cipher_text,
-				   uint32_t cipher_text_length,
-				   const uint8_t *iv, uint32_t iv_length,
-				   const uint8_t *key, uint32_t key_length,
-				   uint8_t *tag, uint32_t tag_length)
+int32_t fdo_crypto_aes_gcm_decrypt(
+    uint8_t *clear_text, uint32_t clear_text_length, const uint8_t *cipher_text,
+    uint32_t cipher_text_length, const uint8_t *iv, uint32_t iv_length,
+    const uint8_t *key, uint32_t key_length, uint8_t *tag, uint32_t tag_length)
 {
 	atca_aes_gcm_ctx_t ctx;
 	bool verified;

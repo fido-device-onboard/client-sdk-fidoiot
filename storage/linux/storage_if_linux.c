@@ -16,10 +16,13 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "util.h"
-#include "fdoCryptoHal.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_hal.h"
+#include "fdo_crypto.h"
 #include "crypto_utils.h"
 #include "platform_utils.h"
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#endif
 
 /****************************************************
  *
@@ -52,15 +55,16 @@
  * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
  * @param name - pointer to the blob/file name
  * @param flags - descriptor telling type of file
-* @return file size on success, 0 if file does not exist or on other failure
+ * @return file size on success, 0 if file does not exist or on other failure
  */
 
 size_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 {
 	size_t retval = 0;
-	const size_t NORMAL_BLOB_OVERHEAD = PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
-	const size_t SECURE_BLOB_OVERHEAD = AES_TAG_LEN +
-					PLATFORM_IV_DEFAULT_LEN + BLOB_CONTENT_SIZE;
+	const size_t NORMAL_BLOB_OVERHEAD =
+	    PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
+	const size_t SECURE_BLOB_OVERHEAD =
+	    AES_TAG_LEN + PLATFORM_IV_DEFAULT_LEN + BLOB_CONTENT_SIZE;
 
 	if (!name) {
 		LOG(LOG_ERROR, "Invalid parameters!\n");
@@ -93,7 +97,8 @@ size_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 		if (retval >= NORMAL_BLOB_OVERHEAD) {
 			retval -= NORMAL_BLOB_OVERHEAD;
 		} else {
-			/* File format is not correct, not enough data in the file */
+			/* File format is not correct, not enough data in the
+			 * file */
 			retval = 0;
 		}
 		break;
@@ -106,7 +111,8 @@ size_t fdo_blob_size(const char *name, fdo_sdk_blob_flags flags)
 		if (retval >= SECURE_BLOB_OVERHEAD) {
 			retval -= SECURE_BLOB_OVERHEAD;
 		} else {
-			/* File format is not correct, not enough data in the file */
+			/* File format is not correct, not enough data in the
+			 * file */
 			retval = 0;
 		}
 		break;
@@ -235,8 +241,11 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		}
 
 		// compare HMAC
-		memcmp_s(stored_hmac, PLATFORM_HMAC_SIZE, computed_hmac,
-			 PLATFORM_HMAC_SIZE, &strcmp_result);
+		if (memcmp_s(stored_hmac, PLATFORM_HMAC_SIZE, computed_hmac,
+			     PLATFORM_HMAC_SIZE, &strcmp_result) != 0) {
+			LOG(LOG_ERROR, "Failed to compare HMAC\n");
+			goto exit;
+		}
 		if (strcmp_result != 0) {
 			LOG(LOG_ERROR, "%s: HMACs do not compare!\n", __func__);
 			goto exit;
@@ -260,9 +269,8 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		 * Sizeof_ciphertext(8 * bytes)||Ciphertet(n_bytes bytes)]
 		 */
 
-		encrypted_data_len = PLATFORM_IV_DEFAULT_LEN +
-				     AES_TAG_LEN + BLOB_CONTENT_SIZE +
-				     n_bytes;
+		encrypted_data_len = PLATFORM_IV_DEFAULT_LEN + AES_TAG_LEN +
+				     BLOB_CONTENT_SIZE + n_bytes;
 
 		encrypted_data = fdo_alloc(encrypted_data_len);
 		if (NULL == encrypted_data) {
@@ -311,8 +319,8 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 			goto exit;
 		}
 
-		data = encrypted_data + PLATFORM_IV_DEFAULT_LEN +
-		       AES_TAG_LEN + BLOB_CONTENT_SIZE;
+		data = encrypted_data + PLATFORM_IV_DEFAULT_LEN + AES_TAG_LEN +
+		       BLOB_CONTENT_SIZE;
 
 		if (!get_platform_aes_key(aes_key,
 					  PLATFORM_AES_KEY_DEFAULT_LEN)) {
@@ -323,9 +331,9 @@ int32_t fdo_blob_read(const char *name, fdo_sdk_blob_flags flags, uint8_t *buf,
 		// decrypt and authenticate cipher-text content and fill the
 		// given buffer with clear-text
 		if (crypto_hal_aes_decrypt(
-			buf, &n_bytes, data, data_length, 16, iv,
-			aes_key, PLATFORM_AES_KEY_DEFAULT_LEN,
-			stored_tag, AES_TAG_LEN, NULL, 0) < 0) {
+			buf, &n_bytes, data, data_length, 16, iv, aes_key,
+			PLATFORM_AES_KEY_DEFAULT_LEN, stored_tag, AES_TAG_LEN,
+			NULL, 0) < 0) {
 			LOG(LOG_ERROR, "Decryption failed during Secure "
 				       "Blob Read!\n");
 			goto exit;
@@ -460,9 +468,8 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 		 * Sizeof_ciphertext(8 * bytes)||Ciphertet(n_bytes bytes)]
 		 */
 
-		write_context_len = PLATFORM_IV_DEFAULT_LEN +
-				    AES_TAG_LEN + BLOB_CONTENT_SIZE +
-				    n_bytes;
+		write_context_len = PLATFORM_IV_DEFAULT_LEN + AES_TAG_LEN +
+				    BLOB_CONTENT_SIZE + n_bytes;
 
 		write_context = fdo_alloc(write_context_len);
 		if (NULL == write_context) {
@@ -481,17 +488,17 @@ int32_t fdo_blob_write(const char *name, fdo_sdk_blob_flags flags,
 			goto exit;
 		}
 
-		write_context_len_temp = write_context_len - (PLATFORM_IV_DEFAULT_LEN +
-			    AES_TAG_LEN + BLOB_CONTENT_SIZE);
+		write_context_len_temp =
+		    write_context_len -
+		    (PLATFORM_IV_DEFAULT_LEN + AES_TAG_LEN + BLOB_CONTENT_SIZE);
 		// encrypt plain-text and copy cipher-text content
 		if (crypto_hal_aes_encrypt(
 			buf, n_bytes,
-			&write_context[PLATFORM_IV_DEFAULT_LEN +
-			    AES_TAG_LEN + BLOB_CONTENT_SIZE],
-			&write_context_len_temp,
-			16, iv, aes_key,
-			PLATFORM_AES_KEY_DEFAULT_LEN, tag,
-			AES_TAG_LEN, NULL, 0) < 0) {
+			&write_context[PLATFORM_IV_DEFAULT_LEN + AES_TAG_LEN +
+				       BLOB_CONTENT_SIZE],
+			&write_context_len_temp, 16, iv, aes_key,
+			PLATFORM_AES_KEY_DEFAULT_LEN, tag, AES_TAG_LEN, NULL,
+			0) < 0) {
 			LOG(LOG_ERROR, "Encypting data failed during Secure "
 				       "Blob write!\n");
 			goto exit;
@@ -558,3 +565,278 @@ exit:
 	}
 	return retval;
 }
+
+#if defined(DEVICE_TPM20_ENABLED)
+/**
+ * fdo_tpm_size_nv Get specified FDO nv size
+ * @param nv - ptpm nv index
+ * @return file size on success, 0 if file does not exist or on other failure
+ */
+
+size_t fdo_tpm_size_nv(TPMI_RH_NV_INDEX nv)
+{
+	size_t retval = 0;
+	const size_t NORMAL_NV_OVERHEAD =
+	    PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
+
+	if (!nv) {
+		LOG(LOG_ERROR, "Invalid parameters!\n");
+		goto end;
+	}
+
+	/* Normal cred is stored as:
+	 * [HMAC(32bytes)||data-content-size(4bytes)||data-content(?)]
+	 */
+	retval = fdo_tpm_nvread_size(nv);
+
+	// Return 0 if the file is empty.
+	if (retval == 0) {
+		LOG(LOG_DEBUG, "NV is empty!\n");
+		retval = 0;
+		goto end;
+	}
+
+	if (retval >= NORMAL_NV_OVERHEAD) {
+		retval -= NORMAL_NV_OVERHEAD;
+	} else {
+		/* File format is not correct, not enough data in the
+		 * file */
+		retval = 0;
+	}
+
+end:
+	if (retval > R_MAX_SIZE) {
+		LOG(LOG_ERROR, "File size is more than R_MAX_SIZE\n");
+		retval = 0;
+	}
+	return retval;
+}
+
+/**
+ * fdo_blob_read Read FDO blob(file) into specified buffer,
+ * fdo_blob_read ensures authenticity &  integrity for non-secure
+ * data & additionally confidentiality for secure data.
+ * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
+ * @param nv - tpm nv index
+ * @param flags - descriptor telling type of file
+ * @param buf - pointer to buf where data is read into
+ * @param n_bytes - length of data(in bytes) to be read
+ * @return num of bytes read if success, -1 on error
+ */
+int32_t fdo_tpm_read_nv(TPMI_RH_NV_INDEX nv, uint8_t *buf, uint32_t n_bytes)
+{
+	int retval = -1;
+	uint8_t *data = NULL;
+	uint32_t data_length = 0;
+	uint8_t *sealed_data = NULL;
+	uint32_t sealed_data_len = 0;
+	uint8_t stored_hmac[PLATFORM_HMAC_SIZE] = {0};
+	uint8_t computed_hmac[PLATFORM_HMAC_SIZE] = {0};
+	int strcmp_result = -1;
+
+	if (!nv || !buf || n_bytes == 0) {
+		LOG(LOG_ERROR, "Invalid parameters in %s!\n", __func__);
+		goto exit;
+	}
+
+	if (n_bytes > R_MAX_SIZE) {
+		LOG(LOG_ERROR,
+		    "file read buffer is more than R_MAX_SIZE in "
+		    "%s!\n",
+		    __func__);
+		goto exit;
+	}
+
+	if (nv == FDO_CRED_NV_IDX) {
+		/* HMAC-256 is being used to store files under
+		 * FDO_SDK_NORMAL_DATA flag.
+		 * File content to be stored as:
+		 * [HMAC(32 bytes)||Sizeof_plaintext(4 bytes)||Plaintext(n_bytes
+		 * bytes)]
+		 */
+
+		sealed_data_len =
+		    PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE + n_bytes;
+
+		sealed_data = fdo_alloc(sealed_data_len);
+		if (NULL == sealed_data) {
+			LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
+			goto exit;
+		}
+
+		if (fdo_tpm_nvread(nv, sealed_data_len, &sealed_data)) {
+			LOG(LOG_ERROR, "Failed to read file!\n");
+			goto exit;
+		}
+
+		// get actual data length
+		data_length |= sealed_data[PLATFORM_HMAC_SIZE] << 24;
+		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 1] << 16;
+		data_length |= sealed_data[PLATFORM_HMAC_SIZE + 2] << 8;
+		data_length |=
+		    (sealed_data[PLATFORM_HMAC_SIZE + 3] & 0x000000FF);
+
+		// check if input buffer is sufficient ?
+		if (n_bytes < data_length) {
+			LOG(LOG_ERROR,
+			    "Failed to read data, Buffer is not enough, "
+			    "buf_len:%d,\t Lengthstoredinfilesystem:%d\n",
+			    n_bytes, data_length);
+			goto exit;
+		}
+
+		if (memcpy_s(stored_hmac, PLATFORM_HMAC_SIZE, sealed_data,
+			     PLATFORM_HMAC_SIZE) != 0) {
+			LOG(LOG_ERROR,
+			    "Copying stored HMAC failed during "
+			    "%s!\n",
+			    __func__);
+			goto exit;
+		}
+
+		data = sealed_data + PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE;
+
+		if (0 != fdo_tpm_get_hmac(data, data_length, computed_hmac,
+					  PLATFORM_HMAC_SIZE,
+					  TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
+			LOG(LOG_ERROR,
+			    "HMAC computation dailed during"
+			    " %s!\n",
+			    __func__);
+			goto exit;
+		}
+
+		// compare HMAC
+		if (memcmp_s(stored_hmac, PLATFORM_HMAC_SIZE, computed_hmac,
+			     PLATFORM_HMAC_SIZE, &strcmp_result) != 0) {
+			LOG(LOG_ERROR, "Failed to compare HMAC\n");
+			goto exit;
+		}
+		if (strcmp_result != 0) {
+			LOG(LOG_ERROR, "%s: HMACs do not compare!\n", __func__);
+			goto exit;
+		}
+
+		// copy data into supplied buffer
+		if (memcpy_s(buf, n_bytes, data, data_length) != 0) {
+			LOG(LOG_ERROR,
+			    "%s: Copying data into "
+			    "buffer failed!\n",
+			    __func__);
+			goto exit;
+		}
+	} else {
+		if (0 != fdo_tpm_nvread(nv, n_bytes, &buf)) {
+			LOG(LOG_ERROR, "Failed to read file!\n");
+			goto exit;
+		}
+	}
+
+	retval = (int32_t)n_bytes;
+
+exit:
+	return retval;
+}
+
+/**
+ * fdo_blob_write Write FDO blob(file) from specified buffer
+ * fdo_blob_write ensures integrity & authenticity for non-secure
+ * data & additionally confidentiality for secure data.
+ * Note: FDO_SDK_OTP_DATA flag is not supported for this platform.
+ * @param nv - ptpm nv index
+ * @param flags - descriptor telling type of file
+ * @param buf - pointer to buf from where data is read and then written
+ * @param n_bytes - length of data(in bytes) to be written
+ * @return num of bytes write if success, -1 on error
+ */
+
+int32_t fdo_tpm_write_nv(TPMI_RH_NV_INDEX nv, const uint8_t *buf,
+			 uint32_t n_bytes)
+{
+	int retval = -1;
+	uint32_t write_context_len = 0;
+	uint8_t *write_context = NULL;
+
+	if (!buf || !nv || n_bytes == 0) {
+		LOG(LOG_ERROR, "Invalid parameters in %s!\n", __func__);
+		goto exit;
+	}
+
+	if (n_bytes > R_MAX_SIZE) {
+		LOG(LOG_ERROR,
+		    "file write buffer is more than R_MAX_SIZE in "
+		    "%s!\n",
+		    __func__);
+		goto exit;
+	}
+
+	if (nv == FDO_CRED_NV_IDX) {
+		/* HMAC-256 is being used to store files under
+		 * FDO_SDK_NORMAL_DATA flag.
+		 * File content to be stored as:
+		 * [HMAC(32 bytes)||Sizeof_plaintext(4 bytes)||Plaintext(n_bytes
+		 * bytes)]
+		 */
+		write_context_len =
+		    PLATFORM_HMAC_SIZE + BLOB_CONTENT_SIZE + n_bytes;
+
+		write_context = fdo_alloc(write_context_len);
+		if (NULL == write_context) {
+			LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
+			goto exit;
+		}
+
+		if (0 != fdo_tpm_get_hmac(buf, n_bytes, write_context,
+					  PLATFORM_HMAC_SIZE,
+					  TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
+			LOG(LOG_ERROR, "Computing HMAC failed!\n");
+			goto exit;
+		}
+
+		// copy plain-text size
+		write_context[PLATFORM_HMAC_SIZE + 3] = n_bytes >> 0;
+		write_context[PLATFORM_HMAC_SIZE + 2] = n_bytes >> 8;
+		write_context[PLATFORM_HMAC_SIZE + 1] = n_bytes >> 16;
+		write_context[PLATFORM_HMAC_SIZE + 0] = n_bytes >> 24;
+
+		// copy plain-text content
+		if (memcpy_s(write_context + PLATFORM_HMAC_SIZE +
+				 BLOB_CONTENT_SIZE,
+			     (write_context_len - PLATFORM_HMAC_SIZE -
+			      BLOB_CONTENT_SIZE),
+			     buf, n_bytes) != 0) {
+			LOG(LOG_ERROR,
+			    "Copying data failed during Normal Blob write!\n");
+			goto exit;
+		}
+	} else {
+		write_context_len = n_bytes;
+
+		write_context = fdo_alloc(write_context_len);
+		if (NULL == write_context) {
+			LOG(LOG_ERROR, "Malloc Failed in %s!\n", __func__);
+			goto exit;
+		}
+
+		if (memcpy_s(write_context, write_context_len, buf, n_bytes) !=
+		    0) {
+			LOG(LOG_ERROR,
+			    "Copying data failed during RAW Blob write!\n");
+			goto exit;
+		}
+	}
+
+	if (fdo_tpm_nvwrite(write_context, write_context_len, nv)) {
+		LOG(LOG_ERROR, "Failed to write in TPM NV!\n");
+		goto exit;
+	}
+
+	retval = (int32_t)n_bytes;
+
+exit:
+	if (write_context) {
+		fdo_free(write_context);
+	}
+	return retval;
+}
+#endif

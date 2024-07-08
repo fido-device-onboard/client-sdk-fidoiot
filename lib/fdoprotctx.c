@@ -64,8 +64,9 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 			goto err;
 		}
 		prot_ctx->host_ip->length = host_ip->length;
-		if (0 != memcpy_s(prot_ctx->host_ip->addr, sizeof(host_ip->addr),
-			host_ip->addr, sizeof(host_ip->addr))) {
+		if (0 != memcpy_s(prot_ctx->host_ip->addr,
+				  sizeof(host_ip->addr), host_ip->addr,
+				  sizeof(host_ip->addr))) {
 			LOG(LOG_ERROR, "Failed to copy host IP\n");
 			goto err;
 		}
@@ -74,7 +75,17 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 	// use the DNS directly, since the DNS is resolved and cached,
 	// and the resolved IP is used directly
 	if (host_dns) {
-		prot_ctx->host_dns = host_dns;
+		size_t host_dns_len = strnlen_s(host_dns, FDO_MAX_STR_SIZE);
+		prot_ctx->host_dns = fdo_alloc(host_dns_len + 1);
+		if (!prot_ctx->host_dns) {
+			LOG(LOG_ERROR, "Failed to alloc host DNS\n");
+			goto err;
+		}
+		if (0 != strncpy_s((char *)prot_ctx->host_dns, FDO_MAX_STR_SIZE,
+				   host_dns, host_dns_len)) {
+			LOG(LOG_ERROR, "Failed to copy host DNS\n");
+			goto err;
+		}
 	}
 
 	prot_ctx->protdata = protdata;
@@ -86,6 +97,9 @@ fdo_prot_ctx_t *fdo_prot_ctx_alloc(bool (*protrun)(fdo_prot_t *ps),
 err:
 	if (prot_ctx->host_ip) {
 		fdo_free(prot_ctx->host_ip);
+	}
+	if (prot_ctx->host_dns) {
+		fdo_free(prot_ctx->host_dns);
 	}
 	return NULL;
 }
@@ -101,6 +115,9 @@ void fdo_prot_ctx_free(fdo_prot_ctx_t *prot_ctx)
 		}
 		if (prot_ctx->host_ip) {
 			fdo_free(prot_ctx->host_ip);
+		}
+		if (prot_ctx->host_dns) {
+			fdo_free(prot_ctx->host_dns);
 		}
 	}
 }
@@ -127,8 +144,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port,
-					prot_ctx->tls,
+					prot_ctx->host_port, prot_ctx->tls,
 					is_mfg_proxy_defined())) {
 				ret = false;
 				break;
@@ -139,10 +155,9 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_DI_DONE: /* type 13 */
 		ret = connect_to_manufacturer(
-			      prot_ctx->resolved_ip ? prot_ctx->resolved_ip : prot_ctx->host_ip,
-			      prot_ctx->host_port,
-			      &prot_ctx->sock_hdl,
-			      prot_ctx->tls);
+		    prot_ctx->resolved_ip ? prot_ctx->resolved_ip
+					  : prot_ctx->host_ip,
+		    prot_ctx->host_dns, prot_ctx->host_port, prot_ctx->tls);
 		break;
 	case FDO_STATE_T01_SND_HELLO_FDO: /* type 30 */
 		ATTRIBUTE_FALLTHROUGH;
@@ -153,8 +168,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port,
-					prot_ctx->tls,
+					prot_ctx->host_port, prot_ctx->tls,
 					is_rv_proxy_defined())) {
 				ret = false;
 				fdo_free(prot_ctx->resolved_ip);
@@ -164,14 +178,16 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO1_SND_PROVE_TO_FDO: /* type 32 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO1_RCV_FDO_REDIRECT: /* type 33 */
-		// try DNS's resolved IP first, if it fails, try given IP address
-		ret = connect_to_rendezvous(
-		    prot_ctx->resolved_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
-		    prot_ctx->tls);
+		// try DNS's resolved IP first, if it fails, try given IP
+		// address
+		ret = connect_to_rendezvous(prot_ctx->resolved_ip,
+					    prot_ctx->host_dns,
+					    prot_ctx->host_port, prot_ctx->tls);
 		if (!ret) {
-			ret = connect_to_rendezvous(
-				prot_ctx->host_ip, prot_ctx->host_port, &prot_ctx->sock_hdl,
-				prot_ctx->tls);
+			LOG(LOG_DEBUG, "Invalid DNS. Using IP\n");
+			ret = connect_to_rendezvous(prot_ctx->host_ip, NULL,
+						    prot_ctx->host_port,
+						    prot_ctx->tls);
 		}
 		break;
 	case FDO_STATE_T02_SND_HELLO_DEVICE: /* type 60 */
@@ -183,8 +199,7 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 			}
 			if (!resolve_dn(prot_ctx->host_dns,
 					&prot_ctx->resolved_ip,
-					prot_ctx->host_port,
-					prot_ctx->tls,
+					prot_ctx->host_port, prot_ctx->tls,
 					is_owner_proxy_defined())) {
 				ret = false;
 				fdo_free(prot_ctx->resolved_ip);
@@ -210,12 +225,16 @@ static bool fdo_prot_ctx_connect(fdo_prot_ctx_t *prot_ctx)
 	case FDO_STATE_TO2_SND_DONE: /* type 70 */
 		ATTRIBUTE_FALLTHROUGH;
 	case FDO_STATE_TO2_RCV_DONE_2: /* type 71 */
-		// try DNS's resolved IP first, if it fails, try given IP address
-		ret = connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, prot_ctx->tls);
+		// try DNS's resolved IP first, if it fails, try given IP
+		// address
+		ret =
+		    connect_to_owner(prot_ctx->resolved_ip, prot_ctx->host_dns,
+				     prot_ctx->host_port, prot_ctx->tls);
 		if (!ret) {
-			ret = connect_to_owner(prot_ctx->host_ip, prot_ctx->host_port,
-				       &prot_ctx->sock_hdl, prot_ctx->tls);
+			LOG(LOG_DEBUG, "Invalid DNS. Using IP\n");
+			ret = connect_to_owner(prot_ctx->host_ip, NULL,
+					       prot_ctx->host_port,
+					       prot_ctx->tls);
 		}
 		break;
 	default:
@@ -274,7 +293,6 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 		/* ========================================================== */
 		/*  Transmit outbound packet */
 
-
 		/*  Protocol sets State as FDO_STATE_DONE at the end of the*/
 		/*  protocol(DI/T01/TO2) */
 		/*  Hence, when state = FDO_STATE_DONE, we have nothing more*/
@@ -291,13 +309,16 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		// update the final encoded length in the FDOW block after every successfull write.
+		// update the final encoded length in the FDOW block after every
+		// successfull write.
 		if (!fdow_encoded_length(fdow, &fdow->b.block_size)) {
-			LOG(LOG_ERROR, "Failed to get encoded length in FDOW\n");
+			LOG(LOG_ERROR,
+			    "Failed to get encoded length in FDOW\n");
 			ret = -1;
 			break;
 		}
-		LOG(LOG_DEBUG, "%s Tx Request Body length: %zu\n", __func__, fdow->b.block_size);
+		LOG(LOG_DEBUG, "%s Tx Request Body length: %zu\n", __func__,
+		    fdow->b.block_size);
 		LOG(LOG_DEBUG, "%s Tx Request Body:\n", __func__);
 		fdo_log_block(&fdow->b);
 
@@ -313,16 +334,32 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		fdow->b.block[size] = 0;
 		retries = CONNECTION_RETRY;
-		do {
-			n = fdo_con_send_message(
-			    prot_ctx->sock_hdl, FDO_PROT_SPEC_VERSION,
-			    fdow->msg_type, &fdow->b.block[0], size,
-			    prot_ctx->tls);
+		char hdr_buf[REST_MAX_MSGHDR_SIZE];
+		char body_buf[REST_MAX_MSGBODY_SIZE];
 
-			if (n <= 0) {
-				if (fdo_con_disconnect(prot_ctx->sock_hdl)) {
-					LOG(LOG_ERROR,
-					    "Error during socket close()\n");
+		if (memset_s(hdr_buf, REST_MAX_MSGHDR_SIZE, 0) != 0) {
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			ret = -1;
+			break;
+		}
+
+		if (memset_s(body_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
+			LOG(LOG_ERROR, "Memset() failed!\n");
+			ret = -1;
+			break;
+		}
+
+		n = -1;
+		do {
+			n = fdo_con_send_recv_message(
+			    FDO_PROT_SPEC_VERSION, fdow->msg_type,
+			    &fdow->b.block[0], size, prot_ctx->tls, hdr_buf,
+			    body_buf);
+
+			if (n < 0) {
+				if (fdo_con_disconnect()) {
+					LOG(LOG_ERROR, "Error during "
+						       "connection close()\n");
 					ret = -1;
 					break;
 				}
@@ -342,7 +379,8 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			break;
 		}
 
-		// clear the block contents in preparation for the next FDOW write operation
+		// clear the block contents in preparation for the next FDOW
+		// write operation
 		fdo_block_reset(&fdow->b);
 		fdow->b.block_size = prot_ctx->protdata->prot_buff_sz;
 
@@ -351,39 +389,36 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 
 		uint32_t msglen = 0;
 		uint32_t protver = 0;
-		char curl_buf[REST_MAX_MSGBODY_SIZE];
-		size_t curl_buf_offset = 0;
 
-		if (memset_s(curl_buf, REST_MAX_MSGBODY_SIZE, 0) != 0) {
-				LOG(LOG_ERROR, "Memset() failed!\n");
-				return false;
-			}
-
-		ret = fdo_con_recv_msg_header(prot_ctx->sock_hdl, &protver,
-					      (uint32_t *)&fdor->msg_type,
-					      &msglen, curl_buf, &curl_buf_offset);
+		ret = fdo_con_parse_msg_header(
+		    &protver, (uint32_t *)&fdor->msg_type, &msglen, hdr_buf);
 		if (ret == -1) {
 			LOG(LOG_ERROR, "fdo_con_recv_msg_header() Failed!\n");
 			ret = -1;
 			break;
 		}
 
-		// clear the block contents in preparation for the next FDOR read operation
+		if ((fdor->msg_type < FDO_DI_APP_START) ||
+		    (fdor->msg_type > FDO_TYPE_ERROR)) {
+			msglen = 0;
+		}
+
+		// clear the block contents in preparation for the next FDOR
+		// read operation
 		fdo_block_reset(&fdor->b);
 		// set the received msg length in the block
 		fdor->b.block_size = msglen;
 
 		if (msglen > 0 && msglen <= prot_ctx->protdata->prot_buff_sz) {
 			retries = CONNECTION_RETRY;
-			n = 0;
+			n = -1;
 			do {
-				n = fdo_con_recv_msg_body(&fdor->b.block[0], msglen,
-				    curl_buf, curl_buf_offset);
+				n = fdo_con_parse_msg_body(&fdor->b.block[0],
+							   msglen, body_buf);
 				if (n < 0) {
-					if (fdo_con_disconnect(
-						prot_ctx->sock_hdl)) {
+					if (fdo_con_disconnect()) {
 						LOG(LOG_ERROR, "Error during "
-							       "socket "
+							       "network "
 							       "close()\n");
 						ret = -1;
 						break;
@@ -400,8 +435,8 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 				}
 			} while (n < 0 && retries--);
 
-			if (n <= 0) {
-				LOG(LOG_ERROR, "Socket read not successful "
+			if (n < 0) {
+				LOG(LOG_ERROR, "Buffer read not successful "
 					       "after retries!\n");
 				fdo_block_reset(&fdor->b);
 				ret = -1;
@@ -409,14 +444,15 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			}
 		}
 
-		if (fdo_con_disconnect(prot_ctx->sock_hdl)) {
-			LOG(LOG_ERROR, "Error during socket close()\n");
+		if (fdo_con_disconnect()) {
+			LOG(LOG_ERROR, "Error during connection close()\n");
 			ret = -1;
 			break;
 		}
 
 		if (msglen > prot_ctx->protdata->prot_buff_sz) {
-			LOG(LOG_ERROR, "Response body size is more than allocated memory\n");
+			LOG(LOG_ERROR, "Response body size is more than "
+				       "allocated memory\n");
 			ret = -1;
 			break;
 		}
@@ -432,15 +468,15 @@ int fdo_prot_ctx_run(fdo_prot_ctx_t *prot_ctx)
 			ret = -1;
 			break;
 		}
-		 /* ERROR case ? */
+		/* ERROR case ? */
 		if (fdor->msg_type == FDO_TYPE_ERROR) {
 			ret = -1;
 			break;
 		}
 
 		/*
-		 * Now that we have the received buffer, initialize the parser for next FDOR read
-		 * operation and set the have_block flag.
+		 * Now that we have the received buffer, initialize the parser
+		 * for next FDOR read operation and set the have_block flag.
 		 */
 		if (!fdor_parser_init(fdor)) {
 			LOG(LOG_ERROR, "Failed to initilize FDOR parser\n");

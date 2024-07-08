@@ -3,18 +3,16 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "stdlib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 #if defined(DEVICE_CSE_ENABLED)
 #include "cse_utils.h"
 #endif
-
-#define ECDSA_SIGNATURE_MAX_LEN BUFF_SIZE_256_BYTES
 
 /* This function signs a message passed in message of size message_length.
  * The generated signature will be available in signature of size
@@ -37,7 +35,8 @@
 
  */
 int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
-			fdo_byte_array_t **signature, fdo_byte_array_t **eat_maroe)
+			fdo_byte_array_t **signature,
+			fdo_byte_array_t **eat_maroe)
 {
 	int ret = -1;
 
@@ -57,8 +56,10 @@ int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
 		goto end;
 	}
 
-	if (0 != crypto_hal_ecdsa_sign_cse(message, message_length, (*signature)->bytes,
-			(*signature)->byte_sz, (*eat_maroe)->bytes, &(*eat_maroe)->byte_sz)) {
+	if (0 != crypto_hal_ecdsa_sign_cse(
+		     message, message_length, (*signature)->bytes,
+		     (*signature)->byte_sz, (*eat_maroe)->bytes,
+		     &(*eat_maroe)->byte_sz)) {
 		LOG(LOG_ERROR, "ECDSA signing failed!\n");
 		fdo_byte_array_free(*signature);
 		fdo_byte_array_free(*eat_maroe);
@@ -76,8 +77,9 @@ int32_t fdo_device_sign(const uint8_t *message, size_t message_length,
 		goto end;
 	}
 
-	if (0 != crypto_hal_ecdsa_sign(message, message_length, (*signature)->bytes,
-				&(*signature)->byte_sz)) {
+	if (0 != crypto_hal_ecdsa_sign(message, message_length,
+				       (*signature)->bytes,
+				       &(*signature)->byte_sz)) {
 		LOG(LOG_ERROR, "ECDSA signing failed!\n");
 		fdo_byte_array_free(*signature);
 		*signature = NULL;

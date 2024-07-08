@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include "util.h"
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "platform_utils.h"
 /**
  * Generate platform IV (if not already generated) else provide already
@@ -111,7 +111,9 @@ bool get_platform_iv(uint8_t *iv, size_t len, size_t datalen)
 
 end:
 	if (fp) {
-		fclose(fp);
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	if (p_iv) {
 		fdo_free(p_iv);
@@ -152,7 +154,7 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 		    len);
 
 		if (crypto_hal_random_bytes(key,
-					     PLATFORM_AES_KEY_DEFAULT_LEN)) {
+					    PLATFORM_AES_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform AES Key failed!\n");
 			goto end;
@@ -185,7 +187,9 @@ bool get_platform_aes_key(uint8_t *key, size_t len)
 
 end:
 	if (fp) {
-		fclose(fp);
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	return retval;
 }
@@ -222,7 +226,7 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 		    len);
 
 		if (crypto_hal_random_bytes(key,
-					     PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
+					    PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
 			LOG(LOG_ERROR,
 			    "Generating random platform HMAC Key failed!\n");
 			goto end;
@@ -255,7 +259,9 @@ bool get_platform_hmac_key(uint8_t *key, size_t len)
 
 end:
 	if (fp) {
-		fclose(fp);
+		if (fclose(fp) == EOF) {
+			LOG(LOG_INFO, "Fclose Failed");
+		}
 	}
 	return retval;
 }

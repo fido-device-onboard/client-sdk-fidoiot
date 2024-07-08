@@ -1,7 +1,7 @@
-TPM2_TSS_VER="3.0.3"
+TPM2_TSS_VER="4.0.1"
 TPM2_TSS_LINK="https://github.com/tpm2-software/tpm2-tss/releases/download/$TPM2_TSS_VER/tpm2-tss-$TPM2_TSS_VER.tar.gz"
-TPM2_TSS_ENGINE_VER=1.1.0
-TPM2_TSS_ENGINE_LINK="https://github.com/tpm2-software/tpm2-tss-engine/archive/v$TPM2_TSS_ENGINE_VER.zip"
+TPM2_OPENSSL_VER="1.1.1"
+TPM2_OPENSSL_LINK="https://github.com/tpm2-software/tpm2-openssl/releases/download/$TPM2_OPENSSL_VER/tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz"
 
 PARENT_DIR=`pwd`
 cd $PARENT_DIR
@@ -29,20 +29,17 @@ install_dependencies()
         doxygen \
         m4 \
         pandoc \
-        libcurl-devel \
         uriparser-devel \
         dbus-devel \
         glib2-devel \
         dbus-x11 \
-        libgcrypt-devel \
         libuuid-devel \
         diffutils
-        
-    dnf builddep tpm2-tss
-    pip3 install pyyaml PyYAML
+
+     pip3 install pyyaml PyYAML
 }
 
-install_tpm2tss() 
+install_tpm2tss()
 {
     echo "Build & Install tpm2-tss version : $TPM2_TSS_VER"
     cd $PARENT_DIR
@@ -51,15 +48,10 @@ install_tpm2tss()
     tar -xvzf tpm2-tss-$TPM2_TSS_VER.tar.gz
     cd tpm2-tss-$TPM2_TSS_VER
 
-    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/
+    ./configure --disable-doxygen-doc --with-udevrulesdir=/etc/udev/rules.d/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
-    
-    mkdir -p /var/lib/tpm
-    userdel -f tss
-    groupdel tss
-    groupadd tss
-    useradd -M -d /var/lib/tpm -s /bin/false -g tss tss
+
     udevadm control --reload-rules
     udevadm trigger
     ldconfig
@@ -71,7 +63,8 @@ install_tpm2abrmd()
     yum -y install tpm2-abrmd
     service tpm2-abrmd stop
     service tpm2-abrmd start
-    service tpm2-abrmd status
+    STATUS=$(service tpm2-abrmd status)
+    echo $STATUS
     systemctl enable tpm2-abrmd.service
 }
 
@@ -81,20 +74,20 @@ install_tpm2tools()
     yum -y install tpm2-tools
 }
 
-install_tpm2tssengine()
+install_tpm2openssl()
 {
-    echo "Build & Install tpm2-tss-engine..."
+    echo "Build & Install tpm2-openssl..."
     cd $PARENT_DIR
-    rm -f v$TPM2_TSS_ENGINE_VER.zip
-    wget $TPM2_TSS_ENGINE_LINK
-    unzip v$TPM2_TSS_ENGINE_VER.zip
-    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
+    rm -f tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz
+    wget $TPM2_OPENSSL_LINK
+    tar -xvzf tpm2-openssl-$TPM2_OPENSSL_VER.tar.gz
+    cd tpm2-openssl-$TPM2_OPENSSL_VER
 
     ./bootstrap
-    mkdir -p /usr/local/lib/engines-1.1/
-    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig ./configure --with-enginesdir=/usr/local/lib/engines-1.1/
+    ./configure --with-modulesdir=/usr/local/lib/ossl-modules/ PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     make -j$(nproc)
     make install
+    libtool --finish /usr/local/lib/ossl-modules/
     ldconfig
 
 }
@@ -121,11 +114,11 @@ uninstall_tpm2tools()
     yum -y remove tpm2-tools
 }
 
-uninstall_tpm2tssengine()
+uninstall_tpm2openssl()
 {
-    echo "Uninstall tpm2-tss-engine...."
+    echo "Uninstall tpm2-openssl...."
     cd $PARENT_DIR
-    cd tpm2-tss-engine-$TPM2_TSS_ENGINE_VER
+    cd tpm2-openssl-$TPM2_OPENSSL_VER
     make uninstall
 }
 
@@ -136,7 +129,7 @@ install()
     install_tpm2tss
     install_tpm2abrmd
     install_tpm2tools
-    install_tpm2tssengine
+    install_tpm2openssl
 }
 
 uninstall()
@@ -145,10 +138,9 @@ uninstall()
     uninstall_tpm2tss
     uninstall_tpm2abrmd
     uninstall_tpm2tools
-    uninstall_tpm2tssengine
+    uninstall_tpm2openssl
     cd $PARENT_DIR
-    rm -rf tpm2* 
-    rm v$TPM2_TSS_ENGINE_VER.zip
+    rm -rf tpm2*
 }
 
 usage()

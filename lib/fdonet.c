@@ -87,8 +87,9 @@ bool is_owner_proxy_defined(void)
  */
 
 /* internal api
- * proxydata: proxy data as asscii string. e.g."http://theproxy.mycompany.com:123"
- * return resolved dns, as ip in network format and port
+ * proxydata: proxy data as asscii string.
+ * e.g."http://theproxy.mycompany.com:123" return resolved dns, as ip in network
+ * format and port
  */
 static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 			   uint8_t *netip, uint16_t *proxy_port)
@@ -136,7 +137,7 @@ static bool get_netip_port(const char *proxydata, uint8_t proxydatsize,
 		// set to 0 explicitly
 		errno = 0;
 		*proxy_port = strtol((char *)&proxy[i + 1], &eptr, 10);
-		if (!eptr || eptr == (char *)&proxy[i+1] || errno != 0) {
+		if (!eptr || eptr == (char *)&proxy[i + 1] || errno != 0) {
 			LOG(LOG_ERROR, "Proxy Port read failed\n");
 			goto err;
 		}
@@ -261,7 +262,8 @@ bool setup_http_proxy(const char *filename, fdo_ip_address_t *fdoip,
 	if (nread > 0) {
 		proxydata = fdo_alloc(nread + 1);
 		if (!proxydata) {
-			LOG(LOG_ERROR, "Could not allocate memory to read proxy information.\n");
+			LOG(LOG_ERROR, "Could not allocate memory to read "
+				       "proxy information.\n");
 			goto err;
 		}
 		if (fdo_blob_read((char *)filename, FDO_SDK_RAW_DATA, proxydata,
@@ -359,12 +361,12 @@ void fdo_net_init(void)
  * @return ret
  *         true if successful. false in case of error.
  */
-bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
-		bool tls, bool proxy)
+bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
+		bool proxy)
 {
 	bool ret = false;
+	int connect_ok = -1;
 	uint32_t num_ofIPs = 0;
-	fdo_con_handle sock_hdl = FDO_CON_INVALID_HANDLE;
 	fdo_ip_address_t *ip_list = NULL;
 	rest_ctx_t *rest = NULL;
 
@@ -398,26 +400,28 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port,
 		goto end;
 	}
 
-	curl = curl_easy_init();
-
 	if (ip_list && num_ofIPs > 0) {
 		// Iterate over IP-list to connect
 		uint32_t iter = 0;
 
-		while (iter != num_ofIPs &&
-		       sock_hdl == FDO_CON_INVALID_HANDLE) {
+		while (iter != num_ofIPs && connect_ok == -1) {
 
-			sock_hdl = fdo_con_connect((ip_list + iter), port,
-						   tls);
-			if (sock_hdl == FDO_CON_INVALID_HANDLE) {
+			curl = curl_easy_init();
+			connect_ok =
+			    fdo_con_connect((ip_list + iter), dn, port, tls);
+			if (connect_ok == -1) {
 				LOG(LOG_ERROR, "Failed to connect to "
 					       "server: retrying...\n");
 			}
 			iter++;
 		}
 
-		if (FDO_CON_INVALID_HANDLE != sock_hdl) {
-			fdo_con_disconnect(sock_hdl);
+		if (connect_ok != -1) {
+			if (fdo_con_disconnect()) {
+				LOG(LOG_ERROR,
+				    "Error during connection close()\n");
+				goto end;
+			}
 			if (!cache_host_dns(dn)) {
 				LOG(LOG_ERROR, "REST DNS caching failed!\n");
 				goto end;
@@ -449,18 +453,19 @@ end:
  * programmed into device by the manufacturer.
  *
  * @param ip:   IP address of the server to connect to.
+ * @param dn:   Domain name of the server
  * @param port: Port number of the server instance to connect to.
- * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
-bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
-			     fdo_con_handle *sock_hdl, bool tls)
+bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn,
+			     uint16_t port, bool tls)
 {
 	bool ret = false;
 	int retries = MANUFACTURER_CONNECT_RETRIES;
+	int connect_ok = -1;
 	curl = curl_easy_init();
 
 	LOG(LOG_DEBUG, "Connecting to manufacturer Server\n");
@@ -469,15 +474,9 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
-		goto end;
-	}
-
 	/* cache ip/dns and port to REST */
 	if (!cache_host_ip(ip)) {
-		LOG(LOG_ERROR,
-		    "Mfg IP-address caching to REST failed!\n");
+		LOG(LOG_ERROR, "Mfg IP-address caching to REST failed!\n");
 		goto end;
 	}
 
@@ -495,24 +494,21 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_mfg_proxy_defined()) {
 #if defined HTTPPROXY
-	if (!fdo_curl_proxy(&mfgproxy_ip, mfgproxy_port)) {
-		LOG(LOG_ERROR,
-		"Failed to setup Proxy Connection info for Manufacturer server!\n");
-		goto end;
-	}
+		if (!fdo_curl_proxy(&mfgproxy_ip, mfgproxy_port)) {
+			LOG(LOG_ERROR, "Failed to setup Proxy Connection info "
+				       "for Manufacturer server!\n");
+			goto end;
+		}
 
-	LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
+		LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
 		    mfgproxy_ip.addr[0], mfgproxy_ip.addr[1],
 		    mfgproxy_ip.addr[2], mfgproxy_ip.addr[3], mfgproxy_port);
 #endif
 	}
 
 	if (ip && ip->length > 0) {
-		LOG(LOG_DEBUG, "using IP\n");
-
-		*sock_hdl = fdo_con_connect(ip, port, tls);
-		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
-		    retries--) {
+		connect_ok = fdo_con_connect(ip, dn, port, tls);
+		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO, "Failed to connect to Manufacturer "
 				      "server: retrying...\n");
 			fdo_sleep(RETRY_DELAY);
@@ -523,7 +519,7 @@ bool connect_to_manufacturer(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (FDO_CON_INVALID_HANDLE == *sock_hdl) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR,
 		    "Failed to connect to Manufacturer server: Giving up...\n");
 		goto end;
@@ -538,28 +534,24 @@ end:
  * from RV list stored in device credentials.
  *
  * @param ip:   IP address of the server to connect to.
+ * @param dn:   Domain name of the server
  * @param port: Port number of the server instance to connect to.
- * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
-bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
-			   fdo_con_handle *sock_hdl, bool tls)
+bool connect_to_rendezvous(fdo_ip_address_t *ip, const char *dn, uint16_t port,
+			   bool tls)
 {
 	bool ret = false;
+	int connect_ok = -1;
 	int retries = RENDEZVOUS_CONNECT_RETRIES;
 	curl = curl_easy_init();
 
 	LOG(LOG_DEBUG, "Connecting to Rendezvous server\n");
 
 	if (!ip) {
-		goto end;
-	}
-
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
 		goto end;
 	}
 
@@ -583,24 +575,21 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_rv_proxy_defined()) {
 #if defined HTTPPROXY
-	if (!fdo_curl_proxy(&rvproxy_ip, rvproxy_port)) {
-		LOG(LOG_ERROR,
-		"Failed to setup Proxy Connection info for Rendezvous server!\n");
-		goto end;
-	}
+		if (!fdo_curl_proxy(&rvproxy_ip, rvproxy_port)) {
+			LOG(LOG_ERROR, "Failed to setup Proxy Connection info "
+				       "for Rendezvous server!\n");
+			goto end;
+		}
 
-	LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
+		LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
 		    rvproxy_ip.addr[0], rvproxy_ip.addr[1], rvproxy_ip.addr[2],
 		    rvproxy_ip.addr[3], rvproxy_port);
 #endif
 	}
 
 	if (ip && ip->length > 0) {
-		LOG(LOG_DEBUG, "using IP\n");
-
-		*sock_hdl = fdo_con_connect(ip, port, tls);
-		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
-		    retries--) {
+		connect_ok = fdo_con_connect(ip, dn, port, tls);
+		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO, "Failed to connect to Rendezvous server: "
 				      "retrying...\n");
 			fdo_sleep(RETRY_DELAY);
@@ -611,7 +600,7 @@ bool connect_to_rendezvous(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (FDO_CON_INVALID_HANDLE == *sock_hdl) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR,
 		    "Failed to connect to rendezvous: Giving up...\n");
 		goto end;
@@ -627,17 +616,18 @@ end:
  * received by Rendezvous stored in device credentials.
  *
  * @param ip:   IP address of the server to connect to.
+ * @param dn: Domain name of the server
  * @param port: Port number of the server instance to connect to.
- * @param sock_hdl: Sock struct for subsequent read/write/close.
  * @param tls: flag describing whether HTTP (false) or HTTPS (true) is
  *
  * @return ret
  *         true if successful. false in case of error.
  */
-bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
-		      fdo_con_handle *sock_hdl, bool tls)
+bool connect_to_owner(fdo_ip_address_t *ip, const char *dn, uint16_t port,
+		      bool tls)
 {
 	bool ret = false;
+	int connect_ok = -1;
 	int retries = OWNER_CONNECT_RETRIES;
 	curl = curl_easy_init();
 
@@ -647,15 +637,9 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (!sock_hdl) {
-		LOG(LOG_ERROR, "Connection handle (socket) is NULL\n");
-		goto end;
-	}
-
 	/* cache ip/dns and port to REST */
 	if (!cache_host_ip(ip)) {
-		LOG(LOG_ERROR,
-		    "Owner IP-address caching to REST failed!\n");
+		LOG(LOG_ERROR, "Owner IP-address caching to REST failed!\n");
 		goto end;
 	}
 
@@ -673,13 +657,13 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 
 	if (is_owner_proxy_defined()) {
 #if defined HTTPPROXY
-	if (!fdo_curl_proxy(&ownerproxy_ip, ownerproxy_port)) {
-		LOG(LOG_ERROR,
-		"Failed to setup Proxy Connection info for Owner server!\n");
-		goto end;
-	}
+		if (!fdo_curl_proxy(&ownerproxy_ip, ownerproxy_port)) {
+			LOG(LOG_ERROR, "Failed to setup Proxy Connection info "
+				       "for Owner server!\n");
+			goto end;
+		}
 
-	LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
+		LOG(LOG_DEBUG, "via HTTP proxy <%u.%u.%u.%u:%u>\n",
 		    ownerproxy_ip.addr[0], ownerproxy_ip.addr[1],
 		    ownerproxy_ip.addr[2], ownerproxy_ip.addr[3],
 		    ownerproxy_port);
@@ -687,11 +671,8 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 	}
 
 	if (ip && ip->length > 0) {
-		LOG(LOG_DEBUG, "using IP\n");
-
-		*sock_hdl = fdo_con_connect(ip, port, tls);
-		if ((*sock_hdl == FDO_CON_INVALID_HANDLE) &&
-		    retries--) {
+		connect_ok = fdo_con_connect(ip, dn, port, tls);
+		if ((connect_ok == -1) && retries--) {
 			LOG(LOG_INFO,
 			    "Failed to connect to Owner server: retrying...\n");
 			fdo_sleep(RETRY_DELAY);
@@ -701,7 +682,7 @@ bool connect_to_owner(fdo_ip_address_t *ip, uint16_t port,
 		goto end;
 	}
 
-	if (FDO_CON_INVALID_HANDLE == *sock_hdl) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR, "Failed to connect to Owner: Giving up...\n");
 		goto end;
 	}
@@ -722,18 +703,20 @@ end:
  */
 int fdo_connection_restablish(fdo_prot_ctx_t *prot_ctx)
 {
+	int connect_ok = -1;
 	int retries = OWNER_CONNECT_RETRIES;
+	curl = curl_easy_init();
 
 	/* re-connect using server-IP */
-	while (((prot_ctx->sock_hdl = fdo_con_connect(
-		     prot_ctx->host_ip, prot_ctx->host_port, prot_ctx->tls)) ==
-		FDO_CON_INVALID_HANDLE) &&
+	while (((connect_ok = fdo_con_connect(
+		     prot_ctx->host_ip, prot_ctx->host_dns, prot_ctx->host_port,
+		     prot_ctx->tls)) == -1) &&
 	       retries--) {
 		LOG(LOG_INFO, "Failed reconnecting to server: retrying...");
 		fdo_sleep(RETRY_DELAY);
 	}
 
-	if (prot_ctx->sock_hdl == FDO_CON_INVALID_HANDLE) {
+	if (connect_ok == -1) {
 		LOG(LOG_ERROR, "Failed reconnecting to server: Giving up...");
 		return -1;
 	} else {

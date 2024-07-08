@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 #include "fdoprot.h"
 #include "storage_al.h"
 #include "platform_utils.h"
 
 #if defined(DEVICE_TPM20_ENABLED)
 #include "tpm20_Utils.h"
+#include "tpm2_nv_storage.h"
 #endif
 
 #if defined(DEVICE_CSE_ENABLED)
@@ -30,7 +31,7 @@
 int32_t set_ov_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 {
 	int ret = -1;
-	fdo_byte_array_t **ovkeyctx = getOVKey();
+	fdo_byte_array_t **ovkeyctx = get_OV_key();
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
@@ -65,8 +66,8 @@ err:
 }
 
 /**
- * This function sets the Ownership Voucher replacement hmac key in the structure.
- * Which will later be used to generate the replacement hmac.
+ * This function sets the Ownership Voucher replacement hmac key in the
+ * structure. Which will later be used to generate the replacement hmac.
  * @param OVkey In Pointer to the Ownership Voucher replacement hmac key.
  * @param OVKey_len In Size of the Ownership Voucher replacement hmac key
  * @return 0 on success and -1 on failure.
@@ -74,7 +75,7 @@ err:
 int32_t set_ov_replacement_key(fdo_byte_array_t *OVkey, size_t OVKey_len)
 {
 	int ret = -1;
-	fdo_byte_array_t **ovkeyctx = getreplacementOVKey();
+	fdo_byte_array_t **ovkeyctx = get_replacement_OV_key();
 
 	if ((NULL == OVkey) || !(OVkey->bytes) ||
 	    !((BUFF_SIZE_32_BYTES == OVKey_len) ||
@@ -150,17 +151,17 @@ int32_t fdo_device_ov_hmac(uint8_t *OVHdr, size_t OVHdr_len, uint8_t *hmac,
 	fdo_byte_array_t **keyset = NULL;
 	if (is_replacement_hmac) {
 #if defined(DEVICE_TPM20_ENABLED)
-	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-				TPM_HMAC_REPLACEMENT_PUB_KEY, TPM_HMAC_REPLACEMENT_PRIV_KEY);
+		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
+					TPM_HMAC_KEY_PERSISTANT_HANDLE);
 #else
-		keyset = getreplacementOVKey();
+		keyset = get_replacement_OV_key();
 #endif
 	} else {
 #if defined(DEVICE_TPM20_ENABLED)
-	return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
-				TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY);
+		return fdo_tpm_get_hmac(OVHdr, OVHdr_len, hmac, hmac_len,
+					TPM_HMAC_KEY_PERSISTANT_HANDLE);
 #else
-		keyset = getOVKey();
+		keyset = get_OV_key();
 #endif
 	}
 	if (!keyset || !*keyset) {
@@ -205,7 +206,7 @@ int32_t fdo_crypto_hash(const uint8_t *message, size_t message_length,
 	}
 
 	if (0 != crypto_hal_hash(FDO_CRYPTO_HASH_TYPE_USED, message,
-				  message_length, hash, hash_length)) {
+				 message_length, hash, hash_length)) {
 
 		return -1;
 	}
@@ -224,8 +225,7 @@ int32_t fdo_generate_ov_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 !=
-	    fdo_tpm_generate_hmac_key(TPM_HMAC_PUB_KEY, TPM_HMAC_PRIV_KEY)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
 		LOG(LOG_ERROR, "Failed to generate device HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -258,7 +258,8 @@ err:
 }
 
 /**
- * fdo_generate_ov_replacement_hmac_key function generates the new/replacement OV HMAC key
+ * fdo_generate_ov_replacement_hmac_key function generates the new/replacement
+ * OV HMAC key
  *
  * @return
  *        return 0 on success, -1 on failure.
@@ -268,9 +269,7 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 !=
-	    fdo_tpm_generate_hmac_key(TPM_HMAC_REPLACEMENT_PUB_KEY,
-			TPM_HMAC_REPLACEMENT_PRIV_KEY)) {
+	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_KEY_PERSISTANT_HANDLE)) {
 		LOG(LOG_ERROR, "Failed to generate device replacement HMAC key"
 			       " from TPM.\n");
 		return ret;
@@ -288,7 +287,8 @@ int32_t fdo_generate_ov_replacement_hmac_key(void)
 		goto err;
 	}
 
-	/* Generate replacement HMAC key for calcuating it over Ownership header */
+	/* Generate replacement HMAC key for calcuating it over Ownership header
+	 */
 	fdo_crypto_random_bytes(secret->bytes, FDO_HMAC_KEY_LENGTH);
 	if (0 != set_ov_replacement_key(secret, FDO_HMAC_KEY_LENGTH)) {
 		goto err;
@@ -303,8 +303,8 @@ err:
 
 /**
  * Commit the OV replacment key by replacing the original HMAC key
- * with the replacement HMAC key. This operation is final and the original HMAC key
- * is lost completely.
+ * with the replacement HMAC key. This operation is final and the original HMAC
+ * key is lost completely.
  *
  * @return
  *        return 0 on success, -1 on failure.
@@ -314,15 +314,9 @@ int32_t fdo_commit_ov_replacement_hmac_key(void)
 
 	int32_t ret = -1;
 #if defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_commit_replacement_hmac_key()) {
-		LOG(LOG_ERROR, "Failed to commit device replacement HMAC key"
-			       " for TPM.\n");
-		return ret;
-	}
-
 	ret = 0;
 #else
-	fdo_byte_array_t **secret = getreplacementOVKey();
+	fdo_byte_array_t **secret = get_replacement_OV_key();
 
 	if (!secret || !(*secret) || !(*secret)->bytes) {
 		LOG(LOG_ERROR, "Failed to read OV replacement HMAC key\n");
@@ -363,17 +357,6 @@ int32_t fdo_compute_storage_hmac(const uint8_t *data, uint32_t data_length,
 		goto error;
 	}
 
-#if defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_get_hmac(data, data_length, computed_hmac,
-				  computed_hmac_size, TPM_HMAC_DATA_PUB_KEY,
-				  TPM_HMAC_DATA_PRIV_KEY)) {
-		LOG(LOG_ERROR, "TPM HMAC Computation failed!\n");
-		goto error;
-	}
-
-	LOG(LOG_DEBUG, "TPM HMAC computed successfully!\n");
-
-#else
 	uint8_t hmac_key[PLATFORM_HMAC_KEY_DEFAULT_LEN] = {0};
 
 	if (!get_platform_hmac_key(hmac_key, PLATFORM_HMAC_KEY_DEFAULT_LEN)) {
@@ -401,7 +384,6 @@ error:
 #endif
 	return ret;
 }
-#endif
 
 /**
  * fdo_generate_storage_hmac_key function generates Storage HMAC key
@@ -416,18 +398,6 @@ int32_t fdo_generate_storage_hmac_key(void)
 
 #if defined(TARGET_OS_OPTEE)
 	return 0;
-
-#elif defined(DEVICE_TPM20_ENABLED)
-	if (0 != fdo_tpm_generate_hmac_key(TPM_HMAC_DATA_PUB_KEY,
-					   TPM_HMAC_DATA_PRIV_KEY)) {
-		LOG(LOG_ERROR, "Failed to generate TPM data protection "
-			       "key.\n");
-		return ret;
-	}
-
-	ret = 0;
-	LOG(LOG_DEBUG, "TPM data protection key generated successfully.\n");
-
 #else
 	uint8_t hmac_key[PLATFORM_HMAC_KEY_DEFAULT_LEN] = {0};
 

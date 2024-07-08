@@ -16,6 +16,13 @@ include(cmake/cli_input.cmake)
 include(cmake/extension.cmake)
 include(cmake/blob_path.cmake)
 
+if (NOT(DEFINED ENV{OPENSSL3_ROOT}))
+  message(FATAL_ERROR "OPENSSL3_ROOT not set")
+endif()
+
+if (NOT(DEFINED ENV{CURL_ROOT}))
+  message(FATAL_ERROR "CURL_ROOT not set")
+endif()
 
 if (NOT(DEFINED ENV{SAFESTRING_ROOT}))
   message(FATAL_ERROR "SAFESTRING_ROOT not set")
@@ -43,7 +50,6 @@ client_sdk_compile_options(
   -Wswitch-default
   -Wunused-parameter
   -Wsign-compare
-  -Wno-deprecated-declarations
   -Wpedantic
   -Werror
   -Wimplicit-function-declaration
@@ -71,6 +77,8 @@ client_sdk_compile_options(
 if(${TARGET_OS} MATCHES linux)
 # Safestring lib
 client_sdk_include_directories(
+  $ENV{OPENSSL3_ROOT}/include
+  $ENV{CURL_ROOT}/include
   $ENV{SAFESTRING_ROOT}/include
   $ENV{TINYCBOR_ROOT}/src
   include
@@ -121,11 +129,14 @@ if(${TARGET_OS} MATCHES linux)
     -L$ENV{TINYCBOR_ROOT}/lib/
     -l:libtinycbor.a
     -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
+    -L$ENV{CURL_ROOT}/lib
     -lcurl
     )
 
   if (${TLS} STREQUAL openssl)
     client_sdk_ld_options(
+      -L$ENV{OPENSSL3_ROOT}/lib64
+      -L$ENV{OPENSSL3_ROOT}/lib
       -Wl,--no-whole-archive -lssl -lcrypto -ldl
       )
   elseif(${TLS} MATCHES mbedtls)

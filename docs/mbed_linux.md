@@ -54,7 +54,7 @@ The FDO Client SDK for Arm Cortex-A7 platform is built using the Yocto Project-b
     IMAGE_INSTALL_APPEND = "clientsdk-mbedtls"
 ```
 
-6. Re-run the build command as you did in the [Building Arm Mbed Linux OS](#building-mbed-linux) step.
+6. Re-run the build command as you did in the [Building Arm Mbed Linux OS](#building-arm-mbed-linux-os) step.
 > ***NOTE***: If the `imx7s-warp.dtb` file is not generated during build, refer to [this](https://github.com/WaRP7/linux-fslc/) link to generate the file.
 
 ## Flashing and Preparing the Device

@@ -52,7 +52,7 @@ uint8_t slot_config[] = {
     0x0F, 0x0F, /* Slot 12 */
     0x0F, 0x0F, /* Slot 13 */
     0x0F, 0x0F, /* Slot 14 */
-    0x0F, 0x0F  /* Slot 15 */
+    0x0F, 0x0F	/* Slot 15 */
 };
 
 uint8_t key_config[] = {
@@ -71,7 +71,7 @@ uint8_t key_config[] = {
     0x3C, 0x00, /* Slot 12 */
     0x3C, 0x00, /* Slot 13 */
     0x32, 0x00, /* Slot 14 */
-    0x30, 0x00  /* Slot 15 */
+    0x30, 0x00	/* Slot 15 */
 };
 
 static void print_arr(uint8_t *arr, uint32_t len)

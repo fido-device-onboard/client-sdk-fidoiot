@@ -15,7 +15,7 @@
 #include "mbedtls/cipher_internal.h"
 
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "BN_support.h"
 #include "safe_lib.h"
@@ -26,8 +26,8 @@
 #define CIPHER_TYPE MBEDTLS_CIPHER_AES_256_CTR
 #else
 #define CIPHER_TYPE MBEDTLS_CIPHER_AES_256_CBC
-#endif /* AES_MODE_CTR_ENABLED */
-#define KEY_LENGTH_LOCAL 32 //256 bit 
+#endif			    /* AES_MODE_CTR_ENABLED */
+#define KEY_LENGTH_LOCAL 32 // 256 bit
 
 #else
 
@@ -35,8 +35,8 @@
 #define CIPHER_TYPE MBEDTLS_CIPHER_AES_128_CTR
 #else
 #define CIPHER_TYPE MBEDTLS_CIPHER_AES_128_CBC
-#endif /* AES_MODE_CTR_ENABLED */
-#define KEY_LENGTH_LOCAL 16 //128 bit
+#endif			    /* AES_MODE_CTR_ENABLED */
+#define KEY_LENGTH_LOCAL 16 // 128 bit
 
 #endif /* AES_256_BIT */
 
@@ -125,7 +125,7 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	}
 
 	ret = mbedtls_cipher_setkey(&cipher_ctx, key, 8 * key_length,
-				     MBEDTLS_ENCRYPT);
+				    MBEDTLS_ENCRYPT);
 	if (ret != 0) {
 		LOG(LOG_ERROR, "failed to set the key\n");
 		goto end;
@@ -144,16 +144,14 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 	}
 
 	/* encrypt */
-	ret = mbedtls_cipher_update(&cipher_ctx, clear_text,
-				    clear_text_length, cipher_text,
-				    &olen);
+	ret = mbedtls_cipher_update(&cipher_ctx, clear_text, clear_text_length,
+				    cipher_text, &olen);
 	if (ret != 0) {
 		LOG(LOG_ERROR, "cipher_update failed\n");
 		goto end;
 	}
 
-	ret = mbedtls_cipher_finish(&cipher_ctx, cipher_text + olen,
-				    &olen);
+	ret = mbedtls_cipher_finish(&cipher_ctx, cipher_text + olen, &olen);
 	if (ret != 0) {
 		LOG(LOG_ERROR, "cipher failed\n");
 		goto end;

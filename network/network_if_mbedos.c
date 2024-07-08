@@ -11,7 +11,7 @@
 
 #include "util.h"
 #include "network_al.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "fdoprotctx.h"
 #include "fdonet.h"
 #include "safe_lib.h"
@@ -283,7 +283,7 @@ int32_t fdo_con_recv_msg_header(fdo_con_handle handle,
 	if (!hdrlen || hdrlen == REST_MAX_MSGHDR_SIZE) {
 		LOG(LOG_ERROR, "hdr is not NULL terminated.\n");
 		goto err;
-	}	
+	}
 
 	/* Process REST header and get content-length of body */
 	if (!get_rest_content_length(hdr, hdrlen, msglen)) {

@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 #include "util.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "crypto_utils.h"
 #include "BN_support.h"
 #include "safe_lib.h"
@@ -72,7 +72,7 @@ int32_t crypto_hal_kex_init(void **context)
 	}
 
 	if (crypto_hal_random_bytes(key_ex_data->_Device_random,
-				     key_ex_data->_Dev_rand_size) != 0) {
+				    key_ex_data->_Dev_rand_size) != 0) {
 		LOG(LOG_ERROR, "Failed to generate device random\n");
 		goto error;
 	}

@@ -160,8 +160,20 @@ elseif(DA STREQUAL tpm20_ecdsa256)
     set (TPM2_TCTI_TYPE tabrmd)
     client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"tabrmd\")
   endif()
+elseif(DA STREQUAL tpm20_ecdsa384)
+  client_sdk_compile_definitions(-DECDSA384_DA)
+  if(${TPM2_TCTI_TYPE} MATCHES tpmrm0)
+    client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"device:/dev/tpmrm0\")
+  elseif(${TPM2_TCTI_TYPE} MATCHES tabrmd)
+    client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"tabrmd\")
+  else()
+    message(WARNING "Incorrect TPM2_TCTI_TYPE selected. Supported values are 'tabrmd' and 'tpmrm0'. \
+    Defaulting to 'tabrmd'")
+    set (TPM2_TCTI_TYPE tabrmd)
+    client_sdk_compile_definitions(-DTPM2_TCTI_TYPE=\"tabrmd\")
+  endif()
 else()
-  message(WARNING "Incorrect DA selected. Supported values are 'ecdsa256', 'ecdsa384', 'cse_ecdsa384' and 'tpm20_ecdsa256'. \
+  message(WARNING "Incorrect DA selected. Supported values are 'ecdsa256', 'ecdsa384', 'cse_ecdsa384', 'tpm20_ecdsa256' and 'tpm20_ecdsa384'. \
   Defaulting to 'ecdsa384'")
   set (DA ecdsa384)
   client_sdk_compile_definitions(-DECDSA384_DA)
@@ -240,6 +252,10 @@ if(${SELF_SIGNED_CERTS} STREQUAL true)
   client_sdk_compile_definitions(-DSELF_SIGNED_CERTS_SUPPORTED)
 endif()
 
+if(${SNI} STREQUAL true)
+  client_sdk_compile_definitions(-DSNI_SUPPORTED)
+endif()
+
 if(${RESALE} STREQUAL true)
   client_sdk_compile_definitions(-DRESALE_SUPPORTED)
 endif()
@@ -254,5 +270,21 @@ endif()
 
 if(${CSE_CLEAR} STREQUAL true)
   client_sdk_compile_definitions(-DCSE_CLEAR)
+endif()
+
+if(${MTLS} STREQUAL true)
+  client_sdk_compile_definitions(-DMTLS)
+endif()
+
+if(${GET_DEV_SERIAL} STREQUAL true)
+  client_sdk_compile_definitions(-DGET_DEV_SERIAL)
+endif()
+
+if(${LOCK_TPM} STREQUAL true)
+  client_sdk_compile_definitions(-DLOCK_TPM)
+endif()
+
+if(${BUILD_MFG_TOOLKIT} STREQUAL true)
+  client_sdk_compile_definitions(-DBUILD_MFG_TOOLKIT)
 endif()
 ############################################################

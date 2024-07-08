@@ -7,5 +7,5 @@
 
 #include <openssl/ec.h>
 
-EC_KEY *get_ec_key(void);
+EVP_PKEY *get_evp_key(void);
 #endif

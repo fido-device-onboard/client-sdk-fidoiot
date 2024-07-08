@@ -15,7 +15,7 @@
 #include "mbedtls/ecdsa.h"
 
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "stdlib.h"
 #include "storage_al.h"
@@ -32,8 +32,8 @@
  * @return 0 if true, else -1.
  */
 int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
-		       unsigned char *message_signature,
-		       size_t *signature_length)
+			      unsigned char *message_signature,
+			      size_t *signature_length)
 {
 	int ret = -1;
 	int retval = -1;
@@ -115,19 +115,17 @@ int32_t crypto_hal_ecdsa_sign(const uint8_t *data, size_t data_len,
 
 	/* From the EC keypair, get the private key */
 	ecp = mbedtls_pk_ec(pk_ctx);
-	retval = mbedtls_mpi_copy(&(ctx_sign.d),
-				  (const mbedtls_mpi *)&(ecp->d));
+	retval =
+	    mbedtls_mpi_copy(&(ctx_sign.d), (const mbedtls_mpi *)&(ecp->d));
 	if (ecp == NULL || retval != 0) {
 		goto end;
 	}
 #endif
 
 	// Generate Signature
-	retval = mbedtls_ecdsa_write_signature(&ctx_sign, hash_type, hash,
-					       hash_length, message_signature,
-					       (size_t *)signature_length,
-					       mbedtls_ctr_drbg_random,
-					       drbg_ctx);
+	retval = mbedtls_ecdsa_write_signature(
+	    &ctx_sign, hash_type, hash, hash_length, message_signature,
+	    (size_t *)signature_length, mbedtls_ctr_drbg_random, drbg_ctx);
 	if (retval != 0) {
 		LOG(LOG_ERROR, "signature creation failed ret:%d\n", retval);
 		goto end;

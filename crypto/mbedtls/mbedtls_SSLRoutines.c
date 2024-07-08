@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache 2.0
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "crypto_utils.h"
 #include "mbedtls/net_sockets.h"
@@ -19,23 +19,23 @@
 
 /* The list of recommended cipher suites to be used in TLS setup with server */
 static const int ciphersuites[] = {
-	MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,
-	MBEDTLS_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
-	MBEDTLS_TLS_RSA_WITH_AES_128_GCM_SHA256,
-	MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CCM,
-	MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-	MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-	MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CCM,
-	MBEDTLS_TLS_RSA_WITH_AES_128_CCM,
-	MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA256,
-	MBEDTLS_TLS_RSA_WITH_AES_256_CCM,
-	MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA256,
-	MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CCM,
-	MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
-	MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CCM,
-	MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_RSA_WITH_AES_128_GCM_SHA256,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CCM,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CCM,
+    MBEDTLS_TLS_RSA_WITH_AES_128_CCM,
+    MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_RSA_WITH_AES_256_CCM,
+    MBEDTLS_TLS_RSA_WITH_AES_256_CBC_SHA256,
+    MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CCM,
+    MBEDTLS_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,
+    MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CCM,
+    MBEDTLS_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256,
 };
 
 #if !defined(TARGET_OS_MBEDOS) // non mbedos platform
@@ -124,21 +124,19 @@ void *fdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
 	mbedtls_ctr_drbg_init(&(p_ssl_info->ctr_drbg));
 	mbedtls_ssl_init(&(p_ssl_info->ssl));
 	mbedtls_ssl_config_init(&(p_ssl_info->conf));
-	ret = mbedtls_ctr_drbg_seed(&(p_ssl_info->ctr_drbg),
-				    mbedtls_entropy_func,
-				    &(p_ssl_info->entropy),
-				    (unsigned char *)DRBG_PERSONALIZED_STR,
-				    strlen((char *)DRBG_PERSONALIZED_STR) + 1);
+	ret = mbedtls_ctr_drbg_seed(
+	    &(p_ssl_info->ctr_drbg), mbedtls_entropy_func,
+	    &(p_ssl_info->entropy), (unsigned char *)DRBG_PERSONALIZED_STR,
+	    strlen((char *)DRBG_PERSONALIZED_STR) + 1);
 	if (ret != 0) {
 		LOG(LOG_ERROR, "mbedtls_ctr_drbg_seed returned %d", ret);
 		goto exit;
 	}
 
 #if !defined(TARGET_OS_MBEDOS)
-	ret = mbedtls_net_connect(&(p_ssl_info->server_fd),
-				  (const char *)SERVER_NAME,
-				  (const char *)SERVER_PORT,
-				  MBEDTLS_NET_PROTO_TCP);
+	ret = mbedtls_net_connect(
+	    &(p_ssl_info->server_fd), (const char *)SERVER_NAME,
+	    (const char *)SERVER_PORT, MBEDTLS_NET_PROTO_TCP);
 	if (ret != 0) {
 		LOG(LOG_ERROR,
 		    "failed\n  ! mbedtls_net_connect returned %d\n\n", ret);
@@ -153,10 +151,9 @@ void *fdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
 	}
 	ssl_info_var.socket = socket;
 #endif
-	ret = mbedtls_ssl_config_defaults(&(p_ssl_info->conf),
-					  MBEDTLS_SSL_IS_CLIENT,
-					  MBEDTLS_SSL_TRANSPORT_STREAM,
-					  MBEDTLS_SSL_PRESET_DEFAULT);
+	ret = mbedtls_ssl_config_defaults(
+	    &(p_ssl_info->conf), MBEDTLS_SSL_IS_CLIENT,
+	    MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
 	if (ret != 0) {
 		LOG(LOG_ERROR,
 		    "failed\n  ! mbedtls_ssl_config_defaults returned %d\n\n",
@@ -186,8 +183,7 @@ void *fdo_ssl_setup_connect(char *SERVER_NAME, char *SERVER_PORT)
 	mbedtls_esp_enable_debug_log(&(p_ssl_info->conf), 4);
 #endif
 
-	ret = mbedtls_ssl_setup(&(p_ssl_info->ssl),
-				&(p_ssl_info->conf));
+	ret = mbedtls_ssl_setup(&(p_ssl_info->ssl), &(p_ssl_info->conf));
 	if (ret != 0) {
 		LOG(LOG_ERROR, "failed\n  ! mbedtls_ssl_setup returned %d\n\n",
 		    ret);

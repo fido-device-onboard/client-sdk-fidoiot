@@ -16,6 +16,7 @@ set (TARGET_OS linux)
 set (HTTPPROXY true)
 set (PROXY_DISCOVERY false)
 set (SELF_SIGNED_CERTS true)
+set (SNI true)
 set (OPTIMIZE 1)
 set (DA_FILE der)
 set (CRYPTO_HW false)
@@ -28,6 +29,12 @@ set (BLOB_PATH .)
 set (TPM2_TCTI_TYPE tabrmd)
 set (RESALE true)
 set (REUSE true)
+set (MTLS false)
+set (GET_DEV_SERIAL false)
+set (LOCK_TPM true)
+
+#Mfg toolkit specific
+set (BUILD_MFG_TOOLKIT false)
 
 #for CSE
 set (CSE_SHUTDOWN true)
@@ -243,6 +250,34 @@ endif()
 
 set(CACHED_SELF_SIGNED_CERTS ${SELF_SIGNED_CERTS} CACHE STRING "Selected SELF_SIGNED_CERTS")
 message("Selected SELF_SIGNED_CERTS ${SELF_SIGNED_CERTS}")
+
+###########################################
+# FOR SNI
+get_property(cached_server_name_indication_value CACHE SNI PROPERTY VALUE)
+
+set(server_name_indication_cli_arg ${cached_server_name_indication_value})
+if(server_name_indication_cli_arg STREQUAL CACHED_SNI)
+  unset(server_name_indication_cli_arg)
+endif()
+
+set(server_name_indication_app_cmake_lists ${SNI})
+if(cached_server_name_indication_value STREQUAL SNI)
+  unset(server_name_indication_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_SNI)
+  if ((DEFINED server_name_indication_cli_arg) AND (NOT(CACHED_SNI STREQUAL server_name_indication_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(SNI ${CACHED_SNI})
+elseif(DEFINED server_name_indication_cli_arg)
+  set(SNI ${server_name_indication_cli_arg})
+elseif(DEFINED server_name_indication_app_cmake_lists)
+  set(SNI ${server_name_indication_app_cmake_lists})
+endif()
+
+set(CACHED_SNI ${SNI} CACHE STRING "Selected SNI")
+message("Selected SNI ${SNI}")
 
 ###########################################
 # FOR DA_FILE
@@ -798,3 +833,111 @@ if (${DA} MATCHES cse)
   message("Selected CSE_CLEAR ${CSE_CLEAR}")
 endif()
 ###########################################
+# FOR MTLS
+get_property(cached_mtls_value CACHE MTLS PROPERTY VALUE)
+
+set(mtls_cli_arg ${cached_mtls_value})
+if(mtls_cli_arg STREQUAL CACHED_MTLS)
+  unset(mtls_cli_arg)
+endif()
+
+set(mtls_app_cmake_lists ${MTLS})
+if(cached_mtls_value STREQUAL MTLS)
+  unset(mtls_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_MTLS)
+  if ((DEFINED mtls_cli_arg) AND (NOT(CACHED_MTLS STREQUAL mtls_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(MTLS ${CACHED_MTLS})
+elseif(DEFINED mtls_cli_arg)
+  set(MTLS ${mtls_cli_arg})
+elseif(DEFINED mtls_app_cmake_lists)
+  set(MTLS ${mtls_app_cmake_lists})
+endif()
+
+set(CACHED_MTLS ${MTLS} CACHE STRING "Selected MTLS")
+message("Selected MTLS ${MTLS}")
+###########################################
+# FOR GET_DEV_SERIAL
+get_property(cached_get_dev_serial_value CACHE GET_DEV_SERIAL PROPERTY VALUE)
+
+set(get_dev_serial_cli_arg ${cached_get_dev_serial_value})
+if(get_dev_serial_cli_arg STREQUAL CACHED_GET_DEV_SERIAL)
+  unset(get_dev_serial_cli_arg)
+endif()
+
+set(get_dev_serial_app_cmake_lists ${GET_DEV_SERIAL})
+if(cached_get_dev_serial_value STREQUAL GET_DEV_SERIAL)
+  unset(get_dev_serial_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_GET_DEV_SERIAL)
+  if ((DEFINED get_dev_serial_cli_arg) AND (NOT(CACHED_GET_DEV_SERIAL STREQUAL get_dev_serial_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(GET_DEV_SERIAL ${CACHED_GET_DEV_SERIAL})
+elseif(DEFINED get_dev_serial_cli_arg)
+  set(GET_DEV_SERIAL ${get_dev_serial_cli_arg})
+elseif(DEFINED get_dev_serial_app_cmake_lists)
+  set(GET_DEV_SERIAL ${get_dev_serial_app_cmake_lists})
+endif()
+
+set(CACHED_GET_DEV_SERIAL ${GET_DEV_SERIAL} CACHE STRING "Selected GET_DEV_SERIAL")
+message("Selected GET_DEV_SERIAL ${GET_DEV_SERIAL}")
+###########################################
+# FOR LOCK TPM
+if (${DA} MATCHES tpm)
+  get_property(cached_lock_tpm_value CACHE LOCK_TPM PROPERTY VALUE)
+
+  set(lock_tpm_cli_arg ${cached_lock_tpm_value})
+  if(lock_tpm_cli_arg STREQUAL CACHED_LOCK_TPM)
+    unset(lock_tpm_cli_arg)
+  endif()
+
+  set(lock_tpm_app_cmake_lists ${LOCK_TPM})
+  if(cached_lock_tpm_value STREQUAL LOCK_TPM)
+    unset(lock_tpm_app_cmake_lists)
+  endif()
+
+  if(DEFINED CACHED_LOCK_TPM)
+    if ((DEFINED lock_tpm_cli_arg) AND (NOT(CACHED_LOCK_TPM STREQUAL lock_tpm_cli_arg)))
+      message(WARNING "Need to do make pristine before cmake args can change.")
+    endif()
+    set(LOCK_TPM ${CACHED_LOCK_TPM})
+  elseif(DEFINED lock_tpm_cli_arg)
+    set(LOCK_TPM ${lock_tpm_cli_arg})
+  elseif(DEFINED lock_tpm_app_cmake_lists)
+    set(LOCK_TPM ${lock_tpm_app_cmake_lists})
+  endif()
+
+  set(CACHED_LOCK_TPM ${LOCK_TPM} CACHE STRING "Selected LOCK_TPM")
+  message("Selected LOCK_TPM ${LOCK_TPM}")
+endif()
+###########################################
+# FOR BUILD MFG TOOLKIT
+get_property(cached_build_mfg_toolkit_value CACHE BUILD_MFG_TOOLKIT PROPERTY VALUE)
+set(build_mfg_toolkit_cli_arg ${cached_build_mfg_toolkit_value})
+if(build_mfg_toolkit_cli_arg STREQUAL CACHED_BUILD_MFG_TOOLKIT)
+  unset(build_mfg_toolkit_cli_arg)
+endif()
+
+set(build_mfg_toolkit_app_cmake_lists ${BUILD_MFG_TOOLKIT})
+if(cached_build_mfg_toolkit_value STREQUAL BUILD_MFG_TOOLKIT)
+  unset(build_mfg_toolkit_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_BUILD_MFG_TOOLKIT)
+  if ((DEFINED build_mfg_toolkit_cli_arg) AND (NOT(CACHED_BUILD_MFG_TOOLKIT STREQUAL build_mfg_toolkit_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(BUILD_MFG_TOOLKIT ${CACHED_BUILD_MFG_TOOLKIT})
+elseif(DEFINED build_mfg_toolkit_cli_arg)
+  set(BUILD_MFG_TOOLKIT ${build_mfg_toolkit_cli_arg})
+elseif(DEFINED build_mfg_toolkit_app_cmake_lists)
+  set(BUILD_MFG_TOOLKIT ${build_mfg_toolkit_app_cmake_lists})
+endif()
+
+set(CACHED_BUILD_MFG_TOOLKIT ${BUILD_MFG_TOOLKIT} CACHE STRING "Selected BUILD_MFG_TOOLKIT")
+message("Selected BUILD_MFG_TOOLKIT ${BUILD_MFG_TOOLKIT}")

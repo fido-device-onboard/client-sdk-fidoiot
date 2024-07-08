@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include "safe_lib.h"
 #include "snprintf_s.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto.h"
 
 /**
  * Encrypt the characters in the clear_txt buffer, place the result
@@ -33,9 +33,11 @@
  *        return 0 on success. -1 on failure.
  */
 int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
-		       size_t clear_txt_size, const uint8_t *aad, size_t aad_length)
+		       size_t clear_txt_size, const uint8_t *aad,
+		       size_t aad_length)
 {
-	if (!cipher_txt || !clear_txt || 0 == clear_txt_size || !aad || 0 == aad_length) {
+	if (!cipher_txt || !clear_txt || 0 == clear_txt_size || !aad ||
+	    0 == aad_length) {
 		return -1;
 	}
 
@@ -63,8 +65,8 @@ int aes_encrypt_packet(fdo_encrypted_packet_t *cipher_txt, uint8_t *clear_txt,
 	// get encryted data
 	if (0 != fdo_msg_encrypt(ct, clear_txt_size, cipher_text,
 				 &cipher_length, cipher_txt->iv,
-				 cipher_txt->tag, sizeof(cipher_txt->tag),
-				 aad, aad_length)) {
+				 cipher_txt->tag, sizeof(cipher_txt->tag), aad,
+				 aad_length)) {
 		LOG(LOG_ERROR, "Failed to get encrypt.\n");
 		goto end;
 	}
@@ -127,10 +129,11 @@ int aes_decrypt_packet(fdo_encrypted_packet_t *cipher_txt,
 		goto end;
 	}
 
-	if (0 != fdo_msg_decrypt(
-		     cleartext, &clear_text_length, cipher_txt->em_body->bytes,
-		     cipher_txt->em_body->byte_sz, cipher_txt->iv,
-		     cipher_txt->tag, sizeof(cipher_txt->tag), aad, aad_length)) {
+	if (0 != fdo_msg_decrypt(cleartext, &clear_text_length,
+				 cipher_txt->em_body->bytes,
+				 cipher_txt->em_body->byte_sz, cipher_txt->iv,
+				 cipher_txt->tag, sizeof(cipher_txt->tag), aad,
+				 aad_length)) {
 		LOG(LOG_ERROR, "Failed to Decrypt\n");
 		goto end;
 	}

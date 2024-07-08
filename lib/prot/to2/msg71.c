@@ -61,9 +61,10 @@ int32_t msg71(fdo_prot_t *ps)
 
 	/* already allocated  nonce_to2setupdv_rcv*/
 	if (!ps->nonce_to2setupdv_rcv ||
-		!fdor_byte_string(&ps->fdor, ps->nonce_to2setupdv_rcv->bytes,
-		ps->nonce_to2setupdv_rcv->byte_sz)) {
-		LOG(LOG_ERROR, "TO2.Done2: Failed to alloc/read NonceTO2SetupDv array\n");
+	    !fdor_byte_string(&ps->fdor, ps->nonce_to2setupdv_rcv->bytes,
+			      ps->nonce_to2setupdv_rcv->byte_sz)) {
+		LOG(LOG_ERROR,
+		    "TO2.Done2: Failed to alloc/read NonceTO2SetupDv array\n");
 		goto err;
 	}
 
@@ -74,8 +75,9 @@ int32_t msg71(fdo_prot_t *ps)
 
 	/* verify the nonce received is correct. */
 	if (!fdo_nonce_equal(ps->nonce_to2setupdv_rcv, ps->nonce_to2setupdv)) {
-		LOG(LOG_ERROR, "TO2.Done2: Received NonceTO2SetupDv does not match with the"
-			"stored NonceTO2SetupDv\n");
+		LOG(LOG_ERROR, "TO2.Done2: Received NonceTO2SetupDv does not "
+			       "match with the"
+			       "stored NonceTO2SetupDv\n");
 		goto err;
 	}
 

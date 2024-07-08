@@ -49,7 +49,8 @@ int32_t msg13(fdo_prot_t *ps)
 	}
 
 	size_t num_array_entries;
-	if (!fdor_array_length(&ps->fdor, &num_array_entries) || num_array_entries != 0) {
+	if (!fdor_array_length(&ps->fdor, &num_array_entries) ||
+	    num_array_entries != 0) {
 		goto err;
 	}
 	if (!fdor_start_array(&ps->fdor)) {
@@ -77,11 +78,19 @@ int32_t msg13(fdo_prot_t *ps)
 	FDO_STATUS fdo_status;
 
 	if (TEE_SUCCESS != fdo_heci_commit_file(&fdo_cse_handle, OVH_FILE_ID,
-			&fdo_status) || FDO_STATUS_SUCCESS != fdo_status) {
+						&fdo_status) ||
+	    FDO_STATUS_SUCCESS != fdo_status) {
 		LOG(LOG_ERROR, "FDO OVH COMMIT failed!!\n");
 		return -1;
 	}
 	LOG(LOG_DEBUG, "FDO OVH COMMIT succeeded %u\n", fdo_status);
+#elif defined(DEVICE_TPM20_ENABLED)
+	ps->dev_cred->dc_active = true;
+
+	if (store_tpm_credential(ps->dev_cred) != 0) {
+		LOG(LOG_ERROR, "TO2.Done: Failed to store new device creds\n");
+		goto err;
+	}
 #else
 	if (store_credential(ps->dev_cred) != 0) {
 		LOG(LOG_ERROR, "Failed to store updated device credentials\n");
@@ -95,7 +104,8 @@ int32_t msg13(fdo_prot_t *ps)
 	ps->fdor.have_block = false;
 
 	LOG(LOG_INFO, "(Current) GUID after DI: %s\n",
-		fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf, sizeof(guid_buf)));
+	    fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf,
+			       sizeof(guid_buf)));
 	LOG(LOG_DEBUG, "DIDone completed\n");
 	ret = 0;
 

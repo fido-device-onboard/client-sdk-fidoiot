@@ -5,13 +5,13 @@
 
 #include <math.h>
 #include "fdokeyexchange.h"
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "safe_lib.h"
 #include "snprintf_s.h"
 #include "stdlib.h"
-#include "fdoCryptoCtx.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_ctx.h"
+#include "fdo_crypto.h"
 
 /* Static functions */
 static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
@@ -27,7 +27,7 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray);
 int32_t fdo_kex_init(void)
 {
 	int32_t ret = -1;
-	fdo_kex_ctx_t *kex_ctx = getfdo_key_ctx();
+	fdo_kex_ctx_t *kex_ctx = get_fdo_key_ctx();
 	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
 	size_t cs = COSE_ENC_TYPE;
 
@@ -83,7 +83,7 @@ err:
  */
 int32_t fdo_kex_close(void)
 {
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 	fdo_to2Sym_enc_ctx_t *to2sym_ctx = get_fdo_to2_ctx();
 	/* Free "KEX" string (Key Exchange) */
 	if (kex_ctx->kx) {
@@ -133,7 +133,7 @@ int32_t fdo_kex_close(void)
 static int32_t set_encrypt_key(fdo_public_key_t *encrypt_key)
 {
 #ifdef KEX_ASYM_ENABLED
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 
 	return set_encrypt_key_asym(kex_ctx->context, encrypt_key);
 #endif
@@ -152,7 +152,7 @@ static int32_t set_encrypt_key(fdo_public_key_t *encrypt_key)
 int32_t fdo_get_kex_paramB(fdo_byte_array_t **xB)
 {
 	int32_t ret = -1;
-	fdo_kex_ctx_t *kex_ctx = getfdo_key_ctx();
+	fdo_kex_ctx_t *kex_ctx = get_fdo_key_ctx();
 	uint32_t bufsize = 0;
 	fdo_byte_array_t *tmp_xB = NULL;
 
@@ -198,7 +198,8 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray)
 	if (BArray && BArray->bytes) {
 		if (BArray->bytes[0] == 0x00) {
 			if (!memmove_s(BArray->bytes, BArray->byte_sz - 1,
-				       &BArray->bytes[1], BArray->byte_sz - 1)) {
+				       &BArray->bytes[1],
+				       BArray->byte_sz - 1)) {
 				BArray->byte_sz--;
 			} else {
 				return -1;
@@ -211,21 +212,22 @@ static int32_t remove_java_compatible_byte_array(fdo_byte_array_t *BArray)
 }
 
 /**
- * Write the input to the KDF i.e KDFInput, of size kdf_input_len into kdf_input buffer.
- * Refer to Section 3.6.4 in FIDO Device Onboard (FDO) specification.
+ * Write the input to the KDF i.e KDFInput, of size kdf_input_len into kdf_input
+ * buffer. Refer to Section 3.6.4 in FIDO Device Onboard (FDO) specification.
  *
  * KDFInput = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr,
  * where Context = "AutomaticOnboardTunnel"||ContextRand, and,
  * ContextRand = null for ECDH Key Exchange (Section 3.6.3)
  *
  * index is the counter (i), and cannot be more than 2.
- * keymat_bit_length is the total number of key-bits to generate, and is used to calculate Lstr.
+ * keymat_bit_length is the total number of key-bits to generate, and is used to
+ * calculate Lstr.
  */
-static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const int index,
-	const int keymat_bit_length)
+static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len,
+			      const int index, const int keymat_bit_length)
 {
 	int ret = -1;
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 	size_t ofs = 0;
 	uint8_t idx0_val;
 	size_t kdf_label_len = 0;
@@ -242,8 +244,7 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 		goto err;
 	}
 
-	context_label_len = strnlen_s(kex_ctx->context_label,
-					FDO_MAX_STR_SIZE);
+	context_label_len = strnlen_s(kex_ctx->context_label, FDO_MAX_STR_SIZE);
 	if (!context_label_len || context_label_len == FDO_MAX_STR_SIZE) {
 		LOG(LOG_ERROR, "Context Label is not NULL terminated.\n");
 		goto err;
@@ -262,7 +263,7 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 	kdf_input[ofs++] = idx0_val;
 	// Fill in the kdflabel
 	if (strncpy_s((char *)&kdf_input[ofs], kdf_input_len - ofs,
-		kex_ctx->kdf_label, kdf_label_len)) {
+		      kex_ctx->kdf_label, kdf_label_len)) {
 		LOG(LOG_ERROR, "Failed to fill kdf label in key Material\n");
 		goto err;
 	}
@@ -271,7 +272,7 @@ static int32_t prep_kdf_input(uint8_t *kdf_input, size_t kdf_input_len, const in
 	kdf_input[ofs++] = 0x00;
 	// Fill in the context
 	if (strncpy_s((char *)&kdf_input[ofs], kdf_input_len - ofs,
-		kex_ctx->context_label, context_label_len)) {
+		      kex_ctx->context_label, context_label_len)) {
 		LOG(LOG_ERROR, "Failed to fill svk label\n");
 		goto err;
 	}
@@ -291,8 +292,8 @@ static fdo_byte_array_t *get_secret(void)
 	fdo_byte_array_t *b = NULL;
 	uint8_t *shared_secret_buffer = NULL;
 	uint32_t secret_size = 0;
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
-	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(getfdo_key_ctx());
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
+	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(get_fdo_key_ctx());
 
 	if (crypto_hal_get_secret(key_ex_data->context, NULL, &secret_size) !=
 	    0) {
@@ -350,7 +351,7 @@ err:
 static int32_t kex_kdf(void)
 {
 	int ret = -1;
-	struct fdo_kex_ctx *kex_ctx = getfdo_key_ctx();
+	struct fdo_kex_ctx *kex_ctx = get_fdo_key_ctx();
 	fdo_byte_array_t *shse = get_secret();
 	fdo_aes_keyset_t *keyset = get_keyset();
 	// input data to the KDF
@@ -358,7 +359,8 @@ static int32_t kex_kdf(void)
 	size_t kdf_input_len = 0;
 	// length of 1 byte in bits
 	int byte_size = 8;
-	// Length of Output Keying Material, in bytes = SEK size for AES-GCM and AES-CCM modes
+	// Length of Output Keying Material, in bytes = SEK size for AES-GCM and
+	// AES-CCM modes
 	size_t keymat_bytes_sz = SEK_KEY_SIZE;
 	// Output Keying Material
 	uint8_t keymat[keymat_bytes_sz];
@@ -384,8 +386,7 @@ static int32_t kex_kdf(void)
 		goto err;
 	}
 
-	context_label_len = strnlen_s(kex_ctx->context_label,
-					FDO_MAX_STR_SIZE);
+	context_label_len = strnlen_s(kex_ctx->context_label, FDO_MAX_STR_SIZE);
 	if (!context_label_len || context_label_len == FDO_MAX_STR_SIZE) {
 		LOG(LOG_ERROR, "Context Label is not NULL terminated.\n");
 		goto err;
@@ -396,17 +397,19 @@ static int32_t kex_kdf(void)
 		goto err;
 	}
 
-	// total number of rounds (n) to iterate for generating the total number of key bits
-	// n = ceil (L/h), where,
-	// L = Keying Material length in bits, and
-	// h = PRF output length in bits
-	n = ceil((double)(keymat_bytes_sz * byte_size) / (hmac_sha256_sz * byte_size));
+	// total number of rounds (n) to iterate for generating the total number
+	// of key bits n = ceil (L/h), where, L = Keying Material length in
+	// bits, and h = PRF output length in bits
+	n = ceil((double)(keymat_bytes_sz * byte_size) /
+		 (hmac_sha256_sz * byte_size));
 
-	// Input to the KDF, KDFInput = (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where
-	// Context = "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL for ECDH key-exchange,
-	// Lstr = (byte)L1||(byte)L2, i.e, 16-bit number, depending on L=key-bits to generate
-	// Therefore, KDFInput size = 1 for byte (i) + length of Label + 1 for byte (0) +
-	// length of Context + 2 bytes for Lstr
+	// Input to the KDF, KDFInput =
+	// (byte)i||"FIDO-KDF"||(byte)0||Context||Lstr, where Context =
+	// "AutomaticOnboardTunnel"||ContextRand, ContextRand is NULL for ECDH
+	// key-exchange, Lstr = (byte)L1||(byte)L2, i.e, 16-bit number,
+	// depending on L=key-bits to generate Therefore, KDFInput size = 1 for
+	// byte (i) + length of Label + 1 for byte (0) + length of Context + 2
+	// bytes for Lstr
 	kdf_input_len = 1 + kdf_label_len + 1 + context_label_len + 2;
 	// Allocate memory for KDFInput
 	kdf_input = fdo_alloc(kdf_input_len);
@@ -422,8 +425,8 @@ static int32_t kex_kdf(void)
 		goto err;
 	}
 
-	// iterate for the calculated number of iterations (n) to generate key bits
-	// once the iterations are done, keymat contains the generated key
+	// iterate for the calculated number of iterations (n) to generate key
+	// bits once the iterations are done, keymat contains the generated key
 	for (i = 1; i <= n; i++) {
 
 		// clear for new round usage
@@ -431,8 +434,10 @@ static int32_t kex_kdf(void)
 			LOG(LOG_ERROR, "Failed to clear kdf_input\n");
 			goto err;
 		}
-		// prepare KDFInput by passing the number of rounds (i) and length of key bits (L)
-		ret = prep_kdf_input(kdf_input, kdf_input_len, i, keymat_bytes_sz * byte_size);
+		// prepare KDFInput by passing the number of rounds (i) and
+		// length of key bits (L)
+		ret = prep_kdf_input(kdf_input, kdf_input_len, i,
+				     keymat_bytes_sz * byte_size);
 		if (ret) {
 			LOG(LOG_ERROR, "Failed to prepare kdf_input\n");
 			goto err;
@@ -444,23 +449,24 @@ static int32_t kex_kdf(void)
 			goto err;
 		}
 		// generate hmac that gives us the key (or a part of it)
-		if (crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_SHA_256, kdf_input, kdf_input_len,
-					hmac, hmac_sha256_sz, shse->bytes,
-					shse->byte_sz)) {
+		if (crypto_hal_hmac(FDO_CRYPTO_HMAC_TYPE_SHA_256, kdf_input,
+				    kdf_input_len, hmac, hmac_sha256_sz,
+				    shse->bytes, shse->byte_sz)) {
 			LOG(LOG_ERROR, "Failed to derive key via HMAC\n");
 			goto err;
 		}
 
 		if (keymat_bytes_index + hmac_sha256_sz <= keymat_bytes_sz) {
 			keymat_bytes_to_copy = hmac_sha256_sz;
-		}
-		else {
-			keymat_bytes_to_copy = keymat_bytes_sz - keymat_bytes_index;
+		} else {
+			keymat_bytes_to_copy =
+			    keymat_bytes_sz - keymat_bytes_index;
 		}
 
-		// copy the generated hmac (key/a part of the key) into generated key buffer
+		// copy the generated hmac (key/a part of the key) into
+		// generated key buffer
 		if (memcpy_s(&keymat[keymat_bytes_index], keymat_bytes_sz, hmac,
-		    keymat_bytes_to_copy)) {
+			     keymat_bytes_to_copy)) {
 			LOG(LOG_ERROR, "Failed to copy generated key bytes\n");
 			goto err;
 		}
@@ -474,7 +480,7 @@ static int32_t kex_kdf(void)
 
 	// Get the sevk
 	if (memcpy_s(keyset->sek->bytes, keyset->sek->byte_sz, &keymat[0],
-		      keyset->sek->byte_sz)) {
+		     keyset->sek->byte_sz)) {
 		LOG(LOG_ERROR, "Failed to copy sek key\n");
 		goto err;
 	}
@@ -505,7 +511,7 @@ int32_t fdo_set_kex_paramA(fdo_byte_array_t *xA, fdo_public_key_t *encrypt_key)
 
 {
 	int32_t ret = true;
-	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(getfdo_key_ctx());
+	fdo_kex_ctx_t *key_ex_data = (fdo_kex_ctx_t *)(get_fdo_key_ctx());
 
 	if (!xA) {
 		return -1;

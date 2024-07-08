@@ -25,7 +25,7 @@
 // maximum supported length is 64000 + 700.
 #define REST_MAX_MSGBODY_SIZE MAX_SERVICEINFO_SZ + MSG_METADATA_SIZE
 #define HTTP_SUCCESS_OK 200
-#define IP_TAG_LEN 16   // e.g. 192.168.111.111
+#define IP_TAG_LEN 16	// e.g. 192.168.111.111
 #define MAX_PORT_SIZE 6 // max port size is 65536 + 1null char
 
 #define ISASCII(ch) ((ch & ~0x7f) == 0)
@@ -45,6 +45,11 @@ typedef struct Rest_ctx_s {
 	bool is_dns;
 } rest_ctx_t;
 
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
 extern CURL *curl;
 
 bool cache_host_dns(const char *dns);
@@ -53,7 +58,7 @@ bool cache_host_port(uint16_t port);
 bool cache_tls_connection(void);
 bool init_rest_context(void);
 rest_ctx_t *get_rest_context(void);
-bool construct_rest_header(rest_ctx_t *rest, char *header, size_t header_len);
+bool construct_rest_header(rest_ctx_t *rest, struct curl_slist **msg_header);
 char get_rest_hdr_body_separator(void);
 bool get_rest_content_length(char *hdr, size_t hdrlen, uint32_t *cont_len);
 void exit_rest_context(void);

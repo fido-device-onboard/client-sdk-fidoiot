@@ -5,7 +5,7 @@ Open a terminal and start the FDO PRI Manufacturer. After this step, an ownershi
 is generated so that the new owner can initiate the TO0 protocol.
 
 Detailed steps and configuration needed to start FDO PRI Manufacturer are in
-[README](https://github.com/secure-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md) document.
+[README](https://github.com/fido-device-onboard/pri-fidoiot/blob/master/component-samples/demo/manufacturer/README.md) document.
 
 # Device Initialization Device Setup
 

@@ -28,6 +28,10 @@
 #include "cse_utils.h"
 #include "cse_tools.h"
 #endif
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm20_Utils.h"
+#include "fdo_crypto.h"
+#endif
 
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
@@ -111,7 +115,8 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 
-	module_info = fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
+	module_info =
+	    fdo_alloc(FDO_MAX_MODULES * (sizeof(fdo_sdk_service_info_module)));
 
 	if (!module_info) {
 		LOG(LOG_ERROR, "Malloc failed!\n");
@@ -126,6 +131,24 @@ static fdo_sdk_service_info_module *fdo_sv_info_modules_init(void)
 		return NULL;
 	}
 	module_info[0].service_info_callback = fdo_sys;
+
+	/* module#2: fdo.download */
+	if (strncpy_s(module_info[1].module_name, FDO_MODULE_NAME_LEN,
+		      "fdo.download", FDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		fdo_free(module_info);
+		return NULL;
+	}
+	module_info[1].service_info_callback = fdo_sim_download;
+
+	/* module#3: fdo.command */
+	if (strncpy_s(module_info[2].module_name, FDO_MODULE_NAME_LEN,
+		      "fdo.command", FDO_MODULE_NAME_LEN) != 0) {
+		LOG(LOG_ERROR, "Strcpy failed");
+		fdo_free(module_info);
+		return NULL;
+	}
+	module_info[2].service_info_callback = fdo_sim_command;
 
 	return module_info;
 }
@@ -199,19 +222,19 @@ static void print_device_status(void)
 
 	status = fdo_sdk_get_status();
 	if (status == FDO_STATE_PRE_DI) {
-		LOG(LOG_DEBUG, "Device is ready for DI\n");
+		LOG(LOG_INFO, "Device is ready for DI\n");
 	}
 	if (status == FDO_STATE_PRE_TO1) {
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
+		LOG(LOG_INFO, "Device is ready for Ownership transfer\n");
 	}
 	if (status == FDO_STATE_IDLE) {
-		LOG(LOG_DEBUG, "Device Ownership transfer Done\n");
+		LOG(LOG_INFO, "Device Ownership transfer Done\n");
 	}
 	if (status == FDO_STATE_RESALE) {
-		LOG(LOG_DEBUG, "Device is ready for Ownership transfer\n");
+		LOG(LOG_INFO, "Device is ready for Ownership transfer\n");
 	}
 	if (status == FDO_STATE_ERROR) {
-		LOG(LOG_DEBUG, "Error in getting device status\n");
+		LOG(LOG_ERROR, "Error in getting device status\n");
 	}
 }
 
@@ -228,9 +251,43 @@ int app_main(bool is_resale)
 {
 	fdo_sdk_service_info_module *module_info = NULL;
 	int ret = -1;
-
+	bool resale = false;
 	bool do_resale = false;
+	int strcmp_res = 0;
+
 	LOG(LOG_DEBUG, "Starting FIDO Device Onboard\n");
+
+	for (int index = 1; index < argc; index++) {
+		if (index + 1 < argc &&
+		    (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE, "-ip",
+			       &strcmp_res) &&
+		     !strcmp_res)) {
+			index++;
+			mfg_addr = argv[index];
+			use_mfg_addr_bin = false;
+		} else if (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE,
+				     "-ss", &strcmp_res) &&
+			   !strcmp_res) {
+#if defined SELF_SIGNED_CERTS_SUPPORTED
+			useSelfSignedCerts = true;
+			LOG(LOG_INFO, "Set connection for self signed "
+					      "certificate usage.\n");
+#endif
+		} else if (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE,
+				     "-r", &strcmp_res) &&
+			   !strcmp_res) {
+			resale = true;
+		} else {
+			printf("Usage: linux-client -ip <http|https>://<mfg "
+			       "addr>:<port>\n"
+			       "\tif -ip not specified, manufacturer_addr.bin "
+			       "will be used\n"
+			       "\t-ss: specify if backend servers are using "
+			       "self-signed certificates\n"
+			       "\t-r: enable resale\n");
+			exit(1);
+		}
+	}
 
 #ifdef SECURE_ELEMENT
 	if (-1 == se_provisioning()) {
@@ -239,8 +296,9 @@ int app_main(bool is_resale)
 	}
 #endif /* SECURE_ELEMENT */
 
-#if !defined(DEVICE_CSE_ENABLED)
-	LOG(LOG_DEBUG, "CSE not enabaled, Normal Blob Modules loaded!\n");
+#if !defined(DEVICE_CSE_ENABLED) && !defined(DEVICE_TPM20_ENABLED)
+	LOG(LOG_DEBUG,
+	    "CSE and TPM not enabled, Normal Blob Modules loaded!\n");
 	if (-1 == configure_normal_blob()) {
 		LOG(LOG_ERROR,
 		    "Provisioning Normal blob for the 1st time failed!\n");
@@ -256,7 +314,7 @@ int app_main(bool is_resale)
 		LOG(LOG_DEBUG, "Sv_info Modules not loaded!\n");
 	}
 
-	/* Init fdo sdk */
+	/* Init FDO sdk */
 	if (FDO_SUCCESS !=
 	    fdo_sdk_init(error_cb, FDO_MAX_MODULES, module_info)) {
 		LOG(LOG_ERROR, "fdo_sdk_init failed!!\n");
@@ -277,25 +335,15 @@ int app_main(bool is_resale)
 #endif
 
 #if defined TARGET_OS_LINUX
-	if  (argc > 1 && *argv[1] == '1') {
+	if (resale == true) {
 		do_resale = true;
 	}
 #else
-	if  (is_resale == true) {
+	if (is_resale == true) {
 		do_resale = true;
 	}
 #endif
-#if defined SELF_SIGNED_CERTS_SUPPORTED
-	int strcmp_ss = 1;
-	int res = -1;
 
-	res = (int)strcmp_s((char *)argv[1], DATA_CONTENT_SIZE, "-ss",
-						&strcmp_ss);
-
-	if  (argc > 1 && (!res && !strcmp_ss)) {
-		useSelfSignedCerts = true;
-	}
-#endif
 	if (is_ownership_transfer(do_resale)) {
 		ret = 0;
 		goto end;

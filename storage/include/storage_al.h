@@ -17,9 +17,16 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
+#if defined(DEVICE_TPM20_ENABLED)
+#include "tpm2_nv_storage.h"
+#endif
 
 // platform HMAC and blob size
+#if defined(DEVICE_TPM20_ENABLED) && defined(ECDSA384_DA)
+#define PLATFORM_HMAC_SIZE BUFF_SIZE_48_BYTES
+#else
 #define PLATFORM_HMAC_SIZE BUFF_SIZE_32_BYTES
+#endif
 #define BLOB_CONTENT_SIZE BUFF_SIZE_4_BYTES
 
 typedef enum {
@@ -42,6 +49,14 @@ size_t fdo_blob_size(const char *blob_name, fdo_sdk_blob_flags flags);
 
 int32_t create_hmac_normal_blob(void);
 
+#if defined(DEVICE_TPM20_ENABLED)
+int32_t fdo_tpm_read_nv(TPMI_RH_NV_INDEX nv, uint8_t *buffer, uint32_t length);
+
+int32_t fdo_tpm_write_nv(TPMI_RH_NV_INDEX nv, const uint8_t *buffer,
+			 uint32_t length);
+
+size_t fdo_tpm_size_nv(TPMI_RH_NV_INDEX nv);
+#endif
 #ifdef __cplusplus
 } // endof externc (CPP code)
 #endif

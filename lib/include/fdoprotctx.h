@@ -21,14 +21,13 @@ typedef struct {
 
 // FDO protocol context
 typedef struct fdo_prot_ctx_s {
-	fdo_con_handle sock_hdl;
 	bool tls;
 	int msg_type;
 	fdo_prot_t *protdata;
 	bool (*protrun)(fdo_prot_t *ps);
 	fdo_ip_address_t *host_ip;
 	uint16_t host_port;
-	const char *host_dns;
+	char *host_dns;
 	fdo_ip_address_t *resolved_ip;
 } fdo_prot_ctx_t;
 

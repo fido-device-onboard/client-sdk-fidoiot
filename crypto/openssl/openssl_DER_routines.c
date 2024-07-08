@@ -8,7 +8,7 @@
  * \ brief Abstraction layer for ECDSA signing routine using SE
  */
 
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 #include "util.h"
 #include "storage_al.h"
 #include "safe_lib.h"
@@ -22,7 +22,8 @@
  * format.
  */
 int32_t crypto_hal_der_encode(uint8_t *raw_sig, size_t raw_sig_length,
-		   uint8_t *message_signature, size_t *signature_length)
+			      uint8_t *message_signature,
+			      size_t *signature_length)
 {
 	/* Encode */
 	int ret = 0;
@@ -89,9 +90,10 @@ err:
  * raw_key_length: input, the buffer size of the raw_key
  */
 int32_t crypto_hal_der_decode(uint8_t *raw_key, uint8_t *raw_sig,
-		   const unsigned char *pub_key, size_t key_length,
-		   const uint8_t *message_signature, size_t signature_length,
-		   size_t raw_key_length, size_t raw_sig_length)
+			      const unsigned char *pub_key, size_t key_length,
+			      const uint8_t *message_signature,
+			      size_t signature_length, size_t raw_key_length,
+			      size_t raw_sig_length)
 {
 	size_t buff_size;
 	int ret = 0;

@@ -20,13 +20,13 @@
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
 #include <assert.h>
-#include "fdoCryptoHal.h"
+#include "fdo_crypto_hal.h"
 
 #ifndef SECURE_ELEMENT
 static bool g_random_initialised;
 #endif /* SECURE_ELEMENT */
 
-ENGINE * engine;
+ENGINE *engine;
 
 int32_t inc_rollover_ctr(uint8_t *first_iv, uint8_t *new_iv, uint8_t iv_len,
 			 size_t aesblocks)
@@ -244,20 +244,16 @@ int32_t crypto_close(void)
  *        return 0 on success. -ve value on failure.
  */
 
-int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
-			 size_t buffer_length, uint8_t *output,
-			 size_t output_length)
+int32_t crypto_hal_hash(int _hash_type, const uint8_t *buffer,
+			size_t buffer_length, uint8_t *output,
+			size_t output_length)
 {
-	int hash_type = FDO_CRYPTO_HASH_TYPE_USED;
-
-	(void)_hash_type; /* Unused parameter */
-
 	if (NULL == output || 0 == output_length || NULL == buffer ||
 	    0 == buffer_length) {
 		return -1;
 	}
 
-	switch (hash_type) {
+	switch (_hash_type) {
 	case FDO_CRYPTO_HASH_TYPE_SHA_256:
 		if (output_length < SHA256_DIGEST_SIZE) {
 			return -1;

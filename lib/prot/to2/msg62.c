@@ -31,18 +31,21 @@ int32_t msg62(fdo_prot_t *ps)
 
 	fdow_next_block(&ps->fdow, FDO_TO2_GET_OP_NEXT_ENTRY);
 	if (!fdow_start_array(&ps->fdow, 1)) {
-		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read start array\n");
+		LOG(LOG_ERROR,
+		    "TO2.GetOVNextEntry: Failed to read start array\n");
 		return -1;
 	}
 
 	/* Write OVEntryNum value in the block */
 	if (!fdow_signed_int(&ps->fdow, ps->ov_entry_num)) {
-		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read OPEntryNum\n");
+		LOG(LOG_ERROR,
+		    "TO2.GetOVNextEntry: Failed to read OPEntryNum\n");
 		return -1;
 	}
 
 	if (!fdow_end_array(&ps->fdow)) {
-		LOG(LOG_ERROR, "TO2.GetOVNextEntry: Failed to read end array\n");
+		LOG(LOG_ERROR,
+		    "TO2.GetOVNextEntry: Failed to read end array\n");
 		return -1;
 	}
 	/* Move to msg63 */

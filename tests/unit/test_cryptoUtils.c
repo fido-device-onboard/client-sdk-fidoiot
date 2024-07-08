@@ -16,8 +16,8 @@
 #include "unity.h"
 #include "safe_mem_lib.h"
 #include "crypto_utils.h"
-#include "fdoCryptoHal.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_hal.h"
+#include "fdo_crypto.h"
 
 #ifdef TARGET_OS_LINUX
 /*
@@ -212,7 +212,8 @@ void test_aes_encrypt_packet(void)
 	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE, aad, sizeof(aad));
+	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE,
+				 aad, sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
 	TEST_ASSERT_NOT_NULL(cipher_txt->em_body);
 
@@ -222,18 +223,21 @@ void test_aes_encrypt_packet(void)
 	}
 
 	/* Negative Test Case */
-	ret = aes_encrypt_packet(NULL, clear_txt->bytes, PLAIN_TEXT_SIZE, NULL, sizeof(aad));
+	ret = aes_encrypt_packet(NULL, clear_txt->bytes, PLAIN_TEXT_SIZE, NULL,
+				 sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "AES Encryption Failed");
 
 	/* Negative Test Case */
 	g_malloc_fail = true;
-	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE, aad, sizeof(aad));
+	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE,
+				 aad, sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "AES Encryption Failed");
 	g_malloc_fail = false;
 
 	/* Negative Test Case */
 	g_memset_fail = true;
-	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE, aad, sizeof(aad));
+	ret = aes_encrypt_packet(cipher_txt, clear_txt->bytes, PLAIN_TEXT_SIZE,
+				 aad, sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "AES Encryption Failed");
 	g_memset_fail = false;
 
@@ -245,6 +249,7 @@ void test_aes_encrypt_packet(void)
 	fdo_bits_free(keyset->sek);
 	fdo_byte_array_free(keyset->svk);
 	fdo_free(keyset);
+	fdo_free(aad);
 }
 
 #ifdef TARGET_OS_FREERTOS
@@ -258,7 +263,8 @@ void test_aes_decrypt_packet(void)
 	    fdo_alloc(sizeof(fdo_encrypted_packet_t));
 	fdo_aes_keyset_t *keyset = fdo_alloc(sizeof(fdo_aes_keyset_t));
 	fdo_byte_array_t *cleartext = getcleartext(PLAIN_TEXT_SIZE);
-	fdo_byte_array_t *cleartext_decrypted = fdo_byte_array_alloc(PLAIN_TEXT_SIZE);
+	fdo_byte_array_t *cleartext_decrypted =
+	    fdo_byte_array_alloc(PLAIN_TEXT_SIZE);
 	uint8_t *aad = NULL;
 
 	TEST_ASSERT_NOT_NULL(cipher_txt);
@@ -283,9 +289,11 @@ void test_aes_decrypt_packet(void)
 	ret = fdo_kex_init();
 	TEST_ASSERT_EQUAL_INT(0, ret);
 
-	ret = aes_encrypt_packet(cipher_txt, cleartext->bytes, PLAIN_TEXT_SIZE, aad, sizeof(aad));
+	ret = aes_encrypt_packet(cipher_txt, cleartext->bytes, PLAIN_TEXT_SIZE,
+				 aad, sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Encryption Failed");
-	ret = aes_decrypt_packet(cipher_txt, cleartext_decrypted, aad, sizeof(aad));
+	ret = aes_decrypt_packet(cipher_txt, cleartext_decrypted, aad,
+				 sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(0, ret, "AES Decryption Failed");
 
 	if (cipher_txt->em_body) {
@@ -299,7 +307,8 @@ void test_aes_decrypt_packet(void)
 
 	/* Negative Test Case */
 	g_malloc_fail = true;
-	ret = aes_decrypt_packet(cipher_txt, cleartext_decrypted, aad, sizeof(aad));
+	ret = aes_decrypt_packet(cipher_txt, cleartext_decrypted, aad,
+				 sizeof(aad));
 	TEST_ASSERT_EQUAL_MESSAGE(-1, ret, "AES Decryption Failed");
 	g_malloc_fail = false;
 

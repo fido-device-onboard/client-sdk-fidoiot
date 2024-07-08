@@ -11,8 +11,8 @@
 #include <stdlib.h>
 #include "util.h"
 #include "safe_lib.h"
-#include "fdoCryptoHal.h"
-#include "fdoCrypto.h"
+#include "fdo_crypto_hal.h"
+#include "fdo_crypto.h"
 
 /* Do nothing for ECDSA based attestation */
 int32_t dev_attestation_init(void)
