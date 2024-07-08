@@ -14,7 +14,7 @@ jobs:
     container: amr-registry.caas.intel.com/devops-ai-platform/gasp-oidc:0.0.4
     # TODO: Update'runs-on' to specify the type of runner your repo uses.
     # If using GASP, do not add additional labels. Use ONLY "gasp".
-    runs-on: [gasp, azure]
+    runs-on:  ubuntu-latest
     permissions:
       contents: read
       issues: write
