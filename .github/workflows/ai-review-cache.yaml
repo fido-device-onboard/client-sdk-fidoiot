@@ -66,7 +66,7 @@ jobs:
         languages: |
           markdown
         # TODO: Update 'path' to represent the top level path where code files are found.
-        path: ./src
+        path: ./docs
         cache_path: ./cache
 
     - name: Create Code Embeddings
@@ -80,11 +80,15 @@ jobs:
         service_token: bearer ${{ steps.auth.outputs.result }}
         # TODO: Update 'file_types' with the code file extensions to parse. *Note it is a newline delimited list.
         file_types: |
-          .ts
+          .txt
+          .cpp
+          .h
+          .js
         # TODO: Update 'languages' to include the languages in the repository. *Note it is a newline delimited list.
         # Supports the following values: 'cpp', 'go', 'java', 'js', 'php', 'proto', 'python', 'rst', 'ruby', 'rust', 'scala', 'swift', 'markdown', 'latex', 'html'
         languages: |
+          cpp
           js
         # TODO: Update 'path' to represent the top level path where code files are found.
-        path: ./src
+        path: ./docs
         cache_path: ./cache
