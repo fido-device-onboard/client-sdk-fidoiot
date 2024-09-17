@@ -303,9 +303,12 @@ int fdo_sim_set_osi_write(size_t bin_len, uint8_t *bin_data)
 		goto end;
 	}
 
-	if (bytes_received == expected_len || !bin_len) {
-		// Entire file has been sent
-		bytes_received = 0;
+	if (!bin_len) {
+		if (!fdor_next(fdor)) {
+			LOG(LOG_ERROR, "Module fdo.download - Failed to read "
+				       "fdo.download\n");
+			goto end;
+		}
 		result = FDO_SI_SUCCESS;
 		goto end;
 	}
@@ -406,6 +409,7 @@ end:
 		if (file_data) {
 			FSIMModuleFree(file_data);
 		}
+		bytes_received = 0;
 	}
 
 	result = fdo_sim_end(&fdor, &fdow, result, bin_data, NULL, 0, &hasmore,
