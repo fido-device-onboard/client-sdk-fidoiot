@@ -50,10 +50,16 @@
  */
 
 /* All below sizes are excluding NULL termination */
-#if defined(DEVICE_CSE_ENABLED)
-#define DEVICE_MFG_STRING_ARRAY_SZ 9
+#if defined(BUILD_MFG_TOOLKIT) || defined(DEVICE_CSE_ENABLED)
+#define MAC_ARRAY_SZ 1
 #else
-#define DEVICE_MFG_STRING_ARRAY_SZ 6
+#define MAC_ARRAY_SZ 0
+#endif
+
+#if defined(DEVICE_CSE_ENABLED)
+#define DEVICE_MFG_STRING_ARRAY_SZ (8 + MAC_ARRAY_SZ)
+#else
+#define DEVICE_MFG_STRING_ARRAY_SZ (5 + MAC_ARRAY_SZ)
 #endif
 
 #define MAX_DEV_SERIAL_SZ 255
@@ -232,9 +238,11 @@ int ps_get_m_string(fdo_prot_t *ps)
 	fdo_byte_array_t *csr = NULL;
 	fdow_t temp_fdow = {0};
 	size_t enc_device_mfginfo = 0;
+
+#if defined(BUILD_MFG_TOOLKIT) || defined(DEVICE_CSE_ENABLED)
 	fdo_byte_array_t *mac_addresses = NULL;
 	size_t mac_addresses_sz = 0;
-
+#endif
 #if defined(DEVICE_CSE_ENABLED)
 	fdo_byte_array_t *cse_cert = NULL;
 	fdo_byte_array_t *cse_maroeprefix = NULL;
@@ -368,7 +376,7 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "Failed to read %s file!\n", MAC_ADDRESSES);
 		goto err;
 	}
-#else
+#elif !defined(BUILD_MFG_TOOLKIT) && defined(DEVICE_CSE_ENABLED)
 	mac_addresses = fdo_byte_array_alloc(mac_addresses_sz);
 	if (!mac_addresses) {
 		LOG(LOG_ERROR,
@@ -412,13 +420,14 @@ int ps_get_m_string(fdo_prot_t *ps)
 		LOG(LOG_ERROR, "DeviceMfgInfo: Failed to write CSR\n");
 		goto err;
 	}
-
+#if defined(BUILD_MFG_TOOLKIT) || defined(DEVICE_CSE_ENABLED)
 	if (!fdow_byte_string(&temp_fdow, mac_addresses->bytes,
 			      mac_addresses->byte_sz)) {
 		LOG(LOG_ERROR,
 		    "DeviceMfgInfo: Failed to write mac_addresses\n");
 		goto err;
 	}
+#endif
 #if defined(DEVICE_CSE_ENABLED)
 	if (!fdow_byte_string(&temp_fdow, cse_cert->bytes, cse_cert->byte_sz)) {
 		LOG(LOG_ERROR,
@@ -464,12 +473,12 @@ err:
 	if (csr) {
 		fdo_byte_array_free(csr);
 	}
-
+#if defined(BUILD_MFG_TOOLKIT) || defined(DEVICE_CSE_ENABLED)
 	if (mac_addresses) {
 		fdo_byte_array_free(mac_addresses);
 		mac_addresses_sz = 0;
 	}
-
+#endif
 #if defined(DEVICE_CSE_ENABLED)
 	if (cose_sig_structure) {
 		fdo_byte_array_free(cose_sig_structure);

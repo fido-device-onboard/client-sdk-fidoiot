@@ -89,6 +89,7 @@ int32_t msg70(fdo_prot_t *ps)
 	    fdo_guid_to_string(ps->dev_cred->owner_blk->guid, guid_buf,
 			       sizeof(guid_buf)));
 
+#if !defined(DEVICE_TPM20_ENABLED) && !defined(DEVICE_CSE_ENABLED)
 	/* Rotate Data Protection Key */
 	if (0 != fdo_generate_storage_hmac_key()) {
 		LOG(LOG_ERROR,
@@ -96,6 +97,7 @@ int32_t msg70(fdo_prot_t *ps)
 	}
 	LOG(LOG_DEBUG,
 	    "TO2.Done: Data protection key rotated successfully!!\n");
+#endif
 
 	if (!ps->reuse_enabled) {
 		/* Commit the replacement hmac key only if reuse was not
