@@ -20,7 +20,7 @@ bool is_owner_proxy_defined(void);
 bool setup_http_proxy(const char *filename, fdo_ip_address_t *fdoip,
 		      uint16_t *port_num);
 
-bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
+bool resolve_dn(char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		bool proxy);
 
 bool connect_to_manufacturer(fdo_ip_address_t *ip, const char *dn,

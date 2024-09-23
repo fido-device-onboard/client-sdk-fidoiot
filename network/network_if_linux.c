@@ -152,6 +152,7 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
 	struct addrinfo *result = NULL, *it = NULL;
 	struct addrinfo hints;
 	struct sockaddr_in *sa_in = NULL;
+	struct sockaddr_in6 *sa_in6 = NULL;
 	fdo_ip_address_t *ip_list_temp = NULL;
 	int32_t ret = -1;
 
@@ -166,10 +167,10 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
 		goto end;
 	}
 
-	hints.ai_family = AF_INET; // IPv4
+	hints.ai_family = AF_UNSPEC; // Support both IPv4 and IPv6
 	hints.ai_socktype = SOCK_STREAM;
 
-	// get the list-of IP addresses
+	// get the list of IP addresses
 	if (getaddrinfo(url, NULL, &hints, &result) != 0) {
 		LOG(LOG_ERROR, "getaddrinfo() failed!\n");
 		goto end;
@@ -177,7 +178,7 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
 
 	int len = 0;
 
-	// get length of the ip-address LL
+	// get length of the ip-address list
 	for (it = result; it != NULL; it = it->ai_next) {
 		++len;
 	}
@@ -189,24 +190,50 @@ int32_t fdo_con_dns_lookup(const char *url, fdo_ip_address_t **ip_list,
 		goto end;
 	}
 
-	// iterate and store IP-addresses
+	// iterate and store IP addresses
 	for (idx = 0, it = result; it != NULL; ++idx, it = it->ai_next) {
-		sa_in = (struct sockaddr_in *)it->ai_addr;
+		if (it->ai_family == AF_INET) { // IPv4
+			sa_in = (struct sockaddr_in *)it->ai_addr;
 
 #if LOG_LEVEL == LOG_MAX_LEVEL
-		// for trace purpose
-		char host[16];
+			// for trace purpose
+			char host[INET_ADDRSTRLEN];
 
-		inet_ntop(AF_INET, &(sa_in->sin_addr), host, 16);
-		LOG(LOG_DEBUG, "Resolved into IP-Address: <%s>\n", host);
+			inet_ntop(AF_INET, &(sa_in->sin_addr), host,
+				  INET_ADDRSTRLEN);
+			LOG(LOG_DEBUG, "Resolved into IPv4 Address: <%s>\n",
+			    host);
 #endif
-		(ip_list_temp + idx)->length = IPV4_ADDR_LEN;
+			(ip_list_temp + idx)->length = IPV4_ADDR_LEN;
 
-		if (memcpy_s((ip_list_temp + idx)->addr, ip_list_temp->length,
-			     &(sa_in->sin_addr.s_addr),
-			     ip_list_temp->length) != 0) {
-			LOG(LOG_ERROR, "Memcpy failed\n");
-			goto end;
+			if (memcpy_s((ip_list_temp + idx)->addr,
+				     ip_list_temp->length,
+				     &(sa_in->sin_addr.s_addr),
+				     ip_list_temp->length) != 0) {
+				LOG(LOG_ERROR, "Memcpy failed\n");
+				goto end;
+			}
+		} else if (it->ai_family == AF_INET6) { // IPv6
+			sa_in6 = (struct sockaddr_in6 *)it->ai_addr;
+			is_ipv6 = true;
+
+#if LOG_LEVEL == LOG_MAX_LEVEL
+			// for trace purpose
+			char host[INET6_ADDRSTRLEN];
+
+			inet_ntop(AF_INET6, &(sa_in6->sin6_addr), host,
+				  INET6_ADDRSTRLEN);
+			LOG(LOG_DEBUG, "Resolved into IPv6 Address: <%s>\n",
+			    host);
+#endif
+			(ip_list_temp + idx)->length = IPV6_ADDR_LEN;
+
+			if (memcpy_s((ip_list_temp + idx)->addr,
+				     ip_list_temp->length, &(sa_in6->sin6_addr),
+				     ip_list_temp->length) != 0) {
+				LOG(LOG_ERROR, "Memcpy failed\n");
+				goto end;
+			}
 		}
 	}
 
@@ -245,25 +272,32 @@ bool fdo_curl_proxy(fdo_ip_address_t *ip_addr, uint16_t port)
 		goto err;
 	}
 
-	if (ip_addr) {
-		ip_ascii = fdo_alloc(IP_TAG_LEN);
-		if (!ip_ascii) {
-			goto err;
-		}
-
-		if (!ip_bin_to_ascii(ip_addr, ip_ascii)) {
-			goto err;
-		}
-	}
-
-	if (snprintf_s_si(proxy_url, HTTP_MAX_URL_SIZE, "%s:%d", ip_ascii,
-			  port) < 0) {
-		LOG(LOG_ERROR, "Snprintf() failed!\n");
+	ip_ascii = fdo_alloc(IP_TAG_LEN);
+	if (!ip_ascii) {
 		goto err;
 	}
 
-	if (curl) {
+	if (!ip_bin_to_ascii(ip_addr, ip_ascii)) {
+		goto err;
+	}
 
+	if (ip_addr->length == IPV6_ADDR_LEN) {
+		// IPv6 address needs to be enclosed in brackets
+		if (snprintf_s_si(proxy_url, HTTP_MAX_URL_SIZE, "[%s]:%d",
+				  ip_ascii, port) < 0) {
+			LOG(LOG_ERROR, "Snprintf() failed!\n");
+			goto err;
+		}
+	} else {
+		// IPv4 address
+		if (snprintf_s_si(proxy_url, HTTP_MAX_URL_SIZE, "%s:%d",
+				  ip_ascii, port) < 0) {
+			LOG(LOG_ERROR, "Snprintf() failed!\n");
+			goto err;
+		}
+	}
+
+	if (curl) {
 		if (curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1) !=
 		    CURLE_OK) {
 			LOG(LOG_ERROR,
@@ -478,6 +512,22 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			LOG(LOG_ERROR,
 			    "CURL_ERROR: Unable to connect to host.\n");
 			goto err;
+		}
+
+		// TO-DO: Remove this in prod code
+		if (is_ipv6) {
+			if (curl_easy_setopt(curl, CURLOPT_PROXY, "") !=
+			    CURLE_OK) {
+				LOG(LOG_ERROR,
+				    "CURL_PROXY: Cannot set proxy.\n");
+				goto err;
+			}
+			if (curl_easy_setopt(curl, CURLOPT_INTERFACE,
+					     curl_interface) != CURLE_OK) {
+				LOG(LOG_ERROR, "CURLOPT_INTERFACE: Cannot set "
+					       "interface.\n");
+				goto err;
+			}
 		}
 
 		res = curl_easy_perform(curl);
@@ -1098,7 +1148,39 @@ uint32_t fdo_host_to_net_long(uint32_t value)
  */
 int32_t fdo_printable_to_net(const char *src, void *addr)
 {
-	return inet_pton(AF_INET, src, addr);
+	if (is_ipv6) {
+		return inet_pton(AF_INET6, src, addr);
+	} else {
+		return inet_pton(AF_INET, src, addr);
+	}
+}
+
+/**
+ * @brief Check the version of given IP address
+ *
+ * @param ip_addr input IP address
+ * @return int protocol family no. of socket
+ */
+int check_ip_version(char *ip_addr)
+{
+	struct addrinfo hint, *res = NULL;
+	int ret = -1;
+
+	memset(&hint, '\0', sizeof hint);
+
+	hint.ai_family = PF_UNSPEC;
+	hint.ai_flags = AI_NUMERICHOST;
+
+	if (getaddrinfo(ip_addr, NULL, &hint, &res) != 0) {
+		goto end;
+	}
+	ret = res->ai_family;
+
+end:
+	if (res) {
+		freeaddrinfo(res); // free the addr list always
+	}
+	return ret;
 }
 
 /**

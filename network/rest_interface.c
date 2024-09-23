@@ -8,7 +8,8 @@
  *
  * The file implements REST layer for FDO.
  */
-
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "util.h"
 #include "network_al.h"
 #include "fdo_crypto_hal.h"
@@ -193,31 +194,52 @@ err:
 bool ip_bin_to_ascii(fdo_ip_address_t *ip, char *ip_ascii)
 {
 	char temp[IP_TAG_LEN + 1] = {0};
-	uint8_t octlet_size = 4; // e.g 192.168.0.100, max 3char +1 null/oct.
 
 	if (!ip || !ip_ascii) {
 		goto err;
 	}
 
-	size_t temp_len = 0;
-	for (int i = 0; i < 4; i++) {
-		if (snprintf_s_i(temp + temp_len, octlet_size + 1, "%d.",
-				 ip->addr[i]) < 0) {
+	if (ip->length == IPV4_ADDR_LEN) {
+		// IPv4 address
+		uint8_t octlet_size =
+		    4; // e.g 192.168.0.100, max 3char +1 null/oct.
+		size_t temp_len = 0;
+		for (int i = 0; i < 4; i++) {
+			if (snprintf(temp + temp_len, octlet_size + 1, "%d.",
+				     ip->addr[i]) < 0) {
+				LOG(LOG_ERROR, "Snprintf() failed!\n");
+				goto err;
+			}
+
+			temp_len = strnlen_s(temp, IP_TAG_LEN + 1);
+			if (!temp_len || temp_len == IP_TAG_LEN + 1) {
+				LOG(LOG_ERROR,
+				    "temp string is not NULL terminated.\n");
+				goto err;
+			}
+		}
+
+		// Remove the last '.'
+		temp[temp_len - 1] = '\0';
+	} else if (ip->length == IPV6_ADDR_LEN) {
+		// IPv6 address
+		char ipv6_temp[IP_TAG_LEN + 1] = {0};
+		if (inet_ntop(AF_INET6, ip->addr, ipv6_temp, IP_TAG_LEN + 1) ==
+		    NULL) {
+			LOG(LOG_ERROR, "inet_ntop() failed!\n");
+			goto err;
+		}
+		// Add square brackets around the IPv6 address
+		if (snprintf(temp, IP_TAG_LEN + 1, "[%s]", ipv6_temp) < 0) {
 			LOG(LOG_ERROR, "Snprintf() failed!\n");
 			goto err;
 		}
-
-		temp_len = strnlen_s(temp, IP_TAG_LEN + 1);
-		if (!temp_len || temp_len == IP_TAG_LEN + 1) {
-			LOG(LOG_ERROR, "temp string is not NULL terminated.\n");
-			goto err;
-		}
+	} else {
+		LOG(LOG_ERROR, "Unknown IP address length.\n");
+		goto err;
 	}
 
-	// Remove the last '.'
-	temp[temp_len - 1] = '\0';
-
-	if (strcpy_s(ip_ascii, temp_len, temp) != 0) {
+	if (strcpy_s(ip_ascii, HTTP_MAX_URL_SIZE, temp) != 0) {
 		LOG(LOG_ERROR, "Strcpy() failed!\n");
 		goto err;
 	}
