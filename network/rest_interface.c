@@ -264,6 +264,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header)
 	char g_URL[HTTP_MAX_URL_SIZE] = {0};
 	char temp1[REST_MAX_MSGHDR_SIZE] = {0};
 	bool ret = false;
+	bool enable_sni = false;
 
 	if (!rest_ctx) {
 		LOG(LOG_ERROR, "Invalid input!\n");
@@ -293,7 +294,13 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header)
 		}
 	}
 
-	if (rest_ctx->host_dns) {
+#if defined(SNI_SUPPORTED)
+	if (rest_ctx->host_dns && rest_ctx->tls) {
+		enable_sni = true;
+	}
+#endif
+
+	if (rest_ctx->host_dns && enable_sni) {
 		/* DNS */
 		if (snprintf_s_si(temp, REST_MAX_MSGHDR_SIZE, "%s:%d",
 				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
@@ -346,7 +353,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header)
 		goto err;
 	}
 
-	if (rest_ctx->host_dns) {
+	if (rest_ctx->host_dns && enable_sni) {
 		/* DNS */
 		if (snprintf_s_si(temp, REST_MAX_MSGHDR_SIZE, "HOST:%s:%d",
 				  rest_ctx->host_dns, rest_ctx->portno) < 0) {
