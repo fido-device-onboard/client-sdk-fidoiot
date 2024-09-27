@@ -957,6 +957,8 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		index++;
 	}
 
+	transport_prot[index] = '\0';
+
 	// parse separator "://"
 	if (buffer[index] != ':' || buffer[index + 1] != '/' ||
 	    buffer[index + 2] != '/') {
@@ -1099,8 +1101,7 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		LOG(LOG_INFO, "%s is an ipv6 address\n", mfg_dns);
 		is_ipv6 = true;
 	} else {
-		LOG(LOG_DEBUG, "%s is an unknown address format %d\n", mfg_dns,
-		    ip_info);
+		LOG(LOG_INFO, "%s is a DNS name\n", mfg_dns);
 	}
 
 	*mfg_ip = fdo_ipaddress_alloc();
@@ -1314,7 +1315,7 @@ static bool _STATE_DI(void)
 	if (use_mfg_addr_bin) {
 		fsize =
 		    fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
-		if (fsize > 0) {
+		if (fsize < FDO_MAX_STR_SIZE && fsize > 0) {
 			buffer = fdo_alloc(fsize + 1);
 			if (buffer == NULL) {
 				LOG(LOG_ERROR, "malloc failed\n");
@@ -1340,7 +1341,7 @@ static bool _STATE_DI(void)
 			}
 		} else {
 			LOG(LOG_ERROR,
-			    "Manufacturer Network address file is empty.\n");
+			    "Invalid Manufacturer Network address.\n");
 			goto end;
 		}
 	} else {

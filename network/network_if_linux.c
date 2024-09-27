@@ -1166,7 +1166,9 @@ int check_ip_version(char *ip_addr)
 	struct addrinfo hint, *res = NULL;
 	int ret = -1;
 
-	memset(&hint, '\0', sizeof hint);
+	if (memset_s(&hint, sizeof hint, 0)) {
+		goto end;
+	}
 
 	hint.ai_family = PF_UNSPEC;
 	hint.ai_flags = AI_NUMERICHOST;

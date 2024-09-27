@@ -429,7 +429,6 @@ bool resolve_dn(char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 			if (connect_ok == -1) {
 				LOG(LOG_ERROR, "Failed to connect to server: "
 					       "retrying...\n");
-				// curl_easy_cleanup(curl);
 			}
 			iter++;
 		}
