@@ -1096,12 +1096,16 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	int ip_info = check_ip_version(mfg_dns);
 
 	if (ip_info == AF_INET) {
-		LOG(LOG_INFO, "%s is an ipv4 address\n", mfg_dns);
+		LOG(LOG_INFO, "%s is an IPv4 address\n", mfg_dns);
 	} else if (ip_info == AF_INET6) {
-		LOG(LOG_INFO, "%s is an ipv6 address\n", mfg_dns);
+		LOG(LOG_INFO, "%s is an IPv6 address\n", mfg_dns);
 		is_ipv6 = true;
+	} else if (ip_info == 0) {
+		LOG(LOG_INFO, "%s is a resolvable DNS name\n", mfg_dns);
 	} else {
-		LOG(LOG_INFO, "%s is a DNS name\n", mfg_dns);
+		LOG(LOG_DEBUG, "%s is an unknown address format %d\n", mfg_dns,
+		    ip_info);
+		goto end;
 	}
 
 	*mfg_ip = fdo_ipaddress_alloc();

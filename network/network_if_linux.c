@@ -1173,10 +1173,15 @@ int check_ip_version(char *ip_addr)
 	hint.ai_family = PF_UNSPEC;
 	hint.ai_flags = AI_NUMERICHOST;
 
-	if (getaddrinfo(ip_addr, NULL, &hint, &res) != 0) {
-		goto end;
+	if (getaddrinfo(ip_addr, NULL, &hint, &res) == 0) {
+		ret = res->ai_family;
+	} else {
+		// Try resolving as a DNS name
+		hint.ai_flags = SOCK_STREAM;
+		if (getaddrinfo(ip_addr, NULL, &hint, &res) == 0) {
+			ret = 0; // Indicate valid DNS
+		}
 	}
-	ret = res->ai_family;
 
 end:
 	if (res) {
