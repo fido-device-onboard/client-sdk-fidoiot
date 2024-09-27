@@ -36,6 +36,7 @@
 #define STORAGE_NAMESPACE "storage"
 #define OWNERSHIP_TRANSFER_FILE "data/owner_transfer"
 #define ERROR_RETRY_COUNT 5
+#define MAX_INTERFACE_SIZE 12
 
 static bool is_ownership_transfer(bool do_resale)
 {
@@ -271,12 +272,17 @@ int app_main(bool is_resale)
 #if defined SELF_SIGNED_CERTS_SUPPORTED
 			useSelfSignedCerts = true;
 			LOG(LOG_INFO, "Set connection for self signed "
-					      "certificate usage.\n");
+				      "certificate usage.\n");
 #endif
 		} else if (!strcmp_s((char *)argv[index], DATA_CONTENT_SIZE,
 				     "-r", &strcmp_res) &&
 			   !strcmp_res) {
 			resale = true;
+		} else if (!strcmp_s((char *)argv[index], MAX_INTERFACE_SIZE,
+				     "-interface", &strcmp_res) &&
+			   !strcmp_res) {
+			index++;
+			curl_interface = argv[index];
 		} else {
 			printf("Usage: linux-client -ip <http|https>://<mfg "
 			       "addr>:<port>\n"
@@ -284,7 +290,8 @@ int app_main(bool is_resale)
 			       "will be used\n"
 			       "\t-ss: specify if backend servers are using "
 			       "self-signed certificates\n"
-			       "\t-r: enable resale\n");
+			       "\t-r: enable resale\n"
+			       "\t-interface: ethernet interface\n");
 			exit(1);
 		}
 	}

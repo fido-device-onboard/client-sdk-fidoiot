@@ -377,7 +377,10 @@ After a successful compilation, the FDO Client SDK Linux device executable can b
 >if -ip not specified, manufacturer_addr.bin will be used
 >-ss: specify if backend servers are using self-signed certificates
 >-r: enable resale
+>-interface: ethernet interface
 >```
+
+>***NOTE***: For IPv6 link-local addresses (addresses starting with fe80::), you must specify the interface because these addresses are only valid within a single network segment. The interface identifier helps the system determine which network segment to use.
 
 > ***NOTE***:  linux-client may require elevated privileges. Please use 'sudo' to execute.
 >  ***NOTE***: To do the DI again we need to clear the Device status from TPM storage.

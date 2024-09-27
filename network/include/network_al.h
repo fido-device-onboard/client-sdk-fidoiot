@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #define IPV4_ADDR_LEN 4
+#define IPV6_ADDR_LEN 16
 #define MAX_TIME_OUT 60000L
 
 #ifndef TARGET_OS_MBEDOS
@@ -151,6 +152,14 @@ uint32_t fdo_host_to_net_long(uint32_t value);
 
 /* Convert from ASCII to Network byte order format */
 int32_t fdo_printable_to_net(const char *src, void *addr);
+
+/**
+ * @brief Check the version of given IP address
+ *
+ * @param ip_addr input IP address
+ * @return int protocol family no. of socket
+ */
+int check_ip_version(char *ip_addr);
 
 /* get device model number */
 const char *get_device_model(void);

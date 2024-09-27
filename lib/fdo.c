@@ -24,6 +24,7 @@
 #include "safe_lib.h"
 #include "fdodeviceinfo.h"
 #include <ctype.h>
+#include <arpa/inet.h>
 #if defined(DEVICE_CSE_ENABLED)
 #include <linux/mei.h>
 #include <metee.h>
@@ -54,6 +55,8 @@ typedef struct app_data_s {
 static app_data_t *g_fdo_data = NULL;
 extern int g_argc;
 extern char **g_argv;
+bool is_ipv6 = false;
+char *curl_interface = NULL;
 
 char *mfg_addr = NULL;
 bool use_mfg_addr_bin = true;
@@ -954,6 +957,8 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		index++;
 	}
 
+	transport_prot[index] = '\0';
+
 	// parse separator "://"
 	if (buffer[index] != ':' || buffer[index + 1] != '/' ||
 	    buffer[index + 2] != '/') {
@@ -969,24 +974,50 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 		LOG(LOG_ERROR, "memset failed\n");
 		goto end;
 	}
-	while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) &&
-	       index < buffer_sz) {
-		if (!isalnum(buffer[index]) && buffer[index] != '-' &&
-		    buffer[index] != '.') {
-			LOG(LOG_ERROR, "Invalid DNS/IP or missing separator in "
-				       "Manufacturer address\n");
-			goto end;
-		} else {
-			mfg_dns[dns_index] = buffer[index];
-			if (isalpha(buffer[index])) {
-				count_dns_alphabets++;
+
+	// remove '[]' from the network address if present
+	if (buffer[index] == '[') {
+		index++;
+		while (buffer[index] != ']' && (dns_index < mfg_dns_sz - 1) &&
+		       index < buffer_sz) {
+			if (!isalnum(buffer[index]) && buffer[index] != '-' &&
+			    buffer[index] != '.' && buffer[index] != ':') {
+				LOG(LOG_ERROR,
+				    "Invalid DNS/IP or missing separator in "
+				    "Manufacturer address\n");
+				goto end;
+			} else {
+				mfg_dns[dns_index] = buffer[index];
+				if (isalpha(buffer[index])) {
+					count_dns_alphabets++;
+				}
 			}
+			index++;
+			dns_index++;
 		}
 		index++;
-		dns_index++;
+	} else {
+		while (buffer[index] != ':' && (dns_index < mfg_dns_sz - 1) &&
+		       index < buffer_sz) {
+			if (!isalnum(buffer[index]) && buffer[index] != '-' &&
+			    buffer[index] != '.') {
+				LOG(LOG_ERROR,
+				    "Invalid DNS/IP or missing separator in "
+				    "Manufacturer address\n");
+				goto end;
+			} else {
+				mfg_dns[dns_index] = buffer[index];
+				if (isalpha(buffer[index])) {
+					count_dns_alphabets++;
+				}
+			}
+			index++;
+			dns_index++;
+		}
 	}
 
-	if (!isalnum(mfg_dns[0]) || !isalnum(mfg_dns[dns_index - 1])) {
+	if ((!isalnum(mfg_dns[0]) && mfg_dns[0] != ':') ||
+	    !isalnum(mfg_dns[dns_index - 1])) {
 		LOG(LOG_ERROR, "Invalid DNS/IP in Manufacturer address\n");
 		goto end;
 	}
@@ -1059,9 +1090,24 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 
 	// validate IP/DNS, check for IP first, if it fails, treat it as DNS
 	// allocate IP structure here
-	// if a valid IP is found, return the IP structure conatining IP, that
+	// if a valid IP is found, return the IP structure containing IP, that
 	// must be freed by caller if a valid IP is not found, free the IP
 	// structure immediately and return NULL IP structure
+	int ip_info = check_ip_version(mfg_dns);
+
+	if (ip_info == AF_INET) {
+		LOG(LOG_INFO, "%s is an IPv4 address\n", mfg_dns);
+	} else if (ip_info == AF_INET6) {
+		LOG(LOG_INFO, "%s is an IPv6 address\n", mfg_dns);
+		is_ipv6 = true;
+	} else if (ip_info == 0) {
+		LOG(LOG_INFO, "%s is a resolvable DNS name\n", mfg_dns);
+	} else {
+		LOG(LOG_DEBUG, "%s is an unknown address format %d\n", mfg_dns,
+		    ip_info);
+		goto end;
+	}
+
 	*mfg_ip = fdo_ipaddress_alloc();
 	if (!*mfg_ip) {
 		LOG(LOG_ERROR, "Failed to alloc memory\n");
@@ -1071,7 +1117,11 @@ bool parse_manufacturer_address(char *buffer, size_t buffer_sz, bool *tls,
 	result = fdo_printable_to_net(mfg_dns, (*mfg_ip)->addr);
 	if (result > 0) {
 		// valid IP address
-		(*mfg_ip)->length = IPV4_ADDR_LEN;
+		if (is_ipv6) {
+			(*mfg_ip)->length = IPV6_ADDR_LEN;
+		} else {
+			(*mfg_ip)->length = IPV4_ADDR_LEN;
+		}
 		LOG(LOG_DEBUG, "Manufacturer IP will be used\n");
 	} else if (result == 0) {
 		// not an IP address, so treat it as DNS address
@@ -1269,7 +1319,7 @@ static bool _STATE_DI(void)
 	if (use_mfg_addr_bin) {
 		fsize =
 		    fdo_blob_size((char *)MANUFACTURER_ADDR, FDO_SDK_RAW_DATA);
-		if (fsize > 0) {
+		if (fsize < FDO_MAX_STR_SIZE && fsize > 0) {
 			buffer = fdo_alloc(fsize + 1);
 			if (buffer == NULL) {
 				LOG(LOG_ERROR, "malloc failed\n");
@@ -1295,7 +1345,7 @@ static bool _STATE_DI(void)
 			}
 		} else {
 			LOG(LOG_ERROR,
-			    "Manufacturer Network address file is empty.\n");
+			    "Invalid Manufacturer Network address.\n");
 			goto end;
 		}
 	} else {
