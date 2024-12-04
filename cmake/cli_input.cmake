@@ -30,6 +30,7 @@ set (TPM2_TCTI_TYPE tabrmd)
 set (RESALE true)
 set (REUSE true)
 set (MTLS false)
+set (CA false)
 set (GET_DEV_SERIAL false)
 set (LOCK_TPM true)
 
@@ -859,6 +860,33 @@ endif()
 
 set(CACHED_MTLS ${MTLS} CACHE STRING "Selected MTLS")
 message("Selected MTLS ${MTLS}")
+###########################################
+# FOR CA RETRIEVAL
+get_property(cached_CA_value CACHE CA PROPERTY VALUE)
+
+set(CA_cli_arg ${cached_CA_value})
+if(CA_cli_arg STREQUAL CACHED_CA)
+  unset(CA_cli_arg)
+endif()
+
+set(CA_app_cmake_lists ${CA})
+if(cached_CA_value STREQUAL CA)
+  unset(CA_app_cmake_lists)
+endif()
+
+if(DEFINED CACHED_CA)
+  if ((DEFINED CA_cli_arg) AND (NOT(CACHED_CA STREQUAL CA_cli_arg)))
+    message(WARNING "Need to do make pristine before cmake args can change.")
+  endif()
+  set(CA ${CACHED_CA})
+elseif(DEFINED CA_cli_arg)
+  set(CA ${CA_cli_arg})
+elseif(DEFINED CA_app_cmake_lists)
+  set(CA ${CA_app_cmake_lists})
+endif()
+
+set(CACHED_CA ${CA} CACHE STRING "Selected CA")
+message("Selected CA ${CA}")
 ###########################################
 # FOR GET_DEV_SERIAL
 get_property(cached_get_dev_serial_value CACHE GET_DEV_SERIAL PROPERTY VALUE)
