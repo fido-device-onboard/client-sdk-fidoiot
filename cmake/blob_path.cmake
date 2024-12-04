@@ -32,6 +32,12 @@ if(TARGET_OS MATCHES linux)
     )
     endif()
 
+  if (${CA} MATCHES true)
+    client_sdk_compile_definitions(
+      -DSSL_CERT=\"${BLOB_PATH}/certs/ca-cert.pem\"
+    )
+    endif()
+
   if (${BUILD_MFG_TOOLKIT} MATCHES true)
     client_sdk_compile_definitions(
       -DMAC_ADDRESSES=\"${BLOB_PATH}/data/mac_addresses.bin\"
