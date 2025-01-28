@@ -2,9 +2,9 @@ name: client-sdk-fidoiot-build
 on:
   workflow_dispatch:
   push:
-    branches: [master, '*rel']
+    branches: [master, "*rel"]
   pull_request:
-    branches: [master, '*rel']
+    branches: [master, "*rel"]
 permissions:
   contents: read
 jobs:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: scm checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build docker image
         run: docker build -t client-sdk -f '.github/Dockerfile' .
       - name: run Docker container
@@ -25,14 +25,14 @@ jobs:
           cp ../utils/tpm_make_ready_ecdsa.sh ../utils/install_tpm_libs*.sh ../utils/keys_gen.sh utils/
           cd .. && tar -cvzf client-sdk-binaries.tar.gz client-sdk-binaries
       - name: checkout test-fidoiot
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fido-device-onboard/test-fidoiot
           ref: master
           path: test-fidoiot
       - name: Download pri-fidoiot artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v8
         with:
           name: demo.tar.gz
           repo: fido-device-onboard/pri-fidoiot
@@ -43,7 +43,7 @@ jobs:
         run: |
           sudo echo "127.0.0.1 host.docker.internal" | sudo tee -a /etc/hosts
       - name: Smoke Test
-        run : |
+        run: |
           mkdir -p test-fidoiot/binaries/client-sdk-fidoiot
           tar -xvzf test-fidoiot/binaries/pri-fidoiot/demo.tar.gz
           cp -r demo/* test-fidoiot/binaries/pri-fidoiot/
@@ -67,12 +67,9 @@ jobs:
           export TEST_DIR=`pwd`
           mvn clean test -Dgroups=fdo_clientsdk_smoketest
       - name: archive artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: client-sdk-binaries.tar.gz
           path: client-sdk-binaries.tar.gz
           retention-days: 5
         if: github.event_name != 'pull_request'
-
-
-
