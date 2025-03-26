@@ -361,7 +361,7 @@ void fdo_net_init(void)
  * @return ret
  *         true if successful. false in case of error.
  */
-bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
+bool resolve_dn(char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		bool proxy)
 {
 	bool ret = false;
@@ -369,17 +369,29 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 	uint32_t num_ofIPs = 0;
 	fdo_ip_address_t *ip_list = NULL;
 	rest_ctx_t *rest = NULL;
+	int dn_size = 0;
 
 	if (!dn || !ip) {
 		LOG(LOG_ERROR, "Invalid inputs\n");
 		goto end;
 	}
+
+	// Remove '[]' from IPv6 domain name
+	dn_size = strnlen_s(dn, HTTP_MAX_URL_SIZE);
+
+	if (dn[0] == '[' && dn[dn_size - 1] == ']') {
+		int i;
+		for (i = 1; i < dn_size - 1; i++) {
+			dn[i - 1] = dn[i];
+		}
+		dn[i - 1] = '\0';
+	}
+
 	/* DNS is non-NULL, */
 	LOG(LOG_DEBUG, "using DNS: %s\n", dn);
 
 	if (proxy) {
-
-		/* cache DNS to REST */
+		/* Cache DNS to REST */
 		rest = get_rest_context();
 
 		if (!rest) {
@@ -394,7 +406,8 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		}
 		goto end;
 	}
-	// get list of IPs resolved to given DNS
+
+	// Get list of IPs resolved to given DNS
 	if (fdo_con_dns_lookup(dn, &ip_list, &num_ofIPs) == -1) {
 		LOG(LOG_ERROR, "DNS look-up failed!\n");
 		goto end;
@@ -405,13 +418,17 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		uint32_t iter = 0;
 
 		while (iter != num_ofIPs && connect_ok == -1) {
-
 			curl = curl_easy_init();
+			if (!curl) {
+				LOG(LOG_ERROR, "curl_easy_init() failed!\n");
+				goto end;
+			}
+
 			connect_ok =
 			    fdo_con_connect((ip_list + iter), dn, port, tls);
 			if (connect_ok == -1) {
-				LOG(LOG_ERROR, "Failed to connect to "
-					       "server: retrying...\n");
+				LOG(LOG_ERROR, "Failed to connect to server: "
+					       "retrying...\n");
 			}
 			iter++;
 		}
@@ -441,7 +458,7 @@ bool resolve_dn(const char *dn, fdo_ip_address_t **ip, uint16_t port, bool tls,
 		}
 	}
 end:
-	if (ip_list) { // free ip_list
+	if (ip_list) { // Free ip_list
 		fdo_free(ip_list);
 	}
 

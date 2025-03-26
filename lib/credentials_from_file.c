@@ -1033,7 +1033,7 @@ bool load_device_status(fdo_sdk_device_status *state)
 		*state = FDO_DEVICE_STATE_PC;
 	} else {
 		LOG(LOG_DEBUG, "DeviceCredential is non-empty. Set state to "
-			      "run TO1/TO2\n");
+			       "run TO1/TO2\n");
 		// No Device state is being set currently
 	}
 	return true;
