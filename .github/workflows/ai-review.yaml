@@ -1,0 +1,111 @@
+---
+name: "Perform AI Review"
+
+on:
+  pull_request:
+  issues:
+    types:
+    - opened
+    
+jobs:
+  ai_review:
+    name: AI Review
+    # Skip code review if the pull request is from dependabot.
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    # TODO: Update'runs-on' to specify the type of runner your repo uses.
+    # If using GASP, do not add additional labels. Use ONLY "[gasp, azure]".
+    runs-on:  ubuntu-latest
+    container: amr-registry.caas.intel.com/devops-ai-platform/gasp-oidc:0.0.4
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+    # Login using OIDC Auth
+    - name: Authenticate
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    # Get a temporary access token. Expires in 5-60 minutes.
+    - name: Retrieve Access Token
+      id: auth
+      run: |
+        export output=$(az account get-access-token --resource https://cognitiveservices.azure.com --query \"accessToken\" -o tsv);
+        echo "result=$output" >> $GITHUB_OUTPUT;
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Caching improves the response time.
+    - name: Cache embeddings
+      id: cache-embeddings
+      uses: actions/cache@v4
+      env:
+        cache-name: cache-embeddings
+      with:
+        path: ./cache
+        key: ${{ env.cache-name }}-${{ github.run_id }}
+        restore-keys: ${{ env.cache-name }}
+
+    - name: Create Document Embeddings
+      uses: intel-innersource/frameworks.devops.ai-devops-platform.embedding-action@v3
+      env:
+        no_proxy: "*.azure.com"
+      with:
+        name: documentation_lookup
+        description: A search tool for referencing documentation specific to the code being reviewed. Use this when you want to understand architecture, features, requirements, application behavior and other non-code specific attributes. Input is a question that can be answered by the codes documentation.
+        service_model: embedding
+        service_token: bearer ${{ steps.auth.outputs.result }}
+        # TODO: Update 'file_types' with the code file extensions to parse. *Note it is a newline delimited list.
+        file_types: |
+          .cpp
+          .js
+          .txt
+        # TODO: Update 'languages' to include the languages in the repository. *Note it is a newline delimited list.
+        # Supports the following values: 'cpp', 'go', 'java', 'js', 'php', 'proto', 'python', 'rst', 'ruby', 'rust', 'scala', 'swift', 'markdown', 'latex', 'html'
+        languages: |
+          markdown
+        # TODO: Update 'path' to represent the top level path where code files are found.
+        path: ./docs
+        cache_path: ./cache
+
+    - name: Create Code Embeddings
+      uses: intel-innersource/frameworks.devops.ai-devops-platform.embedding-action@v3
+      env:
+        no_proxy: "*.azure.com"
+      with:
+        name: code_lookup
+        description: A search tool for looking up unknown code. Use this when you want to understand how a function or class is implimented or used. Input is a code snippet and a question.
+        service_model: embedding
+        service_token: bearer ${{ steps.auth.outputs.result }}
+        # TODO: Update 'file_types' with the code file extensions to parse. *Note it is a newline delimited list.
+        file_types: |
+          .cpp
+          .js
+          .txt
+        # TODO: Update 'languages' to include the languages in the repository. *Note it is a newline delimited list.
+        # Supports the following values: 'cpp', 'go', 'java', 'js', 'php', 'proto', 'python', 'rst', 'ruby', 'rust', 'scala', 'swift', 'markdown', 'latex', 'html'
+        languages: |
+          cpp
+        # TODO: Update 'path' to represent the top level path where code files are found.
+        path: ./docs
+        cache_path: ./cache
+
+    # Perform Review
+    - name: Perform AI Review
+      uses: intel-innersource/frameworks.devops.ai-devops-platform.reviewer-action@v3
+      env:
+        no_proxy: "*.azure.com,*.dynatrace.com"
+        NODE_EXTRA_CA_CERTS: /usr/local/share/ca-certificates/IntelSHA256RootCA-base64.crt
+      with:
+        # Example: A Github action that reviews and summarizes code changes and helps triage issues.
+        product_description: # TODO: Provide some context describing repository the tool is managing.
+        service_token: bearer ${{ steps.auth.outputs.result }}
+        # The project ID allows for the customization of prompts, collection feedback and improving response quality.
+        project_id: # TODO: Add the PROJECT_ID provided.
+        project_token: ${{ secrets.PROJECT_TOKEN }}
