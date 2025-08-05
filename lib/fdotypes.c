@@ -6194,7 +6194,7 @@ bool fdo_serviceinfo_modules_list_write(fdow_t *fdow)
 			       "ServiceInfoVal (modules) array\n");
 		goto end;
 	}
-	if (!fdow_signed_int(fdow, 3)) {
+	if (!fdow_signed_int(fdow, 0)) {
 		LOG(LOG_ERROR, "Platform Device ServiceInfoKV: Failed to write "
 			       "ServiceInfoVal (modules) nummodules\n");
 		goto end;
