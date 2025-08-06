@@ -480,6 +480,13 @@ int32_t fdo_curl_connect(fdo_ip_address_t *ip_addr, const char *dn,
 			goto err;
 		}
 
+#if defined(CA)
+		curlCode = curl_easy_setopt(curl, CURLOPT_CAINFO, (char *)SSL_CERT);
+		if (curlCode != CURLE_OK) {
+			LOG(LOG_ERROR, "CURL_ERROR: Unable to set CA info path.\n");
+			goto err;
+		}
+#endif
 		res = curl_easy_perform(curl);
 		if (res != CURLE_OK) {
 			LOG(LOG_ERROR, "Error: %s\n", curl_easy_strerror(res));
