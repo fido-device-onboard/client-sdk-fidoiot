@@ -527,59 +527,11 @@ int32_t fdo_con_connect(fdo_ip_address_t *ip_addr, const char *dn,
 		goto end;
 	}
 
-#ifdef USE_MBEDTLS
-
-	if (ssl) {
-		char ipv4[IP_TAG_LEN] = {0};
-		char port_s[MAX_PORT_SIZE] = {0};
-		uint8_t octlet_size =
-		    4; // e.g 192.168.0.100, max 3char + 1null/oct.
-
-		if (!ip_addr) {
-			goto end;
-		}
-
-		/*
-		 * Convert ip binary to string format as required by
-		 * mbed connect
-		 */
-		if ((snprintf_s_i(ipv4, octlet_size, "%d", ip_addr->addr[0]) <
-		     0) ||
-		    (snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
-				  octlet_size + 1, ".%d",
-				  ip_addr->addr[1]) < 0) ||
-		    (snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
-				  octlet_size + 1, ".%d",
-				  ip_addr->addr[2]) < 0) ||
-		    (snprintf_s_i((ipv4 + strnlen_s(ipv4, IP_TAG_LEN)),
-				  octlet_size + 1, ".%d",
-				  ip_addr->addr[3]) < 0)) {
-			LOG(LOG_ERROR, "Snprintf() failed!\n");
-			goto end;
-		}
-		if (snprintf_s_i(port_s, sizeof(port_s), "%d", port) < 0) {
-			LOG(LOG_ERROR, "Snprintf() failed!\n");
-			goto end;
-		}
-
-		*ssl = fdo_ssl_setup_connect(ipv4, port_s);
-
-		if (NULL == *ssl) {
-			LOG(LOG_ERROR, "TLS connection "
-				       "setup "
-				       "failed\n");
-			goto end;
-		}
-		return MBEDTLS_NET_DUMMY_SOCKET;
-	}
-#endif
-
-#if defined(USE_OPENSSL)
 	connect_ok = fdo_curl_connect(ip_addr, dn, port, tls);
 	if (connect_ok < 0) {
 		goto end;
 	}
-#endif
+
 end:
 	return connect_ok;
 }
@@ -592,9 +544,7 @@ end:
 int32_t fdo_con_disconnect(void)
 {
 	int ret = -1;
-#ifdef USE_MBEDTLS
-	return 0;
-#endif
+
 	// close() returns 0 on success
 
 	if (curl) {

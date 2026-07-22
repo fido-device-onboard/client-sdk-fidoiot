@@ -188,19 +188,16 @@ int32_t crypto_close(void)
  * @return
  *        return 0 on success. -ve value on failure.
  */
-int32_t crypto_hal_hash(uint8_t _hash_type, const uint8_t *buffer,
+int32_t crypto_hal_hash(int hash_type, const uint8_t *buffer,
 			size_t buffer_length, uint8_t *output,
 			size_t output_length)
 {
 	mbedtls_md_type_t mbedhash_type = MBEDTLS_MD_NONE;
-	uint8_t hash_type = FDO_CRYPTO_HASH_TYPE_USED;
 
 	if (NULL == output || 0 == output_length || NULL == buffer ||
 	    0 == buffer_length) {
 		return -1;
 	}
-
-	(void)_hash_type;
 
 	switch (hash_type) {
 	case FDO_CRYPTO_HASH_TYPE_SHA_256:
