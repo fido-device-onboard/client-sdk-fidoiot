@@ -50,6 +50,9 @@ extern bool use_mfg_addr_bin;
 extern bool useSelfSignedCerts;
 #endif
 
+extern bool is_ipv6;
+extern char *curl_interface;
+
 fdo_sdk_status fdo_sdk_run(void);
 
 fdo_sdk_status fdo_sdk_resale(void);
