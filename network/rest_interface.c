@@ -350,7 +350,7 @@ bool construct_rest_header(rest_ctx_t *rest_ctx, struct curl_slist **msg_header)
 		goto err;
 	}
 	*msg_header = curl_slist_append(*msg_header, temp1);
-	*msg_header = curl_slist_append(*msg_header, "_connection: keep-alive");
+	*msg_header = curl_slist_append(*msg_header, "Connection: keep-alive");
 
 	if (memset_s(temp, REST_MAX_MSGHDR_SIZE, 0) != 0) {
 		ret = false;
