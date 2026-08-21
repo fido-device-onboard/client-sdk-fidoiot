@@ -130,14 +130,14 @@ if(${TARGET_OS} MATCHES linux)
     -l:libtinycbor.a
     -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
     -L$ENV{CURL_ROOT}/lib
-    -lcurl
+    -l:libcurl.a -lz -lnghttp2
     )
 
   if (${TLS} STREQUAL openssl)
     client_sdk_ld_options(
       -L$ENV{OPENSSL3_ROOT}/lib64
       -L$ENV{OPENSSL3_ROOT}/lib
-      -Wl,--no-whole-archive -lssl -lcrypto -ldl
+      -Wl,--no-whole-archive -l:libssl.a -l:libcrypto.a pthread -ldl
       )
   elseif(${TLS} MATCHES mbedtls)
     client_sdk_ld_options(
