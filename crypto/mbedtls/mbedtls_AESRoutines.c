@@ -69,8 +69,14 @@ int32_t crypto_hal_aes_encrypt(const uint8_t *clear_text,
 			       uint32_t clear_text_length, uint8_t *cipher_text,
 			       uint32_t *cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length)
+			       uint32_t key_length, uint8_t *tag,
+			       size_t tag_length, const uint8_t *aad,
+			       size_t aad_length)
 {
+	(void)tag;
+	(void)tag_length;
+	(void)aad;
+	(void)aad_length;
 	int ret = -1;
 	size_t exp_cipher_len = 0;
 	static mbedtls_cipher_context_t cipher_ctx;
@@ -197,9 +203,15 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 			       const uint8_t *cipher_text,
 			       uint32_t cipher_length, size_t block_size,
 			       const uint8_t *iv, const uint8_t *key,
-			       uint32_t key_length)
+			       uint32_t key_length, uint8_t *tag,
+			       size_t tag_length, const uint8_t *aad,
+			       size_t aad_length)
 
 {
+	(void)tag;
+	(void)tag_length;
+	(void)aad;
+	(void)aad_length;
 	int ret = -1;
 	size_t olen = 0, ofs = 0;
 	static mbedtls_cipher_context_t cipher_ctx;
@@ -264,7 +276,7 @@ int32_t crypto_hal_aes_decrypt(uint8_t *clear_text, uint32_t *clear_text_length,
 		goto err;
 	}
 
-	if (mbedtls_cipher_set_iv(&cipher_ctx, iv, AES_IV)) {
+	if (mbedtls_cipher_set_iv(&cipher_ctx, iv, FDO_AES_IV_SIZE)) {
 		LOG(LOG_ERROR, "Failed to set IV for decryption\n");
 		goto err;
 	}

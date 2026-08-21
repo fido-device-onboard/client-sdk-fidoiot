@@ -81,7 +81,6 @@ if (${TLS} STREQUAL mbedtls)
     mbedtls/mbedtls_AESRoutines.c
     mbedtls/mbedtls_cryptoSupport.c
     mbedtls/mbedtls_SSLRoutines.c
-    mbedtls/mbedtls_RSAEncryptRoutines.c
     mbedtls/mbedtls_random.c
     mbedtls/mbedtls_key_exchange_ecdh.c)
 
