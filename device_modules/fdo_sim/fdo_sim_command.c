@@ -325,8 +325,58 @@ int fdo_sim_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 	int result = FDO_SI_INTERNAL_ERROR;
 	int flag = 0;
 	size_t exec_array_length = 0;
+	size_t bin_len = 0;
+	uint8_t *bstr_payload = NULL;
+	fdor_t *nested_fdor = NULL;
 
-	if (!fdor_array_length(fdor, &exec_array_length)) {
+	// Read bstr wrapped CBOR array payload for fdo.command:args
+	if (!fdor_string_length(fdor, &bin_len)) {
+		LOG(LOG_ERROR, "Module fdo.command - Failed to read "
+			       "fdo.command:args bstr length\n");
+		goto end;
+	}
+
+	if (bin_len == 0) {
+		LOG(LOG_ERROR, "Module fdo.command - Empty bstr received for "
+			       "fdo.command:args\n");
+		result = FDO_SI_CONTENT_ERROR;
+		goto end;
+	}
+
+	bstr_payload = FSIMModuleAlloc(bin_len * sizeof(uint8_t));
+	if (!bstr_payload) {
+		LOG(LOG_ERROR, "Module fdo.command - Failed to alloc for "
+			       "fdo.command:args bstr\n");
+		goto end;
+	}
+
+	if (!fdor_byte_string(fdor, bstr_payload, bin_len)) {
+		LOG(LOG_ERROR, "Module fdo.command - Failed to read "
+			       "fdo.command:args bstr\n");
+		goto end;
+	}
+
+	// Initialize a nested CBOR reader on the bstr payload
+	nested_fdor = FSIMModuleAlloc(sizeof(fdor_t));
+	if (!nested_fdor || !fdor_init(nested_fdor) ||
+	    !fdo_block_alloc_with_size(&nested_fdor->b, bin_len)) {
+		LOG(LOG_ERROR, "Module fdo.command - Failed to init nested FDOR "
+			       "for fdo.command:args\n");
+		goto end;
+	}
+	if (0 != memcpy_s(nested_fdor->b.block, bin_len, bstr_payload, bin_len)) {
+		LOG(LOG_ERROR, "Module fdo.command - Failed to copy nested args\n");
+		goto end;
+	}
+	nested_fdor->b.block_size = bin_len;
+	if (!fdor_parser_init(nested_fdor)) {
+		LOG(LOG_ERROR, "Module fdo.command - Failed to init nested FDOR "
+			       "parser for fdo.command:args\n");
+		goto end;
+	}
+
+	// Now parse the array from the nested reader
+	if (!fdor_array_length(nested_fdor, &exec_array_length)) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to read "
 			       "fdo.command:args array length\n");
 		goto end;
@@ -340,7 +390,7 @@ int fdo_sim_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 		goto end;
 	}
 
-	if (!fdor_start_array(fdor)) {
+	if (!fdor_start_array(nested_fdor)) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to start "
 			       "fdo.command:args array\n");
 		goto end;
@@ -398,14 +448,14 @@ int fdo_sim_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 				       " instruction\n");
 			goto end;
 		}
-		if (!fdor_string_length(fdor, exec_instructions_sz) ||
+		if (!fdor_string_length(nested_fdor, exec_instructions_sz) ||
 		    *exec_instructions_sz > MOD_MAX_EXEC_ARG_LEN) {
 			LOG(LOG_ERROR, "Module fdo.command - Failed to read "
 				       "fdo.command:args text "
 				       "length\n");
 			goto end;
 		}
-		if (!fdor_text_string(fdor,
+		if (!fdor_text_string(nested_fdor,
 				      (char *)fdo_exec_instr[exec_array_index],
 				      *exec_instructions_sz)) {
 			LOG(LOG_ERROR, "Module fdo.command - Failed to read "
@@ -434,7 +484,7 @@ int fdo_sim_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 	}
 	fdo_exec_instr[exec_array_index] = NULL;
 
-	if (!fdor_end_array(fdor)) {
+	if (!fdor_end_array(nested_fdor)) {
 		LOG(LOG_ERROR, "Module fdo.command - Failed to end "
 			       "fdo.command:args array\n");
 		goto end;
@@ -443,6 +493,14 @@ int fdo_sim_set_osi_args(int exec_array_index, size_t *exec_instructions_sz)
 	flag = 1;
 	result = FDO_SI_SUCCESS;
 end:
+	if (nested_fdor) {
+		fdor_flush(nested_fdor);
+		FSIMModuleFree(nested_fdor);
+	}
+	if (bstr_payload) {
+		FSIMModuleFree(bstr_payload);
+	}
+
 	if (!flag) {
 		result =
 		    fdo_sim_end(&fdor, &fdow, result, fdo_cmd, fdo_exec_instr,
@@ -462,12 +520,6 @@ int fdo_sim_set_osi_exec(uint8_t **exec_instr)
 
 	if (front == -1) {
 		front = 0;
-	}
-
-	if (fdor_is_value_null(fdor)) {
-		LOG(LOG_ERROR, "Module fdo.command - Failed to read "
-			       "fdo.command:execute array length\n");
-		goto end;
 	}
 
 	if (exec_instr) {
